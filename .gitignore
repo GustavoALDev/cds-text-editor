@@ -1,0 +1,10 @@
+node_modules
+dist
+.nx/cache
+.nx/workspace-data
+*.tsbuildinfo
+playwright-report
+test-results
+coverage
+*.tgz
+.superpowers
