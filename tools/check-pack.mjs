@@ -9,7 +9,13 @@ const COMMON = [/^package\.json$/, /^README\.md$/, /^LICENSE$/];
 const TSUP_OUTPUT = [/^dist\//];
 // Pacotes ng-packagr: a raiz do tarball é a pasta dist, então a saída fica na raiz
 // (fesm2022/, types/ e package.json de cada entry point secundário).
-const NG_OUTPUT = [/^fesm2022\//, /^types\//, /^[^/]+\/package\.json$/, /^[^/]+\/types\//, /^[^/]+\.d\.ts$/];
+const NG_OUTPUT = [
+  /^fesm2022\//,
+  /^types\//,
+  /^[^/]+\/package\.json$/,
+  /^[^/]+\/types\//,
+  /^[^/]+\.d\.ts$/,
+];
 const FORBIDDEN = [/\.spec\./, /\.tsbuildinfo$/];
 
 export function checkPackFiles(files, kind = 'tsup') {
@@ -17,7 +23,10 @@ export function checkPackFiles(files, kind = 'tsup') {
   const allowed = [...COMMON, ...output];
   const errors = [];
   for (const file of files) {
-    if (FORBIDDEN.some((re) => re.test(file)) || !allowed.some((re) => re.test(file))) {
+    if (
+      FORBIDDEN.some((re) => re.test(file)) ||
+      !allowed.some((re) => re.test(file))
+    ) {
       errors.push(`arquivo inesperado no tarball: ${file}`);
     }
   }
@@ -31,7 +40,11 @@ export function checkRequiredFiles(files) {
 }
 
 function run(cwd, cmd, args) {
-  return execFileSync(cmd, args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
+  return execFileSync(cmd, args, {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'inherit'],
+  });
 }
 
 // attw só analisa JS/tipos: entrypoints que exportam um arquivo de estilo (ex.: ./theme.css)
@@ -39,7 +52,12 @@ function run(cwd, cmd, args) {
 export function nonCodeEntrypoints(exportsField) {
   if (!exportsField || typeof exportsField !== 'object') return [];
   return Object.entries(exportsField)
-    .filter(([key, target]) => key.startsWith('.') && typeof target === 'string' && /\.(css|scss|json)$/.test(target))
+    .filter(
+      ([key, target]) =>
+        key.startsWith('.') &&
+        typeof target === 'string' &&
+        /\.(css|scss|json)$/.test(target),
+    )
     .map(([key]) => key);
 }
 
@@ -64,7 +82,14 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   console.log(run(dir, 'npx', ['--no-install', 'publint', '--strict']));
   const pkg = JSON.parse(readFileSync(resolve(dir, 'package.json'), 'utf8'));
   const excluded = nonCodeEntrypoints(pkg.exports);
-  const attwArgs = ['--no-install', 'attw', '--pack', '.', '--profile', 'esm-only'];
+  const attwArgs = [
+    '--no-install',
+    'attw',
+    '--pack',
+    '.',
+    '--profile',
+    'esm-only',
+  ];
   if (excluded.length) attwArgs.push('--exclude-entrypoints', ...excluded);
   try {
     console.log(run(dir, 'npx', attwArgs));

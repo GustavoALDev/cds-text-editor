@@ -1,5 +1,11 @@
 # @cds/rte-core
 
-Núcleo do editor de texto rico cds-text-editor: extensões Tiptap, utilitários e esquema do HTML.
+Núcleo do editor: extensões Tiptap, utilitários e esquema do HTML.
 
-Pacote provisório do monorepo `cds-text-editor` (escopo `@cds` ainda não confirmado).
+**Status: em construção.** Ainda sem versão publicada.
+
+Instalação (nome provisório, escopo `@cds` ainda não confirmado): `npm i @cds/rte-core`
+
+Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
+
+Repositório: cds-text-editor (monorepo). Licença MIT.

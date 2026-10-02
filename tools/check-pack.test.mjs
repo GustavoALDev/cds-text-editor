@@ -1,13 +1,31 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkPackFiles, checkRequiredFiles, nonCodeEntrypoints } from './check-pack.mjs';
+import {
+  checkPackFiles,
+  checkRequiredFiles,
+  nonCodeEntrypoints,
+} from './check-pack.mjs';
 
 test('accepts dist, README, LICENSE and package.json', () => {
-  assert.deepEqual(checkPackFiles(['package.json', 'README.md', 'LICENSE', 'dist/index.js', 'dist/index.d.ts']), []);
+  assert.deepEqual(
+    checkPackFiles([
+      'package.json',
+      'README.md',
+      'LICENSE',
+      'dist/index.js',
+      'dist/index.d.ts',
+    ]),
+    [],
+  );
 });
 
 test('rejects sources, specs and tsbuildinfo', () => {
-  const errors = checkPackFiles(['package.json', 'src/index.ts', 'dist/index.spec.js', 'tsconfig.tsbuildinfo']);
+  const errors = checkPackFiles([
+    'package.json',
+    'src/index.ts',
+    'dist/index.spec.js',
+    'tsconfig.tsbuildinfo',
+  ]);
   assert.equal(errors.length, 3);
 });
 
@@ -16,13 +34,29 @@ test('rejects tsup output outside dist/', () => {
 });
 
 test('ng-packagr: accepts build output at the package root', () => {
-  const files = ['package.json', 'README.md', 'LICENSE', 'fesm2022/cds-rte-angular.mjs', 'fesm2022/cds-rte-angular.mjs.map', 'types/cds-rte-angular.d.ts', 'i18n/package.json', 'i18n/types/cds-rte-angular-i18n.d.ts'];
+  const files = [
+    'package.json',
+    'README.md',
+    'LICENSE',
+    'fesm2022/cds-rte-angular.mjs',
+    'fesm2022/cds-rte-angular.mjs.map',
+    'types/cds-rte-angular.d.ts',
+    'i18n/package.json',
+    'i18n/types/cds-rte-angular-i18n.d.ts',
+  ];
   assert.deepEqual(checkPackFiles(files, 'ng-packagr'), []);
 });
 
 test('ng-packagr: rejects sources, specs, tsbuildinfo and dist/', () => {
   const errors = checkPackFiles(
-    ['package.json', 'src/index.ts', 'fesm2022/a.spec.mjs', 'tsconfig.tsbuildinfo', 'dist/index.js', 'ng-package.json'],
+    [
+      'package.json',
+      'src/index.ts',
+      'fesm2022/a.spec.mjs',
+      'tsconfig.tsbuildinfo',
+      'dist/index.js',
+      'ng-package.json',
+    ],
     'ng-packagr',
   );
   assert.equal(errors.length, 5);
@@ -30,11 +64,22 @@ test('ng-packagr: rejects sources, specs, tsbuildinfo and dist/', () => {
 
 test('checkRequiredFiles reports missing package.json, README.md and LICENSE', () => {
   assert.equal(checkRequiredFiles(['dist/index.js']).length, 3);
-  assert.deepEqual(checkRequiredFiles(['package.json', 'README.md', 'LICENSE', 'dist/index.js']), []);
+  assert.deepEqual(
+    checkRequiredFiles([
+      'package.json',
+      'README.md',
+      'LICENSE',
+      'dist/index.js',
+    ]),
+    [],
+  );
 });
 
 test('nonCodeEntrypoints lists only exports that point to non-code files', () => {
-  const exportsField = { '.': { types: './dist/index.d.ts', default: './dist/index.js' }, './theme.css': './dist/theme.css' };
+  const exportsField = {
+    '.': { types: './dist/index.d.ts', default: './dist/index.js' },
+    './theme.css': './dist/theme.css',
+  };
   assert.deepEqual(nonCodeEntrypoints(exportsField), ['./theme.css']);
   assert.deepEqual(nonCodeEntrypoints(undefined), []);
 });

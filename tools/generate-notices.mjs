@@ -3,10 +3,20 @@ import { writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const OUT = 'THIRD-PARTY-NOTICES.md';
-const BASE = ['--no-install', 'license-checker-rseidelsohn', '--production', '--excludePrivatePackages'];
-const EMPTY = '# Avisos de terceiros\n\nNenhuma dependência de produção de terceiros no momento.\n';
+const BASE = [
+  '--no-install',
+  'license-checker-rseidelsohn',
+  '--production',
+  '--excludePrivatePackages',
+];
+const EMPTY =
+  '# Avisos de terceiros\n\nNenhuma dependência de produção de terceiros no momento.\n';
 
-const run = (args) => execFileSync('npx', [...BASE, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
+const run = (args) =>
+  execFileSync('npx', [...BASE, ...args], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'inherit'],
+  });
 
 // Com o conjunto de produção vazio a ferramenta imprime um arquivo vazio/sem conteúdo útil,
 // então o documento é gerado aqui para continuar sendo um markdown válido.

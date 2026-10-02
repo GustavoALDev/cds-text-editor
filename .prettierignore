@@ -5,3 +5,6 @@
 /.nx/workspace-data
 .nx/self-healing
 .angular
+/docs/specs
+/docs/superpowers
+/THIRD-PARTY-NOTICES.md

@@ -1,5 +1,11 @@
 # @cds/rte-render
 
-Renderização do HTML do editor de texto rico cds-text-editor.
+Renderização do HTML produzido pelo editor, para exibir o conteúdo sem carregar o editor.
 
-Pacote provisório do monorepo `cds-text-editor` (escopo `@cds` ainda não confirmado).
+**Status: em construção.** Ainda sem versão publicada.
+
+Instalação (nome provisório, escopo `@cds` ainda não confirmado): `npm i @cds/rte-render`
+
+Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
+
+Repositório: cds-text-editor (monorepo). Licença MIT.

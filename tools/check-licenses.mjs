@@ -1,11 +1,18 @@
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-const ALLOWED = new Set(['MIT', 'ISC', 'BSD-2-Clause', 'BSD-3-Clause', 'Apache-2.0']);
+const ALLOWED = new Set([
+  'MIT',
+  'ISC',
+  'BSD-2-Clause',
+  'BSD-3-Clause',
+  'Apache-2.0',
+]);
 const FORBIDDEN_RE = /(^|\/)(node_modules\/)?@tiptap-(pro|cloud)\//;
 const MARKER = 'node_modules/';
 
-export const nameOf = (key) => key.slice(key.lastIndexOf(MARKER) + MARKER.length);
+export const nameOf = (key) =>
+  key.slice(key.lastIndexOf(MARKER) + MARKER.length);
 
 // Falha fechado: lockfile sem mapa `packages` utilizável (v1, {}, arquivo errado) não pode passar.
 export function lockfileError(lock) {
@@ -17,7 +24,9 @@ export function lockfileError(lock) {
     typeof packages === 'object' &&
     !Array.isArray(packages) &&
     Object.keys(packages).length > 0;
-  return ok ? undefined : "lockfile inválido: sem 'packages' (lockfileVersion >= 2 exigido)";
+  return ok
+    ? undefined
+    : "lockfile inválido: sem 'packages' (lockfileVersion >= 2 exigido)";
 }
 
 const FORBIDDEN_FIELD_RE = /@tiptap-(pro|cloud)\//;
@@ -32,12 +41,17 @@ export function checkForbiddenNames(lock) {
   for (const [key, entry] of Object.entries(lock.packages)) {
     const fields = [];
     if (FORBIDDEN_RE.test(key)) fields.push('chave');
-    if (typeof entry?.name === 'string' && FORBIDDEN_FIELD_RE.test(entry.name)) fields.push('name');
+    if (typeof entry?.name === 'string' && FORBIDDEN_FIELD_RE.test(entry.name))
+      fields.push('name');
     const resolved = entry?.resolved;
-    if (typeof resolved === 'string' && (FORBIDDEN_FIELD_RE.test(resolved) || FORBIDDEN_HOST_RE.test(resolved))) {
+    if (
+      typeof resolved === 'string' &&
+      (FORBIDDEN_FIELD_RE.test(resolved) || FORBIDDEN_HOST_RE.test(resolved))
+    ) {
       fields.push('resolved');
     }
-    if (fields.length) errors.push(`pacote proibido: ${key} (campo: ${fields.join(', ')})`);
+    if (fields.length)
+      errors.push(`pacote proibido: ${key} (campo: ${fields.join(', ')})`);
   }
   return errors;
 }
@@ -83,26 +97,38 @@ export function isAllowed(expression) {
   }
 }
 
-const licenseFromEntry = (entry) => (typeof entry?.license === 'string' ? entry.license : undefined);
+const licenseFromEntry = (entry) =>
+  typeof entry?.license === 'string' ? entry.license : undefined;
 
 // Só o conjunto de produção (o que vai ao tarball) é checado: entradas dev/devOptional são
 // toolchain. Pacotes do workspace (sem node_modules/ na chave, ou link: true) são ignorados.
-export function checkLicenses(lock, licenseOf = (_name, entry) => licenseFromEntry(entry)) {
+export function checkLicenses(
+  lock,
+  licenseOf = (_name, entry) => licenseFromEntry(entry),
+) {
   const invalid = lockfileError(lock);
   if (invalid) return [invalid];
   const errors = [];
   for (const [key, entry] of Object.entries(lock.packages)) {
-    if (!key.includes(MARKER) || entry.link || entry.dev || entry.devOptional) continue;
+    if (!key.includes(MARKER) || entry.link || entry.dev || entry.devOptional)
+      continue;
     const name = nameOf(key);
     const license = licenseOf(name, entry);
-    if (!license || !isAllowed(license)) errors.push(`${name}: licença "${license ?? 'desconhecida'}" fora da allowlist`);
+    if (!license || !isAllowed(license))
+      errors.push(
+        `${name}: licença "${license ?? 'desconhecida'}" fora da allowlist`,
+      );
   }
   return errors;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  const lock = JSON.parse(readFileSync(process.argv[2] ?? 'package-lock.json', 'utf8'));
-  const errors = [...new Set([...checkForbiddenNames(lock), ...checkLicenses(lock)])];
+  const lock = JSON.parse(
+    readFileSync(process.argv[2] ?? 'package-lock.json', 'utf8'),
+  );
+  const errors = [
+    ...new Set([...checkForbiddenNames(lock), ...checkLicenses(lock)]),
+  ];
   for (const e of errors) console.error(e);
   if (!errors.length) console.log('licenças ok');
   process.exit(errors.length ? 1 : 0);
