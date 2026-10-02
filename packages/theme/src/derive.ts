@@ -2,14 +2,14 @@ import { clamp, luminance, toSrgb, type Rgb } from './color/convert';
 import { fromOklch, mixOklch, toOklch, type Oklch } from './color/oklab';
 
 /** Luminância (srgb-linear) abaixo da qual o texto sobre a semente é branco; acima, preto. */
-const WHITE_Y = 0.1791;
+export const WHITE_Y = 0.1791;
 
 /**
  * Ganho do degrau on-*. O degrau precisa ser praticamente exato: uma rampa de 0,001 de largura
  * deixava ~35 mil cores sRGB (Y logo abaixo de WHITE_Y) com texto cinza. A cor de 8 bits mais
  * próxima do limiar fica a ~1,1e-8 dele, então o ganho precisa passar de ~9e7.
  */
-const STEP_GAIN = 1e9;
+export const STEP_GAIN = 1e9;
 
 /** 1 = semente escura (texto branco), 0 = clara (texto preto); `y` é a luminância da semente. */
 export const onLevel = (y: number): number => clamp((WHITE_Y - y) * STEP_GAIN);
