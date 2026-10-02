@@ -2,11 +2,12 @@
  * Gera packages/theme/src/__fixtures__/spike-golden.json a partir do spike T6
  * (docs/specs/referencias/t6-tema/theme-fallback.mjs), a verdade independente do plano B.
  *
- * ATENÇÃO: o spike tem um erro de digitação conhecido na linha "m" de `linearToOklab`
- * (0.0883024619 * b, quando o coeficiente padrão do OKLab é 0.1073969566). Como docs/specs
- * não deve ser editado, este script lê o spike como texto, aplica em memória a correção desse
- * único coeficiente (exigindo exatamente uma ocorrência), grava a cópia corrigida em
- * $HOME/.cache/tmp e a importa de lá. O golden é, portanto, "matemática do spike + typo corrigido".
+ * ATENÇÃO: o spike tem dois defeitos conhecidos. (1) Erro de digitação na linha "m" de
+ * `linearToOklab` (0.0883024619 * b; o coeficiente padrão do OKLab é 0.1073969566). (2) O degrau
+ * `clamp((WHITE_Y - y) * 1000)` é uma rampa de 0,001 de largura (~35 mil cores sRGB com texto
+ * cinza); o ganho passa a 1e9. Como docs/specs não deve ser editado, este script lê o spike como
+ * texto, aplica em memória as duas correções (exigindo exatamente uma ocorrência de cada), grava a cópia corrigida em
+ * $HOME/.cache/tmp e a importa de lá. O golden é, portanto, "matemática do spike + correções".
  *
  * Uso: node tools/gen-theme-golden.mjs
  */
@@ -15,19 +16,39 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const BAD = '0.2119034982 * r + 0.6806995451 * g + 0.0883024619 * b';
-const GOOD = '0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b';
+const FIXES = [
+  {
+    // Coeficiente OKLab errado na linha "m" de linearToOklab.
+    bad: '0.2119034982 * r + 0.6806995451 * g + 0.0883024619 * b',
+    good: '0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b',
+    name: 'coeficiente OKLab',
+  },
+  {
+    // A rampa de 0,001 de largura deixava ~35 mil cores sRGB com texto cinza: degrau praticamente exato.
+    bad: 'const s = clamp((WHITE_Y - y) * 1000);',
+    good: 'const s = clamp((WHITE_Y - y) * 1e9);',
+    name: 'ganho do degrau',
+  },
+];
 
-/** Aplica a correção do coeficiente; lança se a ocorrência não for única. */
-export function applyOklabFix(source) {
-  const count = source.split(BAD).length - 1;
+function applyFix({ bad, good, name }, source) {
+  const count = source.split(bad).length - 1;
   if (count !== 1) {
     throw new Error(
-      `Correção do spike: esperada 1 ocorrência do coeficiente errado, encontradas ${count}.`,
+      `Correção do spike (${name}): esperada 1 ocorrência, encontradas ${count}.`,
     );
   }
-  return source.replace(BAD, () => GOOD);
+  return source.replace(bad, () => good);
 }
+
+/** Aplica a correção do coeficiente OKLab; lança se a ocorrência não for única. */
+export const applyOklabFix = (source) => applyFix(FIXES[0], source);
+
+/** Aplica a correção do ganho do degrau; lança se a ocorrência não for única. */
+export const applyStepFix = (source) => applyFix(FIXES[1], source);
+
+/** Aplica todas as correções conhecidas do spike (cada uma exatamente uma vez). */
+export const applySpikeFixes = (source) => applyStepFix(applyOklabFix(source));
 
 export const SEEDS = [
   '#8514f5',
@@ -60,6 +81,18 @@ export const SEEDS = [
   '#14b8a6',
   '#f97316',
   '#6b7280',
+  // Perto do limiar de luminância (0.1791): exemplo da rampa, 8-bit mais próximos de cada lado
+  // e cores a menos de 0.0005 abaixo/acima.
+  '#e51e3a',
+  '#97687b',
+  '#1d8811',
+  '#0274e0',
+  '#03874d',
+  '#09882e',
+  '#1b7cb2',
+  '#03847a',
+  '#068836',
+  '#0d78cd',
 ];
 
 async function main() {
@@ -67,16 +100,18 @@ async function main() {
   const spike = join(root, 'docs/specs/referencias/t6-tema/theme-fallback.mjs');
   let patched;
   try {
-    patched = applyOklabFix(readFileSync(spike, 'utf8'));
+    patched = applySpikeFixes(readFileSync(spike, 'utf8'));
   } catch (e) {
     console.error(`Erro: ${e.message}`);
     process.exit(1);
   }
-  const tmp = join(process.env.TMPDIR ?? join(homedir(), '.cache/tmp'));
+  const tmp = process.env.TMPDIR ?? join(homedir(), '.cache', 'tmp');
   mkdirSync(tmp, { recursive: true });
   const copy = join(tmp, 'theme-fallback.fixed.mjs');
   writeFileSync(copy, patched);
-  console.log('Correção do coeficiente OKLab aplicada (1 ocorrência).');
+  console.log(
+    'Correções do spike aplicadas (coeficiente OKLab e ganho do degrau, 1 ocorrência cada).',
+  );
   const { createRteTheme } = await import(pathToFileURL(copy).href);
 
   const golden = [];

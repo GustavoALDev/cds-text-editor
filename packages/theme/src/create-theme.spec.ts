@@ -99,6 +99,61 @@ describe('createRteTheme', () => {
     for (const value of Object.values(vars)) expect(value).toMatch(HEX);
   });
 
+  it('treats a throwing custom parser as invalid and clamps out-of-range channels', () => {
+    const boom = (): never => {
+      throw new Error('boom');
+    };
+    expect(createRteTheme({ primary: 'x', parseColor: boom })).toEqual(
+      createRteTheme(),
+    );
+    expect(
+      createRteTheme({ primary: 'x', parseColor: () => [2, -1, 128 / 255] }),
+    ).toEqual(createRteTheme({ primary: '#ff0080' }));
+  });
+
+  it('emits exactly the documented --rte-* keys', () => {
+    const roles = ['primary', 'secondary', 'tertiary'].flatMap((r) => [
+      `--rte-${r}`,
+      `--rte-on-${r}`,
+      `--rte-${r}-hover`,
+      `--rte-${r}-active`,
+      `--rte-${r}-text`,
+      `--rte-${r}-subtle`,
+      `--rte-${r}-border`,
+    ]);
+    const expected = [
+      '--rte-surface',
+      '--rte-surface-raised',
+      '--rte-text',
+      '--rte-text-muted',
+      '--rte-border',
+      '--rte-focus',
+      ...roles,
+      '--rte-danger',
+      '--rte-warning',
+      '--rte-success',
+      '--rte-code-bg',
+      '--rte-code-text',
+      '--rte-code-comment',
+      '--rte-code-keyword',
+      '--rte-code-string',
+      '--rte-code-number',
+      '--rte-code-function',
+    ];
+    for (const mode of ['light', 'dark'] as const) {
+      const keys = Object.keys(createRteTheme({ mode }));
+      expect(keys.sort()).toEqual(expected.sort());
+      expect(keys).toHaveLength(37);
+      expect(keys.some((k) => k.startsWith('--_'))).toBe(false);
+    }
+  });
+
+  it('keeps on-* readable on the ramp example from the review', () => {
+    expect(createRteTheme({ primary: '#e51e3a' })['--rte-on-primary']).toBe(
+      '#ffffff',
+    );
+  });
+
   it('exposes the static semantic and code tokens for the resolved mode', () => {
     const light = createRteTheme({ mode: 'light' });
     const dark = createRteTheme({ mode: 'dark' });

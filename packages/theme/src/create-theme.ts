@@ -1,4 +1,4 @@
-import { toHex, toLinear, type Rgb } from './color/convert';
+import { clamp, map3, toHex, toLinear, type Rgb } from './color/convert';
 import { oklchToSrgb, toOklch, type Oklch } from './color/oklab';
 import { parseColor } from './color/parse';
 import { ANGULAR_DEFAULTS, type ColorParser } from './defaults';
@@ -18,15 +18,22 @@ const ROLES = ['primary', 'secondary', 'tertiary'] as const;
 /**
  * Plano B: calcula em JS os tokens `--rte-*` (mesma matemática do theme.css) para navegadores
  * sem cores relativas / `light-dark()`. Nunca lança: semente inválida cai no padrão Angular, e
- * canais não finitos devolvidos por um parser customizado também são tratados como inválidos.
+ * um parser customizado que lança ou devolve canais não finitos também é tratado como inválido;
+ * canais finitos são recortados em [0, 1].
  */
 export function createRteTheme(
   options: CreateRteThemeOptions = {},
 ): Record<string, string> {
   const parse = options.parseColor ?? parseColor;
   const resolve = (value: string | undefined, fallback: string): Rgb => {
-    const parsed = value === undefined ? null : parse(value);
-    if (parsed && parsed.every(Number.isFinite)) return parsed;
+    let parsed: Rgb | null = null;
+    try {
+      parsed = value === undefined ? null : parse(value);
+    } catch {
+      parsed = null; // parser customizado que lança: semente inválida
+    }
+    if (parsed && parsed.every(Number.isFinite))
+      return map3(parsed, (v) => clamp(v));
     return parseColor(fallback) as Rgb;
   };
   const dark = options.dark ?? options.mode === 'dark';
