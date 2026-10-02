@@ -39,8 +39,9 @@ function getMedia(): MediaQueryLike | null {
 }
 
 /**
- * `true` só se o navegador entende cores relativas, `light-dark()` e `@property` (o que o
- * theme.css exige). Em Node/SSR ou diante de qualquer erro, `false`.
+ * `true` só se o navegador entende tudo o que o theme.css exige: cores relativas em srgb-linear e
+ * em oklch (`color(from …)`, `oklch(from …)`), `color-mix(in oklab, …)`, `light-dark()` e
+ * `@property`. Em Node/SSR ou diante de qualquer erro, `false`.
  */
 export function supportsRelativeColors(): boolean {
   if (typeof CSS === 'undefined' || typeof CSS.supports !== 'function')
@@ -49,7 +50,9 @@ export function supportsRelativeColors(): boolean {
   try {
     return (
       CSS.supports('color', 'color(from red srgb-linear calc(r) g b)') &&
-      CSS.supports('color', 'light-dark(red, blue)')
+      CSS.supports('color', 'light-dark(red, blue)') &&
+      CSS.supports('color', 'oklch(from red l c h)') &&
+      CSS.supports('color', 'color-mix(in oklab, red, blue)')
     );
   } catch {
     return false;

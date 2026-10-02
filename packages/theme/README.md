@@ -82,7 +82,7 @@ Opções (`RteTheme` + `force`): `primary`, `secondary`, `tertiary`, `mode` (`'a
 
 Semântica de `applyRteTheme`:
 
-- **Caminho nativo** (navegador com cores relativas, `light-dark()` e `@property`): define só as sementes informadas (texto original, qualquer cor CSS), o atributo `data-rte-mode` (quando `mode` é informado) e, para `neutral: 'gray'`, `--rte-neutral-tint: 0`. O `theme.css` deriva o resto.
+- **Caminho nativo** (navegador com cores relativas `color(from …)`/`oklch(from …)`, `color-mix(in oklab, …)`, `light-dark()` e `@property`): define só as sementes informadas (texto original, qualquer cor CSS), o atributo `data-rte-mode` (quando `mode` é informado) e, para `neutral: 'gray'`, `--rte-neutral-tint: 0`. O `theme.css` deriva o resto.
 - **Plano B** (navegador sem esse suporte, ou `force: true`): calcula tudo com `createRteTheme` e define cada variável inline com `style.setProperty` (sem `unsafe-inline`; ver CSP), mais `color-scheme`.
 - O **cleanup** remove tudo o que a função definiu (propriedades, atributo, listener de `prefers-color-scheme`). Ele **não restaura** um valor inline preexistente da mesma propriedade: ele a remove.
 - Aplicar de novo no **mesmo elemento** descarta a aplicação anterior.
@@ -136,7 +136,7 @@ import {
 
 | Export                                  | O que faz                                                                                                                                                                                                                                                      |
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `supportsRelativeColors()`              | `true` só se o navegador entende cores relativas, `light-dark()` e `@property`. Em Node/SSR, `false`                                                                                                                                                           |
+| `supportsRelativeColors()`              | `true` só se o navegador entende tudo o que o `theme.css` usa: cores relativas (`color(from …)` e `oklch(from …)`), `color-mix(in oklab, …)`, `light-dark()` e `@property`. Em Node/SSR, `false`                                                               |
 | `createRteTheme(options)`               | Devolve o mapa de 37 variáveis `--rte-*` em `#rrggbb` (e valores estáticos). Opções: `primary`, `secondary`, `tertiary`, `mode`, `neutral`, `dark` (vence `mode`), `parseColor` (leitor de cores próprio). Nunca lança: semente inválida cai no padrão Angular |
 | `parseColor(input)`                     | Lê uma cor CSS e devolve `[r, g, b]` em 0..1, ou `null` se inválida (máx. 200 caracteres)                                                                                                                                                                      |
 | `checkRteTheme(options)`                | Relatório de contraste (`{ ok, checks, invalid }`): 72 verificações, 36 por modo                                                                                                                                                                               |

@@ -70,6 +70,27 @@ describe('supportsRelativeColors', () => {
     vi.stubGlobal('CSS', { supports: () => true });
     expect(supportsRelativeColors()).toBe(true);
   });
+
+  it.each([
+    'color(from red srgb-linear calc(r) g b)',
+    'light-dark(red, blue)',
+    'oklch(from red l c h)',
+    'color-mix(in oklab, red, blue)',
+  ])(
+    'is false when only %j is unsupported (theme.css needs all four)',
+    (missing) => {
+      vi.stubGlobal('CSSPropertyRule', class {});
+      const asked: string[] = [];
+      vi.stubGlobal('CSS', {
+        supports: (p: string, v: string) => {
+          asked.push(`${p}:${v}`);
+          return v !== missing;
+        },
+      });
+      expect(supportsRelativeColors()).toBe(false);
+      expect(asked).toContain(`color:${missing}`);
+    },
+  );
 });
 
 describe('applyRteTheme', () => {
