@@ -18,13 +18,14 @@ npx nx run-many -t lint,typecheck,build,test,verify-package       # lint, build,
 npm run check:rules                                     # regras do repositório (tools/check-repo-rules.mjs)
 npm run check:licenses                                  # gate de licenças
 npm run check:pack                                      # verify-package em todos os pacotes
+npm run check:size                                      # orçamento de tamanho por cenário (nx run theme:size, tools/check-size.mjs)
 npm run test:tools                                      # testes de tools/
 npm run notices                                         # regenera THIRD-PARTY-NOTICES.md
 npx playwright test -c e2e --project=chromium           # E2E; em WSL veja o LD_LIBRARY_PATH em e2e/README.md
 npx changeset                                           # registrar mudança de pacote
 ```
 
-CI: `.github/workflows/ci.yml` roda no PR e no push para `main` (check:rules, test:tools, notices sem drift, `nx affected -t lint typecheck build test verify-package`, check:licenses (depois do build, para ler o `dist`), `typecheck:e2e`, E2E Chromium).
+CI: `.github/workflows/ci.yml` roda no PR e no push para `main` (check:rules, test:tools, notices sem drift, `nx affected -t lint typecheck build test verify-package size`, check:licenses (depois do build, para ler o `dist`), `typecheck:e2e`, E2E Chromium).
 
 Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp` (e `NX_DAEMON=false` se o daemon do Nx atrapalhar).
 

@@ -51,9 +51,20 @@ Preenchidas pelas Tarefas 10, 12 e 14.
 
 #### Orçamento de tamanho (R11)
 
-| Medição | Orçamento | Data |
-| ------- | --------- | ---- |
-|         |           |      |
+| Cenário (import do consumidor)                                  | Medição min / min+gzip (B) | Orçamento (B) | Data       |
+| --------------------------------------------------------------- | -------------------------- | ------------- | ---------- |
+| `whole` (`export *`)                                            | 11007 / 4898               | 5632          | 2026-10-02 |
+| `apply` (`applyRteTheme`, puxa o plano B)                       | 7442 / 3460                | 4096          | 2026-10-02 |
+| `create` (`createRteTheme`)                                     | 5645 / 2737                | 3072          | 2026-10-02 |
+| `parse` (`parseColor`)                                          | 2956 / 1450                | 2048          | 2026-10-02 |
+| `presets` (`RTE_THEME_PRESETS`)                                 | 476 / 304                  | 512           | 2026-10-02 |
+| `check` (`checkRteTheme`, `warnIfPoorTheme`, `suggestRteColor`) | 8761 / 3994                | 4608          | 2026-10-02 |
+
+Medição com esbuild (`bundle`, `minify`, `treeShaking`, ESM) sobre `packages/theme/dist/index.js`, gzip nível 9; orçamentos em `packages/theme/size-budget.json` (medição + cerca de 10 %, arredondada para cima ao próximo múltiplo de 0,5 kB), verificados por `tools/check-size.mjs` (`nx run theme:size`, no CI via `nx affected`).
+
+A spec (R11) pede JS de no máximo 3 kB min+gzip e autoriza ajustar após medir. O pacote inteiro mede 4,9 kB e o caminho de `applyRteTheme` 3,5 kB, acima do alvo literal, porque o plano B (cálculo em OKLab/OKLCH no JS, equivalente ao CSS de cores relativas), o parser de cores e o verificador de contraste são inerentes a um fallback autocontido, sem dependências. O `sideEffects` declara só `*.css` e o JS é tree-shakeable (provado em `tools/check-size.test.mjs`): cada consumidor paga só pelo que importa (`parseColor` 1,4 kB, `createRteTheme` 2,7 kB, presets 0,3 kB), por isso o orçamento é por cenário e não um único número. Um ajuste feito ao medir: `STATIC_SPECS` em `check-theme.ts` era uma constante de módulo com chamadas no inicializador, o que impedia o esbuild de descartar `STATIC_TOKENS` e a lógica de avisos de quem só importava `parseColor` ou os presets; virou função (`staticSpecs()`), sem mudança de comportamento (`parse` 1785 para 1450 B, `presets` 650 para 304 B, `create` 2863 para 2737 B, `apply` 3583 para 3460 B).
+
+Opções futuras (não adotadas, mudariam a API ou o comportamento): (1) entry point `@cds/rte-theme/dev` para `checkRteTheme`, `warnIfPoorTheme` e `suggestRteColor`, que tiraria cerca de 1,1 kB do pacote inteiro (4898 B contra 3792 B sem eles); (2) carregar o plano B sob demanda (import dinâmico), de modo que o caminho nativo de `applyRteTheme` não o inclua, economia estimada de 2 a 2,5 kB no cenário `apply` (estimativa a partir de `create`, 2,7 kB, e `supportsRelativeColors`, 0,6 kB), ao custo de tornar o fallback assíncrono.
 
 #### Resultado por navegador
 

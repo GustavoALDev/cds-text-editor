@@ -41,6 +41,21 @@
         "command": "tsc -p packages/theme/tsconfig.spec.json --noEmit",
         "cwd": "{workspaceRoot}"
       }
+    },
+    "size": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "inputs": [
+        "production",
+        "^production",
+        "{workspaceRoot}/tools/check-size.mjs",
+        "{projectRoot}/size-budget.json"
+      ],
+      "cache": true,
+      "options": {
+        "command": "node tools/check-size.mjs packages/theme/dist/index.js",
+        "cwd": "{workspaceRoot}"
+      }
     }
   }
 }

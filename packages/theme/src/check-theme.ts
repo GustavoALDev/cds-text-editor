@@ -74,7 +74,8 @@ const BASE_SPECS: Spec[] = [
   ['C5b', 'text-muted', 'surface', 4.5, 'text-muted sobre surface'],
 ];
 
-const STATIC_SPECS: Spec[] = [
+// Função (não constante): um inicializador com chamadas impede o tree-shaking de STATIC_TOKENS.
+const staticSpecs = (): Spec[] => [
   ...['danger', 'warning', 'success'].flatMap((name): Spec[] =>
     ['surface', 'surface-raised'].map((bg): Spec => [
       `static:${name}:${bg}`,
@@ -135,7 +136,7 @@ export function checkRteTheme(options: CheckThemeOptions = {}): RteThemeReport {
     for (const role of ['secondary', 'tertiary'])
       for (const spec of roleSpecs(role))
         run(`${spec[0]}:${role}`, spec, `${spec[0]} ${spec[4]} (≥ ${spec[3]})`);
-    for (const spec of STATIC_SPECS)
+    for (const spec of staticSpecs())
       run(spec[0], spec, `${spec[4]} (≥ ${spec[3]})`);
   }
   return { ok: checks.every((c) => c.pass), checks, invalid };

@@ -1,0 +1,8 @@
+{
+  "whole": 5632,
+  "apply": 4096,
+  "create": 3072,
+  "parse": 2048,
+  "presets": 512,
+  "check": 4608
+}
