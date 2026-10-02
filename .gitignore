@@ -8,3 +8,6 @@ test-results
 coverage
 *.tgz
 .superpowers
+
+vitest.config.*.timestamp*
+.angular
