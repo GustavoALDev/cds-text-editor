@@ -3,7 +3,7 @@
   "compilerOptions": {
     "declarationMap": false
   },
-  "renderCompilerOptions": {
+  "angularCompilerOptions": {
     "compilationMode": "partial"
   }
 }
