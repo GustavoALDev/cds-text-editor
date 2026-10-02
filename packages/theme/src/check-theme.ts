@@ -146,7 +146,9 @@ export interface SuggestRteColorOptions {
   parseColor?: ColorParser;
   /**
    * Avaliador de uma semente (`true` = passa). Para testes e extensão; o padrão aprova a semente
-   * quando todas as verificações do papel `primary` passam em `checkRteTheme`.
+   * quando todas as verificações do papel `primary` passam em `checkRteTheme`. Um `check`
+   * personalizado SUBSTITUI essa semântica do papel `primary` (inclusive a verificação inicial
+   * que decide devolver `null`).
    */
   check?: (color: string) => boolean;
 }
@@ -198,6 +200,41 @@ export function suggestRteColor(
   return null;
 }
 
+const ROLE_RE = /:(secondary|tertiary)$/;
+
+/** Papel de um id de verificação: `null` para estáticas, `primary` sem sufixo. */
+const roleOf = (id: string): 'primary' | 'secondary' | 'tertiary' | null =>
+  id.startsWith('static:')
+    ? null
+    : ((ROLE_RE.exec(id)?.[1] as 'secondary' | 'tertiary' | undefined) ??
+      'primary');
+
+/**
+ * Mensagens (pt-BR) das verificações reprovadas do relatório. Regra da sugestão: só falhas de um
+ * papel recebem "Sugestão para `<papel>`" (a do próprio papel; estáticas nunca), e `suggest(papel)`
+ * é chamado no máximo uma vez por papel, só quando há falha daquele papel.
+ */
+export function formatFailedCheckWarnings(
+  report: RteThemeReport,
+  suggest: (role: 'primary' | 'secondary' | 'tertiary') => string | null,
+): string[] {
+  const cache = new Map<string, string | null>();
+  const suggestionFor = (role: 'primary' | 'secondary' | 'tertiary') => {
+    if (!cache.has(role)) cache.set(role, suggest(role));
+    return cache.get(role) ?? null;
+  };
+  return report.checks
+    .filter((c) => !c.pass)
+    .map((c) => {
+      const role = roleOf(c.id);
+      const suggestion = role ? suggestionFor(role) : null;
+      return (
+        `[rte-theme] contraste insuficiente (${c.mode}) em ${c.id}: ${c.label}; razão ${c.ratio.toFixed(2)} < ${c.min}.` +
+        (suggestion ? ` Sugestão para \`${role}\`: ${suggestion}.` : '')
+      );
+    });
+}
+
 /**
  * Avisa (pt-BR) sobre campos ilegíveis e verificações reprovadas; devolve o relatório.
  * Idempotente, sem efeitos além de chamar `warn`, sem acesso ao DOM. A análise nunca lança;
@@ -212,17 +249,19 @@ export function warnIfPoorTheme(
     warn(
       `[rte-theme] valor inválido em \`${field}\`: "${String(options[field as (typeof FIELDS)[number]])}"; usando o padrão do Angular.`,
     );
-  for (const c of report.checks.filter((x) => !x.pass)) {
-    const suggestion = options.primary
-      ? suggestRteColor(
-          options.primary,
-          options.parseColor ? { parseColor: options.parseColor } : {},
-        )
-      : null;
-    warn(
-      `[rte-theme] contraste insuficiente (${c.mode}) em ${c.id}: ${c.label}; razão ${c.ratio.toFixed(2)} < ${c.min}.` +
-        (suggestion ? ` Sugestão para \`primary\`: ${suggestion}.` : ''),
-    );
-  }
+  const suggest = (role: 'primary' | 'secondary' | 'tertiary') => {
+    const seed = options[role];
+    if (!seed) return null; // omitida: usa o padrão, nada a sugerir
+    const inRole = (id: string): boolean => roleOf(id) === role;
+    return suggestRteColor(seed, {
+      ...(options.parseColor && { parseColor: options.parseColor }),
+      check: (candidate) =>
+        checkRteTheme({ ...options, [role]: candidate })
+          .checks.filter((c) => inRole(c.id))
+          .every((c) => c.pass),
+    });
+  };
+  for (const message of formatFailedCheckWarnings(report, suggest))
+    warn(message);
   return report;
 }
