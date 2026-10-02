@@ -1,8 +1,9 @@
 import { clamp, from8, toSrgb, type Rgb } from './convert';
 import { fromOklch } from './oklab';
 
-const NUM = String.raw`[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?`;
+const NUM = String.raw`[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?`;
 const NUM_RE = new RegExp(`^(${NUM})(%|deg)?$`);
+const MAX_INPUT_LENGTH = 200;
 const HEX_RE = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/;
 const FN_RE = /^(rgba?|hsla?|oklch)\(([^()]*)\)$/;
 
@@ -21,7 +22,11 @@ function token(text: string): Token | null {
     : null;
 }
 
-/** Separa os argumentos (vírgula, espaço ou `/`) e valida a quantidade; o 4º é o alfa (ignorado, mas validado). */
+/**
+ * Separa os argumentos (vírgula, espaço ou `/`) e valida a quantidade.
+ * O 4º é o alfa: validado e ignorado, exceto alfa exatamente 0, que invalida a cor
+ * (sementes precisam ser opacas; totalmente transparente é tratada como inválida).
+ */
 function args(body: string): Token[] | null {
   const parts = body
     .trim()
@@ -34,6 +39,7 @@ function args(body: string): Token[] | null {
     if (!t) return null;
     tokens.push(t);
   }
+  if (tokens[3]?.value === 0) return null;
   return tokens.slice(0, 3);
 }
 
@@ -42,6 +48,8 @@ function parseHex(text: string): Rgb | null {
   const digits = text.slice(1);
   const full =
     digits.length <= 4 ? [...digits].map((c) => c + c).join('') : digits;
+  // Alfa (4º canal) é ignorado, salvo 00 (totalmente transparente), que invalida a cor.
+  if (full.length === 8 && full.slice(6) === '00') return null;
   const channel = (i: number): number =>
     parseInt(full.slice(i, i + 2), 16) / 255;
   return [channel(0), channel(2), channel(4)];
@@ -111,7 +119,7 @@ function parsePure(input: string): Rgb | null {
 }
 
 interface CanvasLike {
-  ctx: CanvasRenderingContext2D;
+  ctx: CanvasRenderingContext2D | null;
   doc: Document;
 }
 
@@ -119,12 +127,12 @@ interface CanvasLike {
 let canvasCache: CanvasLike | null = null;
 
 function getContext(): CanvasRenderingContext2D | null {
+  // Resultado negativo (sem contexto 2d) também fica em cache, por documento.
   if (canvasCache?.doc === document) return canvasCache.ctx;
   const canvas = document.createElement('canvas');
   canvas.width = 1;
   canvas.height = 1;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return null;
   canvasCache = { ctx, doc: document };
   return ctx;
 }
@@ -149,8 +157,11 @@ function parseWithCanvas(input: string): Rgb | null {
     ctx.clearRect(0, 0, 1, 1);
     ctx.fillStyle = input;
     ctx.fillRect(0, 0, 1, 1);
-    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    // Lê o pixel sobre fundo transparente (antes de qualquer mistura com as bases): sementes
+    // precisam ser opacas; cores com transparência são tratadas como inválidas.
+    const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
     if (r === undefined || g === undefined || b === undefined) return null;
+    if (a !== 255) return null;
     return sanitize(from8([r, g, b]));
   } catch {
     return null;
@@ -163,6 +174,7 @@ function parseWithCanvas(input: string): Rgb | null {
  * Nunca lança; o resultado tem sempre três canais finitos em [0, 1].
  */
 export function parseColor(input: string): Rgb | null {
-  if (typeof input !== 'string') return null;
+  // Teto defensivo: nenhuma cor CSS legítima precisa de mais que isso.
+  if (typeof input !== 'string' || input.length > MAX_INPUT_LENGTH) return null;
   return parsePure(input) ?? parseWithCanvas(input);
 }

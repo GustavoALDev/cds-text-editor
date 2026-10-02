@@ -86,6 +86,26 @@ describe('parseColor (sem DOM)', () => {
     expect(parseColor(value)).toBeNull();
   });
 
+  it('treats alpha exactly 0 as invalid and keeps ignoring partial alpha', () => {
+    expect(parseColor('rgba(10,20,30,0)')).toBeNull();
+    expect(parseColor('rgb(10 20 30 / 0%)')).toBeNull();
+    expect(parseColor('hsla(120, 100%, 25%, 0)')).toBeNull();
+    expect(parseColor('oklch(0.7 0.2 150 / 0)')).toBeNull();
+    expect(parseColor('#00000000')).toBeNull();
+    expect(parseColor('#0000')).toBeNull();
+    expect(hex('rgba(10,20,30,0.5)')).toBe('#0a141e');
+    expect(hex('#000000ff')).toBe('#000000');
+  });
+
+  it('is linear on pathological input and caps the input length', () => {
+    const start = performance.now();
+    expect(parseColor('1'.repeat(1e5) + 'x')).toBeNull();
+    expect(parseColor('rgb(' + '1'.repeat(1e5) + 'x)')).toBeNull();
+    expect(performance.now() - start).toBeLessThan(200);
+    expect(hex('rgb(' + ' '.repeat(150) + '133 20 245)')).toBe('#8514f5');
+    expect(parseColor('rgb(' + ' '.repeat(300) + '133 20 245)')).toBeNull();
+  });
+
   it('returns null for non-string input', () => {
     expect(parseColor(null as unknown as string)).toBeNull();
     expect(parseColor(undefined as unknown as string)).toBeNull();
@@ -117,39 +137,49 @@ describe('parseColor (sem DOM)', () => {
 });
 
 // Canvas falso: aceita só nomes conhecidos, como o navegador (valor inválido é ignorado).
-function fakeDocument(known: Record<string, [number, number, number]>) {
+type Known = Record<
+  string,
+  [number, number, number] | [number, number, number, number]
+>;
+
+function fakeDocument(known: Known) {
   const created = vi.fn();
+  const hexOf = (c: number[]): string =>
+    '#' +
+    c
+      .slice(0, 3)
+      .map((v) => v.toString(16).padStart(2, '0'))
+      .join('');
   const doc = {
     createElement: (tag: string) => {
       created(tag);
-      let current = '#000000';
-      let painted: [number, number, number] = [0, 0, 0];
+      let entry: number[] = [0, 0, 0, 255];
+      let painted: number[] = [0, 0, 0, 0];
       const ctx = {
         get fillStyle() {
-          return current;
+          return hexOf(entry);
         },
         set fillStyle(value: string) {
-          if (/^#[0-9a-f]{3}$/.test(value)) {
+          const found = value in known ? known[value] : undefined;
+          if (found)
+            entry = [...found, 255].slice(0, found.length === 4 ? 4 : 4);
+          else if (/^#[0-9a-f]{3}$/.test(value)) {
             const [, r = '0', g = '0', b = '0'] = value;
-            current = `#${r}${r}${g}${g}${b}${b}`;
-          } else if (value in known) {
-            current =
-              '#' +
-              (known[value] ?? [])
-                .map((v) => v.toString(16).padStart(2, '0'))
-                .join('');
+            entry = [
+              parseInt(r + r, 16),
+              parseInt(g + g, 16),
+              parseInt(b + b, 16),
+              255,
+            ];
           }
         },
-        clearRect: () => undefined,
-        fillRect: () => {
-          const entry = Object.values(known).find(
-            (rgb) =>
-              '#' + rgb.map((v) => v.toString(16).padStart(2, '0')).join('') ===
-              current,
-          );
-          painted = entry ?? [0, 0, 0];
+        clearRect: () => {
+          painted = [0, 0, 0, 0];
         },
-        getImageData: () => ({ data: [...painted, 255] }),
+        fillRect: () => {
+          painted = entry;
+        },
+        getImageData: () => ({ data: painted }),
       };
       return { width: 0, height: 0, getContext: () => ctx };
     },
@@ -182,6 +212,28 @@ describe('parseColor (canvas simulado)', () => {
     vi.stubGlobal('document', second.doc);
     hex('red');
     expect(second.created).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats transparent canvas colors as invalid (seeds must be opaque)', () => {
+    const { doc } = fakeDocument({
+      transparent: [0, 0, 0, 0],
+      ghost: [10, 20, 30, 0],
+      half: [10, 20, 30, 128],
+      red: [255, 0, 0, 255],
+    });
+    vi.stubGlobal('document', doc);
+    expect(parseColor('transparent')).toBeNull();
+    expect(parseColor('ghost')).toBeNull();
+    expect(parseColor('half')).toBeNull();
+    expect(hex('red')).toBe('#ff0000');
+  });
+
+  it('caches the negative result when the context is unavailable', () => {
+    const createElement = vi.fn(() => ({ getContext: () => null }));
+    vi.stubGlobal('document', { createElement });
+    expect(parseColor('red')).toBeNull();
+    expect(parseColor('red')).toBeNull();
+    expect(createElement).toHaveBeenCalledTimes(1);
   });
 
   it('returns null when the canvas or its context is unavailable or throws', () => {
