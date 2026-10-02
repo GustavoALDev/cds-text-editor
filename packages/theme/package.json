@@ -1,0 +1,35 @@
+{
+  "name": "@cds/rte-theme",
+  "version": "0.0.0",
+  "description": "Tema (CSS e tokens) do editor de texto rico cds-text-editor.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./theme.css": "./dist/theme.css"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TODO-AUTOR/cds-text-editor.git",
+    "directory": "packages/theme"
+  },
+  "bugs": "https://github.com/TODO-AUTOR/cds-text-editor/issues",
+  "homepage": "https://github.com/TODO-AUTOR/cds-text-editor#readme",
+  "keywords": [
+    "rich-text-editor",
+    "tiptap",
+    "prosemirror",
+    "angular"
+  ]
+}

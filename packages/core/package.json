@@ -1,0 +1,44 @@
+{
+  "name": "@cds/rte-core",
+  "version": "0.0.0",
+  "description": "Núcleo do editor de texto rico cds-text-editor: extensões Tiptap, utilitários e esquema do HTML.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./embeds": {
+      "types": "./dist/embeds/index.d.ts",
+      "default": "./dist/embeds/index.js"
+    },
+    "./code-languages": {
+      "types": "./dist/code-languages/index.d.ts",
+      "default": "./dist/code-languages/index.js"
+    }
+  },
+  "peerDependencies": {
+    "@tiptap/core": "^3.0.0",
+    "@tiptap/pm": "^3.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TODO-AUTOR/cds-text-editor.git",
+    "directory": "packages/core"
+  },
+  "bugs": "https://github.com/TODO-AUTOR/cds-text-editor/issues",
+  "homepage": "https://github.com/TODO-AUTOR/cds-text-editor#readme",
+  "keywords": [
+    "rich-text-editor",
+    "tiptap",
+    "prosemirror",
+    "angular"
+  ]
+}

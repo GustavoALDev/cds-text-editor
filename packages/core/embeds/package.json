@@ -1,0 +1,6 @@
+{
+  "name": "@cds/rte-core/embeds",
+  "type": "module",
+  "types": "../dist/embeds/index.d.ts",
+  "default": "../dist/embeds/index.js"
+}

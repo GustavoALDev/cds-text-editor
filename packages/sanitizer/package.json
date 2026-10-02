@@ -1,0 +1,32 @@
+{
+  "name": "@cds/rte-sanitizer",
+  "version": "0.0.0",
+  "description": "Sanitização do HTML do editor de texto rico cds-text-editor.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TODO-AUTOR/cds-text-editor.git",
+    "directory": "packages/sanitizer"
+  },
+  "bugs": "https://github.com/TODO-AUTOR/cds-text-editor/issues",
+  "homepage": "https://github.com/TODO-AUTOR/cds-text-editor#readme",
+  "keywords": [
+    "rich-text-editor",
+    "tiptap",
+    "prosemirror",
+    "angular"
+  ]
+}

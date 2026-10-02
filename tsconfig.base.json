@@ -17,6 +17,14 @@
     "noImplicitReturns": true,
     "sourceMap": true,
     "experimentalDecorators": true,
-    "baseUrl": "."
+    "paths": {
+      "@cds/rte-core": ["packages/core/src/index.ts"],
+      "@cds/rte-core/embeds": ["packages/core/embeds/src/index.ts"],
+      "@cds/rte-core/code-languages": [
+        "packages/core/code-languages/src/index.ts"
+      ],
+      "@cds/rte-sanitizer": ["packages/sanitizer/src/index.ts"],
+      "@cds/rte-theme": ["packages/theme/src/index.ts"]
+    }
   }
 }
