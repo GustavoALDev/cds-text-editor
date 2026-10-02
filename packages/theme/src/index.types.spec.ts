@@ -2,13 +2,21 @@ import { describe, expect, it } from 'vitest';
 import {
   ANGULAR_DEFAULTS,
   RTE_THEME_PRESETS,
+  applyRteTheme,
+  checkRteTheme,
+  createRteTheme,
+  type ApplyRteThemeOptions,
+  type CheckThemeOptions,
   type ColorParser,
+  type CreateRteThemeOptions,
+  type Rgb,
   type RteNeutral,
   type RteTheme,
   type RteThemeCheck,
   type RteThemeMode,
   type RteThemePresetName,
   type RteThemeReport,
+  type RteThemeVariables,
   type SuggestRteColorOptions,
 } from './index';
 
@@ -36,5 +44,28 @@ describe('public types', () => {
     expect(ANGULAR_DEFAULTS.primary).toBeTruthy();
     expect(parser('x')).toBeNull();
     expect(suggest).toEqual({});
+  });
+
+  it('expõe os tipos das assinaturas públicas (opções, Rgb e o mapa de variáveis)', () => {
+    const rgb: Rgb = [0, 0.5, 1];
+    const parse: ColorParser = () => rgb;
+    const create: CreateRteThemeOptions = {
+      primary: '#000',
+      dark: true,
+      parseColor: parse,
+    };
+    const check: CheckThemeOptions = { secondary: '#fff', parseColor: parse };
+    const apply: ApplyRteThemeOptions = { tertiary: '#123', force: true };
+    const vars: RteThemeVariables = createRteTheme(create);
+    // As chaves são `--rte-*`: um nome sem o prefixo não é aceito pelo tipo.
+    // @ts-expect-error chave fora do padrão `--rte-${string}`
+    const bad: RteThemeVariables = { surface: '#fff' };
+    const params: [
+      Parameters<typeof applyRteTheme>[1],
+      Parameters<typeof checkRteTheme>[0],
+    ] = [apply, check];
+    expect(vars['--rte-primary']).toBe('#0080ff'); // o parser customizado foi usado
+    expect(bad).toBeTruthy();
+    expect(params).toHaveLength(2);
   });
 });

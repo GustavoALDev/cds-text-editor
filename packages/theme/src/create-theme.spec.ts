@@ -192,7 +192,10 @@ describe('createRteTheme', () => {
           const vars = createRteTheme(
             seed ? { primary: seed, mode } : { mode },
           );
-          for (const surface of ['--rte-surface', '--rte-surface-raised']) {
+          for (const surface of [
+            '--rte-surface',
+            '--rte-surface-raised',
+          ] as const) {
             for (const key of ['danger', 'warning', 'success']) {
               const ratio = contrastRatio(
                 rgb8(vars[`--rte-${key}`] as string),

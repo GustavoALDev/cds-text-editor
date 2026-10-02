@@ -441,7 +441,7 @@ describe('property: determinismo e equivalências', () => {
         const input = { primary, secondary, tertiary, mode: m };
         const tinted = createRteTheme({ ...input, neutral: 'tinted' });
         const grayed = createRteTheme({ ...input, neutral: 'gray' });
-        for (const key of Object.keys(tinted)) {
+        for (const key of Object.keys(tinted) as (keyof typeof tinted)[]) {
           if (NEUTRAL_AFFECTED.has(key)) continue;
           expect(grayed[key], key).toBe(tinted[key]);
         }

@@ -11,3 +11,6 @@ export interface RteTheme {
   mode?: RteThemeMode;
   neutral?: RteNeutral;
 }
+
+/** Mapa devolvido por `createRteTheme`: nome da variável `--rte-*` -> valor CSS. */
+export type RteThemeVariables = Record<`--rte-${string}`, string>;

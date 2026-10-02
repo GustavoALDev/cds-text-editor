@@ -4,7 +4,7 @@ import { parseColor } from './color/parse';
 import { ANGULAR_DEFAULTS, type ColorParser } from './defaults';
 import { deriveRole } from './derive';
 import { STATIC_TOKENS } from './static-tokens';
-import type { RteTheme } from './types';
+import type { RteTheme, RteThemeVariables } from './types';
 
 export interface CreateRteThemeOptions extends RteTheme {
   /** Força claro/escuro; vence `mode`. */
@@ -41,7 +41,7 @@ type NeutralName = keyof typeof NEUTRAL_SPEC;
  */
 export function createRteTheme(
   options: CreateRteThemeOptions = {},
-): Record<string, string> {
+): RteThemeVariables {
   const parse = options.parseColor ?? parseColor;
   const resolve = (value: string | undefined, fallback: string): Rgb => {
     let parsed: Rgb | null = null;
@@ -85,7 +85,7 @@ export function createRteTheme(
   }
   tokens['focus'] = tokens['primary-text'] as Rgb;
 
-  const vars: Record<string, string> = {};
+  const vars: RteThemeVariables = {};
   for (const [name, value] of Object.entries(tokens))
     vars[`--rte-${name}`] = toHex(value);
   for (const [name, value] of Object.entries(STATIC_TOKENS[mode])) {
