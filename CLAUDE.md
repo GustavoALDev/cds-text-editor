@@ -13,7 +13,7 @@ spec → plano (`writing-plans`) → implementação → verificação. As specs
 ## Comandos
 
 ```bash
-npm ci                                                  # instalar (use o lockfile)
+npm ci                                                  # instalar (use o lockfile); exige npm >= 11 (engine-strict)
 npx nx run-many -t lint,build,test,verify-package       # lint, build, testes e npm pack + publint + attw
 npm run check:rules                                     # regras do repositório (tools/check-repo-rules.mjs)
 npm run check:licenses                                  # gate de licenças

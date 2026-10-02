@@ -11,7 +11,8 @@
   },
   "private": true,
   "engines": {
-    "node": "^22.22.3 || ^24.15.0 || >=26.0.0"
+    "node": "^22.22.3 || ^24.15.0 || >=26.0.0",
+    "npm": ">=11"
   },
   "devDependencies": {
     "@angular-devkit/core": "22.2.1",
@@ -22,6 +23,7 @@
     "@angular/compiler": "22.2.1",
     "@angular/compiler-cli": "22.2.1",
     "@angular/core": "22.2.1",
+    "@angular/forms": "22.2.1",
     "@angular/platform-browser": "22.2.1",
     "@arethetypeswrong/cli": "^0.18.5",
     "@changesets/cli": "^3.0.3",

@@ -24,6 +24,8 @@ jobs:
         with:
           node-version: lts/*
           cache: npm
+      # Salvaguarda: o repositório exige npm >= 11 (engines + engine-strict), independente do Node do runner.
+      - run: npm i -g npm@11
       - run: npm ci
       # PR: base = merge-base com main. Push em main: base = último commit com CI verde;
       # sem execução anterior bem-sucedida, cai em HEAD~1 (não pula nem quebra).

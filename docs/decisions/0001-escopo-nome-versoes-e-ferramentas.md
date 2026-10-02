@@ -16,28 +16,28 @@ O projeto é um editor de texto rico para Angular 22+ sobre Tiptap 3, publicado 
 
 ### (b) Versões fixadas
 
-| Item                                                                                                              | Versão             | Observação                                                                                                                                |
-| ----------------------------------------------------------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Node                                                                                                              | 22.23.3 (em uso)   | `engines`: `^22.22.3 \|\| ^24.15.0 \|\| >=26.0.0`, o mesmo intervalo exigido por `@angular/core` 22.2.1; o mínimo é o Node 22 LTS 22.22.3 |
-| npm                                                                                                               | 10.9.9             | ver (f) sobre `nx add`                                                                                                                    |
-| Nx (`nx`, `@nx/angular`, `@nx/js`, `@nx/eslint`, `@nx/eslint-plugin`, `@nx/playwright`, `@nx/vite`, `@nx/vitest`) | 23.2.1             |                                                                                                                                           |
-| Angular (`@angular/*`, CLI, build)                                                                                | 22.2.1             | fixado exato                                                                                                                              |
-| TypeScript                                                                                                        | 6.0.3              | fixado exato                                                                                                                              |
-| Vitest                                                                                                            | 4.1.11             | **não** 5: o Vitest 5 fica fora do peer `^3 \|\| ^4` de `@nx/vitest` 23.2.1                                                               |
-| `@vitest/coverage-v8`                                                                                             | ~4.1.0             | acompanha o Vitest                                                                                                                        |
-| Playwright (`@playwright/test`)                                                                                   | 1.63.0             |                                                                                                                                           |
-| ng-packagr                                                                                                        | 22.1.1 (`~22.1.0`) |                                                                                                                                           |
-| tsup                                                                                                              | 8.5.1              |                                                                                                                                           |
-| ESLint                                                                                                            | 9.39.5 (`^9.8.0`)  |                                                                                                                                           |
-| angular-eslint                                                                                                    | 22.5.0             |                                                                                                                                           |
-| publint                                                                                                           | 0.3.25             |                                                                                                                                           |
-| @arethetypeswrong/cli (attw)                                                                                      | 0.18.5             |                                                                                                                                           |
-| license-checker-rseidelsohn                                                                                       | 4.4.2              |                                                                                                                                           |
-| @changesets/cli                                                                                                   | 3.0.3              |                                                                                                                                           |
+| Item                                                                                                              | Versão               | Observação                                                                                                                                |
+| ----------------------------------------------------------------------------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Node                                                                                                              | 22.23.3 (em uso)     | `engines`: `^22.22.3 \|\| ^24.15.0 \|\| >=26.0.0`, o mesmo intervalo exigido por `@angular/core` 22.2.1; o mínimo é o Node 22 LTS 22.22.3 |
+| npm                                                                                                               | 11.x (>=11, exigido) | `engines.npm` `>=11` + `engine-strict=true` no `.npmrc`; ver (f) 2 e 3                                                                    |
+| Nx (`nx`, `@nx/angular`, `@nx/js`, `@nx/eslint`, `@nx/eslint-plugin`, `@nx/playwright`, `@nx/vite`, `@nx/vitest`) | 23.2.1               |                                                                                                                                           |
+| Angular (`@angular/*`, CLI, build)                                                                                | 22.2.1               | fixado exato                                                                                                                              |
+| TypeScript                                                                                                        | 6.0.3                | fixado exato                                                                                                                              |
+| Vitest                                                                                                            | 4.1.11               | **não** 5: o Vitest 5 fica fora do peer `^3 \|\| ^4` de `@nx/vitest` 23.2.1                                                               |
+| `@vitest/coverage-v8`                                                                                             | ~4.1.0               | acompanha o Vitest                                                                                                                        |
+| Playwright (`@playwright/test`)                                                                                   | 1.63.0               |                                                                                                                                           |
+| ng-packagr                                                                                                        | 22.1.1 (`~22.1.0`)   |                                                                                                                                           |
+| tsup                                                                                                              | 8.5.1                |                                                                                                                                           |
+| ESLint                                                                                                            | 9.39.5 (`^9.8.0`)    |                                                                                                                                           |
+| angular-eslint                                                                                                    | 22.5.0               |                                                                                                                                           |
+| publint                                                                                                           | 0.3.25               |                                                                                                                                           |
+| @arethetypeswrong/cli (attw)                                                                                      | 0.18.5               |                                                                                                                                           |
+| license-checker-rseidelsohn                                                                                       | 4.4.2                |                                                                                                                                           |
+| @changesets/cli                                                                                                   | 3.0.3                |                                                                                                                                           |
 
 ### (c) Tiptap
 
-Faixa de peer **provisória** `^3.0.0` para `@tiptap/core` e `@tiptap/pm` (em `@cds/rte-core`). Última 3.x publicada na verificação: `@tiptap/core` 3.31.4. A faixa final e o peer de ProseMirror são definidos na spec 08. Tiptap ainda não está instalado no workspace.
+Faixa de peer **provisória** `^3.0.0` para `@tiptap/core` e `@tiptap/pm` (em `@cds/rte-core`). Última 3.x publicada na verificação: `@tiptap/core` 3.31.4. A faixa final e o peer de ProseMirror são definidos na spec 08. O Tiptap já entra no workspace a partir da spec 03 (instalado pelo npm 11 como peer automático de `@cds/rte-core`: hoje `@tiptap/core` e `@tiptap/pm` 3.31.4).
 
 ### (d) Nx + npm e ferramentas de build
 
@@ -57,8 +57,8 @@ Registro apenas (`npm view @angular/aria version dist-tags --json`, 2026-10-02):
 Verificada pelos builds, lints e testes funcionando em 2026-10-02: Nx 23.2.1 + Angular 22.2.1 + ng-packagr 22.1.1 constroem `angular` e `render` (`nx run-many -t lint,test,build,verify-package` verde). Exceções e achados:
 
 1. **Setup de TS solution.** `@nx/angular:init` do Nx 23 rejeita o setup padrão de TS solution (project references). Usamos `tsconfig.base.json` clássico, com `paths`.
-2. **`nx add` quebra no npm 10.9.9** (bug do arborist). Plugins instalados com `npm i -D` + `nx g @nx/x:init`.
-3. **`.npmrc` com `legacy-peer-deps=true`**, e o lockfile foi gerado com ele. Isso esconde conflitos de peer até o Tiptap ser instalado na spec 08; remover a flag nessa spec.
+2. **`nx add` quebrava no npm 10.9.9** (bug do arborist). Plugins instalados com `npm i -D` + `nx g @nx/x:init`. O repositório agora exige npm 11 (item 3).
+3. **npm >= 11 obrigatório; sem `legacy-peer-deps`.** `engines.npm` `>=11` e `engine-strict=true` no `.npmrc` (npm 10 recusa `npm ci`/`npm install` com `EBADENGINE`); o lockfile foi regenerado com npm 11, que instala peers por padrão. `legacy-peer-deps=true` foi removido: escondia peers ausentes (`@angular/forms`, agora devDependency exata 22.2.1) e o Tiptap, que chega na spec 03, não na 08. Node 24 LTS já traz o npm 11; no CI há um passo `npm i -g npm@11` de salvaguarda.
 4. **TypeScript 6.** `baseUrl` foi removido; `paths` usam o prefixo `./`. O tsup precisa de `dts.compilerOptions.ignoreDeprecations: '6.0'`, duplicado nos 3 `tsup.config.ts` (rever na atualização do tsup ou TS 7).
 5. **attw.** Usa `--profile esm-only` e `--exclude-entrypoints` apenas para exports de css/scss/json (falso positivo em `./theme.css`); o publint continua validando esses exports.
 6. **ng-packagr.** A raiz do tarball é `dist`; o `.npmignore` é emitido; o target `copy-license` copia o `LICENSE`.
@@ -69,7 +69,7 @@ Verificada pelos builds, lints e testes funcionando em 2026-10-02: Nx 23.2.1 + A
 
 - Versões exatas de Angular, TypeScript e Nx evitam surpresas; atualizar é decisão consciente, com novo registro aqui.
 - O escopo `@cds` pode mudar; até a confirmação nada é publicado.
-- `legacy-peer-deps=true` é dívida técnica com prazo (spec 08).
+- Contribuidores precisam de npm 11 (`npm i -g npm@11`); com npm 10 a instalação falha de propósito.
 - Vitest fica em 4.x até o `@nx/vitest` aceitar o 5.
 - A duplicação de `ignoreDeprecations` nos tsup é aceita por ora.
 

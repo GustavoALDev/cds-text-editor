@@ -5,7 +5,7 @@ Obrigado pelo interesse. Documentação em português do Brasil; código, nomes 
 ## Pré-requisitos
 
 - Node.js LTS compatível com Angular 22: `^22.22.3 || ^24.15.0 || >=26.0.0` (campo `engines` do `package.json`).
-- npm 10 ou superior.
+- npm 11 ou superior (`engine-strict=true`: o npm 10 recusa a instalação). O Node 24 LTS já traz o npm 11; em outros Node use `npm i -g npm@11`.
 
 ## Começando
 
@@ -13,7 +13,7 @@ Obrigado pelo interesse. Documentação em português do Brasil; código, nomes 
 npm ci
 ```
 
-O `.npmrc` da raiz tem `legacy-peer-deps=true` (ver ADR 0001).
+O `.npmrc` da raiz tem `engine-strict=true` e não usa `legacy-peer-deps` (ver ADR 0001).
 
 ## Comandos
 
