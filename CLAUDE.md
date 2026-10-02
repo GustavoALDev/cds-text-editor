@@ -24,6 +24,8 @@ npx playwright test -c e2e --project=chromium           # E2E; em WSL veja o LD_
 npx changeset                                           # registrar mudança de pacote
 ```
 
+CI: `.github/workflows/ci.yml` roda no PR e no push para `main` (check:rules, test:tools, check:licenses, notices sem drift, `nx affected -t lint build test verify-package`, E2E Chromium).
+
 Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp` (e `NX_DAEMON=false` se o daemon do Nx atrapalhar).
 
 ## Convenções

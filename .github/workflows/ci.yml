@@ -1,0 +1,52 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # nx-set-shas e o `nx affected` precisam do histórico completo.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      # PR: base = merge-base com main. Push em main: base = último commit com CI verde;
+      # sem execução anterior bem-sucedida, cai em HEAD~1 (não pula nem quebra).
+      - uses: nrwl/nx-set-shas@v4
+        with:
+          main-branch-name: main
+      # Verificações do repositório: rodam sempre, independem do `affected`.
+      - run: npm run check:rules
+      - run: npm run test:tools
+      - run: npm run check:licenses
+      - name: THIRD-PARTY-NOTICES.md em dia
+        run: |
+          npm run notices
+          git diff --exit-code THIRD-PARTY-NOTICES.md
+      # `build` inclui o typecheck (Vitest não checa tipos).
+      - run: npx nx affected -t lint build test verify-package --parallel=3
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test -c e2e --project=chromium
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            e2e/test-results/
+          if-no-files-found: ignore

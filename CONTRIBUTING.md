@@ -34,6 +34,6 @@ Testes E2E: veja [e2e/README.md](e2e/README.md).
 2. **Nenhum recurso é feito sem teste automatizado e verificação em navegador real.**
 3. Crie uma branch a partir de `main` e abra um PR usando o template.
 4. Se a mudança afeta um pacote publicado, adicione um changeset (`npx changeset`). Cada pacote tem versão independente.
-5. Lint, build, testes e `check:rules` precisam passar.
+5. Lint, build, testes e `check:rules` precisam passar; o CI (`.github/workflows/ci.yml`) roda essas verificações em todo PR.
 
 Ao participar, você concorda com o [Código de Conduta](CODE_OF_CONDUCT.md).
