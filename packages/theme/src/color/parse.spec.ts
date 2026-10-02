@@ -86,6 +86,51 @@ describe('parseColor (sem DOM)', () => {
     expect(parseColor(value)).toBeNull();
   });
 
+  // Formas que o CSS rejeita (CSS.supports('color', s) === false em Chromium, Firefox e WebKit;
+  // ver e2e/theme/behavior-parse-align.spec.ts): o caminho puro também precisa rejeitar.
+  it.each([
+    'rgb(255 0 0 0.5)', // alfa sem "/" na sintaxe moderna
+    'rgb(1,,2,3)', // vírgula vazia
+    'rgb(1,2,3,)', // vírgula sobrando
+    'rgb(,1,2,3)',
+    'rgb(1, 2 3)', // vírgulas misturadas com espaços
+    'rgb(1 2, 3)',
+    'rgb(255, 0, 0 / 0.5)', // "/" na sintaxe com vírgulas
+    'rgb(255 0 0 / 0.5deg)', // deg no alfa
+    'rgb(255, 0, 0, 0.5deg)',
+    'rgb(255, 50%, 0)', // sintaxe com vírgulas mistura número e porcentagem
+    'rgb(5. 0 0)', // número CSS não termina em "."
+    'rgb(1 2 3 / )',
+    'rgb(/ 1 2 3)',
+    'hsl(120, 100, 25)', // com vírgulas, S e L precisam de %
+    'hsl(120, 100%, 25)',
+    'hsl(120 100% 25% 0.5)',
+    'oklch(0.7, 0.15, 150)', // oklch() não tem sintaxe com vírgulas
+    'oklch(0.7 0.15 150 0.5)',
+  ])('rejects %j like CSS does', (value) => {
+    expect(parseColor(value)).toBeNull();
+  });
+
+  it.each([
+    ['rgb(255, 0, 0, 50%)', '#ff0000'],
+    ['rgba(100%, 0%, 0%, 50%)', '#ff0000'],
+    ['rgb(255 0 0/0.5)', '#ff0000'],
+    ['rgb(255 0 0 /0.5)', '#ff0000'],
+    ['rgb(255 50% 0)', '#ff8000'],
+    ['rgb(1e2 0 0)', '#640000'],
+    ['rgb(1e+2 0 0)', '#640000'],
+    ['rgb(.5 0 0)', '#010000'],
+    ['rgb(+5 0 0)', '#050000'],
+    ['rgba(255 0 0)', '#ff0000'],
+    ['hsl(240deg, 100%, 50%)', '#0000ff'],
+    ['hsl(120 100 25)', '#008000'],
+    ['hsl(120 100% 25% / 50%)', '#008000'],
+    ['oklch(0.7 0.15 150 / 50%)', null],
+  ])('keeps accepting the valid CSS form %j', (value, expected) => {
+    if (expected) expect(hex(value)).toBe(expected);
+    else expect(parseColor(value)).not.toBeNull();
+  });
+
   it('treats alpha exactly 0 as invalid and keeps ignoring partial alpha', () => {
     expect(parseColor('rgba(10,20,30,0)')).toBeNull();
     expect(parseColor('rgb(10 20 30 / 0%)')).toBeNull();
