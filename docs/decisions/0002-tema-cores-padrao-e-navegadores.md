@@ -5,7 +5,7 @@
 
 ## Contexto
 
-O pacote `@cds/rte-theme` precisa de três cores padrão de marca (primária, secundária, terciária), das quais deriva a paleta inteira. A spec propõe `#8514f5`, `#f637e3` e `#0546ff`, validadas pelo spike com 0 falhas de contraste. Antes de fixá-las, a Tarefa 1 consultou o press kit do Angular. O tema também usa recursos de CSS recentes (cores relativas, `light-dark()`, `@property`), então é preciso fixar em quais navegadores a verificação roda.
+O pacote `@cds/rte-theme` precisa de três cores padrão de marca (primária, secundária, terciária), das quais deriva a paleta inteira. A spec propõe `#8514f5`, `#f637e3` e `#0546ff`, validadas pelo spike com 0 falhas de contraste (afirmação da spec, sobre 223 + 148 cores amostradas; a Tarefa 5 mostrou que não valia para todas as cores, ver "Desvios da fórmula do spike"). Antes de fixá-las, a Tarefa 1 consultou o press kit do Angular. O tema também usa recursos de CSS recentes (cores relativas, `light-dark()`, `@property`), então é preciso fixar em quais navegadores a verificação roda.
 
 ## Decisão
 
@@ -15,7 +15,7 @@ Consulta feita em 2026-10-02:
 
 - `https://angular.dev/press-kit` (WebFetch): a página descreve as variações do logotipo (preto, branco, gradiente estático e animado), mas **não publica valores hex**; remete a pastas do Google Drive com as diretrizes de marca (não consultadas).
 - Tentativas de baixar o SVG do gradiente em `https://angular.dev/assets/images/logos/angular/angular_gradient.svg` e `.../press-kit/angular_gradient.png` devolveram o HTML da SPA (caminhos inexistentes).
-- O HTML de `https://angular.dev/` traz o logotipo inline com gradiente de paradas `#F60A48`, `#F20755`, `#DC087D`, `#9717E7`, `#6C00F5` (e `#E40035`, `#FF31D9`). É o gradiente vermelho-violeta do logotipo, que não equivale ao trio violeta/rosa/azul da spec e não é uma publicação oficial de "cores de marca".
+- Em 2026-10-02, o HTML de `https://angular.dev/` trazia o logotipo inline com gradiente de paradas `#F60A48`, `#F20755`, `#DC087D`, `#9717E7`, `#6C00F5` (e `#E40035`, `#FF31D9`). É o gradiente vermelho-violeta do logotipo, que não equivale ao trio violeta/rosa/azul da spec e não é uma publicação oficial de "cores de marca".
 
 Resultado: **não verificado** (não há hex oficial publicado para violeta/rosa/azul no press kit). Os valores observados no logotipo ficam registrados só como referência.
 
@@ -138,4 +138,10 @@ Mutações verificadas: `STEP_GAIN = 1000` falha o contraste (contraexemplo `["#
 
 ## Pendências do autor
 
-- Confirmar as cores de marca oficiais do Angular (diretrizes do press kit) e decidir se os padrões mudam.
+1. Corrigir em `docs/specs` os defeitos de fórmula do spike e da spec (os quatro desvios de "Desvios da fórmula do spike"):
+   - `docs/specs/referencias/t6-tema/theme-fallback.mjs`: linha `m` da matriz de `linearToOklab` (0,0883024619 em vez de 0,1073969566);
+   - `theme.css` do spike e spec 02 §7.5: rampa do `on-*` com `* 1000` (deve ser `* 1000000000`), limiar `0.1791` (deve ser `0.1791005`) e `color-mix(in oklch)` em `*-subtle`/`*-border` (deve ser `in oklab`);
+   - `README` do spike §2.3: os ΔE do plano B (neutros <= 0,019, bordas <= 0,041) foram medidos com a matriz errada; os valores corretos estão em "Resultado por navegador".
+2. Confirmar as cores de marca oficiais do Angular (diretrizes do press kit) e decidir se os padrões mudam; o press kit não publica hex e os valores do gradiente do logotipo (consulta de 2026-10-02) diferem do trio violeta/rosa/azul da spec.
+3. Orçamento R11: o JS excede 3 kB min+gzip (pacote inteiro 4898 B; caminho de `applyRteTheme` 3460 B). Aceitar o orçamento por cenário ou reestruturar: entry point `@cds/rte-theme/dev` para `checkRteTheme`/`warnIfPoorTheme`/`suggestRteColor` e/ou plano B carregado sob demanda (ver "Orçamento de tamanho").
+4. Registrar na spec 02 e no R1 a nova variável pública de nível 3 `--rte-focus-width` (`2px`; `3px` em `prefers-contrast: more`).

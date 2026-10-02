@@ -21,13 +21,22 @@ npm run check:pack                                      # verify-package em todo
 npm run check:size                                      # orçamento de tamanho por cenário (nx run theme:size, tools/check-size.mjs)
 npm run test:tools                                      # testes de tools/
 npm run notices                                         # regenera THIRD-PARTY-NOTICES.md
-npx playwright test -c e2e --project=chromium           # E2E; em WSL veja o LD_LIBRARY_PATH em e2e/README.md
+npx playwright test -c e2e                              # E2E nos 3 navegadores (chromium, firefox, webkit); --project=firefox para um só
+e2e/with-browser-libs.sh npx playwright test -c e2e     # idem em WSL/Ubuntu sem sudo (libs em ~/.cache/playwright-libs; ver e2e/README.md)
+npx nx test theme                                       # unitários + propriedade do tema; FC_SEED=<n> FC_RUNS=<n> mudam a semente/execuções do fast-check
 npx changeset                                           # registrar mudança de pacote
 ```
 
-CI: `.github/workflows/ci.yml` roda no PR e no push para `main` (check:rules, test:tools, notices sem drift, `nx affected -t lint typecheck build test verify-package size`, check:licenses (depois do build, para ler o `dist`), `typecheck:e2e`, E2E Chromium).
+CI: `.github/workflows/ci.yml` roda no PR e no push para `main` (check:rules, test:tools, notices sem drift, `nx affected -t lint typecheck build test verify-package size`, check:licenses (depois do build, para ler o `dist`), `typecheck:e2e`, E2E nos 3 navegadores com `playwright install --with-deps`).
 
 Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp` (e `NX_DAEMON=false` se o daemon do Nx atrapalhar).
+
+## Tema (`packages/theme`)
+
+- Testes de navegador do tema: `e2e/theme/*.spec.ts` (contraste, ΔE plano B × nativo, comportamentos, CSP, SSR); o harness/fixtures ficam em `e2e/theme/helpers/` e `e2e/fixtures/`.
+- `theme.css` e o plano B em TypeScript (`derive.ts`, `create-theme.ts`) **precisam andar juntos**: qualquer mudança de fórmula ou constante vai nos dois, e a prova é o golden (`tools/gen-theme-golden.mjs`) mais o E2E de equivalência (`e2e/theme/fallback-equivalence.spec.ts`).
+- As fórmulas de `docs/specs/referencias/t6-tema` têm 4 desvios documentados (matriz OKLab, degrau do `on-*`, limiar 0,1791005, mistura em OKLab): ver ADR 0002, "Desvios da fórmula do spike".
+- Orçamento de tamanho por cenário em `packages/theme/size-budget.json` (`npm run check:size`).
 
 ## Convenções
 
