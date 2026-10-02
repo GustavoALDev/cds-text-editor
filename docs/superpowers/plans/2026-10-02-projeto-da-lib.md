@@ -57,7 +57,7 @@ cds-text-editor/
 
 ---
 
-### Tarefa 0: Confirmar a organização npm `cds` (BLOQUEANTE) — responsável: o autor
+### Task 0: Confirmar a organização npm `cds` (BLOQUEANTE) — responsável: o autor
 
 **Files:** nenhum (decisão registrada na Tarefa 9, ADR 0001).
 
@@ -71,7 +71,7 @@ Responder no chat: "org cds confirmada" ou "usar plano B". **Nenhuma tarefa segu
 
 ---
 
-### Tarefa 1: Repositório git, specs movidas e workspace Nx
+### Task 1: Repositório git, specs movidas e workspace Nx
 
 **Files:**
 - Create: `.gitignore`, `package.json`, `nx.json`, `tsconfig.base.json`, `.prettierrc`, `.editorconfig`, `eslint.config.mjs` (gerados pelo Nx, depois ajustados)
@@ -152,7 +152,7 @@ git commit -m "chore: inicia workspace Nx (Angular 22) e move specs para docs/sp
 
 ---
 
-### Tarefa 2: Pacotes sem Angular (`core`, `sanitizer`, `theme`)
+### Task 2: Pacotes sem Angular (`core`, `sanitizer`, `theme`)
 
 **Files:**
 - Create: `packages/{core,sanitizer,theme}/{package.json,project.json,tsconfig.json,tsconfig.lib.json,tsconfig.spec.json,tsup.config.ts,README.md}`
@@ -266,7 +266,7 @@ git commit -m "feat: pacotes sem Angular (core, sanitizer, theme) com build e te
 
 ---
 
-### Tarefa 3: Pacotes Angular (`angular`, `render`)
+### Task 3: Pacotes Angular (`angular`, `render`)
 
 **Files:**
 - Create: `packages/angular/{package.json,project.json,ng-package.json,tsconfig*.json,README.md,src/index.ts,src/index.spec.ts}`
@@ -349,7 +349,7 @@ git commit -m "feat: pacotes Angular (angular, render) com ng-packagr, peers >=2
 
 ---
 
-### Tarefa 4: Lint, fronteiras e regras do repositório
+### Task 4: Lint, fronteiras e regras do repositório
 
 **Files:**
 - Modify: `eslint.config.mjs`
@@ -521,7 +521,7 @@ git commit -m "feat: lint de fronteiras, proibição de @angular/* e verificador
 
 ---
 
-### Tarefa 5: Playwright configurado (3 engines declarados, Chromium executado)
+### Task 5: Playwright configurado (3 engines declarados, Chromium executado)
 
 **Files:**
 - Create: `e2e/playwright.config.ts`, `e2e/fixtures/blank.html`, `e2e/smoke.spec.ts`, `e2e/README.md`
@@ -597,7 +597,7 @@ git commit -m "test: Playwright configurado com smoke em Chromium"
 
 ---
 
-### Tarefa 6: Validação de pacote (`publint`, `attw`, `npm pack`)
+### Task 6: Validação de pacote (`publint`, `attw`, `npm pack`)
 
 **Files:**
 - Create: `tools/check-pack.mjs`, `tools/check-pack.test.mjs`
@@ -686,7 +686,7 @@ git commit -m "feat: verificação de pacote (npm pack, publint, attw)"
 
 ---
 
-### Tarefa 7: Verificação de licenças e `THIRD-PARTY-NOTICES.md`
+### Task 7: Verificação de licenças e `THIRD-PARTY-NOTICES.md`
 
 **Files:**
 - Create: `tools/check-licenses.mjs`, `tools/check-licenses.test.mjs`, `tools/generate-notices.mjs`, `THIRD-PARTY-NOTICES.md`
@@ -794,7 +794,7 @@ git commit -m "feat: verificação de licenças e geração de THIRD-PARTY-NOTIC
 
 ---
 
-### Tarefa 8: Arquivos de projeto, ADR 0001 e `CLAUDE.md`
+### Task 8: Arquivos de projeto, ADR 0001 e `CLAUDE.md`
 
 **Files:**
 - Create: `LICENSE`, `README.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CLAUDE.md`, `.changeset/config.json`, `.changeset/README.md`
@@ -852,7 +852,7 @@ git commit -m "docs: LICENSE, README, SECURITY, CONTRIBUTING, CLAUDE.md, ADR 000
 
 ---
 
-### Tarefa 9: CI no GitHub Actions
+### Task 9: CI no GitHub Actions
 
 **Files:**
 - Create: `.github/workflows/ci.yml`
@@ -914,7 +914,7 @@ git commit -m "ci: workflow de lint, build, test, verify-package e licenças"
 
 ---
 
-### Tarefa 10: Verificação final (critérios de aceite da spec)
+### Task 10: Verificação final (critérios de aceite da spec)
 
 **Files:** nenhum novo (se algo falhar, corrigir na tarefa dona).
 
