@@ -1,6 +1,0 @@
-{
-  "name": "@cds/rte-core/code-languages",
-  "type": "module",
-  "types": "../dist/code-languages/index.d.ts",
-  "default": "../dist/code-languages/index.js"
-}
