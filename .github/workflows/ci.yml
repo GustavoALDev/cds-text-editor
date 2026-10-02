@@ -52,8 +52,8 @@ jobs:
       # Depois do build: lê também as `dependencies` dos manifestos em dist/packages/* (ex.: tslib).
       - run: npm run check:licenses
       - run: npm run typecheck:e2e
-      - run: npx playwright install --with-deps chromium
-      - run: npx playwright test -c e2e --project=chromium
+      - run: npx playwright install --with-deps
+      - run: npx playwright test -c e2e
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

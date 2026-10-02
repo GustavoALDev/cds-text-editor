@@ -15,12 +15,10 @@ export default defineConfig({
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
-      grep: /@nonexistent-until-spec-08/,
     },
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
-      grep: /@nonexistent-until-spec-08/,
     },
   ],
 });

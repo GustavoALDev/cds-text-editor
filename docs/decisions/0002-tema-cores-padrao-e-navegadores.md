@@ -39,6 +39,12 @@ Decisão do autor em 2026-10-02: Chromium, Firefox e WebKit rodam **localmente e
 | Firefox   | sim         | sim |
 | WebKit    | sim         | sim |
 
+Procedimento no WSL (Ubuntu, sem sudo), verificado em 2026-10-02:
+
+1. `npx playwright install firefox webkit` (baixa para `~/.cache/ms-playwright`).
+2. Extrair as bibliotecas de sistema ausentes de `.deb` em `~/.cache/playwright-libs/root` (`apt-get download` + `dpkg -x`, sem root). Pacotes além dos do Chromium: `libgtk-4-1 libgtk-4-common libgraphene-1.0-0 libsoup-3.0-0 libsoup-3.0-common libsecret-1-0 libsecret-common libmanette-0.2-0 libenchant-2-2 libhyphen0 libharfbuzz-icu0 libharfbuzz-subset0 libwoff1 libavif16 libwebp7 libwebpdemux2 libwebpmux3 libjpeg-turbo8 libjpeg8 libopenjp2-7 libtiff6 libxslt1.1 libflite1 libopus0 libevent-2.1-7t64 libbacktrace0 libgles2 libwayland-server0 libgudev-1.0-0 libevdev2 libhidapi-hidraw0 libdecor-0-0 libunibreak6 libxkbcommon-x11-0 libxcb-xkb1 libxss1 libjson-glib-1.0-0 libjson-glib-1.0-common glib-networking glib-networking-common glib-networking-services libgstreamer-plugins-base1.0-0 libgstreamer-plugins-bad1.0-0 libgstreamer-plugins-extra1.0-0 libgstreamer-gl1.0-0 libabsl20260107 liblerc4 libdeflate0 libjbig0 libdav1d7 libgav1-2 liborc-0.4-0t64 libyuv0 libcairo-script-interpreter2`.
+3. Rodar via `e2e/with-browser-libs.sh npx playwright test -c e2e`. O script exporta `LD_LIBRARY_PATH=$HOME/.cache/playwright-libs/root/usr/lib/x86_64-linux-gnu:$HOME/.cache/playwright-libs/root/lib/x86_64-linux-gnu`, desliga a validação de dependências do Playwright (`PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`, pois ela usa `ldconfig -p`) e ajusta o wrapper `MiniBrowser` do WebKit para preservar o `LD_LIBRARY_PATH`. Detalhes em `e2e/README.md`.
+
 ### (c) Tabelas a preencher
 
 Preenchidas pelas Tarefas 10, 12 e 14.
