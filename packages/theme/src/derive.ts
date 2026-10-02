@@ -1,0 +1,53 @@
+import { clamp, luminance, toSrgb, type Rgb } from './color/convert';
+import { fromOklch, mixOklch, toOklch, type Oklch } from './color/oklab';
+
+/** Luminância (srgb-linear) abaixo da qual o texto sobre a semente é branco; acima, preto. */
+const WHITE_Y = 0.1791;
+
+export interface DerivedRole {
+  seed: Rgb;
+  on: Rgb;
+  hover: Rgb;
+  active: Rgb;
+  text: Rgb;
+  subtle: Rgb;
+  border: Rgb;
+}
+
+/**
+ * Deriva os tokens de um papel de cor (primary/secondary/tertiary) a partir da semente em
+ * srgb-linear e da superfície em OKLCH. Porte literal do spike T6; entradas e saídas em 0..1.
+ */
+export function deriveRole(
+  seedLin: Rgb,
+  surface: Oklch,
+  dark: boolean,
+): DerivedRole {
+  const y = luminance(seedLin);
+  const s = clamp((WHITE_Y - y) * 1000); // 1 = semente escura (texto branco), 0 = clara (texto preto)
+  const state = (amt: number): Rgb =>
+    [0, 1, 2].map((i) => {
+      const c = seedLin[i] as number;
+      return c * (1 - amt * s) + amt * (1 - s) * (1 - c);
+    }) as unknown as Rgb;
+  // y === 0: 0.13 / 0 = Infinity e Math.min(1, Infinity) = 1; y === 1: divisão por 0 dá -Infinity e
+  // clamp resulta em 0. Ambos os casos já são corretos; clamp ainda trata NaN.
+  const text: Rgb = dark
+    ? ([0, 1, 2].map((i) => {
+        const c = seedLin[i] as number;
+        return c + (1 - c) * clamp((0.28 - y) / (1 - y));
+      }) as unknown as Rgb)
+    : ([0, 1, 2].map(
+        (i) => (seedLin[i] as number) * Math.min(1, 0.13 / y),
+      ) as unknown as Rgb);
+  const seedOk = toOklch(seedLin);
+  return {
+    seed: toSrgb(seedLin),
+    on: toSrgb([s, s, s]),
+    hover: toSrgb(state(0.14)),
+    active: toSrgb(state(0.26)),
+    text: toSrgb(text),
+    subtle: toSrgb(fromOklch(mixOklch(seedOk, 0.12, surface))),
+    border: toSrgb(fromOklch(mixOklch(seedOk, 0.45, surface))),
+  };
+}

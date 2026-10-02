@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { clamp, contrastRatio, from8, luminance, to8, toHex, toLinear, toSrgb } from './convert';
+import {
+  clamp,
+  contrastRatio,
+  from8,
+  luminance,
+  to8,
+  toHex,
+  toLinear,
+  toSrgb,
+} from './convert';
 
 describe('convert', () => {
   it('round-trips sRGB through linear', () => {
@@ -15,7 +24,10 @@ describe('convert', () => {
 
   it('computes the contrast ratio of black on white as 21', () => {
     expect(contrastRatio([0, 0, 0], [255, 255, 255])).toBeCloseTo(21, 6);
-    expect(contrastRatio([119, 119, 119], [255, 255, 255])).toBeCloseTo(4.48, 2);
+    expect(contrastRatio([119, 119, 119], [255, 255, 255])).toBeCloseTo(
+      4.48,
+      2,
+    );
   });
 
   it('formats hex and clamps out-of-gamut values', () => {
@@ -25,8 +37,20 @@ describe('convert', () => {
     expect(clamp(-5)).toBe(0);
   });
 
-  it('never produces NaN for degenerate input', () => {
-    for (const rgb of [[0, 0, 0], [1, 1, 1], [0, 0, 1]] as const) {
+  it('maps NaN to the lower bound and clamps infinities', () => {
+    expect(clamp(Number.NaN)).toBe(0);
+    expect(clamp(Number.NaN, 2, 3)).toBe(2);
+    expect(clamp(Infinity)).toBe(1);
+    expect(clamp(-Infinity)).toBe(0);
+    expect(toHex([Number.NaN, Infinity, -Infinity])).toBe('#00ff00');
+  });
+
+  it('keeps sRGB output finite for degenerate (black/white/blue) input', () => {
+    for (const rgb of [
+      [0, 0, 0],
+      [1, 1, 1],
+      [0, 0, 1],
+    ] as const) {
       expect(toSrgb(toLinear(rgb)).every(Number.isFinite)).toBe(true);
     }
   });

@@ -170,7 +170,9 @@ function parseWithCanvas(input: string): Rgb | null {
 
 /**
  * Lê uma cor CSS. Em Node e no navegador: `#rgb[a]`, `#rrggbb[aa]`, `rgb()/rgba()`, `hsl()/hsla()`
- * e `oklch()`. O alfa é ignorado. Demais formas só com `document` (via canvas); sem ele, `null`.
+ * e `oklch()`. No caminho puro, o alfa parcial é ignorado e alfa exatamente 0 invalida a cor. Demais
+ * formas só com `document` (via canvas); sem ele, `null`. No canvas, qualquer cor com alfa < 255
+ * (não totalmente opaca) é rejeitada.
  * Nunca lança; o resultado tem sempre três canais finitos em [0, 1].
  */
 export function parseColor(input: string): Rgb | null {

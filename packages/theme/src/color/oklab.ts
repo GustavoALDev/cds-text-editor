@@ -27,7 +27,11 @@ export function oklabToLinear([L, a, b]: Oklab): Rgb {
 
 export function toOklch(lin: Rgb): Oklch {
   const [L, a, b] = linearToOklab(lin);
-  return [L, Math.hypot(a, b), ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360];
+  return [
+    L,
+    Math.hypot(a, b),
+    ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360,
+  ];
 }
 
 export function fromOklch([L, C, h]: Oklch): Rgb {
@@ -35,7 +39,8 @@ export function fromOklch([L, C, h]: Oklch): Rgb {
   return oklabToLinear([L, C * Math.cos(rad), C * Math.sin(rad)]);
 }
 
-export const oklchToSrgb = (L: number, C: number, h: number): Rgb => toSrgb(fromOklch([L, C, h]));
+export const oklchToSrgb = (L: number, C: number, h: number): Rgb =>
+  toSrgb(fromOklch([L, C, h]));
 
 /** color-mix(in oklch, a pA%, b): interpola L, C e H (arco curto); matiz de cor acromática é "ausente". */
 export function mixOklch(a: Oklch, pA: number, b: Oklch): Oklch {
