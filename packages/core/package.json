@@ -30,11 +30,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TODO-AUTOR/cds-text-editor.git",
+    "url": "git+https://github.com/GustavoALDev/cds-text-editor.git",
     "directory": "packages/core"
   },
-  "bugs": "https://github.com/TODO-AUTOR/cds-text-editor/issues",
-  "homepage": "https://github.com/TODO-AUTOR/cds-text-editor#readme",
+  "bugs": "https://github.com/GustavoALDev/cds-text-editor/issues",
+  "homepage": "https://github.com/GustavoALDev/cds-text-editor#readme",
   "keywords": [
     "rich-text-editor",
     "tiptap",

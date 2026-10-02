@@ -88,7 +88,7 @@ Emenda à R14: allowlist inclui 0BSD (`tslib`, dependência de runtime dos pacot
 Marcador `TODO-AUTOR` (`grep -rn TODO-AUTOR --exclude-dir=node_modules --exclude-dir=.git .`):
 
 - Organização npm `cds` não confirmada: escopo `@cds` provisório, plano B `cds-text-editor-*`.
-- Organização/usuário do GitHub (`.github/CODEOWNERS`, URLs `repository`/`bugs`/`homepage` dos `package.json`).
+- ~~Organização/usuário do GitHub~~ resolvido: `GustavoALDev` (`.github/CODEOWNERS`, URLs `repository`/`bugs`/`homepage` dos `package.json`); repositório `github.com/GustavoALDev/cds-text-editor`.
 - Nome do autor no `LICENSE`.
 - E-mail de contato de segurança (`SECURITY.md`, `CODE_OF_CONDUCT.md`).
-- Nome do repositório (sugerido: `cds-text-editor`).
+- ~~Nome do repositório~~ resolvido: `cds-text-editor`.

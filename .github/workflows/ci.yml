@@ -43,13 +43,14 @@ jobs:
       # Verificações do repositório: rodam sempre, independem do `affected`.
       - run: npm run check:rules
       - run: npm run test:tools
-      - run: npm run check:licenses
       - name: THIRD-PARTY-NOTICES.md em dia
         run: |
           npm run notices
           git diff --exit-code THIRD-PARTY-NOTICES.md
       # `typecheck` cobre os testes dos pacotes tsup (Vitest não checa tipos); `build` cobre o código.
       - run: npx nx affected -t lint typecheck build test verify-package --parallel=3
+      # Depois do build: lê também as `dependencies` dos manifestos em dist/packages/* (ex.: tslib).
+      - run: npm run check:licenses
       - run: npm run typecheck:e2e
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test -c e2e --project=chromium
