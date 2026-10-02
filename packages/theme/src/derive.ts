@@ -1,13 +1,19 @@
 import { clamp, luminance, toSrgb, type Rgb } from './color/convert';
 import { fromOklch, mixOklch, toOklch, type Oklch } from './color/oklab';
 
-/** Luminância (srgb-linear) abaixo da qual o texto sobre a semente é branco; acima, preto. */
-export const WHITE_Y = 0.1791;
+/**
+ * Luminância (srgb-linear) abaixo da qual o texto sobre a semente é branco; acima, preto.
+ * Qualquer limiar em [0.175, 0.1833] mantém preto e branco com contraste >= 4.5. O ideal teórico é
+ * 0.1791, mas a cor de 8 bits mais próxima fica a só 5.6e-9 dele e os motores (Chromium, Firefox,
+ * WebKit) calculam `0.1791 - Y` com precisões diferentes, divergindo do plano B. 0.1791005 fica a
+ * >= 1.28e-7 de toda cor de 8 bits (~4x o pior erro medido entre motores), então todos decidem igual.
+ */
+export const WHITE_Y = 0.1791005;
 
 /**
  * Ganho do degrau on-*. O degrau precisa ser praticamente exato: uma rampa de 0,001 de largura
  * deixava ~35 mil cores sRGB (Y logo abaixo de WHITE_Y) com texto cinza. A cor de 8 bits mais
- * próxima do limiar fica a ~1,1e-8 dele, então o ganho precisa passar de ~9e7.
+ * próxima do limiar fica a >= 1,28e-7 dele, então o ganho precisa passar de ~8e6 (1e9 sobra).
  */
 export const STEP_GAIN = 1e9;
 

@@ -56,6 +56,30 @@ const properties = new Map(
 );
 const nonProperty = code.replace(/@property[^{]*\{[^}]*\}/g, '');
 
+/** Remove blocos `@media {...}` (aninhados) de um texto. */
+function stripMedia(src: string): string {
+  let out = src;
+  for (;;) {
+    const i = out.indexOf('@media');
+    if (i < 0) return out;
+    const open = out.indexOf('{', i);
+    let depth = 0;
+    let k = open;
+    for (; k < out.length; k++) {
+      if (out[k] === '{') depth++;
+      else if (out[k] === '}' && --depth === 0) break;
+    }
+    out = out.slice(0, i) + out.slice(k + 1);
+  }
+}
+/** Corpo das regras principais de `@layer rte.theme`, sem os blocos @media. */
+const mainTheme = stripMedia(
+  blocks
+    .filter((b) => b.head === '@layer rte.theme')
+    .map((b) => b.body)
+    .join(' '),
+);
+
 describe('theme.css', () => {
   it('abre com a ordem das camadas', () => {
     expect(blocks[0]?.head).toBe(
@@ -183,17 +207,20 @@ describe('theme.css', () => {
     );
     expect(gains).toHaveLength(45);
     for (const g of gains) expect(g).toBe(STEP_GAIN);
-    // 0.28 (alvo do texto no escuro) e 1 (denominador 1 - Y) são de outras fórmulas; só o limiar do degrau conta.
-    const thresholds = [...code.matchAll(/\(([\d.]+)\s*-\s*\(0\.2126/g)]
-      .map((m) => Number(m[1]))
-      .filter((t) => t !== 0.28 && t !== 1);
+    expect(WHITE_Y).toBe(0.1791005);
+    // O limiar do degrau aparece como `(<WHITE_Y> - (0.2126 ...`; nenhum outro valor pode restar.
+    const thresholds = [...code.matchAll(/\(0\.1791\d* - \(0\.2126/g)].map(
+      (m) => m[0],
+    );
     expect(thresholds).toHaveLength(45);
-    for (const t of thresholds) expect(t).toBe(WHITE_Y);
+    for (const t of thresholds) expect(t).toBe(`(${WHITE_Y} - (0.2126`);
+    expect(code).not.toMatch(/0\.1791 /);
+    expect(code.split(String(WHITE_Y)).length - 1).toBe(45);
   });
 
   it('sincronia com createRteTheme: mesmas variáveis derivadas', () => {
     const declared = new Set(
-      [...nonProperty.matchAll(/(--rte-[a-z0-9-]+)\s*:/g)].map((m) => m[1]),
+      [...mainTheme.matchAll(/(--rte-[a-z0-9-]+)\s*:/g)].map((m) => m[1]),
     );
     const ts = Object.keys(createRteTheme()).filter((k) => !SEEDS.includes(k));
     for (const key of ts) expect(declared.has(key), key).toBe(true);

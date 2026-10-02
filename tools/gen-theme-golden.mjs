@@ -2,11 +2,11 @@
  * Gera packages/theme/src/__fixtures__/spike-golden.json a partir do spike T6
  * (docs/specs/referencias/t6-tema/theme-fallback.mjs), a verdade independente do plano B.
  *
- * ATENÇÃO: o spike tem dois defeitos conhecidos. (1) Erro de digitação na linha "m" de
+ * ATENÇÃO: o spike tem três defeitos conhecidos. (1) Erro de digitação na linha "m" de
  * `linearToOklab` (0.0883024619 * b; o coeficiente padrão do OKLab é 0.1073969566). (2) O degrau
  * `clamp((WHITE_Y - y) * 1000)` é uma rampa de 0,001 de largura (~35 mil cores sRGB com texto
- * cinza); o ganho passa a 1e9. Como docs/specs não deve ser editado, este script lê o spike como
- * texto, aplica em memória as duas correções (exigindo exatamente uma ocorrência de cada), grava a cópia corrigida em
+ * cinza); o ganho passa a 1e9. (3) O limiar 0.1791 fica a 5.6e-9 de uma cor de 8 bits (motores divergem); passa a 0.1791005. Como docs/specs não deve ser editado, este script lê o spike como
+ * texto, aplica em memória as três correções (exigindo exatamente uma ocorrência de cada), grava a cópia corrigida em
  * $HOME/.cache/tmp e a importa de lá. O golden é, portanto, "matemática do spike + correções".
  *
  * Uso: node tools/gen-theme-golden.mjs
@@ -29,6 +29,12 @@ const FIXES = [
     good: 'const s = clamp((WHITE_Y - y) * 1e9);',
     name: 'ganho do degrau',
   },
+  {
+    // Limiar 0.1791 fica a 5.6e-9 de uma cor de 8 bits: motores divergem; 0.1791005 fica a >= 1.28e-7.
+    bad: 'const WHITE_Y = 0.1791;',
+    good: 'const WHITE_Y = 0.1791005;',
+    name: 'limiar do degrau',
+  },
 ];
 
 function applyFix({ bad, good, name }, source) {
@@ -47,8 +53,12 @@ export const applyOklabFix = (source) => applyFix(FIXES[0], source);
 /** Aplica a correção do ganho do degrau; lança se a ocorrência não for única. */
 export const applyStepFix = (source) => applyFix(FIXES[1], source);
 
+/** Aplica a correção do limiar de luminância; lança se a ocorrência não for única. */
+export const applyThresholdFix = (source) => applyFix(FIXES[2], source);
+
 /** Aplica todas as correções conhecidas do spike (cada uma exatamente uma vez). */
-export const applySpikeFixes = (source) => applyStepFix(applyOklabFix(source));
+export const applySpikeFixes = (source) =>
+  applyThresholdFix(applyStepFix(applyOklabFix(source)));
 
 export const SEEDS = [
   '#8514f5',
@@ -85,6 +95,8 @@ export const SEEDS = [
   // e cores a menos de 0.0005 abaixo/acima.
   '#e51e3a',
   '#97687b',
+  '#2d870b',
+  '#4071d9',
   '#1d8811',
   '#0274e0',
   '#03874d',
@@ -110,7 +122,7 @@ async function main() {
   const copy = join(tmp, 'theme-fallback.fixed.mjs');
   writeFileSync(copy, patched);
   console.log(
-    'Correções do spike aplicadas (coeficiente OKLab e ganho do degrau, 1 ocorrência cada).',
+    'Correções do spike aplicadas (coeficiente OKLab, ganho e limiar do degrau, 1 ocorrência cada).',
   );
   const { createRteTheme } = await import(pathToFileURL(copy).href);
 

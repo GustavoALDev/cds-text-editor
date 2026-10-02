@@ -8,3 +8,5 @@
 /docs/specs
 /docs/superpowers
 /THIRD-PARTY-NOTICES.md
+# Arquivo central com expressões calc() longas; layout compacto de uma declaração por linha (como o spike) preserva revisão e diff.
+packages/theme/src/theme.css

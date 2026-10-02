@@ -7,9 +7,9 @@ import {
   toSrgb,
   type Rgb8,
 } from './color/convert';
-import { onLevel, stateChannel } from './derive';
+import { onLevel, stateChannel, WHITE_Y } from './derive';
 
-const T = 0.1791;
+const T = WHITE_Y;
 
 describe('on-* step', () => {
   it('is an exact step around the luminance threshold', () => {
@@ -17,6 +17,28 @@ describe('on-* step', () => {
     expect(onLevel(T + 1e-7)).toBe(0);
     expect(onLevel(0)).toBe(1);
     expect(onLevel(1)).toBe(0);
+  });
+
+  it('no 8-bit sRGB color lies within 1e-7 of the threshold (engines differ in float precision)', () => {
+    const lin = Array.from(
+      { length: 256 },
+      (_, i) => toLinear(from8([i, i, i]))[0] as number,
+    );
+    let minDist = Infinity;
+    let argmin = '';
+    for (let r = 0; r < 256; r++)
+      for (let g = 0; g < 256; g++) {
+        const base = 0.2126 * lin[r]! + 0.7152 * lin[g]!;
+        for (let b = 0; b < 256; b++) {
+          const d = Math.abs(base + 0.0722 * lin[b]! - WHITE_Y);
+          if (d < minDist) {
+            minDist = d;
+            argmin = `rgb(${r},${g},${b})`;
+          }
+        }
+      }
+    console.log(`min |Y - WHITE_Y| ${minDist.toExponential(3)} at ${argmin}`);
+    expect(minDist).toBeGreaterThanOrEqual(1e-7);
   });
 
   it('keeps on/hover/active readable (>= 4.5) for every 8-bit sRGB color', () => {
