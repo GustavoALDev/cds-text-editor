@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { RTE_THEME_PRESETS } from '../../packages/theme/src/presets';
+import {
+  from8,
+  toLinear,
+  type Rgb8,
+} from '../../packages/theme/src/color/convert';
+import { toOklch } from '../../packages/theme/src/color/oklab';
+import { parseColor } from '../../packages/theme/src/color/parse';
 import { deltaE } from './helpers/delta-e';
 import {
   loadThemePage,
@@ -98,6 +105,44 @@ test.describe('plano B equivale ao CSS nativo (R7)', () => {
           };
       }
     }
+    // Matiz de subtle/border no CSS nativo e no plano B: perto da semente do papel (mistura em OKLab).
+    // Cinza: a superfície é acromática (<= 5 graus, ruído de 8 bits); tingido: a superfície carrega o
+    // matiz da primary por desenho (borda <= 6, subtle <= 35; antes, com mistura polar, até ~155).
+    const hueOf = (c: Rgb8): readonly number[] => toOklch(toLinear(from8(c)));
+    for (const e of entries) {
+      if (e.seeds[0] === e.seeds[1] && e.seeds[1] === e.seeds[2]) continue;
+      e.seeds.forEach((seed, i) => {
+        const role = ['primary', 'secondary', 'tertiary'][i]!;
+        const rgb = parseColor(seed)!.map((v) => Math.round(v * 255));
+        const [, seedC, seedH] = hueOf(rgb as unknown as Rgb8) as [
+          number,
+          number,
+          number,
+        ];
+        if (seedC < 0.05) return; // semente quase acromática: matiz mal definido em 8 bits
+        for (const [kind, limit] of [
+          ['subtle', e.neutral === 'gray' ? 5 : 35],
+          ['border', e.neutral === 'gray' ? 5 : 6],
+        ] as const)
+          for (const [plan, toks] of [
+            ['native', e.native],
+            ['planB', e.planB],
+          ] as const) {
+            const [, c, h] = hueOf(toks[`${role}-${kind}`]!) as [
+              number,
+              number,
+              number,
+            ];
+            if (c <= 0.01) continue;
+            let d = Math.abs(h - seedH) % 360;
+            if (d > 180) d = 360 - d;
+            expect(
+              d,
+              `${plan} ${e.seeds} ${e.mode} ${e.neutral} ${role}-${kind}`,
+            ).toBeLessThanOrEqual(limit);
+          }
+      });
+    }
     for (const g of Object.keys(LIMITS) as Group[]) {
       test.info().annotations.push({
         type: 'delta-e-max',
@@ -151,16 +196,10 @@ test.describe('plano B equivale ao CSS nativo (R7)', () => {
     await run(page, browserName, trioCases('tinted'));
   });
 
-  // Divergência conhecida (aguarda decisão): com neutros `gray` e sementes de papel DIFERENTES, o
-  // nativo mistura `*-subtle`/`*-border` com uma superfície de croma 0 que mantém o matiz da primary
-  // (os 3 motores interpolam esse matiz, ex.: borda de um vermelho vira amarelada), enquanto o plano B
-  // trata a superfície como acromática e usa o matiz do papel. `test.fail` documenta e avisa quando
-  // for corrigido (então trocar por `test`).
-  test('ΔE por grupo com três sementes diferentes, neutros gray (divergência conhecida)', async ({
+  test('ΔE por grupo com três sementes diferentes, neutros gray (matiz do papel preservado)', async ({
     page,
     browserName,
   }) => {
-    test.fail(true, 'neutral gray + sementes diferentes: ver comentário acima');
     await run(page, browserName, trioCases('gray'));
   });
 });

@@ -42,22 +42,18 @@ export function fromOklch([L, C, h]: Oklch): Rgb {
 export const oklchToSrgb = (L: number, C: number, h: number): Rgb =>
   toSrgb(fromOklch([L, C, h]));
 
-/** color-mix(in oklch, a pA%, b): interpola L, C e H (arco curto); matiz de cor acromática é "ausente". */
-export function mixOklch(a: Oklch, pA: number, b: Oklch): Oklch {
-  const [La, Ca, ha] = a;
-  const [Lb, Cb, hb] = b;
+/** Oklch (L, C, h em graus) para Oklab (L, a, b). */
+export function oklchToOklab([L, C, h]: Oklch): Oklab {
+  const rad = (h * Math.PI) / 180;
+  return [L, C * Math.cos(rad), C * Math.sin(rad)];
+}
+
+/**
+ * color-mix(in oklab, a pA%, b): interpolação linear de L, a e b, sem lógica de matiz. Uma cor
+ * acromática (a = b = 0) mantém exatamente o matiz da outra. A mistura polar (oklch) interpolava o
+ * matiz entre a semente e a superfície (que carrega o matiz da primary), puxando o matiz de cada papel.
+ */
+export function mixOklab(a: Oklab, pA: number, b: Oklab): Oklab {
   const t = 1 - pA;
-  const achromaticA = Ca < 1e-4;
-  const achromaticB = Cb < 1e-4;
-  let h: number;
-  if (achromaticA && achromaticB) h = 0;
-  else if (achromaticA) h = hb;
-  else if (achromaticB) h = ha;
-  else {
-    let d = hb - ha;
-    if (d > 180) d -= 360;
-    if (d < -180) d += 360;
-    h = (ha + d * t + 360) % 360;
-  }
-  return [La * pA + Lb * t, Ca * pA + Cb * t, h];
+  return [a[0] * pA + b[0] * t, a[1] * pA + b[1] * t, a[2] * pA + b[2] * t];
 }

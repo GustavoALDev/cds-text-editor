@@ -2,11 +2,11 @@
  * Gera packages/theme/src/__fixtures__/spike-golden.json a partir do spike T6
  * (docs/specs/referencias/t6-tema/theme-fallback.mjs), a verdade independente do plano B.
  *
- * ATENÇÃO: o spike tem três defeitos conhecidos. (1) Erro de digitação na linha "m" de
+ * ATENÇÃO: o spike tem quatro defeitos conhecidos (o quarto: `mixOklch` polar, trocada por mistura em OKLab). (1) Erro de digitação na linha "m" de
  * `linearToOklab` (0.0883024619 * b; o coeficiente padrão do OKLab é 0.1073969566). (2) O degrau
  * `clamp((WHITE_Y - y) * 1000)` é uma rampa de 0,001 de largura (~35 mil cores sRGB com texto
  * cinza); o ganho passa a 1e9. (3) O limiar 0.1791 fica a 5.6e-9 de uma cor de 8 bits (motores divergem); passa a 0.1791005. Como docs/specs não deve ser editado, este script lê o spike como
- * texto, aplica em memória as três correções (exigindo exatamente uma ocorrência de cada), grava a cópia corrigida em
+ * texto, aplica em memória as quatro correções (exigindo exatamente uma ocorrência de cada), grava a cópia corrigida em
  * $HOME/.cache/tmp e a importa de lá. O golden é, portanto, "matemática do spike + correções".
  *
  * Uso: node tools/gen-theme-golden.mjs
@@ -35,6 +35,19 @@ const FIXES = [
     good: 'const WHITE_Y = 0.1791005;',
     name: 'limiar do degrau',
   },
+  {
+    // A mistura polar (oklch) interpolava o matiz entre a semente e a superfície (que carrega o matiz
+    // da primary): matiz de subtle/border puxado até ~150 graus. A nova mistura é linear em OKLab.
+    bad: 'function mixOklch(a, pA, b) {',
+    good: `function mixOklch(a, pA, b) {
+  const lab = ([L, C, h]) => [L, C * Math.cos((h * Math.PI) / 180), C * Math.sin((h * Math.PI) / 180)];
+  const [La, aa, ba] = lab(a), [Lb, ab, bb] = lab(b), t = 1 - pA;
+  const A = aa * pA + ab * t, B = ba * pA + bb * t;
+  return [La * pA + Lb * t, Math.hypot(A, B), ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360];
+}
+function mixOklchPolar(a, pA, b) {`,
+    name: 'mistura em OKLab',
+  },
 ];
 
 function applyFix({ bad, good, name }, source) {
@@ -56,9 +69,12 @@ export const applyStepFix = (source) => applyFix(FIXES[1], source);
 /** Aplica a correção do limiar de luminância; lança se a ocorrência não for única. */
 export const applyThresholdFix = (source) => applyFix(FIXES[2], source);
 
+/** Aplica a mistura em OKLab no lugar da mistura polar; lança se a ocorrência não for única. */
+export const applyMixFix = (source) => applyFix(FIXES[3], source);
+
 /** Aplica todas as correções conhecidas do spike (cada uma exatamente uma vez). */
 export const applySpikeFixes = (source) =>
-  applyThresholdFix(applyStepFix(applyOklabFix(source)));
+  applyMixFix(applyThresholdFix(applyStepFix(applyOklabFix(source))));
 
 export const SEEDS = [
   '#8514f5',
@@ -122,7 +138,7 @@ async function main() {
   const copy = join(tmp, 'theme-fallback.fixed.mjs');
   writeFileSync(copy, patched);
   console.log(
-    'Correções do spike aplicadas (coeficiente OKLab, ganho e limiar do degrau, 1 ocorrência cada).',
+    'Correções do spike aplicadas (coeficiente OKLab, ganho e limiar do degrau, mistura em OKLab, 1 ocorrência cada).',
   );
   const { createRteTheme } = await import(pathToFileURL(copy).href);
 

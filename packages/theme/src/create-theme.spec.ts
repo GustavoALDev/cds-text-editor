@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import golden from './__fixtures__/spike-golden.json';
-import { contrastRatio, type Rgb8 } from './color/convert';
+import { contrastRatio, from8, toLinear, type Rgb8 } from './color/convert';
+import { toOklch } from './color/oklab';
 import { createRteTheme } from './create-theme';
 import { ANGULAR_DEFAULTS } from './defaults';
 
@@ -210,4 +211,52 @@ describe('createRteTheme', () => {
       }
     }
   });
+});
+
+describe('hue of subtle and border (mix in OKLab)', () => {
+  const trios: [string, string, string][] = [
+    ['#1d8811', '#e51e3a', '#4071d9'],
+    ['#8514f5', '#f637e3', '#0546ff'],
+    ['#ea580c', '#db2777', '#9333ea'],
+    ['#0369a1', '#0e7490', '#4f46e5'],
+    ['#00bcd4', '#ff5722', '#8bc34a'],
+  ];
+  const lch = (hex: string): readonly [number, number, number] =>
+    toOklch(toLinear(from8(rgb8(hex))));
+  const dh = (a: number, b: number): number => {
+    const d = Math.abs(a - b) % 360;
+    return d > 180 ? 360 - d : d;
+  };
+
+  // Antes (mistura polar): até ~155 graus. Com neutros cinza a superfície é acromática e o matiz
+  // fica na semente (resta o ruído de 8 bits); com neutros tingidos a superfície carrega o matiz da
+  // primary por desenho: a borda (45%) fica a <= 6 graus e o subtle (12%, quase só superfície) a <= 35.
+  for (const neutral of ['gray', 'tinted'] as const)
+    for (const dark of [false, true])
+      it(`keeps each role hue near its seed (${neutral}, ${dark ? 'dark' : 'light'})`, () => {
+        for (const trio of trios) {
+          const t = createRteTheme({
+            primary: trio[0],
+            secondary: trio[1],
+            tertiary: trio[2],
+            neutral,
+            dark,
+          });
+          trio.forEach((seed, i) => {
+            const role = ['primary', 'secondary', 'tertiary'][i]!;
+            const seedH = lch(seed)[2];
+            for (const [kind, limit] of [
+              ['subtle', neutral === 'gray' ? 5 : 35],
+              ['border', neutral === 'gray' ? 5 : 6],
+            ] as const) {
+              const [, c, h] = lch(t[`--rte-${role}-${kind}`] as string);
+              if (c > 0.01)
+                expect(
+                  dh(h, seedH),
+                  `${trio} ${role}-${kind} ${neutral} dark=${dark}`,
+                ).toBeLessThanOrEqual(limit);
+            }
+          });
+        }
+      });
 });

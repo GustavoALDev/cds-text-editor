@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  applyMixFix,
   applyOklabFix,
   applySpikeFixes,
   applyStepFix,
@@ -10,6 +11,7 @@ import {
 const OKLAB = '0.2119034982 * r + 0.6806995451 * g + 0.0883024619 * b';
 const STEP = 'const s = clamp((WHITE_Y - y) * 1000);';
 const THRESHOLD = 'const WHITE_Y = 0.1791;';
+const MIX = 'function mixOklch(a, pA, b) {';
 
 test('corrige o coeficiente OKLab com exatamente uma ocorrência', () => {
   const out = applyOklabFix(`x ${OKLAB} y`);
@@ -41,18 +43,35 @@ test('corrige o limiar com exatamente uma ocorrência', () => {
   );
 });
 
-test('applySpikeFixes aplica as três e exige todas', () => {
-  const out = applySpikeFixes(`${OKLAB}\n${STEP}\n${THRESHOLD}`);
+test('troca a mistura polar por OKLab com exatamente uma ocorrência', () => {
+  const out = applyMixFix(`x ${MIX} y`);
+  assert.match(out, /Math\.hypot\(A, B\)/);
+  assert.match(out, /function mixOklchPolar/);
+  assert.throws(() => applyMixFix('nada'), /encontradas 0/);
+  assert.throws(() => applyMixFix(`${MIX}\n${MIX}`), /encontradas 2/);
+});
+
+test('applySpikeFixes aplica as quatro e exige todas', () => {
+  const all = `${OKLAB}\n${STEP}\n${THRESHOLD}\n${MIX}`;
+  const out = applySpikeFixes(all);
+  assert.match(out, /Math\.hypot\(A, B\)/);
+  assert.throws(
+    () => applySpikeFixes(`${OKLAB}\n${STEP}\n${THRESHOLD}`),
+    /mistura em OKLab/,
+  );
   assert.match(out, /0\.1791005/);
   assert.match(out, /0\.1073969566/);
   assert.match(out, /1e9/);
-  assert.throws(() => applySpikeFixes(`${OKLAB}\n${STEP}`), /limiar do degrau/);
   assert.throws(
-    () => applySpikeFixes(`${STEP}\n${THRESHOLD}`),
+    () => applySpikeFixes(`${OKLAB}\n${STEP}\n${MIX}`),
+    /limiar do degrau/,
+  );
+  assert.throws(
+    () => applySpikeFixes(`${STEP}\n${THRESHOLD}\n${MIX}`),
     /coeficiente OKLab/,
   );
   assert.throws(
-    () => applySpikeFixes(`${OKLAB}\n${THRESHOLD}`),
+    () => applySpikeFixes(`${OKLAB}\n${THRESHOLD}\n${MIX}`),
     /ganho do degrau/,
   );
 });

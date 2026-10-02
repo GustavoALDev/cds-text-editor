@@ -1,5 +1,11 @@
 import { clamp, luminance, toSrgb, type Rgb } from './color/convert';
-import { fromOklch, mixOklch, toOklch, type Oklch } from './color/oklab';
+import {
+  linearToOklab,
+  mixOklab,
+  oklabToLinear,
+  oklchToOklab,
+  type Oklch,
+} from './color/oklab';
 
 /**
  * Luminância (srgb-linear) abaixo da qual o texto sobre a semente é branco; acima, preto.
@@ -59,14 +65,15 @@ export function deriveRole(
     : ([0, 1, 2].map(
         (i) => (seedLin[i] as number) * Math.min(1, 0.13 / y),
       ) as unknown as Rgb);
-  const seedOk = toOklch(seedLin);
+  const seedOk = linearToOklab(seedLin);
+  const surfaceLab = oklchToOklab(surface);
   return {
     seed: toSrgb(seedLin),
     on: toSrgb([s, s, s]),
     hover: toSrgb(state(0.14)),
     active: toSrgb(state(0.26)),
     text: toSrgb(text),
-    subtle: toSrgb(fromOklch(mixOklch(seedOk, 0.12, surface))),
-    border: toSrgb(fromOklch(mixOklch(seedOk, 0.45, surface))),
+    subtle: toSrgb(oklabToLinear(mixOklab(seedOk, 0.12, surfaceLab))),
+    border: toSrgb(oklabToLinear(mixOklab(seedOk, 0.45, surfaceLab))),
   };
 }
