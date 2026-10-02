@@ -10,13 +10,19 @@ export interface CheckResult {
   ok: boolean;
 }
 
+function token(t: Tokens, name: string): Rgb8 {
+  const v = t[name];
+  if (!v) throw new Error(`token ausente: --rte-${name}`);
+  return v;
+}
+
 export const ROLES = ['primary', 'secondary', 'tertiary'] as const;
 
 /** As 10 verificações de analyze.py (C1..C6b) por papel; C4/C5 (só dependem da base) rodam uma vez. */
 export function evaluateChecks(t: Tokens): CheckResult[] {
   const out: CheckResult[] = [];
   const add = (id: string, a: string, b: string, min: number): void => {
-    const ratio = contrastRatio(t[a]!, t[b]!);
+    const ratio = contrastRatio(token(t, a), token(t, b));
     out.push({ id, ratio, min, ok: ratio >= min });
   };
   add('C4', 'focus', 'surface', 3);

@@ -1,7 +1,30 @@
 import { expect, test } from '@playwright/test';
 import { evaluateChecks } from './helpers/contrast';
-import { loadThemePage, readSupport, readTokenGrid } from './helpers/page';
+import {
+  loadThemePage,
+  probeProblems,
+  readSupport,
+  readTokenGrid,
+} from './helpers/page';
 import { srgbSeeds, thresholdSeeds, wideSeeds } from './helpers/seeds';
+
+test('native relative-color support is present in this engine', async ({
+  page,
+  browser,
+}) => {
+  await loadThemePage(page);
+  const s = await readSupport(page);
+  const msg = `${browser.browserType().name()} ${browser.version()}: os 3 motores do ADR 0002 (Chromium 153, Firefox 155, WebKit 26.6) suportam cores relativas, light-dark() e @property; se uma versão futura perder suporte, atualize o ADR e a expectativa de forma explícita.`;
+  expect(s.relativeColors, msg).toBe(true);
+  expect(
+    await page.evaluate(() => CSS.supports('color', 'light-dark(red, blue)')),
+    msg,
+  ).toBe(true);
+  expect(
+    await page.evaluate(() => typeof CSSPropertyRule !== 'undefined'),
+    msg,
+  ).toBe(true);
+});
 
 test('seed lists match the spike', () => {
   expect(srgbSeeds()).toHaveLength(223);
@@ -42,6 +65,8 @@ for (const variant of ['native', 'plan B'] as const) {
         seeds,
         forcePlanB: variant === 'plan B',
       });
+      const planProblems = grid.flatMap((e) => probeProblems(e, variant));
+      expect(planProblems, planProblems.slice(0, 10).join('\n')).toEqual([]);
       const failures: string[] = [];
       const mins: Record<string, number> = {};
       for (const { seed, mode, tokens } of grid) {

@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Page } from '@playwright/test';
-import type { Rgb8 } from '../../../packages/theme/src/color/convert';
 import { themeBundle } from './bundle';
 import type { Tokens } from './contrast';
 
@@ -41,10 +40,47 @@ export interface GridOptions {
   forcePlanB?: boolean | undefined;
 }
 
+/** Variáveis derivadas sondadas no estilo INLINE de #root (provam qual plano rodou). */
+export const PROBE_NAMES = ['surface', 'primary-hover', 'on-primary'] as const;
+
 export interface GridEntry {
   seed: string;
   mode: Mode;
   tokens: Tokens;
+  /** Valor inline de `--rte-<nome>` em #root após `applyRteTheme`. */
+  inline: Record<string, string>;
+  /** O que `createRteTheme` (plano B) devolve para o mesmo tema. */
+  expected: Record<string, string>;
+}
+
+/**
+ * Prova qual plano rodou: no plano B o inline traz hex iguais ao `createRteTheme`; no nativo o
+ * inline não traz nenhuma variável derivada (só sementes e data-rte-mode).
+ */
+export function probeProblems(
+  entry: GridEntry,
+  variant: 'native' | 'plan B',
+): string[] {
+  const out: string[] = [];
+  for (const n of PROBE_NAMES) {
+    const got = entry.inline[n] ?? '';
+    const want = entry.expected[n] ?? '';
+    if (variant === 'native') {
+      if (got !== '')
+        out.push(
+          `${entry.seed} ${entry.mode}: nativo mas --rte-${n} inline = "${got}" (esperado vazio)`,
+        );
+    } else if (!/^#[0-9a-f]{6}$/i.test(got)) {
+      out.push(
+        `${entry.seed} ${entry.mode}: plano B não definiu --rte-${n} como hex (inline = "${got}")`,
+      );
+    } else if (got !== want) {
+      out.push(
+        `${entry.seed} ${entry.mode}: --rte-${n} inline "${got}" difere de createRteTheme "${want}"`,
+      );
+    }
+  }
+  return out;
 }
 
 /**
@@ -57,7 +93,7 @@ export function readTokenGrid(
   { seeds, modes = ['light', 'dark'], forcePlanB = false }: GridOptions,
 ): Promise<GridEntry[]> {
   return page.evaluate(
-    ({ seeds, modes, forcePlanB }) => {
+    ({ seeds, modes, forcePlanB, probeNames }) => {
       const root = document.getElementById('root') as HTMLElement;
       const probe = document.getElementById('probe') as HTMLElement;
       const cv = document.getElementById('cv') as HTMLCanvasElement;
@@ -96,6 +132,8 @@ export function readTokenGrid(
         seed: string;
         mode: 'light' | 'dark';
         tokens: Record<string, [number, number, number]>;
+        inline: Record<string, string>;
+        expected: Record<string, string>;
       }[] = [];
       for (const seed of seeds) {
         for (const mode of modes) {
@@ -108,28 +146,23 @@ export function readTokenGrid(
           });
           const tokens: Record<string, [number, number, number]> = {};
           for (const n of names) tokens[n] = get(n);
-          out.push({ seed, mode, tokens });
+          const theme = window.RteTheme.createRteTheme({
+            primary: seed,
+            secondary: seed,
+            tertiary: seed,
+            mode,
+          });
+          const inline: Record<string, string> = {};
+          const expected: Record<string, string> = {};
+          for (const n of probeNames) {
+            inline[n] = root.style.getPropertyValue(`--rte-${n}`);
+            expected[n] = theme[`--rte-${n}`] ?? '';
+          }
+          out.push({ seed, mode, tokens, inline, expected });
         }
       }
       return out;
     },
-    { seeds, modes, forcePlanB },
+    { seeds, modes, forcePlanB, probeNames: [...PROBE_NAMES] },
   ) as Promise<GridEntry[]>;
-}
-
-export async function readTokens(
-  page: Page,
-  {
-    seed,
-    mode,
-    forcePlanB,
-  }: { seed: string; mode: Mode; forcePlanB?: boolean },
-): Promise<Record<string, Rgb8>> {
-  const [entry] = await readTokenGrid(page, {
-    seeds: [seed],
-    modes: [mode],
-    forcePlanB,
-  });
-  if (!entry) throw new Error('readTokens: empty grid');
-  return entry.tokens;
 }
