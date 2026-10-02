@@ -2,7 +2,10 @@
   "name": "@cds/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "check:rules": "node tools/check-repo-rules.mjs",
+    "test:tools": "node --test \"tools/**/*.test.mjs\""
+  },
   "private": true,
   "devDependencies": {
     "@angular-devkit/core": "22.2.1",

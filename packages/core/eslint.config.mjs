@@ -1,7 +1,8 @@
-import baseConfig from '../../eslint.config.mjs';
+import baseConfig, { noAngularImports } from '../../eslint.config.mjs';
 
 export default [
   ...baseConfig,
+  noAngularImports,
   {
     files: ['**/*.json'],
     rules: {
