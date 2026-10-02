@@ -17,7 +17,8 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./theme.css": "./dist/theme.css"
+    "./theme.css": "./dist/theme.css",
+    "./package.json": "./package.json"
   },
   "repository": {
     "type": "git",
