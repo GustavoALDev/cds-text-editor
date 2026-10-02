@@ -1,7 +1,10 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+// Emenda à R14 (ADR 0001): 0BSD permitido (tslib, dependência de runtime dos pacotes ng-packagr).
 const ALLOWED = new Set([
+  '0BSD',
   'MIT',
   'ISC',
   'BSD-2-Clause',
@@ -122,12 +125,72 @@ export function checkLicenses(
   return errors;
 }
 
+// `dependencies`/`optionalDependencies` de manifestos publicáveis vão ao consumidor mesmo quando o
+// lockfile marca o pacote como dev (ex.: tslib é devDependency da raiz). `manifests`: [{ path, json }].
+// Pacotes do workspace (entrada com link) são ignorados; dependência sem entrada no lockfile falha.
+export function checkManifestDependencies(
+  lock,
+  manifests,
+  licenseOf = (_name, entry) => licenseFromEntry(entry),
+) {
+  const invalid = lockfileError(lock);
+  if (invalid) return [invalid];
+  const errors = [];
+  for (const { path, json } of manifests) {
+    const dir = path.replace(/\/?package\.json$/, '');
+    const deps = {
+      ...json?.dependencies,
+      ...json?.optionalDependencies,
+    };
+    for (const name of Object.keys(deps)) {
+      const entry =
+        lock.packages[`${dir}/node_modules/${name}`] ??
+        lock.packages[`node_modules/${name}`];
+      if (!entry) {
+        errors.push(
+          `${path}: dependência "${name}" não encontrada no lockfile`,
+        );
+        continue;
+      }
+      if (entry.link) continue;
+      const license = licenseOf(name, entry);
+      if (!license || !isAllowed(license))
+        errors.push(
+          `${path}: dependência "${name}" com licença "${license ?? 'desconhecida'}" fora da allowlist`,
+        );
+    }
+  }
+  return errors;
+}
+
+// Manifestos publicáveis: packages/*/package.json e, quando existirem, dist/packages/*/package.json.
+export function publishableManifests(root = '.') {
+  const out = [];
+  for (const base of ['packages', 'dist/packages']) {
+    const dir = join(root, base);
+    if (!existsSync(dir)) continue;
+    for (const d of readdirSync(dir)) {
+      const file = join(dir, d, 'package.json');
+      if (existsSync(file))
+        out.push({
+          path: `${base}/${d}/package.json`,
+          json: JSON.parse(readFileSync(file, 'utf8')),
+        });
+    }
+  }
+  return out;
+}
+
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const lock = JSON.parse(
     readFileSync(process.argv[2] ?? 'package-lock.json', 'utf8'),
   );
   const errors = [
-    ...new Set([...checkForbiddenNames(lock), ...checkLicenses(lock)]),
+    ...new Set([
+      ...checkForbiddenNames(lock),
+      ...checkLicenses(lock),
+      ...checkManifestDependencies(lock, publishableManifests()),
+    ]),
   ];
   for (const e of errors) console.error(e);
   if (!errors.length) console.log('licenças ok');

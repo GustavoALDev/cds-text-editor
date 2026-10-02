@@ -65,6 +65,16 @@ Verificada pelos builds, lints e testes funcionando em 2026-10-02: Nx 23.2.1 + A
 7. **`dependency-checks`.** `ignoredDependencies` para os peers de Angular e Tiptap enquanto o código não os usa.
 8. **E2E em WSL** precisa das libs do Chromium (ver `e2e/README.md`).
 
+## Emenda à R14: allowlist inclui 0BSD
+
+Emenda à R14: allowlist inclui 0BSD (`tslib`, dependência de runtime dos pacotes ng-packagr via `importHelpers`). A `0BSD` é mais permissiva que a MIT (sem exigência de aviso), e o `tslib` é inevitável em bibliotecas Angular; remover `importHelpers` duplicaria helpers em cada pacote e seria pior. Como o `tslib` é devDependency da raiz (`dev: true` no lockfile), o gate também passou a ler `dependencies`/`optionalDependencies` de `packages/*/package.json` e de `dist/packages/*/package.json` e checar a licença resolvida no lockfile, mesmo para entradas dev (`checkManifestDependencies` em `tools/check-licenses.mjs`).
+
+## Decisões em aberto (com prazo)
+
+- **(a) Notices e dependências de produção do workspace.** O gerador de `THIRD-PARTY-NOTICES.md` usa `--production` a partir da raiz e não enxerga dependências de produção dos pacotes do workspace. Usar as entradas não-dev do lockfile, como o `check-licenses`. Prazo: antes da spec 04 (entrada do `sanitize-html`).
+- **(b) Política de dependência entre pacotes.** Definir `dependency` com `^0.x` versus `peerDependency` com faixa; configurar `onlyUpdatePeerDependentsWhenOutOfRange` no Changesets; o `@nx/dependency-checks` escreve `0.0.0` exato nos peers. Codificar a regra em `tools/check-repo-rules.mjs`. Prazo: antes do primeiro import entre pacotes (spec 04).
+- **(c) Fluxo de publicação de `angular` e `render`.** `npm pack` na pasta do pacote gera tarball de fontes; publicar `dist/packages/*`. Criar guard contra publicar a partir do fonte e checar o `TODO-AUTOR` do `dist/LICENSE` na publicação. O fluxo de publicação é Changesets; os blocos de Nx Release foram removidos dos `project.json`. Prazo: antes da spec 09.
+
 ## Consequências
 
 - Versões exatas de Angular, TypeScript e Nx evitam surpresas; atualizar é decisão consciente, com novo registro aqui.

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   checkForbiddenNames,
   checkLicenses,
+  checkManifestDependencies,
   isAllowed,
   lockfileError,
   nameOf,
@@ -62,16 +63,20 @@ test('ignores dev-only packages with a bad license', () => {
       'node_modules/shipped': {},
     },
   };
-  const errors = checkLicenses(l, (n) => (n === 'shipped' ? 'MIT' : '0BSD'));
+  const errors = checkLicenses(l, (n) => (n === 'shipped' ? 'MIT' : 'GPL-3.0'));
   assert.deepEqual(errors, []);
 });
 
 test('rejects a production package with a bad license', () => {
   const errors = checkLicenses(
     { lockfileVersion: 3, packages: { 'node_modules/shipped': {} } },
-    () => '0BSD',
+    () => 'GPL-3.0',
   );
   assert.equal(errors.length, 1);
+});
+
+test('0BSD is on the allowlist (R14 amendment: tslib)', () => {
+  assert.equal(isAllowed('0BSD'), true);
 });
 
 test('reports a missing license field', () => {
@@ -201,4 +206,71 @@ test('fails closed on invalid or empty lockfiles', () => {
     lockfileError({ lockfileVersion: 3, packages: { '': {} } }),
     undefined,
   );
+});
+
+const manifestLock = (entries) => ({ lockfileVersion: 3, packages: entries });
+
+test('manifest runtime dependencies are checked even when dev:true in the lockfile', () => {
+  const l = manifestLock({
+    'node_modules/tslib': { dev: true, license: 'GPL-3.0' },
+  });
+  const errors = checkManifestDependencies(l, [
+    {
+      path: 'dist/packages/x/package.json',
+      json: { dependencies: { tslib: '^2.3.0' } },
+    },
+  ]);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /tslib/);
+  assert.match(errors[0], /dist\/packages\/x\/package\.json/);
+});
+
+test('manifest dependencies with allowed licenses (0BSD) pass; peers and devDependencies are ignored', () => {
+  const l = manifestLock({
+    'node_modules/tslib': { dev: true, license: '0BSD' },
+    'node_modules/gpl': { license: 'GPL-3.0' },
+  });
+  assert.deepEqual(
+    checkManifestDependencies(l, [
+      {
+        path: 'p/package.json',
+        json: {
+          dependencies: { tslib: '^2.3.0' },
+          peerDependencies: { gpl: '*' },
+          devDependencies: { gpl: '*' },
+        },
+      },
+    ]),
+    [],
+  );
+});
+
+test('manifest dependencies not found in the lockfile fail closed; workspace links are skipped', () => {
+  const l = manifestLock({
+    'node_modules/@cds/rte-core': { resolved: 'packages/core', link: true },
+  });
+  const errors = checkManifestDependencies(l, [
+    {
+      path: 'p/package.json',
+      json: {
+        dependencies: { '@cds/rte-core': '^0.0.0' },
+        optionalDependencies: { ghost: '1.0.0' },
+      },
+    },
+  ]);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /ghost/);
+});
+
+test('manifest check falls back to the nested workspace entry and fails closed on invalid lockfiles', () => {
+  const l = manifestLock({
+    'packages/x/node_modules/dep': { license: 'MIT' },
+  });
+  assert.deepEqual(
+    checkManifestDependencies(l, [
+      { path: 'packages/x/package.json', json: { dependencies: { dep: '1' } } },
+    ]),
+    [],
+  );
+  assert.equal(checkManifestDependencies({}, []).length, 1);
 });
