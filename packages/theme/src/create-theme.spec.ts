@@ -6,7 +6,10 @@ import { createRteTheme } from './create-theme';
 import { ANGULAR_DEFAULTS } from './defaults';
 
 interface GoldenCase {
-  seed: string;
+  /** Casos de sementes iguais nos três papéis. */
+  seed?: string;
+  /** Casos com sementes diferentes por papel (primary, secondary, tertiary). */
+  seeds?: [string, string, string];
   mode: 'light' | 'dark';
   neutralTint: 0 | 1;
   hex: Record<string, string>;
@@ -21,12 +24,17 @@ const rgb8 = (hex: string): Rgb8 => [
 
 describe('createRteTheme', () => {
   it.each(golden as GoldenCase[])(
-    'matches the spike for $seed $mode tint=$neutralTint',
+    'matches the spike for $seed$seeds $mode tint=$neutralTint',
     (c) => {
+      const [primary, secondary, tertiary] = c.seeds ?? [
+        c.seed!,
+        c.seed!,
+        c.seed!,
+      ];
       const vars = createRteTheme({
-        primary: c.seed,
-        secondary: c.seed,
-        tertiary: c.seed,
+        primary,
+        secondary,
+        tertiary,
         mode: c.mode,
         neutral: c.neutralTint === 0 ? 'gray' : 'tinted',
       });

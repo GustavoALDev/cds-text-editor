@@ -173,6 +173,11 @@ export interface BothEntry {
   neutral: 'tinted' | 'gray';
   native: Tokens;
   planB: Tokens;
+  /** Variáveis derivadas inline em #root após cada passada (prova de qual plano rodou). */
+  nativeInline: Record<string, string>;
+  planBInline: Record<string, string>;
+  /** O que `createRteTheme` devolve para o mesmo tema (hex). */
+  expected: Record<string, string>;
 }
 
 export interface BothCase {
@@ -225,10 +230,18 @@ export function readTokensBoth(
       }
       return out;
     };
+    const probeNames = ['surface', 'primary-hover', 'on-primary'];
+    const inlineOf = (): Record<string, string> =>
+      Object.fromEntries(
+        probeNames.map((n) => [n, root.style.getPropertyValue(`--rte-${n}`)]),
+      );
     const run = (
       c: (typeof cases)[number],
       force: boolean,
-    ): Record<string, [number, number, number]> => {
+    ): {
+      t: Record<string, [number, number, number]>;
+      inline: Record<string, string>;
+    } => {
       const cleanup = window.RteTheme.applyRteTheme(root, {
         primary: c.seeds[0],
         secondary: c.seeds[1],
@@ -238,13 +251,30 @@ export function readTokensBoth(
         force,
       });
       const t = read();
+      const inline = inlineOf();
       cleanup();
-      return t;
+      return { t, inline };
     };
-    return cases.map((c) => ({
-      ...c,
-      native: run(c, false),
-      planB: run(c, true),
-    }));
+    return cases.map((c) => {
+      const n = run(c, false);
+      const b = run(c, true);
+      const theme = window.RteTheme.createRteTheme({
+        primary: c.seeds[0],
+        secondary: c.seeds[1],
+        tertiary: c.seeds[2],
+        mode: c.mode,
+        neutral: c.neutral,
+      });
+      return {
+        ...c,
+        native: n.t,
+        planB: b.t,
+        nativeInline: n.inline,
+        planBInline: b.inline,
+        expected: Object.fromEntries(
+          probeNames.map((p) => [p, theme[`--rte-${p}`] ?? '']),
+        ),
+      };
+    });
   }, cases) as Promise<BothEntry[]>;
 }

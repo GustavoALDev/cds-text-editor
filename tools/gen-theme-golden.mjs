@@ -123,6 +123,15 @@ export const SEEDS = [
   '#0d78cd',
 ];
 
+/** Trios com sementes DIFERENTES por papel: fixam a independência dos papéis (matiz de subtle/border). */
+export const TRIOS = [
+  ['#ff0000', '#00ff00', '#0000ff'],
+  ['#1d8811', '#e51e3a', '#4071d9'],
+  ['#00bcd4', '#ff5722', '#8bc34a'],
+  ['#8514f5', '#f637e3', '#0546ff'],
+  ['#0369a1', '#0e7490', '#4f46e5'],
+];
+
 async function main() {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const spike = join(root, 'docs/specs/referencias/t6-tema/theme-fallback.mjs');
@@ -154,6 +163,20 @@ async function main() {
           neutralTint,
         });
         golden.push({ seed, mode, neutralTint, hex });
+      }
+    }
+  }
+  for (const seeds of TRIOS) {
+    for (const mode of ['light', 'dark']) {
+      for (const neutralTint of [1, 0]) {
+        const { hex } = createRteTheme({
+          primary: seeds[0],
+          secondary: seeds[1],
+          tertiary: seeds[2],
+          mode,
+          neutralTint,
+        });
+        golden.push({ seeds, mode, neutralTint, hex });
       }
     }
   }

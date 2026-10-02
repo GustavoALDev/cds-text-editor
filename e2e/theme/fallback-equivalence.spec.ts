@@ -1,13 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { RTE_THEME_PRESETS } from '../../packages/theme/src/presets';
-import {
-  from8,
-  toLinear,
-  type Rgb8,
-} from '../../packages/theme/src/color/convert';
+import { from8, to8, toLinear } from '../../packages/theme/src/color/convert';
 import { toOklch } from '../../packages/theme/src/color/oklab';
 import { parseColor } from '../../packages/theme/src/color/parse';
-import { deltaE } from './helpers/delta-e';
+import { deltaE, hueOffset } from './helpers/delta-e';
 import {
   loadThemePage,
   readSupport,
@@ -64,6 +60,14 @@ function sampleSeeds(): string[] {
   ];
 }
 
+/** Desvio máximo de matiz (distância (a, b) em OKLab, ver o teste) por neutro e token. */
+const HUE_LIMITS = {
+  'gray-subtle': 0.004,
+  'gray-border': 0.004,
+  'tinted-subtle': 0.016,
+  'tinted-border': 0.01,
+};
+
 const MODES: Mode[] = ['light', 'dark'];
 
 interface Worst {
@@ -92,6 +96,7 @@ test.describe('plano B equivale ao CSS nativo (R7)', () => {
     const entries = await readTokensBoth(page, cases);
     expect(entries).toHaveLength(cases.length);
     const worst = emptyWorst();
+    const hueWorst: Record<string, number> = {};
     for (const e of entries) {
       for (const [token, native] of Object.entries(e.native)) {
         const g = groupOf(token);
@@ -105,44 +110,42 @@ test.describe('plano B equivale ao CSS nativo (R7)', () => {
           };
       }
     }
-    // Matiz de subtle/border no CSS nativo e no plano B: perto da semente do papel (mistura em OKLab).
-    // Cinza: a superfície é acromática (<= 5 graus, ruído de 8 bits); tingido: a superfície carrega o
-    // matiz da primary por desenho (borda <= 6, subtle <= 35; antes, com mistura polar, até ~155).
-    const hueOf = (c: Rgb8): readonly number[] => toOklch(toLinear(from8(c)));
+    // Não vacuidade: o nativo não deixa variáveis derivadas inline; o plano B as deixa iguais a createRteTheme.
+    for (const e of entries)
+      for (const n of ['surface', 'primary-hover', 'on-primary']) {
+        const label = `${e.seeds} ${e.mode} ${e.neutral} --rte-${n}`;
+        expect(e.nativeInline[n], `nativo: ${label}`).toBe('');
+        expect(e.planBInline[n], `plano B: ${label}`).toBe(e.expected[n]);
+      }
+    // Matiz de subtle/border (só com sementes de papel diferentes), nos dois planos. Medido como
+    // distância (a, b) do OKLab até o raio de matiz da semente, que não depende do croma: um degrau de
+    // 8 bits vale 0,0015 a 0,004 em OKLab, mas em graus chega a 10 a 14 quando o croma é ~0,012.
+    // Máximos medidos (3 motores iguais): cinza 0,0018, borda tingida 0,0068, subtle tingido 0,0112;
+    // limites = máximo + >= 1 degrau de 8 bits. Cinza: a superfície é acromática, o desvio é só ruído. Tingido: a superfície carrega o matiz da primary
+    // por desenho; `border` (45%) desvia pouco e `subtle` (12%, quase só superfície) mais. Antes
+    // (mistura polar) o desvio chegava a 0,1 em OKLab (150 graus). Em graus só se checa croma >= 0,03.
     for (const e of entries) {
       if (e.seeds[0] === e.seeds[1] && e.seeds[1] === e.seeds[2]) continue;
       e.seeds.forEach((seed, i) => {
         const role = ['primary', 'secondary', 'tertiary'][i]!;
-        const rgb = parseColor(seed)!.map((v) => Math.round(v * 255));
-        const [, seedC, seedH] = hueOf(rgb as unknown as Rgb8) as [
-          number,
-          number,
-          number,
-        ];
-        if (seedC < 0.05) return; // semente quase acromática: matiz mal definido em 8 bits
-        for (const [kind, limit] of [
-          ['subtle', e.neutral === 'gray' ? 5 : 35],
-          ['border', e.neutral === 'gray' ? 5 : 6],
-        ] as const)
+        const seedRgb = to8(parseColor(seed)!);
+        if (toOklch(toLinear(from8(seedRgb)))[1] < 0.05) return; // semente quase acromática
+        for (const kind of ['subtle', 'border'] as const)
           for (const [plan, toks] of [
             ['native', e.native],
             ['planB', e.planB],
           ] as const) {
-            const [, c, h] = hueOf(toks[`${role}-${kind}`]!) as [
-              number,
-              number,
-              number,
-            ];
-            if (c <= 0.01) continue;
-            let d = Math.abs(h - seedH) % 360;
-            if (d > 180) d = 360 - d;
-            expect(
-              d,
-              `${plan} ${e.seeds} ${e.mode} ${e.neutral} ${role}-${kind}`,
-            ).toBeLessThanOrEqual(limit);
+            const h = hueOffset(toks[`${role}-${kind}`]!, seedRgb);
+            const key = `${e.neutral}-${kind}` as keyof typeof HUE_LIMITS;
+            const label = `${plan} ${e.seeds} ${e.mode} ${e.neutral} ${role}-${kind} offset=${h.offset.toFixed(4)} C=${h.chroma.toFixed(3)} deg=${h.degrees.toFixed(1)}`;
+            hueWorst[key] = Math.max(hueWorst[key] ?? 0, h.offset);
+            expect(h.offset, label).toBeLessThanOrEqual(HUE_LIMITS[key]);
+            if (h.chroma >= 0.03 && (e.neutral === 'gray' || kind === 'border'))
+              expect(h.degrees, label).toBeLessThanOrEqual(6);
           }
       });
     }
+    console.log(`[${browserName}] hue offset max`, JSON.stringify(hueWorst));
     for (const g of Object.keys(LIMITS) as Group[]) {
       test.info().annotations.push({
         type: 'delta-e-max',
@@ -178,6 +181,7 @@ test.describe('plano B equivale ao CSS nativo (R7)', () => {
   const trios: [string, string, string][] = [
     ['#8514f5', '#f637e3', '#0546ff'],
     ['#1d8811', '#e51e3a', '#4071d9'],
+    ['#00bcd4', '#ff5722', '#8bc34a'],
     ...(['ocean', 'forest', 'sunset', 'monochrome'] as const).map(
       (n): [string, string, string] => [
         RTE_THEME_PRESETS[n].primary,

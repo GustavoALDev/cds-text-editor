@@ -42,7 +42,7 @@ export interface DerivedRole {
 
 /**
  * Deriva os tokens de um papel de cor (primary/secondary/tertiary) a partir da semente em
- * srgb-linear e da superfície em OKLCH. Porte literal do spike T6; entradas e saídas em 0..1.
+ * srgb-linear e da superfície em OKLCH. Porte do spike T6 com quatro desvios documentados (ADR 0002, "Desvios da fórmula do spike"); entradas e saídas em 0..1.
  */
 export function deriveRole(
   seedLin: Rgb,

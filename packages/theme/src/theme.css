@@ -11,7 +11,7 @@
  *     (Y = 0.2126r + 0.7152g + 0.0722b) sai em calc(). Com ela: texto branco/preto ótimo sobre a cor,
  *     estados hover/active que sempre AUMENTAM o contraste e variante legível como texto.
  *   - clamp(0, canal, 1): recorta cores fora do gamut sRGB (oklch/p3 muito saturadas) antes das contas.
- *   - oklch(from …): neutros tingidos pelo matiz da primary; color-mix(in oklch): fundos suaves e bordas.
+ *   - oklch(from …): neutros tingidos pelo matiz da primary; color-mix(in oklab): fundos suaves e bordas (em OKLab, não em OKLCH: a mistura polar interpola o matiz e puxaria o de cada papel até o da primary, que a superfície carrega).
  *   - light-dark(): um único conjunto de tokens para claro e escuro (precisa de color-scheme).
  *   - @layer: o CSS do consumidor (sem camada) sempre vence.
  *
