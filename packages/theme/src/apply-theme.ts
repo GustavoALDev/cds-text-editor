@@ -173,8 +173,10 @@ export function resolveMode(mode: RteThemeMode | undefined): 'light' | 'dark' {
  * `currentcolor`, cores do sistema), resolvida no contexto do elemento por um filho-sonda
  * temporário. Semente omitida ou ilegível vale o valor herdado da cascata (`:root`/ancestral) e,
  * sem nenhum, o padrão Angular. É uma FOTO da cascata no momento da aplicação (e de cada
- * repintura por mudança de preferência): se o `:root`/ancestral mudar depois, chame
- * `applyRteTheme` de novo. Plano B, R8: sob `forced-colors: active` os tokens trocados pelo bloco
+ * repintura por mudança de preferência): a semente resolvida também é gravada inline, então
+ * semente e derivados ficam um par consistente; se o `:root`/ancestral mudar depois, chame
+ * `applyRteTheme` de novo. Exceção: um `--rte-<papel>` que o próprio usuário pôs inline no
+ * elemento é respeitado (os derivados saem dele) e não é gravado nem removido pelo cleanup. Plano B, R8: sob `forced-colors: active` os tokens trocados pelo bloco
  * do theme.css não são escritos inline; sob `prefers-contrast: more` a borda recebe o valor do
  * texto secundário. Mudanças dessas preferências repintam.
  */
@@ -215,7 +217,7 @@ export function applyRteTheme(
       const forced = getMedia(FORCED_QUERY)?.matches === true;
       const contrast = !forced && getMedia(CONTRAST_QUERY)?.matches === true;
       const seeds: Partial<Record<(typeof ROLES)[number], string>> = {};
-      const cascaded = new Set<string>();
+      const authored = new Set<string>();
       for (const role of ROLES) {
         const name = `--rte-${role}`;
         const given = options[role];
@@ -226,11 +228,13 @@ export function applyRteTheme(
             : (resolveInContext(element, given) ??
               (parseColor(given) ? given : null));
         if (seed === null) {
-          // Omitido ou ilegível: vale o valor herdado (ancestral/:root); só sem ele, o padrão.
+          // Omitido ou ilegível: vale o valor herdado (ancestral/:root ou inline do usuário no
+          // próprio elemento); só sem ele, o padrão. Inline que resta após remover os nossos é do
+          // usuário: não é sobrescrito.
           const inherited = computedVar(element, name);
           if (inherited && parseColor(inherited)) {
             seed = inherited;
-            cascaded.add(name);
+            if (element.style.getPropertyValue(name)) authored.add(name);
           }
         }
         if (seed !== null) seeds[role] = seed;
@@ -243,8 +247,9 @@ export function applyRteTheme(
       });
       if (contrast) vars['--rte-border'] = vars['--rte-text-muted'] as string;
       for (const [name, value] of Object.entries(vars)) {
-        // A cascata já exibe a semente herdada: não a congela inline.
-        if (cascaded.has(name)) continue;
+        // A semente vinda da cascata é gravada junto (par semente+derivados consistente), exceto a
+        // que o próprio usuário pôs inline no elemento.
+        if (authored.has(name)) continue;
         if (
           forced &&
           (FORCED_COLORS_TOKENS as readonly string[]).includes(name)

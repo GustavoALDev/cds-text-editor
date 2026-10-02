@@ -105,13 +105,79 @@ test('plano B: papel omitido segue a semente do :root (não o padrão Angular)',
     const got = await shown(page, names);
     for (const n of names)
       expect(got[n], `${mode} ${n}`).toEqual(rgb8(want[`--rte-${n}`]));
-    // Prova de que o plano B rodou (derivado inline) e de que a semente não foi congelada inline.
+    // Prova de que o plano B rodou (derivado inline). A semente lida da cascata agora TAMBÉM é
+    // gravada inline (antes esperávamos '' aqui): semente viva + derivados congelados saíam de
+    // compasso quando a cascata mudava depois. Agora o par semente+derivados é uma foto coerente.
     const raw = await inline(page, ['secondary', 'secondary-hover']);
     expect(raw['secondary-hover'], mode).toBe(want['--rte-secondary-hover']);
-    expect(raw['secondary'], mode).toBe('');
+    expect(raw['secondary'], mode).toBe(want['--rte-secondary']);
+    expect(raw['secondary'], mode).toBe('#10b981');
     expect(r.added, mode).toBe(0); // tudo legível: nenhuma sonda
     await cleanup(page);
   }
+});
+
+/** Troca o valor de `--rte-primary` no :root por uma folha nova (vence a anterior, mesma especificidade). */
+const setRootPrimary = (page: Page, value: string): Promise<void> =>
+  addCss(page, `:root{--rte-primary:${value}}`);
+
+test('plano B: a foto da cascata é consistente; mudar o :root depois não quebra o contraste até reaplicar', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await setRootPrimary(page, '#ffff00');
+  await apply(page, { mode: 'light', force: true });
+  const yellow = createRteTheme({ primary: '#ffff00', mode: 'light' });
+  expect((await inline(page, ['primary']))['primary']).toBe('#ffff00');
+
+  // A cascata muda depois da aplicação: o par exibido continua o amarelo (foto consistente).
+  await setRootPrimary(page, '#000080');
+  let t = await shown(page, ['primary', 'on-primary']);
+  expect(t['primary']).toEqual(rgb8(yellow['--rte-primary']));
+  expect(t['on-primary']).toEqual(rgb8(yellow['--rte-on-primary']));
+  expect(contrastRatio(t['primary']!, t['on-primary']!)).toBeGreaterThanOrEqual(
+    4.5,
+  );
+
+  // Reaplicar relê a cascata: o par passa ao azul-marinho com texto branco.
+  await apply(page, { mode: 'light', force: true });
+  const navy = createRteTheme({ primary: '#000080', mode: 'light' });
+  t = await shown(page, ['primary', 'on-primary', 'primary-hover']);
+  expect(t['primary']).toEqual([0, 0, 128]);
+  expect(t['on-primary']).toEqual([255, 255, 255]);
+  expect(t['primary-hover']).toEqual(rgb8(navy['--rte-primary-hover']));
+  expect(contrastRatio(t['primary']!, t['on-primary']!)).toBeGreaterThanOrEqual(
+    4.5,
+  );
+  await cleanup(page);
+  // O cleanup remove a semente gravada: volta a valer a cascata.
+  expect((await inline(page, ['primary']))['primary']).toBe('');
+  expect(errors).toEqual([]);
+});
+
+test('plano B: semente inline do próprio usuário no #root sobrevive à aplicação e ao cleanup', async ({
+  page,
+}) => {
+  await setRootPrimary(page, '#ffff00');
+  await page.evaluate(() =>
+    document
+      .getElementById('root')!
+      .style.setProperty('--rte-primary', '#000080'),
+  );
+  await apply(page, { mode: 'light', force: true });
+  const navy = createRteTheme({ primary: '#000080', mode: 'light' });
+  expect((await inline(page, ['primary']))['primary']).toBe('#000080');
+  const t = await shown(page, ['primary', 'on-primary', 'primary-hover']);
+  expect(t['primary']).toEqual([0, 0, 128]);
+  expect(t['on-primary']).toEqual(rgb8(navy['--rte-on-primary']));
+  expect(t['primary-hover']).toEqual(rgb8(navy['--rte-primary-hover']));
+  expect(contrastRatio(t['primary']!, t['on-primary']!)).toBeGreaterThanOrEqual(
+    4.5,
+  );
+  await cleanup(page);
+  const after = await inline(page, ['primary', 'on-primary']);
+  expect(after['primary']).toBe('#000080');
+  expect(after['on-primary']).toBe('');
 });
 
 test('plano B: valor inválido cai no valor herdado e, sem nada acima, no padrão', async ({

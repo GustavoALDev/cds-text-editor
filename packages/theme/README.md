@@ -87,8 +87,8 @@ Semântica de `applyRteTheme`:
 
 - **Caminho nativo** (navegador com cores relativas `color(from …)`/`oklch(from …)`, `color-mix(in oklab, …)`, `light-dark()` e `@property`): define só as sementes informadas (texto original, qualquer cor CSS), o atributo `data-rte-mode` (quando `mode` é informado) e, para `neutral: 'gray'`, `--rte-neutral-tint: 0`. O `theme.css` deriva o resto.
 - **Plano B** (navegador sem esse suporte, ou `force: true`): calcula tudo com `createRteTheme` e define cada variável inline com `style.setProperty` (sem `unsafe-inline`; ver CSP), mais `color-scheme`.
-  - **Sementes no plano B.** Uma semente informada é lida pelo parser puro; se não der (`var(--marca)`, nomes, `currentcolor`, cores do sistema), é **resolvida no contexto do elemento** (um filho temporário recebe a cor e a cor computada é lida; o filho sai na mesma chamada). Uma semente **omitida**, ou informada mas inválida, vale a da cascata (`:root`, ancestral ou `style` da própria instância) e, sem nenhuma válida acima, o padrão do Angular, como no CSS nativo. Uma semente herdada não é copiada inline: a cascata continua a exibi-la.
-  - **Foto da cascata.** O plano B lê a cascata no momento da aplicação (e de novo a cada repintura por mudança de preferência do sistema). Se o `:root` ou um ancestral trocar uma semente depois, chame `applyRteTheme` de novo; no caminho nativo isso é automático.
+  - **Sementes no plano B.** Uma semente informada é lida pelo parser puro; se não der (`var(--marca)`, nomes, `currentcolor`, cores do sistema), é **resolvida no contexto do elemento** (um filho temporário recebe a cor e a cor computada é lida; o filho sai na mesma chamada). Uma semente **omitida**, ou informada mas inválida, vale a da cascata (`:root`, ancestral ou `style` da própria instância) e, sem nenhuma válida acima, o padrão do Angular, como no CSS nativo. A semente resolvida também é gravada inline (como `#rrggbb`), para que ela e seus derivados formem um par consistente; a exceção é um `--rte-<papel>` que você mesmo pôs no `style` inline do próprio elemento: ele é respeitado (os derivados saem dele), não é sobrescrito e o cleanup não o remove.
+  - **Foto da cascata.** O plano B lê a cascata no momento da aplicação (e de novo a cada repintura por mudança de preferência do sistema) e grava a semente resolvida junto com os derivados, então o par exibido continua consistente (e com o contraste garantido) mesmo que a cascata mude. Se o `:root` ou um ancestral trocar uma semente depois, o elemento segue com a foto antiga: chame `applyRteTheme` de novo para atualizar o par; no caminho nativo isso é automático.
   - **Acessibilidade no plano B (R8).** Com `forced-colors: active`, os tokens que o `theme.css` troca por cores do sistema (`--rte-border`, `--rte-focus`, `--rte-surface`, `--rte-surface-raised`, `--rte-text`, `--rte-text-muted`, `--rte-*-border`) não são escritos inline, então as cores do sistema valem. Com `prefers-contrast: more`, `--rte-border` recebe o mesmo valor de `--rte-text-muted` (como no CSS), e `--rte-focus-width` (não escrito pelo plano B) vai a `3px` pelo CSS. Mudanças dessas preferências repintam.
 - O **cleanup** remove tudo o que a função definiu (propriedades, atributo, listeners de `prefers-color-scheme`, `forced-colors` e `prefers-contrast`). Ele **não restaura** um valor inline preexistente da mesma propriedade: ele a remove.
 - Aplicar de novo no **mesmo elemento** descarta a aplicação anterior.
@@ -218,9 +218,9 @@ Em navegadores sem esses recursos, o `theme.css` sozinho não deriva as cores; u
 
   | Cenário                                               | min+gzip (B) | Orçamento (B) |
   | ----------------------------------------------------- | ------------ | ------------- |
-  | pacote inteiro                                        | 5676         | 6656          |
-  | `applyRteTheme` (puxa o plano B)                      | 4237         | 5120          |
-  | `createRteTheme`                                      | 3024         | 3072          |
+  | pacote inteiro                                        | 5685         | 6656          |
+  | `applyRteTheme` (puxa o plano B)                      | 4243         | 5120          |
+  | `createRteTheme`                                      | 3024         | 3584          |
   | `parseColor`                                          | 1674         | 2048          |
   | presets                                               | 301          | 512           |
   | `checkRteTheme`, `warnIfPoorTheme`, `suggestRteColor` | 4267         | 4608          |

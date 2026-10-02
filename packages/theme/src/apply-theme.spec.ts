@@ -43,6 +43,7 @@ const fakeElement = (
     style: {
       setProperty: (k: string, v: string) => props.set(k, v),
       removeProperty: (k: string) => props.delete(k),
+      getPropertyValue: (k: string) => props.get(k) ?? '',
     },
     setAttribute: (k: string, v: string) => attrs.set(k, v),
     removeAttribute: (k: string) => attrs.delete(k),
@@ -380,7 +381,7 @@ describe('applyRteTheme plano B: sementes resolvidas no contexto do elemento', (
     expect(el.children).toEqual([]);
   });
 
-  it('papel omitido lê o valor da cascata (e não o sobrescreve inline)', () => {
+  it('papel omitido lê o valor da cascata e grava a semente resolvida inline (par consistente)', () => {
     stubDom(false, {});
     const el = fakeElement({ '--rte-secondary': ' rgb(16, 185, 129) ' });
     stubComputed(el);
@@ -391,8 +392,11 @@ describe('applyRteTheme plano B: sementes resolvidas no contexto do elemento', (
         want[`--rte-secondary-${k}`],
       );
     expect(el.props.get('--rte-on-secondary')).toBe(want['--rte-on-secondary']);
-    // A cascata já exibe a semente; o plano B não congela um valor inline por cima.
-    expect(el.props.has('--rte-secondary')).toBe(false);
+    // Antes a semente lida da cascata NÃO era gravada inline (ficava viva enquanto os derivados
+    // eram uma foto: mudar a cascata depois quebrava o contraste). Agora a foto é consistente: a
+    // semente resolvida também é gravada, como o hex que `createRteTheme` devolve.
+    expect(el.props.get('--rte-secondary')).toBe('#10b981');
+    expect(el.props.get('--rte-secondary')).toBe(want['--rte-secondary']);
     // O papel sem nada na cascata cai no padrão Angular e é escrito inline.
     expect(el.props.get('--rte-tertiary')).toBe('#0546ff');
     expect(el.created).not.toHaveBeenCalled(); // nada dado ilegível: sem sonda
@@ -456,10 +460,53 @@ describe('applyRteTheme plano B: sementes resolvidas no contexto do elemento', (
     // Um ancestral passa a definir a semente; a repintura (mudança de esquema) a enxerga.
     el.cascade['--rte-secondary'] = 'rgb(16, 185, 129)';
     for (const l of listeners) l({ matches: false });
-    expect(el.props.has('--rte-secondary')).toBe(false);
+    // A semente inline anterior (padrão) saiu antes da releitura; a nova, lida da cascata, é
+    // gravada junto com os derivados (antes: não era gravada; agora o par fica consistente).
+    expect(el.props.get('--rte-secondary')).toBe('#10b981');
     expect(el.props.get('--rte-secondary-hover')).toBe(
       theme({ secondary: '#10b981' })['--rte-secondary-hover'],
     );
+  });
+
+  it('semente da cascata gravada inline sai no cleanup; reaplicar após mudar a cascata atualiza o par', () => {
+    stubDom(false, {});
+    const el = fakeElement({ '--rte-primary': '#ffff00' });
+    stubComputed(el);
+    let cleanup = applyRteTheme(el, { mode: 'light', force: true });
+    const yellow = theme({ primary: '#ffff00' });
+    expect(el.props.get('--rte-primary')).toBe('#ffff00');
+    expect(el.props.get('--rte-on-primary')).toBe(yellow['--rte-on-primary']);
+    // A cascata muda depois: a foto (semente + derivados) segue intacta e consistente.
+    el.cascade['--rte-primary'] = '#000080';
+    expect(el.props.get('--rte-primary')).toBe('#ffff00');
+    expect(el.props.get('--rte-on-primary')).toBe(yellow['--rte-on-primary']);
+    // Reaplicar descarta a foto anterior e relê a cascata: o par passa a ser o azul-marinho.
+    cleanup = applyRteTheme(el, { mode: 'light', force: true });
+    const navy = theme({ primary: '#000080' });
+    expect(el.props.get('--rte-primary')).toBe('#000080');
+    expect(el.props.get('--rte-on-primary')).toBe(navy['--rte-on-primary']);
+    expect(el.props.get('--rte-primary-hover')).toBe(
+      navy['--rte-primary-hover'],
+    );
+    cleanup();
+    expect(el.props.size).toBe(0);
+  });
+
+  it('semente inline do próprio usuário no elemento é respeitada: não é sobrescrita nem removida', () => {
+    stubDom(false, {});
+    const el = fakeElement({ '--rte-primary': '#ffff00' });
+    el.style.setProperty('--rte-primary', '#000080'); // autoria do usuário
+    stubComputed(el);
+    const cleanup = applyRteTheme(el, { mode: 'light', force: true });
+    const navy = theme({ primary: '#000080' });
+    expect(el.props.get('--rte-primary')).toBe('#000080');
+    expect(el.props.get('--rte-on-primary')).toBe(navy['--rte-on-primary']);
+    // Reaplicar (descartando a anterior) também não toca no valor do usuário.
+    const again = applyRteTheme(el, { mode: 'light', force: true });
+    expect(el.props.get('--rte-primary')).toBe('#000080');
+    cleanup(); // obsoleto: não desfaz a aplicação nova
+    again();
+    expect([...el.props]).toEqual([['--rte-primary', '#000080']]);
   });
 
   it('caminho nativo intocado: texto original, sem sonda e sem ler a cascata', () => {
