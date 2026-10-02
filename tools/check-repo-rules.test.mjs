@@ -63,3 +63,32 @@ test('tolerates a package dir without package.json', () => {
 test('accepts a repo without packages dir', () => {
   assert.deepEqual(checkRepoRules(fixture({ 'README.md': '' })), []);
 });
+
+test('globs with /* inside strings do not hide composite true', () => {
+  const root = fixture({
+    'packages/angular/tsconfig.spec.json':
+      '{\n  "include": ["src/**/*.spec.ts", "**/*.test.ts"],\n  "compilerOptions": { "composite": true },\n  "exclude": ["dist/*/x", "src/**/*.d.ts"]\n}\n',
+  });
+  assert.equal(checkRepoRules(root).length, 1);
+});
+
+test('comments plus URL string still detect composite true', () => {
+  const root = fixture({
+    'packages/angular/tsconfig.spec.json':
+      '// linha\n{\n  /* bloco */\n  "$schema": "https://example.com/x.json",\n  "compilerOptions": { "composite": true }\n}\n',
+  });
+  assert.equal(checkRepoRules(root).length, 1);
+});
+
+test('comments only with composite false is clean', () => {
+  const root = fixture({
+    'packages/angular/tsconfig.spec.json':
+      '// linha\n{\n  /* bloco */\n  "include": ["src/**/*.spec.ts"],\n  "compilerOptions": { "composite": false }\n}\n',
+  });
+  assert.deepEqual(checkRepoRules(root), []);
+});
+
+test('unparseable tsconfig is reported as a violation, not a crash', () => {
+  const root = fixture({ 'packages/angular/tsconfig.spec.json': '{ "a": ' });
+  assert.equal(checkRepoRules(root).length, 1);
+});
