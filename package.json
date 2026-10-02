@@ -3,8 +3,10 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "check:licenses": "node tools/check-licenses.mjs",
     "check:pack": "nx run-many -t verify-package",
     "check:rules": "node tools/check-repo-rules.mjs",
+    "notices": "node tools/generate-notices.mjs",
     "test:tools": "node --test \"tools/**/*.test.mjs\""
   },
   "private": true,
@@ -39,6 +41,7 @@
     "eslint": "^9.8.0",
     "jsdom": "^27.1.0",
     "jsonc-eslint-parser": "^3.3.0",
+    "license-checker-rseidelsohn": "^4.4.2",
     "ng-packagr": "~22.1.0",
     "nx": "^23.2.1",
     "postcss": "^8.4.5",
