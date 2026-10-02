@@ -34,7 +34,7 @@ Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp`
 ## Tema (`packages/theme`)
 
 - Testes de navegador do tema: `e2e/theme/*.spec.ts` (contraste, ΔE plano B × nativo, comportamentos, CSP, SSR); o harness/fixtures ficam em `e2e/theme/helpers/` e `e2e/fixtures/`.
-- `theme.css` e o plano B em TypeScript (`derive.ts`, `create-theme.ts`) **precisam andar juntos**: qualquer mudança de fórmula ou constante vai nos dois, e a prova é o golden (`tools/gen-theme-golden.mjs`) mais o E2E de equivalência (`e2e/theme/fallback-equivalence.spec.ts`).
+- `theme.css` e o plano B em TypeScript (`derive.ts`, `create-theme.ts`) **precisam andar juntos**: qualquer mudança de fórmula ou constante vai nos dois. As constantes de calibração (ganho e limiar do degrau, tetos L/C dos neutros `NEUTRAL_SPEC`, `STATE_AMOUNTS`, `TEXT_TARGETS`, `MIX_PCT`, tokens estáticos) são conferidas literal a literal entre CSS e TS por `theme-css.spec.ts`; as fórmulas, pelo golden (`tools/gen-theme-golden.mjs`) mais o E2E de equivalência (`e2e/theme/fallback-equivalence.spec.ts`), que sozinho não enxerga mudanças abaixo da quantização de 8 bits.
 - As fórmulas de `docs/specs/referencias/t6-tema` têm 4 desvios documentados (matriz OKLab, degrau do `on-*`, limiar 0,1791005, mistura em OKLab): ver ADR 0002, "Desvios da fórmula do spike".
 - Orçamento de tamanho por cenário em `packages/theme/size-budget.json` (`npm run check:size`).
 

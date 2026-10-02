@@ -30,6 +30,17 @@ export const onLevel = (y: number): number => clamp((WHITE_Y - y) * STEP_GAIN);
 export const stateChannel = (c: number, amt: number, s: number): number =>
   c * (1 - amt * s) + amt * (1 - s) * (1 - c);
 
+/**
+ * Constantes de calibração (uso interno; não exportadas por `index.ts`). Cada uma aparece literalmente
+ * no theme.css e `theme-css.spec.ts` confere CSS e TS valor a valor.
+ */
+/** Quanto hover/active clareiam ou escurecem a semente (em srgb-linear). */
+export const STATE_AMOUNTS = { hover: 0.14, active: 0.26 } as const;
+/** Luminância-alvo da variante `*-text`: teto no claro, piso no escuro. */
+export const TEXT_TARGETS = { light: 0.13, dark: 0.28 } as const;
+/** Porcentagem da semente na mistura com a superfície (`color-mix(in oklab, …)`). */
+export const MIX_PCT = { subtle: 12, border: 45 } as const;
+
 export interface DerivedRole {
   seed: Rgb;
   on: Rgb;
@@ -55,25 +66,29 @@ export function deriveRole(
     [0, 1, 2].map((i) =>
       stateChannel(seedLin[i] as number, amt, s),
     ) as unknown as Rgb;
-  // y === 0: 0.13 / 0 = Infinity e Math.min(1, Infinity) = 1; y === 1: divisão por 0 dá -Infinity e
+  // y === 0: TEXT_TARGETS.light / 0 = Infinity e Math.min(1, Infinity) = 1; y === 1: divisão por 0 dá -Infinity e
   // clamp resulta em 0. Ambos os casos já são corretos; clamp ainda trata NaN.
   const text: Rgb = dark
     ? ([0, 1, 2].map((i) => {
         const c = seedLin[i] as number;
-        return c + (1 - c) * clamp((0.28 - y) / (1 - y));
+        return c + (1 - c) * clamp((TEXT_TARGETS.dark - y) / (1 - y));
       }) as unknown as Rgb)
     : ([0, 1, 2].map(
-        (i) => (seedLin[i] as number) * Math.min(1, 0.13 / y),
+        (i) => (seedLin[i] as number) * Math.min(1, TEXT_TARGETS.light / y),
       ) as unknown as Rgb);
   const seedOk = linearToOklab(seedLin);
   const surfaceLab = oklchToOklab(surface);
   return {
     seed: toSrgb(seedLin),
     on: toSrgb([s, s, s]),
-    hover: toSrgb(state(0.14)),
-    active: toSrgb(state(0.26)),
+    hover: toSrgb(state(STATE_AMOUNTS.hover)),
+    active: toSrgb(state(STATE_AMOUNTS.active)),
     text: toSrgb(text),
-    subtle: toSrgb(oklabToLinear(mixOklab(seedOk, 0.12, surfaceLab))),
-    border: toSrgb(oklabToLinear(mixOklab(seedOk, 0.45, surfaceLab))),
+    subtle: toSrgb(
+      oklabToLinear(mixOklab(seedOk, MIX_PCT.subtle / 100, surfaceLab)),
+    ),
+    border: toSrgb(
+      oklabToLinear(mixOklab(seedOk, MIX_PCT.border / 100, surfaceLab)),
+    ),
   };
 }

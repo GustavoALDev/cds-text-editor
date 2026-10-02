@@ -3,13 +3,20 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { ANGULAR_DEFAULTS } from './defaults';
-import { createRteTheme } from './create-theme';
-import { STEP_GAIN, WHITE_Y } from './derive';
+import { createRteTheme, NEUTRAL_SPEC } from './create-theme';
+import {
+  MIX_PCT,
+  STATE_AMOUNTS,
+  STEP_GAIN,
+  TEXT_TARGETS,
+  WHITE_Y,
+} from './derive';
 import { STATIC_TOKENS } from './static-tokens';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const css = readFileSync(resolve(here, 'theme.css'), 'utf8');
 const SEEDS = ['--rte-primary', '--rte-secondary', '--rte-tertiary'];
+const ROLES = ['primary', 'secondary', 'tertiary'] as const;
 /** Variáveis declaradas só no CSS (nível 2/3 e entrada do matiz), fora do que o plano B emite. */
 const CSS_ONLY = ['--rte-neutral-tint', '--rte-focus-width'];
 
@@ -216,6 +223,90 @@ describe('theme.css', () => {
     for (const t of thresholds) expect(t).toBe(`(${WHITE_Y} - (0.2126`);
     expect(code).not.toMatch(/0\.1791 /);
     expect(code.split(String(WHITE_Y)).length - 1).toBe(45);
+  });
+
+  describe('constantes de calibração: literais do CSS == tabelas do TS', () => {
+    /** Valor (texto) da declaração `--rte-<nome>: …;` nas regras principais; exige exatamente uma. */
+    const decl = (name: string): string => {
+      const found = [
+        ...mainTheme.matchAll(new RegExp(`--rte-${name}: ([^;]*);`, 'g')),
+      ];
+      expect(found, name).toHaveLength(1);
+      return found[0]?.[1] ?? '';
+    };
+    const nums = (text: string, re: RegExp): number[] =>
+      [...text.matchAll(re)].map((m) => Number(m[1]));
+    const NUM = String.raw`(\d+(?:\.\d+)?)`;
+
+    it('neutros: L e teto de C (claro e escuro) == NEUTRAL_SPEC', () => {
+      const one = String.raw`oklch\(from var\(--rte-primary\) ${NUM} calc\(min\(c, ${NUM}\) \* var\(--rte-neutral-tint\)\) h\)`;
+      const re = new RegExp(`^light-dark\\(${one}, ${one}\\)$`);
+      for (const [name, spec] of Object.entries(NEUTRAL_SPEC)) {
+        const m = re.exec(decl(name));
+        expect(m, name).not.toBeNull();
+        const [, lL, cL, lD, cD] = (m ?? []).map(Number);
+        expect([lL, cL], `${name} claro`).toEqual([...spec.light]);
+        expect([lD, cD], `${name} escuro`).toEqual([...spec.dark]);
+      }
+    });
+
+    it('hover/active: quantidade == STATE_AMOUNTS (6 ocorrências por declaração)', () => {
+      for (const role of ROLES)
+        for (const state of ['hover', 'active'] as const) {
+          const text = decl(`${role}-${state}`);
+          const scale = nums(
+            text,
+            new RegExp(`\\(1 - ${NUM} \\* clamp\\(0, \\(${WHITE_Y} - `, 'g'),
+          );
+          const lift = nums(
+            text,
+            new RegExp(
+              `\\+ ${NUM} \\* \\(1 - clamp\\(0, \\(${WHITE_Y} - `,
+              'g',
+            ),
+          );
+          expect(scale, `${role}-${state}`).toHaveLength(3);
+          expect(lift, `${role}-${state}`).toHaveLength(3);
+          for (const v of [...scale, ...lift])
+            expect(v, `${role}-${state}`).toBe(STATE_AMOUNTS[state]);
+        }
+    });
+
+    it('*-text: alvos claro/escuro == TEXT_TARGETS', () => {
+      for (const role of ROLES) {
+        const text = decl(`${role}-text`);
+        expect(text.startsWith('light-dark('), role).toBe(true);
+        const light = nums(
+          text,
+          new RegExp(`min\\(1, ${NUM} / \\(0\\.2126`, 'g'),
+        );
+        const dark = nums(
+          text,
+          new RegExp(`clamp\\(0, \\(${NUM} - \\(0\\.2126`, 'g'),
+        );
+        expect(light, `${role} claro`).toHaveLength(3);
+        expect(dark, `${role} escuro`).toHaveLength(3);
+        for (const v of light)
+          expect(v, `${role} claro`).toBe(TEXT_TARGETS.light);
+        for (const v of dark)
+          expect(v, `${role} escuro`).toBe(TEXT_TARGETS.dark);
+        // O alvo claro é o 1º argumento de light-dark() e o escuro, o 2º.
+        expect(text.indexOf('min(1,')).toBeLessThan(
+          text.indexOf('clamp(0, (0.'),
+        );
+      }
+    });
+
+    it('subtle/border: porcentagem da mistura em oklab == MIX_PCT', () => {
+      for (const role of ROLES)
+        for (const kind of ['subtle', 'border'] as const) {
+          const m = new RegExp(
+            `^color-mix\\(in oklab, var\\(--rte-${role}\\) (\\d+)%, var\\(--rte-surface\\)\\)$`,
+          ).exec(decl(`${role}-${kind}`));
+          expect(m, `${role}-${kind}`).not.toBeNull();
+          expect(Number(m?.[1]), `${role}-${kind}`).toBe(MIX_PCT[kind]);
+        }
+    });
   });
 
   it('sincronia com createRteTheme: mesmas variáveis derivadas', () => {

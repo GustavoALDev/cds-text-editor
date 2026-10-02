@@ -16,6 +16,24 @@ export interface CreateRteThemeOptions extends RteTheme {
 const ROLES = ['primary', 'secondary', 'tertiary'] as const;
 
 /**
+ * Neutros (uso interno; não exportado por `index.ts`): `[L, teto de C]` em OKLCH por modo, com o matiz
+ * da primary. O croma é `min(C da primary, teto) * tint`. `theme-css.spec.ts` confere cada literal
+ * com o theme.css.
+ */
+export const NEUTRAL_SPEC = {
+  surface: { light: [0.985, 0.006], dark: [0.18, 0.012] },
+  'surface-raised': { light: [1, 0.003], dark: [0.23, 0.014] },
+  text: { light: [0.22, 0.02], dark: [0.97, 0.006] },
+  'text-muted': { light: [0.45, 0.02], dark: [0.72, 0.015] },
+  border: { light: [0.88, 0.02], dark: [0.32, 0.02] },
+} as const satisfies Record<
+  string,
+  Record<'light' | 'dark', readonly [number, number]>
+>;
+
+type NeutralName = keyof typeof NEUTRAL_SPEC;
+
+/**
  * Plano B: calcula em JS os tokens `--rte-*` (mesma matemática do theme.css) para navegadores
  * sem cores relativas / `light-dark()`. Nunca lança: semente inválida cai no padrão Angular, e
  * um parser customizado que lança ou devolve canais não finitos também é tratado como inválido;
@@ -45,22 +63,16 @@ export function createRteTheme(
   };
 
   const [, c, h] = toOklch(toLinear(seeds.primary));
-  const pick = (light: number, drk: number): number => (dark ? drk : light);
-  const neutral = (lL: number, cL: number, lD: number, cD: number): Rgb =>
-    oklchToSrgb(pick(lL, lD), Math.min(c, pick(cL, cD)) * tint, h);
-  const surfaceOk: Oklch = [
-    pick(0.985, 0.18),
-    Math.min(c, pick(0.006, 0.012)) * tint,
-    h,
-  ];
-
-  const tokens: Record<string, Rgb> = {
-    surface: neutral(0.985, 0.006, 0.18, 0.012),
-    'surface-raised': neutral(1, 0.003, 0.23, 0.014),
-    text: neutral(0.22, 0.02, 0.97, 0.006),
-    'text-muted': neutral(0.45, 0.02, 0.72, 0.015),
-    border: neutral(0.88, 0.02, 0.32, 0.02),
+  const mode = dark ? 'dark' : 'light';
+  const neutral = (name: NeutralName): Oklch => {
+    const [L, cap] = NEUTRAL_SPEC[name][mode];
+    return [L, Math.min(c, cap) * tint, h];
   };
+  const surfaceOk = neutral('surface');
+
+  const tokens: Record<string, Rgb> = {};
+  for (const name of Object.keys(NEUTRAL_SPEC) as NeutralName[])
+    tokens[name] = oklchToSrgb(...neutral(name));
   for (const role of ROLES) {
     const d = deriveRole(toLinear(seeds[role]), surfaceOk, dark);
     tokens[role] = d.seed;
@@ -76,9 +88,7 @@ export function createRteTheme(
   const vars: Record<string, string> = {};
   for (const [name, value] of Object.entries(tokens))
     vars[`--rte-${name}`] = toHex(value);
-  for (const [name, value] of Object.entries(
-    STATIC_TOKENS[dark ? 'dark' : 'light'],
-  )) {
+  for (const [name, value] of Object.entries(STATIC_TOKENS[mode])) {
     vars[`--rte-${name}`] = value;
   }
   return vars;
