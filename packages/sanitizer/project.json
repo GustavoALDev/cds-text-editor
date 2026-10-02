@@ -28,6 +28,19 @@
         "command": "node tools/check-pack.mjs packages/sanitizer",
         "cwd": "{workspaceRoot}"
       }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/tsconfig.base.json"
+      ],
+      "cache": true,
+      "options": {
+        "command": "tsc -p packages/sanitizer/tsconfig.spec.json --noEmit",
+        "cwd": "{workspaceRoot}"
+      }
     }
   }
 }

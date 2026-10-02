@@ -14,7 +14,7 @@ spec → plano (`writing-plans`) → implementação → verificação. As specs
 
 ```bash
 npm ci                                                  # instalar (use o lockfile); exige npm >= 11 (engine-strict)
-npx nx run-many -t lint,build,test,verify-package       # lint, build, testes e npm pack + publint + attw
+npx nx run-many -t lint,typecheck,build,test,verify-package       # lint, build, testes e npm pack + publint + attw
 npm run check:rules                                     # regras do repositório (tools/check-repo-rules.mjs)
 npm run check:licenses                                  # gate de licenças
 npm run check:pack                                      # verify-package em todos os pacotes
@@ -24,7 +24,7 @@ npx playwright test -c e2e --project=chromium           # E2E; em WSL veja o LD_
 npx changeset                                           # registrar mudança de pacote
 ```
 
-CI: `.github/workflows/ci.yml` roda no PR e no push para `main` (check:rules, test:tools, check:licenses, notices sem drift, `nx affected -t lint build test verify-package`, E2E Chromium).
+CI: `.github/workflows/ci.yml` roda no PR e no push para `main` (check:rules, test:tools, check:licenses, notices sem drift, `nx affected -t lint typecheck build test verify-package`, `typecheck:e2e`, E2E Chromium).
 
 Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp` (e `NX_DAEMON=false` se o daemon do Nx atrapalhar).
 
@@ -34,7 +34,7 @@ Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp`
 - Proibido importar `@angular/*` em `core`, `sanitizer` e `theme`.
 - Dependência entre pacotes só via alias de `tsconfig.base.json` (`@cds/rte-*`).
 - `tsconfig.spec.json` de cada pacote usa `composite: false`.
-- O `build` faz parte do typecheck (não há target `typecheck` separado).
+- Typecheck: o `build` checa o código; os testes de `core`, `sanitizer` e `theme` são checados pelo target `typecheck` (`tsc -p tsconfig.spec.json --noEmit`) e os de `e2e/` por `npm run typecheck:e2e`.
 - TypeScript 6: sem `baseUrl`; `paths` usam o prefixo `./`; os configs do tsup têm `dts.compilerOptions.ignoreDeprecations: '6.0'`.
 - Idiomas: documentação em pt-BR; código e nomes públicos em inglês; mensagens das ferramentas (`tools/`, regras de lint) em pt-BR.
 - Nomes de pacote `@cds/rte-*` são provisórios. Marcadores `TODO-AUTOR` indicam dados que só o autor conhece (`grep -rn TODO-AUTOR`).

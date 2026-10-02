@@ -6,6 +6,8 @@ on:
 
 permissions:
   contents: read
+  # nrwl/nx-set-shas consulta execuções anteriores do workflow.
+  actions: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -27,6 +29,12 @@ jobs:
       # Salvaguarda: o repositório exige npm >= 11 (engines + engine-strict), independente do Node do runner.
       - run: npm i -g npm@11
       - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            nx-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
       # PR: base = merge-base com main. Push em main: base = último commit com CI verde;
       # sem execução anterior bem-sucedida, cai em HEAD~1 (não pula nem quebra).
       - uses: nrwl/nx-set-shas@v4
@@ -40,8 +48,9 @@ jobs:
         run: |
           npm run notices
           git diff --exit-code THIRD-PARTY-NOTICES.md
-      # `build` inclui o typecheck (Vitest não checa tipos).
-      - run: npx nx affected -t lint build test verify-package --parallel=3
+      # `typecheck` cobre os testes dos pacotes tsup (Vitest não checa tipos); `build` cobre o código.
+      - run: npx nx affected -t lint typecheck build test verify-package --parallel=3
+      - run: npm run typecheck:e2e
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test -c e2e --project=chromium
       - uses: actions/upload-artifact@v4
