@@ -26,7 +26,8 @@
           "tsConfig": "packages/angular/tsconfig.lib.prod.json"
         },
         "development": {}
-      }
+      },
+      "dependsOn": ["copy-license", "^build"]
     },
     "nx-release-publish": {
       "options": {
@@ -41,6 +42,30 @@
     },
     "lint": {
       "executor": "@nx/eslint:lint"
+    },
+    "copy-license": {
+      "executor": "nx:run-commands",
+      "inputs": ["{workspaceRoot}/LICENSE"],
+      "outputs": ["{projectRoot}/LICENSE"],
+      "cache": true,
+      "options": {
+        "command": "cp ../../LICENSE .",
+        "cwd": "packages/angular"
+      }
+    },
+    "verify-package": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "inputs": [
+        "production",
+        "^production",
+        "{workspaceRoot}/tools/check-pack.mjs"
+      ],
+      "cache": true,
+      "options": {
+        "command": "node tools/check-pack.mjs dist/packages/angular",
+        "cwd": "{workspaceRoot}"
+      }
     }
   }
 }

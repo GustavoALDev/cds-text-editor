@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "check:pack": "nx run-many -t verify-package",
     "check:rules": "node tools/check-repo-rules.mjs",
     "test:tools": "node --test \"tools/**/*.test.mjs\""
   },
@@ -17,6 +18,7 @@
     "@angular/compiler-cli": "22.2.1",
     "@angular/core": "22.2.1",
     "@angular/platform-browser": "22.2.1",
+    "@arethetypeswrong/cli": "^0.18.5",
     "@nx/angular": "23.2.1",
     "@nx/eslint": "^23.2.1",
     "@nx/eslint-plugin": "^23.2.1",
@@ -41,6 +43,7 @@
     "nx": "^23.2.1",
     "postcss": "^8.4.5",
     "prettier": "^3.8.1",
+    "publint": "^0.3.25",
     "rxjs": "^7.8.2",
     "tslib": "^2.3.0",
     "tsup": "^8.5.1",

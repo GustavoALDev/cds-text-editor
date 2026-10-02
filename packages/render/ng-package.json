@@ -3,5 +3,6 @@
   "dest": "../../dist/packages/render",
   "lib": {
     "entryFile": "src/index.ts"
-  }
+  },
+  "assets": ["LICENSE"]
 }
