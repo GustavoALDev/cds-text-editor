@@ -23,7 +23,7 @@ Extrair as libs de `.deb` numa pasta sob `$HOME` (não `/tmp`):
 ```bash
 mkdir -p ~/.cache/playwright-libs/debs && cd ~/.cache/playwright-libs/debs
 apt-get download libnspr4 libnss3 libasound2t64   # Ubuntu 24.04+; em versões antigas: libasound2
-# defina PKGS (lista abaixo) e rode: apt-get download $PKGS
+# Firefox/WebKit: depois de definir PKGS (bloco abaixo), rode: apt-get download $PKGS
 for d in *.deb; do dpkg -x "$d" ../root; done
 ```
 
@@ -42,6 +42,8 @@ libgstreamer-gl1.0-0 libabsl20260107 liblerc4 libdeflate0 libjbig0 libdav1d7 \
 libgav1-2 liborc-0.4-0t64 libyuv0 libcairo-script-interpreter2"
 ```
 
+Os nomes dos pacotes (libabsl…, versões do GStreamer etc.) são os do Ubuntu usado aqui e podem diferir em outras versões.
+
 Para achar o que falta numa versão nova do Playwright: `ldd` nos binários de `~/.cache/ms-playwright/{firefox-*/firefox,webkit-*/minibrowser-wpe/bin}` com o `LD_LIBRARY_PATH` abaixo, procurando `not found`, e `apt-get download` do pacote que fornece a lib (`npx playwright install-deps --dry-run` lista os nomes).
 
 `LD_LIBRARY_PATH` que cobre os três navegadores:
@@ -50,7 +52,7 @@ Para achar o que falta numa versão nova do Playwright: `ldd` nos binários de `
 export LD_LIBRARY_PATH=$HOME/.cache/playwright-libs/root/usr/lib/x86_64-linux-gnu:$HOME/.cache/playwright-libs/root/lib/x86_64-linux-gnu
 ```
 
-`e2e/with-browser-libs.sh` faz isso e mais duas coisas necessárias no WebKit:
+`e2e/with-browser-libs.sh` (variável opcional `CDS_BROWSER_LIBS_ROOT` troca a pasta das libs; falha com mensagem clara se ela não existir) faz isso e mais duas coisas necessárias no WebKit:
 
 - `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`: a validação de dependências do Playwright consulta `ldconfig -p` (libGLESv2, libx264), que não enxerga a pasta extraída.
-- Edita o wrapper `~/.cache/ms-playwright/webkit-*/minibrowser-*/MiniBrowser`, que sobrescreve o `LD_LIBRARY_PATH`, para preservar o valor herdado (idempotente; refeito a cada execução, útil após atualizar o WebKit).
+- Edita o wrapper `~/.cache/ms-playwright/webkit-*/minibrowser-*/MiniBrowser`, que sobrescreve o `LD_LIBRARY_PATH`, para preservar o valor herdado (idempotente; guarda uma cópia única em `MiniBrowser.cds-orig` e avisa se o ajuste não pegar; refeito a cada execução, útil após atualizar o WebKit).
