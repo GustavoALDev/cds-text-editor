@@ -2,15 +2,8 @@
   "name": "render",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/render/src",
-  "prefix": "lib",
+  "prefix": "rte",
   "projectType": "library",
-  "release": {
-    "version": {
-      "manifestRootsToUpdate": ["dist/{projectRoot}"],
-      "currentVersionResolver": "git-tag",
-      "fallbackCurrentVersionResolver": "disk"
-    }
-  },
   "tags": ["scope:render"],
   "targets": {
     "build": {
@@ -29,19 +22,11 @@
       },
       "dependsOn": ["copy-license", "^build"]
     },
-    "nx-release-publish": {
-      "options": {
-        "packageRoot": "dist/{projectRoot}"
-      }
-    },
     "test": {
       "executor": "@nx/angular:unit-test",
       "options": {
         "watch": false
       }
-    },
-    "lint": {
-      "executor": "@nx/eslint:lint"
     },
     "copy-license": {
       "executor": "nx:run-commands",

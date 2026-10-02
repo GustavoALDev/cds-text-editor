@@ -1,6 +1,6 @@
 # Contribuindo
 
-Obrigado pelo interesse. Documentação em português do Brasil; código, nomes públicos e mensagens de erro em inglês.
+Obrigado pelo interesse. Documentação em português do Brasil; código e nomes públicos em inglês; mensagens das ferramentas (`tools/`, regras de lint) em pt-BR.
 
 ## Pré-requisitos
 

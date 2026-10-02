@@ -36,6 +36,6 @@ Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp`
 - `tsconfig.spec.json` de cada pacote usa `composite: false`.
 - O `build` faz parte do typecheck (não há target `typecheck` separado).
 - TypeScript 6: sem `baseUrl`; `paths` usam o prefixo `./`; os configs do tsup têm `dts.compilerOptions.ignoreDeprecations: '6.0'`.
-- Idiomas: documentação em pt-BR; código, nomes públicos e mensagens de erro em inglês.
+- Idiomas: documentação em pt-BR; código e nomes públicos em inglês; mensagens das ferramentas (`tools/`, regras de lint) em pt-BR.
 - Nomes de pacote `@cds/rte-*` são provisórios. Marcadores `TODO-AUTOR` indicam dados que só o autor conhece (`grep -rn TODO-AUTOR`).
 - Sem segredos no repositório.
