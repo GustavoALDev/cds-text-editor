@@ -1,10 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
+import { parseColor } from '../../packages/theme/src/color/parse';
+import { to8 } from '../../packages/theme/src/color/convert';
 import { loadThemePage } from './helpers/page';
 import {
   DEFAULT_SEEDS,
   addCss,
+  addCssFirst,
   computed,
   sameColor,
   shown,
@@ -14,31 +17,70 @@ import {
 } from './helpers/behavior';
 
 const THEME_CSS = resolve(__dirname, '../../packages/theme/src/theme.css');
+// Referência calculada em Node com as próprias funções do pacote (oklab -> sRGB, recortado).
+const OKLCH_REF = to8(parseColor('oklch(0.7 0.15 150)')!);
+const tolerance = (v: string): number =>
+  v.startsWith('oklch') || v.startsWith('color(') ? 3 : 2;
 const ROLES = ['primary', 'secondary', 'tertiary'] as const;
 
 test.beforeEach(async ({ page }) => {
   await loadThemePage(page);
 });
 
+// "Inválido cai no padrão" vale só quando nenhum valor válido está acima na cascata: um valor
+// inválido é descartado (como `unset`) e a semente herda o `:root`/ancestral válido primeiro.
 test('R3: valor inválido inline cai no padrão Angular em cada semente', async ({
   page,
 }) => {
   const errors = trackErrors(page);
-  for (const bad of ['banana', '', 'var(--inexistente)', '12px']) {
-    for (const role of ROLES) {
-      await page.evaluate(
-        ([r, v]) =>
-          document
-            .getElementById('root')!
-            .style.setProperty(`--rte-${r}`, v as string),
-        [role, bad],
-      );
-      const got = await shownOne(page, role);
-      expect(got, `--rte-${role}: "${bad}"`).toEqual(DEFAULT_SEEDS[role]);
-    }
-    await page.evaluate(() =>
+  const setInline = (role: string, v: string, viaAttribute: boolean) =>
+    page.evaluate(
+      ([r, val, attr]) => {
+        const root = document.getElementById('root')!;
+        // `setProperty(nome, '')` REMOVE a propriedade; o valor vazio de verdade só existe via atributo.
+        if (attr === '1') root.setAttribute('style', `--rte-${r}: ;`);
+        else root.style.setProperty(`--rte-${r}`, val as string);
+      },
+      [role, v, viaAttribute ? '1' : '0'],
+    );
+  const clear = () =>
+    page.evaluate(() =>
       document.getElementById('root')!.removeAttribute('style'),
     );
+  const bads: [string, boolean][] = [
+    ['banana', false],
+    ['', true],
+    ['var(--inexistente)', false],
+    ['12px', false],
+  ];
+  for (const [bad, attr] of bads) {
+    for (const role of ROLES) {
+      await setInline(role, bad, attr);
+      expect(await shownOne(page, role), `--rte-${role}: "${bad}"`).toEqual(
+        DEFAULT_SEEDS[role],
+      );
+    }
+    await clear();
+  }
+  // Com um valor válido acima (:root), o inválido na instância herda esse valor, não o padrão.
+  await addCss(
+    page,
+    ':root{--rte-primary:#ff0000;--rte-secondary:#00ff00;--rte-tertiary:#0000ff}',
+  );
+  const expected = {
+    primary: [255, 0, 0],
+    secondary: [0, 255, 0],
+    tertiary: [0, 0, 255],
+  };
+  for (const [bad, attr] of bads) {
+    for (const role of ROLES) {
+      await setInline(role, bad, attr);
+      expect(
+        await shownOne(page, role),
+        `herdado --rte-${role}: "${bad}"`,
+      ).toEqual(expected[role]);
+    }
+    await clear();
   }
   expect(errors).toEqual([]);
 });
@@ -130,9 +172,20 @@ test('R4: camadas — CSS do consumidor sem camada vence sem !important; derivad
   expect(fromRoot).not.toEqual([1, 2, 3]);
   expect(fromRoot).not.toEqual(before); // derivou da nova semente, não do valor em :root
 
-  // Para sobrescrever o derivado: CSS do consumidor mirando .rte-root (sem camada, sem !important).
-  await addCss(page, '.rte-root{--rte-primary-hover:rgb(1,2,3)}');
+  // Para sobrescrever o derivado: CSS do consumidor mirando .rte-root, sem camada e sem !important.
+  // A regra vem ANTES do theme.css no documento e tem a mesma especificidade: só a camada
+  // (CSS sem camada vence qualquer camada) faz ela vencer; a ordem no arquivo favoreceria o tema.
+  await addCssFirst(page, '.rte-root{--rte-primary-hover:rgb(1,2,3)}');
   expect(await shownOne(page, 'primary-hover')).toEqual([1, 2, 3]);
+
+  // A ordem declarada em theme.css (rte.reset, rte.base, rte.theme, rte.components, ...) vale:
+  // regra em rte.components (depois de rte.theme) vence o tema; em rte.reset (antes) perde.
+  await addCss(
+    page,
+    '@layer rte.components{.rte-root{--rte-secondary-hover:rgb(4,5,6)}} @layer rte.reset{.rte-root{--rte-tertiary-hover:rgb(7,8,9)}}',
+  );
+  expect(await shownOne(page, 'secondary-hover')).toEqual([4, 5, 6]);
+  expect(await shownOne(page, 'tertiary-hover')).not.toEqual([7, 8, 9]);
 });
 
 test('R5: formatos de cor aceitos como semente', async ({ page }) => {
@@ -145,8 +198,8 @@ test('R5: formatos de cor aceitos como semente', async ({ page }) => {
     ['hsl(120 100% 25%)', [0, 128, 0]],
     ['rebeccapurple', [102, 51, 153]],
     ['var(--marca)', [18, 52, 86]],
-    ['oklch(0.7 0.15 150)', null],
-    ['color(display-p3 1 0 0)', null],
+    ['oklch(0.7 0.15 150)', OKLCH_REF],
+    ['color(display-p3 1 0 0)', [255, 0, 0]],
   ];
   for (const [value, expected] of cases) {
     await page.evaluate(
@@ -161,7 +214,10 @@ test('R5: formatos de cor aceitos como semente', async ({ page }) => {
       `${value} caiu no padrão`,
     ).toBe(false);
     if (expected)
-      expect(sameColor(got, expected, 2), `${value} -> ${got}`).toBe(true);
+      expect(
+        sameColor(got, expected, tolerance(value)),
+        `${value} -> ${got}`,
+      ).toBe(true);
   }
 });
 

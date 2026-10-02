@@ -48,9 +48,13 @@ test('CSP restritiva: applyRteTheme (force) usa style.setProperty sem violaçõe
   });
   await page.goto(`${ORIGIN}/`);
 
-  const r = await page.evaluate(() => {
+  const r = await page.evaluate(async () => {
     const root = document.getElementById('root')!;
     window.RteTheme.applyRteTheme(root, { primary: '#0ea5e9', force: true });
+    // securitypolicyviolation é assíncrono: espera uma tarefa, um quadro e outra tarefa.
+    await new Promise((res) => setTimeout(res, 0));
+    await new Promise((res) => requestAnimationFrame(() => res(0)));
+    await new Promise((res) => setTimeout(res, 100));
     const w = window as unknown as { __violations: string[] };
     return {
       primary: root.style.getPropertyValue('--rte-primary'),

@@ -91,3 +91,12 @@ export function wrapRoot(page: Page): Promise<void> {
     wrap.append(root);
   });
 }
+
+/** Como addCss, mas no INÍCIO do head: a folha vem antes do theme.css na ordem do documento. */
+export function addCssFirst(page: Page, css: string): Promise<void> {
+  return page.evaluate((text) => {
+    const s = document.createElement('style');
+    s.textContent = text;
+    document.head.prepend(s);
+  }, css);
+}

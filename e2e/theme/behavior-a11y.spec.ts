@@ -75,43 +75,49 @@ test('R8: prefers-contrast: more engrossa o foco e a borda tem contraste >= 3', 
   expect(await computed(page, '--rte-focus-width')).toBe('2px');
 });
 
-test('R10: custo de trocar --rte-primary (mediana ms por troca, 300 trocas)', async ({
-  page,
-  browserName,
-}, testInfo) => {
-  const { perChange, batched } = await page.evaluate(() => {
-    const root = document.getElementById('root')!;
-    const seeds = ['#8514f5', '#f637e3', '#0546ff', '#1db954', '#ff8800'];
-    const change = (i: number): void => {
-      root.style.setProperty('--rte-primary', seeds[i % 5]!);
-      getComputedStyle(root).getPropertyValue('--rte-primary-hover');
-      void root.offsetHeight;
-    };
-    const median = (xs: number[]): number =>
-      [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
-    for (let i = 0; i < 30; i++) change(i); // aquecimento
-    // Firefox e WebKit arredondam performance.now() (até 1 ms): além da mediana por troca,
-    // mede 10 lotes de 30 trocas e usa a mediana dos lotes / 30 (resolução efetiva ~0,03 ms).
-    const each: number[] = [];
-    const lots: number[] = [];
-    for (let l = 0; l < 10; l++) {
-      const lot0 = performance.now();
-      for (let i = 0; i < 30; i++) {
-        const t0 = performance.now();
-        change(l * 30 + i);
-        each.push(performance.now() - t0);
+// Limites mantidos (0,5 ms Chromium, 2 ms demais). Runners do GitHub são mais lentos e ruidosos, então
+// só este teste tenta até 2 vezes de novo; a medição usa um DOM trivial (limite inferior do custo real).
+test.describe('R10', () => {
+  test.describe.configure({ retries: 2 });
+
+  test('R10: custo de trocar --rte-primary (mediana ms por troca, 300 trocas)', async ({
+    page,
+    browserName,
+  }, testInfo) => {
+    const { perChange, batched } = await page.evaluate(() => {
+      const root = document.getElementById('root')!;
+      const seeds = ['#8514f5', '#f637e3', '#0546ff', '#1db954', '#ff8800'];
+      const change = (i: number): void => {
+        root.style.setProperty('--rte-primary', seeds[i % 5]!);
+        getComputedStyle(root).getPropertyValue('--rte-primary-hover');
+        void root.offsetHeight;
+      };
+      const median = (xs: number[]): number =>
+        [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
+      for (let i = 0; i < 30; i++) change(i); // aquecimento
+      // Firefox e WebKit arredondam performance.now() (até 1 ms): além da mediana por troca,
+      // mede 10 lotes de 30 trocas e usa a mediana dos lotes / 30 (resolução efetiva ~0,03 ms).
+      const each: number[] = [];
+      const lots: number[] = [];
+      for (let l = 0; l < 10; l++) {
+        const lot0 = performance.now();
+        for (let i = 0; i < 30; i++) {
+          const t0 = performance.now();
+          change(l * 30 + i);
+          each.push(performance.now() - t0);
+        }
+        lots.push((performance.now() - lot0) / 30);
       }
-      lots.push((performance.now() - lot0) / 30);
-    }
-    return { perChange: median(each), batched: median(lots) };
+      return { perChange: median(each), batched: median(lots) };
+    });
+    testInfo.annotations.push({
+      type: 'cost-ms',
+      description: `${browserName}: mediana por lote ${batched.toFixed(4)} ms por troca (mediana individual ${perChange.toFixed(4)} ms, limitada pela resolução do relógio)`,
+    });
+    // 0,5 ms (R10) foi medido só no Chromium; Firefox/WebKit têm limite de 2 ms.
+    const limit = browserName === 'chromium' ? 0.5 : 2;
+    expect(batched, `${browserName} mediana ${batched} ms`).toBeLessThanOrEqual(
+      limit,
+    );
   });
-  testInfo.annotations.push({
-    type: 'cost-ms',
-    description: `${browserName}: mediana por lote ${batched.toFixed(4)} ms por troca (mediana individual ${perChange.toFixed(4)} ms, limitada pela resolução do relógio)`,
-  });
-  // 0,5 ms (R10) foi medido só no Chromium; Firefox/WebKit têm limite de 2 ms.
-  const limit = browserName === 'chromium' ? 0.5 : 2;
-  expect(batched, `${browserName} mediana ${batched} ms`).toBeLessThanOrEqual(
-    limit,
-  );
 });
