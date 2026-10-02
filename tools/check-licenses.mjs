@@ -7,11 +7,39 @@ const MARKER = 'node_modules/';
 
 export const nameOf = (key) => key.slice(key.lastIndexOf(MARKER) + MARKER.length);
 
-// Nomes proibidos valem para o lockfile INTEIRO (inclui devDependencies e caminhos aninhados).
+// Falha fechado: lockfile sem mapa `packages` utilizável (v1, {}, arquivo errado) não pode passar.
+export function lockfileError(lock) {
+  const packages = lock?.packages;
+  const ok =
+    typeof lock?.lockfileVersion === 'number' &&
+    lock.lockfileVersion >= 2 &&
+    packages !== null &&
+    typeof packages === 'object' &&
+    !Array.isArray(packages) &&
+    Object.keys(packages).length > 0;
+  return ok ? undefined : "lockfile inválido: sem 'packages' (lockfileVersion >= 2 exigido)";
+}
+
+const FORBIDDEN_FIELD_RE = /@tiptap-(pro|cloud)\//;
+const FORBIDDEN_HOST_RE = /^https?:\/\/registry\.tiptap\.dev(\/|$)/;
+
+// Nomes proibidos valem para o lockfile INTEIRO (inclui devDependencies, caminhos aninhados e
+// aliases npm: a chave pode ser inocente enquanto `name`/`resolved` apontam para o pacote proibido).
 export function checkForbiddenNames(lock) {
-  return Object.keys(lock.packages ?? {})
-    .filter((key) => FORBIDDEN_RE.test(key))
-    .map((key) => `pacote proibido: ${nameOf(key)}`);
+  const invalid = lockfileError(lock);
+  if (invalid) return [invalid];
+  const errors = [];
+  for (const [key, entry] of Object.entries(lock.packages)) {
+    const fields = [];
+    if (FORBIDDEN_RE.test(key)) fields.push('chave');
+    if (typeof entry?.name === 'string' && FORBIDDEN_FIELD_RE.test(entry.name)) fields.push('name');
+    const resolved = entry?.resolved;
+    if (typeof resolved === 'string' && (FORBIDDEN_FIELD_RE.test(resolved) || FORBIDDEN_HOST_RE.test(resolved))) {
+      fields.push('resolved');
+    }
+    if (fields.length) errors.push(`pacote proibido: ${key} (campo: ${fields.join(', ')})`);
+  }
+  return errors;
 }
 
 // Avalia uma expressão SPDX: AND exige todos os operandos permitidos, OR exige ao menos um.
@@ -60,8 +88,10 @@ const licenseFromEntry = (entry) => (typeof entry?.license === 'string' ? entry.
 // Só o conjunto de produção (o que vai ao tarball) é checado: entradas dev/devOptional são
 // toolchain. Pacotes do workspace (sem node_modules/ na chave, ou link: true) são ignorados.
 export function checkLicenses(lock, licenseOf = (_name, entry) => licenseFromEntry(entry)) {
+  const invalid = lockfileError(lock);
+  if (invalid) return [invalid];
   const errors = [];
-  for (const [key, entry] of Object.entries(lock.packages ?? {})) {
+  for (const [key, entry] of Object.entries(lock.packages)) {
     if (!key.includes(MARKER) || entry.link || entry.dev || entry.devOptional) continue;
     const name = nameOf(key);
     const license = licenseOf(name, entry);
@@ -72,7 +102,7 @@ export function checkLicenses(lock, licenseOf = (_name, entry) => licenseFromEnt
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const lock = JSON.parse(readFileSync(process.argv[2] ?? 'package-lock.json', 'utf8'));
-  const errors = [...checkForbiddenNames(lock), ...checkLicenses(lock)];
+  const errors = [...new Set([...checkForbiddenNames(lock), ...checkLicenses(lock)])];
   for (const e of errors) console.error(e);
   if (!errors.length) console.log('licenças ok');
   process.exit(errors.length ? 1 : 0);

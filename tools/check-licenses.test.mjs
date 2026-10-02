@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkForbiddenNames, checkLicenses, isAllowed, nameOf } from './check-licenses.mjs';
+import { checkForbiddenNames, checkLicenses, isAllowed, lockfileError, nameOf } from './check-licenses.mjs';
 
 const lock = (names, extra = {}) => ({
+  lockfileVersion: 3,
   packages: Object.fromEntries(names.map((n) => [`node_modules/${n}`, { version: '1.0.0', ...extra }])),
 });
 
@@ -31,6 +32,7 @@ test('accepts allowlisted licenses, including OR expressions of allowed ones', (
 
 test('ignores dev-only packages with a bad license', () => {
   const l = {
+    lockfileVersion: 3,
     packages: {
       'node_modules/tool': { dev: true },
       'node_modules/opt': { devOptional: true },
@@ -42,7 +44,7 @@ test('ignores dev-only packages with a bad license', () => {
 });
 
 test('rejects a production package with a bad license', () => {
-  const errors = checkLicenses({ packages: { 'node_modules/shipped': {} } }, () => '0BSD');
+  const errors = checkLicenses({ lockfileVersion: 3, packages: { 'node_modules/shipped': {} } }, () => '0BSD');
   assert.equal(errors.length, 1);
 });
 
@@ -74,7 +76,7 @@ test('nameOf maps scoped and nested lockfile keys to the package name', () => {
 });
 
 test('nested and scoped keys are checked with the right name', () => {
-  const l = { packages: { 'node_modules/a/node_modules/b': {}, 'node_modules/@s/c': {} } };
+  const l = { lockfileVersion: 3, packages: { 'node_modules/a/node_modules/b': {}, 'node_modules/@s/c': {} } };
   const seen = [];
   checkLicenses(l, (n) => (seen.push(n), 'MIT'));
   assert.deepEqual(seen, ['b', '@s/c']);
@@ -82,6 +84,7 @@ test('nested and scoped keys are checked with the right name', () => {
 
 test('workspace-internal packages and links are not flagged', () => {
   const l = {
+    lockfileVersion: 3,
     packages: {
       '': { name: 'root' },
       'packages/core': { name: '@cds/core', version: '0.0.0' },
@@ -92,6 +95,44 @@ test('workspace-internal packages and links are not flagged', () => {
 });
 
 test('default license lookup reads the lockfile entry', () => {
-  const l = { packages: { 'node_modules/a': { license: 'MIT' }, 'node_modules/b': { license: 'GPL-3.0' } } };
+  const l = { lockfileVersion: 3, packages: { 'node_modules/a': { license: 'MIT' }, 'node_modules/b': { license: 'GPL-3.0' } } };
   assert.equal(checkLicenses(l).length, 1);
+});
+
+test('forbidden: npm alias detected via entry.name', () => {
+  const l = { lockfileVersion: 3, packages: { 'node_modules/foo': { name: '@tiptap-pro/extension-ai' } } };
+  const errors = checkForbiddenNames(l);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /node_modules\/foo.*name/);
+});
+
+test('forbidden: registry.tiptap.dev / scoped resolved detected', () => {
+  const l = {
+    lockfileVersion: 3,
+    packages: { 'node_modules/bar': { dev: true, resolved: 'https://registry.tiptap.dev/@tiptap-cloud/x/-/x-1.0.0.tgz' } },
+  };
+  const errors = checkForbiddenNames(l);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /node_modules\/bar.*resolved/);
+  const host = { lockfileVersion: 3, packages: { 'node_modules/baz': { resolved: 'https://registry.tiptap.dev/anything.tgz' } } };
+  assert.equal(checkForbiddenNames(host).length, 1);
+});
+
+test('forbidden: legit alias is not flagged', () => {
+  const l = {
+    lockfileVersion: 3,
+    packages: {
+      'node_modules/string-width-cjs': { name: 'string-width', resolved: 'https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz' },
+    },
+  };
+  assert.deepEqual(checkForbiddenNames(l), []);
+});
+
+test('fails closed on invalid or empty lockfiles', () => {
+  for (const bad of [{}, { lockfileVersion: 1, dependencies: {} }, { lockfileVersion: 3, packages: {} }, { lockfileVersion: 3, packages: [] }, { packages: { 'node_modules/a': {} } }]) {
+    assert.match(lockfileError(bad), /lockfile inválido/);
+    assert.equal(checkForbiddenNames(bad).length, 1);
+    assert.equal(checkLicenses(bad).length, 1);
+  }
+  assert.equal(lockfileError({ lockfileVersion: 3, packages: { '': {} } }), undefined);
 });
