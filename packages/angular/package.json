@@ -1,0 +1,25 @@
+{
+  "name": "@cds/rte-angular",
+  "version": "0.0.0",
+  "description": "Componente Angular do editor de texto rico cds-text-editor.",
+  "license": "MIT",
+  "sideEffects": false,
+  "peerDependencies": {
+    "@angular/core": ">=22.0.0 <23",
+    "@angular/common": ">=22.0.0 <23",
+    "@angular/forms": ">=22.0.0 <23"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TODO-AUTOR/cds-text-editor.git",
+    "directory": "packages/angular"
+  },
+  "bugs": "https://github.com/TODO-AUTOR/cds-text-editor/issues",
+  "homepage": "https://github.com/TODO-AUTOR/cds-text-editor#readme",
+  "keywords": [
+    "rich-text-editor",
+    "tiptap",
+    "prosemirror",
+    "angular"
+  ]
+}

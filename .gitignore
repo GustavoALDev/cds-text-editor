@@ -11,3 +11,5 @@ coverage
 
 vitest.config.*.timestamp*
 .angular
+
+__screenshots__/
