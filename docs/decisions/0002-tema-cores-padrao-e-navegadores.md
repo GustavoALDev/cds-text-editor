@@ -57,9 +57,15 @@ Preenchidas pelas Tarefas 10, 12 e 14.
 
 #### Resultado por navegador
 
-| Navegador | Versão | Cores relativas nativas? | `light-dark()` | `@property` | Grade de contraste | ΔE máx por grupo |
-| --------- | ------ | ------------------------ | -------------- | ----------- | ------------------ | ---------------- |
-|           |        |                          |                |             |                    |                  |
+| Navegador | Versão        | Cores relativas nativas? | `light-dark()` | `@property` | Grade de contraste          | ΔE máx por grupo |
+| --------- | ------------- | ------------------------ | -------------- | ----------- | --------------------------- | ---------------- |
+| Chromium  | 153.0.8010.12 | sim                      | sim            | sim         | 0 falhas (nativo e plano B) | Tarefa 12        |
+| Firefox   | 155.0         | sim                      | sim            | sim         | 0 falhas (nativo e plano B) | Tarefa 12        |
+| WebKit    | 26.6          | sim                      | sim            | sim         | 0 falhas (nativo e plano B) | Tarefa 12        |
+
+Grade de contraste (Tarefa 10, `e2e/theme/contrast-grid.spec.ts`, medida na cor exibida via canvas 8 bits): 223 sementes sRGB, 148 fora do sRGB e 12 sementes junto ao limiar do `on-*` (Y = 0.1791005), em claro e escuro, com as três cores de papel iguais à semente (cobre primary, secondary e tertiary). Cada motor roda a grade com o CSS nativo e com o plano B forçado (`force: true`); todas as 6 combinações dão 0 falhas nos 3 motores. Menores razões (iguais nos 3 motores, salvo indicação): C1 4,58 (limiar), C2a 5,13, C2b 5,74, C3a 5,53, C3b 5,25, C4 5,53, C5a 16,42, C5b 7,01, C6a 11,51, C6b 4,54 (wide, nativo; Chromium 4,543, Firefox e WebKit 4,540); mínimos exatos por grade e variante estão na saída do teste. "Sim" em `@property` indica `CSSPropertyRule` disponível.
+
+ΔE máx por grupo: coluna reservada para a Tarefa 12 (paridade entre motores); não medida na Tarefa 10.
 
 ## Consequências
 
