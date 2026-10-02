@@ -67,6 +67,29 @@ Grade de contraste (Tarefa 10, `e2e/theme/contrast-grid.spec.ts`, medida na cor 
 
 ΔE máx por grupo: coluna reservada para a Tarefa 12 (paridade entre motores); não medida na Tarefa 10.
 
+#### Comportamentos verificados em navegador real
+
+Tarefa 11 (`e2e/theme/behavior-*.spec.ts`), com Chromium 153, Firefox 155 e WebKit 26.6. "✓" = passa; "skip" = não roda no motor, com o motivo.
+
+| Comportamento                                                                          | Chromium | Firefox                        | WebKit                         |
+| -------------------------------------------------------------------------------------- | -------- | ------------------------------ | ------------------------------ |
+| R3 valor inválido cai no padrão Angular (inline, nativo e plano B, sem erros)          | ✓        | ✓                              | ✓                              |
+| R4 prioridade padrão < `:root` < ancestral < instância (sementes e `--rte-radius`)     | ✓        | ✓                              | ✓                              |
+| R4 camadas: CSS sem camada vence sem `!important`; derivadas não vêm de `:root`        | ✓        | ✓                              | ✓                              |
+| R5 formatos (hex, rgb, hsl, oklch, display-p3, nome, `var()`) e `parseColor` no canvas | ✓        | ✓                              | ✓                              |
+| R6 modos auto, inherit (reage em tempo de execução), light, dark                       | ✓        | ✓                              | ✓                              |
+| `applyRteTheme`: nativo, plano B, listener de `prefers-color-scheme`, cleanup, WeakMap | ✓        | ✓                              | ✓                              |
+| Neutros `tinted` e `gray`, semente cinza                                               | ✓        | ✓                              | ✓                              |
+| R8 `forced-colors: active` (borda, foco, superfície e texto distinguíveis)             | ✓        | ✓                              | ✓                              |
+| R8 `prefers-contrast: more` (foco 3px, borda com contraste >= 3)                       | ✓        | ✓                              | ✓                              |
+| R10 custo de troca da primary (limite 0,5 ms Chromium, 2 ms Firefox/WebKit)            | ✓        | ✓                              | ✓                              |
+| CSP restritiva (`style-src 'self'; script-src 'self'`), sem violações                  | ✓        | ✓                              | ✓                              |
+| SSR: importação em Node sem DOM                                                        | ✓        | skip (teste só de Node, 1 vez) | skip (teste só de Node, 1 vez) |
+
+Custo de trocar `--rte-primary` com recálculo forçado (mediana por troca, 10 lotes de 30 trocas; a mediana individual do Firefox e do WebKit é limitada pela resolução do relógio): Chromium 0,31 ms, Firefox 0,03 ms, WebKit 0,27 ms (execução em paralelo com outros testes; varia entre execuções).
+
+Observações: o Firefox não reavalia `@media (forced-colors | prefers-contrast)` de folhas já carregadas quando a emulação do Playwright muda, então os testes de R8 emulam e recarregam o conteúdo. Um valor inválido na instância é descartado e cai no valor herdado (ancestral ou `:root`), e só então no padrão, como em qualquer propriedade registrada. Em forced-colors, valores do plano B aplicados inline vencem os overrides do tema (comportamento documentado).
+
 ## Consequências
 
 - Os padrões continuam os validados pelo spike (0 falhas de contraste); nada muda no código.
