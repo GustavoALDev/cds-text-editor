@@ -84,7 +84,10 @@ Semântica de `applyRteTheme`:
 
 - **Caminho nativo** (navegador com cores relativas `color(from …)`/`oklch(from …)`, `color-mix(in oklab, …)`, `light-dark()` e `@property`): define só as sementes informadas (texto original, qualquer cor CSS), o atributo `data-rte-mode` (quando `mode` é informado) e, para `neutral: 'gray'`, `--rte-neutral-tint: 0`. O `theme.css` deriva o resto.
 - **Plano B** (navegador sem esse suporte, ou `force: true`): calcula tudo com `createRteTheme` e define cada variável inline com `style.setProperty` (sem `unsafe-inline`; ver CSP), mais `color-scheme`.
-- O **cleanup** remove tudo o que a função definiu (propriedades, atributo, listener de `prefers-color-scheme`). Ele **não restaura** um valor inline preexistente da mesma propriedade: ele a remove.
+  - **Sementes no plano B.** Uma semente informada é lida pelo parser puro; se não der (`var(--marca)`, nomes, `currentcolor`, cores do sistema), é **resolvida no contexto do elemento** (um filho temporário recebe a cor e a cor computada é lida; o filho sai na mesma chamada). Uma semente **omitida**, ou informada mas inválida, vale a da cascata (`:root`, ancestral ou `style` da própria instância) e, sem nenhuma válida acima, o padrão do Angular, como no CSS nativo. Uma semente herdada não é copiada inline: a cascata continua a exibi-la.
+  - **Foto da cascata.** O plano B lê a cascata no momento da aplicação (e de novo a cada repintura por mudança de preferência do sistema). Se o `:root` ou um ancestral trocar uma semente depois, chame `applyRteTheme` de novo; no caminho nativo isso é automático.
+  - **Acessibilidade no plano B (R8).** Com `forced-colors: active`, os tokens que o `theme.css` troca por cores do sistema (`--rte-border`, `--rte-focus`, `--rte-surface`, `--rte-surface-raised`, `--rte-text`, `--rte-text-muted`, `--rte-*-border`) não são escritos inline, então as cores do sistema valem. Com `prefers-contrast: more`, `--rte-border` recebe o mesmo valor de `--rte-text-muted` (como no CSS), e `--rte-focus-width` (não escrito pelo plano B) vai a `3px` pelo CSS. Mudanças dessas preferências repintam.
+- O **cleanup** remove tudo o que a função definiu (propriedades, atributo, listeners de `prefers-color-scheme`, `forced-colors` e `prefers-contrast`). Ele **não restaura** um valor inline preexistente da mesma propriedade: ele a remove.
 - Aplicar de novo no **mesmo elemento** descarta a aplicação anterior.
 - Em **SSR/Node** (sem `document`/`window`) é um no-op e devolve uma função vazia.
 
@@ -158,7 +161,8 @@ for (const [name, value] of Object.entries(vars))
 `parseColor`:
 
 - Em qualquer ambiente (Node ou navegador): `#hex` de 3, 4, 6 e 8 dígitos, `rgb()`, `hsl()` e `oklch()`.
-- Só no navegador, via `<canvas>`: nomes de cor (`red`), `color(display-p3 …)`, `var()` e demais formas. Sem `document`, devolvem `null`.
+- Só no navegador, via `<canvas>`: nomes de cor (`red`), `color(display-p3 …)` e demais formas de cor sem contexto. Sem `document`, devolvem `null`.
+- `var()` **não** é resolvível por `parseColor` (o canvas não tem cascata): devolve `null`. Quem resolve `var()` é o CSS nativo (qualquer cor CSS, inclusive `var()`, como semente) e, no plano B, o `applyRteTheme`, no contexto do elemento.
 - Cor inválida: `null`. Cores fora do gamut sRGB são recortadas.
 - **Alfa (divergência conhecida):** alfa totalmente transparente é inválido nos dois caminhos. Alfa parcial é **ignorado** no parser puro (`#ffffff80` vale `#ffffff`), mas **rejeitado** no caminho do canvas (nomes, `color()`, `var()` com alfa menor que 1). Sementes devem ser opacas.
 
@@ -197,7 +201,7 @@ Em navegadores sem esses recursos, o `theme.css` sozinho não deriva as cores; u
 
 - **CSP.** O plano B usa `style.setProperty` (CSSOM) e não exige `unsafe-inline` para o que o JS gera. Verificado com `style-src 'self'; script-src 'self'`, sem violações, nos três motores.
 - **Contraste do usuário.** Com `prefers-contrast: more`, a borda usa o texto secundário e `--rte-focus-width` vai a `3px`. Com `forced-colors: active`, borda, foco, superfície e texto usam cores do sistema (`CanvasText`, `Highlight`, `Canvas`, `GrayText`, `ButtonBorder`). O foco deve ser desenhado com `outline`, não só com cor.
-- **Limite honesto.** Os valores do plano B são aplicados inline e vencem os ajustes de `forced-colors` e `prefers-contrast` do tema. Os testes de acessibilidade emulam a preferência e recarregam a página; a reação **ao vivo** a uma mudança de preferência não é coberta.
+- **Plano B e preferências de contraste.** O plano B respeita `forced-colors` e `prefers-contrast` (ver "Acessibilidade no plano B" acima) e repinta quando elas mudam. Limite honesto: os testes de acessibilidade emulam a preferência e recarregam a página (o Firefox não reavalia `@media` de folhas já carregadas sob a emulação do Playwright); a reação **ao vivo** a uma mudança de preferência não é coberta por teste de navegador (só por teste unitário do plano B).
 - **WCAG 2.x, não APCA.** As razões de contraste são as da WCAG 2.x. APCA está fora de escopo.
 
 ## Garantias e limites
@@ -209,12 +213,12 @@ Em navegadores sem esses recursos, o `theme.css` sozinho não deriva as cores; u
 
   | Cenário                                               | min+gzip (B) | Orçamento (B) |
   | ----------------------------------------------------- | ------------ | ------------- |
-  | pacote inteiro                                        | 4898         | 5632          |
-  | `applyRteTheme` (puxa o plano B)                      | 3460         | 4096          |
-  | `createRteTheme`                                      | 2737         | 3072          |
-  | `parseColor`                                          | 1450         | 2048          |
-  | presets                                               | 304          | 512           |
-  | `checkRteTheme`, `warnIfPoorTheme`, `suggestRteColor` | 3994         | 4608          |
+  | pacote inteiro                                        | 5676         | 6656          |
+  | `applyRteTheme` (puxa o plano B)                      | 4237         | 5120          |
+  | `createRteTheme`                                      | 3024         | 3072          |
+  | `parseColor`                                          | 1674         | 2048          |
+  | presets                                               | 301          | 512           |
+  | `checkRteTheme`, `warnIfPoorTheme`, `suggestRteColor` | 4267         | 4608          |
 
   O `sideEffects` declara só `*.css` e o JS é tree-shakeable. Detalhes e opções futuras: [ADR 0002, "Orçamento de tamanho"](../../docs/decisions/0002-tema-cores-padrao-e-navegadores.md).
 

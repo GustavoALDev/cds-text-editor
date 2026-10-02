@@ -172,7 +172,9 @@ test('applyRteTheme plano B: cleanup remove listener e propriedades; reaplicar d
     (window as unknown as { __cleanup: () => void }).__cleanup = cleanup;
     return { afterFirst, afterSecond };
   });
-  expect(live).toEqual({ afterFirst: 1, afterSecond: 1 });
+  // Plano B sob `auto` assina 3 consultas: prefers-color-scheme, forced-colors e prefers-contrast
+  // (R8). Reaplicar não acumula: continua 3.
+  expect(live).toEqual({ afterFirst: 3, afterSecond: 3 });
 
   await page.evaluate(() =>
     (window as unknown as { __cleanup: () => void }).__cleanup(),
@@ -192,5 +194,5 @@ test('applyRteTheme plano B: cleanup remove listener e propriedades; reaplicar d
   ).toBe(0);
 });
 
-// Nota (documentada): em forced-colors, os overrides do theme.css perdem para valores do plano B
-// aplicados inline (o inline vence a camada), então o plano B não herda as cores do sistema.
+// Nota: sob forced-colors o plano B não escreve inline os tokens que o bloco do theme.css troca por
+// cores do sistema, e sob prefers-contrast: more usa a borda = texto secundário (behavior-planb.spec.ts).

@@ -1,8 +1,29 @@
+import { parseColor, parseColorPure } from './color/parse';
 import { createRteTheme } from './create-theme';
 import type { RteTheme, RteThemeMode } from './types';
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';
+const FORCED_QUERY = '(forced-colors: active)';
+const CONTRAST_QUERY = '(prefers-contrast: more)';
 const MODE_ATTR = 'data-rte-mode';
+const ROLES = ['primary', 'secondary', 'tertiary'] as const;
+
+/**
+ * Tokens que o bloco `@media (forced-colors: active)` do theme.css troca por cores do sistema. No
+ * plano B eles não são escritos inline sob forced-colors (o inline venceria o bloco). Uso interno;
+ * `theme-css.spec.ts` confere a lista com o theme.css.
+ */
+export const FORCED_COLORS_TOKENS = [
+  '--rte-border',
+  '--rte-focus',
+  '--rte-surface',
+  '--rte-text',
+  '--rte-surface-raised',
+  '--rte-text-muted',
+  '--rte-primary-border',
+  '--rte-secondary-border',
+  '--rte-tertiary-border',
+] as const;
 
 export type ApplyRteThemeOptions = RteTheme & {
   /** Usa o plano B (variáveis calculadas em JS) mesmo com suporte nativo. */
@@ -28,13 +49,67 @@ function hasDom(): boolean {
   return typeof document !== 'undefined' && typeof window !== 'undefined';
 }
 
-function getMedia(): MediaQueryLike | null {
+function getMedia(query = DARK_QUERY): MediaQueryLike | null {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function')
     return null;
   try {
-    return window.matchMedia(DARK_QUERY) as unknown as MediaQueryLike;
+    return (window.matchMedia(query) as unknown as MediaQueryLike) ?? null;
   } catch {
     return null;
+  }
+}
+
+/** Assina `change` (ou o `addListener` legado) e devolve a função que remove o MESMO handler. */
+function subscribe(
+  media: MediaQueryLike | null,
+  handler: MediaListener,
+): () => void {
+  if (!media) return noop;
+  if (typeof media.addEventListener === 'function') {
+    media.addEventListener('change', handler);
+    return () => media.removeEventListener?.('change', handler);
+  }
+  if (typeof media.addListener === 'function') {
+    media.addListener(handler);
+    return () => media.removeListener?.(handler);
+  }
+  return noop;
+}
+
+/** Valor computado (aparado) de uma propriedade no elemento; '' se ilegível. */
+function computedVar(element: Element, name: string): string {
+  try {
+    return String(
+      getComputedStyle(element).getPropertyValue(name) ?? '',
+    ).trim();
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Resolve uma cor no contexto do elemento (`var()`, `currentcolor`, nomes, cores do sistema): um
+ * filho descartável recebe a cor em `background-color` (não herdado: um valor inválido, inclusive
+ * `var()` indefinida, vira transparente, que é rejeitado) e a cor computada é lida. A sonda sai
+ * sempre (`finally`); qualquer erro dá `null`.
+ */
+function resolveInContext(element: HTMLElement, value: string): string | null {
+  let probe: HTMLElement | undefined;
+  try {
+    probe = element.ownerDocument.createElement('span');
+    probe.style.setProperty('forced-color-adjust', 'none');
+    probe.style.setProperty('background-color', value, 'important');
+    element.appendChild(probe);
+    const color = String(getComputedStyle(probe).backgroundColor ?? '');
+    return parseColor(color) ? color : null;
+  } catch {
+    return null;
+  } finally {
+    try {
+      if (probe?.parentNode === element) element.removeChild(probe);
+    } catch {
+      // nada a fazer: o elemento recusou a remoção
+    }
   }
 }
 
@@ -93,6 +168,15 @@ export function resolveMode(mode: RteThemeMode | undefined): 'light' | 'dark' {
  * e define cada variável via `style.setProperty` (compatível com CSP). Sem DOM (SSR) não faz nada.
  * Reaplicar no mesmo elemento descarta a aplicação anterior. Devolve o cleanup, que remove
  * listeners e exatamente as propriedades/atributos definidos.
+ *
+ * Plano B, sementes: uma semente dada é lida pelo parser puro ou, se não der (`var()`, nomes,
+ * `currentcolor`, cores do sistema), resolvida no contexto do elemento por um filho-sonda
+ * temporário. Semente omitida ou ilegível vale o valor herdado da cascata (`:root`/ancestral) e,
+ * sem nenhum, o padrão Angular. É uma FOTO da cascata no momento da aplicação (e de cada
+ * repintura por mudança de preferência): se o `:root`/ancestral mudar depois, chame
+ * `applyRteTheme` de novo. Plano B, R8: sob `forced-colors: active` os tokens trocados pelo bloco
+ * do theme.css não são escritos inline; sob `prefers-contrast: more` a borda recebe o valor do
+ * texto secundário. Mudanças dessas preferências repintam.
  */
 export function applyRteTheme(
   element: HTMLElement,
@@ -123,25 +207,62 @@ export function applyRteTheme(
     if (options.neutral === 'gray') setProp('--rte-neutral-tint', '0');
   } else {
     const paint = (): void => {
+      // Recomeça do zero: a cascata é lida sem as sementes inline desta aplicação, e tokens que o
+      // estado atual não deve escrever (forced-colors) não ficam para trás.
+      for (const name of props) element.style.removeProperty(name);
+      props.clear();
       const dark = resolveMode(mode) === 'dark';
-      const vars = createRteTheme({ ...options, dark });
-      for (const [name, value] of Object.entries(vars)) setProp(name, value);
+      const forced = getMedia(FORCED_QUERY)?.matches === true;
+      const contrast = !forced && getMedia(CONTRAST_QUERY)?.matches === true;
+      const seeds: Partial<Record<(typeof ROLES)[number], string>> = {};
+      const cascaded = new Set<string>();
+      for (const role of ROLES) {
+        const name = `--rte-${role}`;
+        const given = options[role];
+        let seed: string | null = null;
+        if (given !== undefined)
+          seed = parseColorPure(given)
+            ? given
+            : (resolveInContext(element, given) ??
+              (parseColor(given) ? given : null));
+        if (seed === null) {
+          // Omitido ou ilegível: vale o valor herdado (ancestral/:root); só sem ele, o padrão.
+          const inherited = computedVar(element, name);
+          if (inherited && parseColor(inherited)) {
+            seed = inherited;
+            cascaded.add(name);
+          }
+        }
+        if (seed !== null) seeds[role] = seed;
+      }
+      const vars = createRteTheme({
+        ...(mode !== undefined && { mode }),
+        ...(options.neutral !== undefined && { neutral: options.neutral }),
+        ...seeds,
+        dark,
+      });
+      if (contrast) vars['--rte-border'] = vars['--rte-text-muted'] as string;
+      for (const [name, value] of Object.entries(vars)) {
+        // A cascata já exibe a semente herdada: não a congela inline.
+        if (cascaded.has(name)) continue;
+        if (
+          forced &&
+          (FORCED_COLORS_TOKENS as readonly string[]).includes(name)
+        )
+          continue;
+        setProp(name, value);
+      }
       setProp('color-scheme', dark ? 'dark' : 'light');
     };
     paint();
-    if (mode === undefined || mode === 'auto' || mode === 'inherit') {
-      const media = getMedia();
-      if (media) {
-        const handler: MediaListener = () => paint();
-        if (typeof media.addEventListener === 'function') {
-          media.addEventListener('change', handler);
-          unsubscribe = () => media.removeEventListener?.('change', handler);
-        } else if (typeof media.addListener === 'function') {
-          media.addListener(handler);
-          unsubscribe = () => media.removeListener?.(handler);
-        }
-      }
-    }
+    const handler: MediaListener = () => paint();
+    const queries = [FORCED_QUERY, CONTRAST_QUERY];
+    if (mode === undefined || mode === 'auto' || mode === 'inherit')
+      queries.unshift(DARK_QUERY);
+    const subs = queries.map((q) => subscribe(getMedia(q), handler));
+    unsubscribe = () => {
+      for (const off of subs) off();
+    };
   }
 
   const cleanup = (): void => {

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { FORCED_COLORS_TOKENS } from './apply-theme';
 import { ANGULAR_DEFAULTS } from './defaults';
 import { createRteTheme, NEUTRAL_SPEC } from './create-theme';
 import {
@@ -322,5 +323,17 @@ describe('theme.css', () => {
       ).toBe(true);
     }
     for (const seed of SEEDS) expect(declared.has(seed), seed).toBe(false);
+  });
+});
+
+describe('theme.css x plano B (R8)', () => {
+  it('FORCED_COLORS_TOKENS == variáveis do bloco @media (forced-colors: active)', () => {
+    const i = code.indexOf('@media (forced-colors: active)');
+    const block = code.slice(i, code.indexOf('}', i));
+    const declared = [...block.matchAll(/(--rte-[a-z0-9-]+)\s*:/g)].map(
+      (m) => m[1],
+    );
+    expect(declared.length).toBeGreaterThan(0);
+    expect([...FORCED_COLORS_TOKENS].sort()).toEqual(declared.sort());
   });
 });

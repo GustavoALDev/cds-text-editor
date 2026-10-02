@@ -1,0 +1,256 @@
+import { expect, test, type Page } from '@playwright/test';
+import { parseColor } from '../../packages/theme/src/color/parse';
+import { contrastRatio, to8 } from '../../packages/theme/src/color/convert';
+import { createRteTheme } from '../../packages/theme/src/create-theme';
+import type { ApplyRteThemeOptions } from '../../packages/theme/src/apply-theme';
+import { loadThemePage } from './helpers/page';
+import { addCss, computed, shown, trackErrors } from './helpers/behavior';
+
+/*
+ * Plano B (`force: true`) com sementes vindas da cascata e de `var()`, e R8 (forced-colors /
+ * prefers-contrast) no plano B. Os três motores têm suporte nativo, então `force: true` é a única
+ * forma de exercitar o plano B aqui; o caminho é o mesmo de um navegador sem suporte.
+ */
+
+const ROLE_TOKENS = (r: string): string[] => [
+  r,
+  `on-${r}`,
+  `${r}-hover`,
+  `${r}-active`,
+  `${r}-text`,
+  `${r}-subtle`,
+  `${r}-border`,
+];
+
+/** 8 bits de um hex de `createRteTheme` (calculado no Node). */
+const rgb8 = (hex: string | undefined) => to8(parseColor(hex ?? '')!);
+
+/** Aplica no #root e registra quantos filhos foram inseridos (sondas) durante a aplicação. */
+function apply(
+  page: Page,
+  options: ApplyRteThemeOptions,
+): Promise<{ before: number; after: number; added: number }> {
+  return page.evaluate(async (o) => {
+    const root = document.getElementById('root')!;
+    const before = root.children.length;
+    let added = 0;
+    const mo = new MutationObserver((records) => {
+      for (const r of records) added += r.addedNodes.length;
+    });
+    mo.observe(root, { childList: true });
+    const w = window as unknown as {
+      __cleanup?: () => void;
+      RteTheme: typeof window.RteTheme;
+    };
+    w.__cleanup = w.RteTheme.applyRteTheme(root, o);
+    await Promise.resolve(); // entrega os registros do MutationObserver
+    mo.disconnect();
+    return { before, after: root.children.length, added };
+  }, options);
+}
+
+const cleanup = (page: Page): Promise<number> =>
+  page.evaluate(() => {
+    (window as unknown as { __cleanup: () => void }).__cleanup();
+    return document.getElementById('root')!.children.length;
+  });
+
+const inline = (page: Page, names: string[]): Promise<Record<string, string>> =>
+  page.evaluate((list) => {
+    const s = document.getElementById('root')!.style;
+    return Object.fromEntries(
+      list.map((n) => [n, s.getPropertyValue(`--rte-${n}`)]),
+    );
+  }, names);
+
+test.beforeEach(async ({ page }) => {
+  await loadThemePage(page);
+});
+
+test('plano B: var() dado nas opções é resolvido no contexto do elemento', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await addCss(page, ':root{--marca:#0ea5e9}');
+  for (const mode of ['light', 'dark'] as const) {
+    const r = await apply(page, { primary: 'var(--marca)', mode, force: true });
+    const want = createRteTheme({ primary: '#0ea5e9', mode });
+    const got = await inline(page, ['primary', 'primary-hover', 'on-primary']);
+    expect(got['primary-hover'], mode).toBe(want['--rte-primary-hover']);
+    expect(got['on-primary'], mode).toBe(want['--rte-on-primary']);
+    expect(got['primary'], mode).toBe('#0ea5e9');
+    expect((await shown(page, ['primary']))['primary'], mode).toEqual([
+      14, 165, 233,
+    ]);
+    // A sonda foi usada (um filho inserido) e não ficou no DOM.
+    expect(r.added, mode).toBe(1);
+    expect(r.after, mode).toBe(r.before);
+    expect(await cleanup(page), mode).toBe(r.before);
+  }
+  expect(errors).toEqual([]);
+});
+
+test('plano B: papel omitido segue a semente do :root (não o padrão Angular)', async ({
+  page,
+}) => {
+  await addCss(page, ':root{--rte-secondary:#10b981}');
+  for (const mode of ['light', 'dark'] as const) {
+    const r = await apply(page, { primary: '#8514f5', mode, force: true });
+    const want = createRteTheme({
+      primary: '#8514f5',
+      secondary: '#10b981',
+      mode,
+    });
+    const names = ROLE_TOKENS('secondary');
+    const got = await shown(page, names);
+    for (const n of names)
+      expect(got[n], `${mode} ${n}`).toEqual(rgb8(want[`--rte-${n}`]));
+    // Prova de que o plano B rodou (derivado inline) e de que a semente não foi congelada inline.
+    const raw = await inline(page, ['secondary', 'secondary-hover']);
+    expect(raw['secondary-hover'], mode).toBe(want['--rte-secondary-hover']);
+    expect(raw['secondary'], mode).toBe('');
+    expect(r.added, mode).toBe(0); // tudo legível: nenhuma sonda
+    await cleanup(page);
+  }
+});
+
+test('plano B: valor inválido cai no valor herdado e, sem nada acima, no padrão', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  const derived = ['primary', 'primary-hover', 'on-primary', 'primary-border'];
+  // Sem nada acima: padrão Angular.
+  let r = await apply(page, { primary: 'banana', mode: 'light', force: true });
+  const def = createRteTheme({ mode: 'light' });
+  let got = await shown(page, derived);
+  for (const n of derived)
+    expect(got[n], `padrão ${n}`).toEqual(rgb8(def[`--rte-${n}`]));
+  expect(r.after).toBe(r.before);
+  await cleanup(page);
+
+  // Com :root válido: derivado do vermelho.
+  await addCss(page, ':root{--rte-primary:#ff0000}');
+  r = await apply(page, { primary: 'banana', mode: 'light', force: true });
+  const red = createRteTheme({ primary: '#ff0000', mode: 'light' });
+  got = await shown(page, derived);
+  for (const n of derived)
+    expect(got[n], `herdado ${n}`).toEqual(rgb8(red[`--rte-${n}`]));
+  expect((await inline(page, ['primary-hover']))['primary-hover']).toBe(
+    red['--rte-primary-hover'],
+  );
+  expect(r.added).toBe(1); // 'banana' passou pela sonda (rejeitada)
+  expect(r.after).toBe(r.before);
+  expect(await cleanup(page)).toBe(r.before);
+  expect(errors).toEqual([]);
+});
+
+test('plano B: nome de cor e currentcolor resolvidos; nenhuma sonda fica no DOM', async ({
+  page,
+}) => {
+  const r = await apply(page, {
+    primary: 'rebeccapurple',
+    mode: 'light',
+    force: true,
+  });
+  const want = createRteTheme({ primary: '#663399', mode: 'light' });
+  expect((await inline(page, ['primary-hover']))['primary-hover']).toBe(
+    want['--rte-primary-hover'],
+  );
+  expect((await shown(page, ['primary']))['primary']).toEqual([102, 51, 153]);
+  expect(r.after).toBe(r.before);
+  expect(await cleanup(page)).toBe(r.before);
+
+  // currentcolor é a cor do texto do elemento (não a do canvas, que seria preto).
+  await addCss(page, '#root{color:#15803d}');
+  const c = await apply(page, {
+    primary: 'currentcolor',
+    mode: 'light',
+    force: true,
+  });
+  const green = createRteTheme({ primary: '#15803d', mode: 'light' });
+  expect((await inline(page, ['primary-hover']))['primary-hover']).toBe(
+    green['--rte-primary-hover'],
+  );
+  expect(c.added).toBe(1);
+  expect(c.after).toBe(c.before);
+  expect(await cleanup(page)).toBe(c.before);
+});
+
+test('plano B R8: forced-colors deixa borda/foco/superfície/texto para as cores do sistema', async ({
+  page,
+  browserName,
+}) => {
+  await page.emulateMedia({ forcedColors: 'active' });
+  // Firefox não reavalia @media de folhas já carregadas ao mudar a emulação: recarrega o conteúdo.
+  await loadThemePage(page);
+  const active = await page.evaluate(
+    () => matchMedia('(forced-colors: active)').matches,
+  );
+  test.skip(
+    !active,
+    `${browserName}: emulateMedia({forcedColors}) não ativa (forced-colors: active) neste motor`,
+  );
+  await apply(page, { primary: '#0ea5e9', mode: 'light', force: true });
+  const raw = await inline(page, [
+    'border',
+    'focus',
+    'surface',
+    'surface-raised',
+    'text',
+    'text-muted',
+    'primary-border',
+    'primary-hover',
+  ]);
+  for (const n of [
+    'border',
+    'focus',
+    'surface',
+    'surface-raised',
+    'text',
+    'text-muted',
+    'primary-border',
+  ])
+    expect(raw[n], `inline --rte-${n}`).toBe('');
+  // Prova de que o plano B rodou.
+  expect(raw['primary-hover']).toBe(
+    createRteTheme({ primary: '#0ea5e9', mode: 'light' })[
+      '--rte-primary-hover'
+    ],
+  );
+  expect(await computed(page, '--rte-border')).toBe('CanvasText');
+  expect(await computed(page, '--rte-focus')).toBe('Highlight');
+  expect(await computed(page, '--rte-surface')).toBe('Canvas');
+  const t = await shown(page, ['border', 'focus', 'surface', 'text']);
+  expect(t['border']).not.toEqual(t['surface']);
+  expect(t['focus']).not.toEqual(t['surface']);
+  expect(contrastRatio(t['text']!, t['surface']!)).toBeGreaterThanOrEqual(7);
+});
+
+test('plano B R8: prefers-contrast: more faz a borda igual ao texto secundário', async ({
+  page,
+  browserName,
+}) => {
+  await page.emulateMedia({ contrast: 'more' });
+  await loadThemePage(page);
+  const active = await page.evaluate(
+    () => matchMedia('(prefers-contrast: more)').matches,
+  );
+  test.skip(
+    !active,
+    `${browserName}: emulateMedia({contrast:'more'}) não ativa (prefers-contrast: more) neste motor`,
+  );
+  for (const mode of ['light', 'dark'] as const) {
+    await apply(page, { primary: '#0ea5e9', mode, force: true });
+    const raw = await inline(page, ['border', 'text-muted']);
+    expect(raw['border'], mode).toMatch(/^#[0-9a-f]{6}$/);
+    expect(raw['border'], mode).toBe(raw['text-muted']);
+    const t = await shown(page, ['border', 'text-muted', 'surface']);
+    expect(t['border'], mode).toEqual(t['text-muted']);
+    expect(
+      contrastRatio(t['border']!, t['surface']!),
+      mode,
+    ).toBeGreaterThanOrEqual(3);
+    expect(await computed(page, '--rte-focus-width'), mode).toBe('3px');
+    await cleanup(page);
+  }
+});

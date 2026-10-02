@@ -157,6 +157,15 @@ function parsePure(input: string): Rgb | null {
   return sanitize(name?.startsWith('rgb') ? parseRgb(body) : parseHsl(body));
 }
 
+/**
+ * Só o caminho puro (sem canvas), que não depende de contexto. Uso interno do plano B, que resolve
+ * as demais formas no contexto do elemento; não é exportado por `index.ts`.
+ */
+export function parseColorPure(input: string): Rgb | null {
+  if (typeof input !== 'string' || input.length > MAX_INPUT_LENGTH) return null;
+  return parsePure(input);
+}
+
 interface CanvasLike {
   ctx: CanvasRenderingContext2D | null;
   doc: Document;
