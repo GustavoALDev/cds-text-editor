@@ -166,3 +166,85 @@ export function readTokenGrid(
     { seeds, modes, forcePlanB, probeNames: [...PROBE_NAMES] },
   ) as Promise<GridEntry[]>;
 }
+
+export interface BothEntry {
+  seeds: [string, string, string];
+  mode: Mode;
+  neutral: 'tinted' | 'gray';
+  native: Tokens;
+  planB: Tokens;
+}
+
+export interface BothCase {
+  seeds: [string, string, string];
+  mode: Mode;
+  neutral: 'tinted' | 'gray';
+}
+
+/**
+ * Para cada caso, lê numa só ida ao navegador os tokens exibidos (8 bits, canvas 1x1) com o CSS
+ * nativo e depois com o plano B forçado; limpa o estilo inline entre as leituras.
+ */
+export function readTokensBoth(
+  page: Page,
+  cases: BothCase[],
+): Promise<BothEntry[]> {
+  return page.evaluate((cases) => {
+    const root = document.getElementById('root') as HTMLElement;
+    const probe = document.getElementById('probe') as HTMLElement;
+    const cv = document.getElementById('cv') as HTMLCanvasElement;
+    const ctx = cv.getContext('2d', { willReadFrequently: true })!;
+    const names = [
+      'surface',
+      'surface-raised',
+      'text',
+      'text-muted',
+      'border',
+      'focus',
+    ];
+    for (const r of ['primary', 'secondary', 'tertiary'])
+      names.push(
+        r,
+        `on-${r}`,
+        `${r}-hover`,
+        `${r}-active`,
+        `${r}-text`,
+        `${r}-subtle`,
+        `${r}-border`,
+      );
+    const read = (): Record<string, [number, number, number]> => {
+      const out: Record<string, [number, number, number]> = {};
+      for (const n of names) {
+        probe.style.backgroundColor = `var(--rte-${n})`;
+        ctx.clearRect(0, 0, 1, 1);
+        ctx.fillStyle = '#000';
+        ctx.fillStyle = getComputedStyle(probe).backgroundColor;
+        ctx.fillRect(0, 0, 1, 1);
+        const d = ctx.getImageData(0, 0, 1, 1).data;
+        out[n] = [d[0]!, d[1]!, d[2]!];
+      }
+      return out;
+    };
+    const run = (
+      c: (typeof cases)[number],
+      force: boolean,
+    ): Record<string, [number, number, number]> => {
+      const cleanup = window.RteTheme.applyRteTheme(root, {
+        primary: c.seeds[0],
+        secondary: c.seeds[1],
+        tertiary: c.seeds[2],
+        mode: c.mode,
+        neutral: c.neutral,
+        force,
+      });
+      const t = read();
+      cleanup();
+      return t;
+    };
+    return cases.map((c) => ({
+      ...c,
+      native: run(c, false),
+      planB: run(c, true),
+    }));
+  }, cases) as Promise<BothEntry[]>;
+}
