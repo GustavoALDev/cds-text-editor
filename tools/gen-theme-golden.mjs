@@ -2,11 +2,16 @@
  * Gera packages/theme/src/__fixtures__/spike-golden.json a partir do spike T6
  * (docs/specs/referencias/t6-tema/theme-fallback.mjs), a verdade independente do plano B.
  *
- * ATENÇÃO: o spike tem quatro defeitos conhecidos (o quarto: `mixOklch` polar, trocada por mistura em OKLab). (1) Erro de digitação na linha "m" de
- * `linearToOklab` (0.0883024619 * b; o coeficiente padrão do OKLab é 0.1073969566). (2) O degrau
- * `clamp((WHITE_Y - y) * 1000)` é uma rampa de 0,001 de largura (~35 mil cores sRGB com texto
- * cinza); o ganho passa a 1e9. (3) O limiar 0.1791 fica a 5.6e-9 de uma cor de 8 bits (motores divergem); passa a 0.1791005. Como docs/specs não deve ser editado, este script lê o spike como
- * texto, aplica em memória as quatro correções (exigindo exatamente uma ocorrência de cada), grava a cópia corrigida em
+ * ATENÇÃO: o spike tem quatro defeitos conhecidos, corrigidos nesta ordem:
+ * (1) erro de digitação na linha "m" de `linearToOklab` (0.0883024619 * b; o coeficiente padrão do
+ *     OKLab é 0.1073969566);
+ * (2) o degrau `clamp((WHITE_Y - y) * 1000)` é uma rampa de 0,001 de largura (~35 mil cores sRGB
+ *     com texto cinza); o ganho passa a 1e9;
+ * (3) o limiar 0.1791 fica a 5.6e-9 de uma cor de 8 bits (os motores divergem); passa a 0.1791005;
+ * (4) `mixOklch` (mistura polar, que puxava o matiz de cada papel para o da primary) é trocada por
+ *     mistura linear em OKLab.
+ * Como docs/specs não deve ser editado, este script lê o spike como texto, aplica em memória as
+ * quatro correções (exigindo exatamente uma ocorrência de cada), grava a cópia corrigida em
  * $HOME/.cache/tmp e a importa de lá. O golden é, portanto, "matemática do spike + correções".
  *
  * Uso: node tools/gen-theme-golden.mjs

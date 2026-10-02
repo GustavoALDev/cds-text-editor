@@ -8,6 +8,8 @@ O pacote **não depende de Angular** (nem exige Angular 22+): é CSS puro mais h
 
 Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
+Instalação (futura: o pacote **ainda não foi publicado** e o nome pode mudar; hoje o comando falha):
+
 ```bash
 npm i @cds/rte-theme
 ```
@@ -47,7 +49,8 @@ Detalhes por nível:
 
 - **Nível 1.** Um valor inválido (`banana`, vazio, `var(--inexistente)`, `12px`) **cai no padrão do Angular**, só quando não há valor válido acima na cascata: um valor inválido na instância é descartado e vale o do ancestral ou do `:root`; só depois o padrão. As sementes seguem a cascata normal: podem ser definidas em `:root`, num ancestral ou na própria instância.
 - **Nível 2.** Também seguem a cascata normal (`:root`, ancestral, instância). `--rte-density` é um número (1 = padrão), `--rte-radius` e `--rte-font-size` são comprimentos, `--rte-line-height` é um número, as fontes são listas de famílias.
-- **Nível 3.** `--rte-focus-width` é uma variável pública do nível 3 (`2px`; `3px` com `prefers-contrast: more`). **Contrato importante:** os tokens derivados e os do nível 3 são declarados em `.rte-root`. Sobrescrevê-los exige CSS que mire `.rte-root` (CSS sem camada vence sem `!important`) ou `style` inline na instância. Declarar `--rte-surface` em `:root` ou num ancestral **não** funciona para eles (a regra de `.rte-root` ganha); já as sementes e as variáveis do nível 2 seguem a cascata normal.
+- **Nível 3.** Contrato importante: os tokens derivados e os do nível 3 (`--rte-surface`, `--rte-border`, `--rte-danger`, ...) são declarados em `.rte-root`. Sobrescrevê-los exige CSS que mire `.rte-root` (CSS sem camada vence sem `!important`) ou `style` inline na instância. Declarar `--rte-surface` em `:root` ou num ancestral **não** funciona para eles (a regra de `.rte-root` ganha); já as sementes e as variáveis do nível 2 seguem a cascata normal.
+- **`--rte-focus-width`** (nível 3, `2px`) é exceção: é uma `@property` com `inherits: true` e **não** tem declaração em `.rte-root` fora do bloco `@media (prefers-contrast: more)`. Por isso defini-la em `:root` ou num ancestral funciona, como uma variável do nível 2, **exceto** com `prefers-contrast: more`, quando a regra `.rte-root { --rte-focus-width: 3px }` do tema vence o valor herdado (para mudar também esse caso, mire `.rte-root`).
 - **Nível 4.** Todo o CSS do pacote fica em `@layer rte.reset, rte.base, rte.theme, rte.components, rte.content`; o CSS do consumidor sem camada sempre vence. As classes `rte-*` só existem quando os componentes chegarem (spec 05).
 
 ```css
@@ -102,6 +105,8 @@ Semântica de `applyRteTheme`:
 
 **Se o seu site tem tema claro/escuro, use `inherit` e declare `color-scheme` no `<html>`** (por exemplo `html[data-theme='dark'] { color-scheme: dark; }`). Com `auto`, o editor segue o sistema operacional e não o botão de tema do seu site.
 
+Nuance do `inherit`: no CSS nativo, `color-scheme: inherit` segue o **ancestral mais próximo** que declara `color-scheme` (não necessariamente o `<html>`); no plano B, o JS lê o `color-scheme` calculado do `<html>`. Se um contêiner intermediário do seu site muda o esquema, os dois caminhos podem divergir: declare o esquema no `<html>` ou use `light`/`dark` explícitos.
+
 No plano B o valor é calculado em JS: sob `inherit` o chamador deve invocar `applyRteTheme` de novo quando o site trocar de tema (a mudança de classe/atributo não é observada; a mudança de `prefers-color-scheme` sob `auto`/`inherit` é).
 
 ```html
@@ -112,14 +117,14 @@ No plano B o valor é calculado em JS: sob `inherit` o chamador deve invocar `ap
 
 Públicas e estáveis. As variáveis internas do pacote não fazem parte do contrato.
 
-| Nível     | Variáveis                                                                                                                                                                                                                                                                                                                        | Onde sobrescrever                                 |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| 1         | `--rte-primary`, `--rte-secondary`, `--rte-tertiary`                                                                                                                                                                                                                                                                             | `:root`, ancestral ou instância                   |
-| 2         | `--rte-radius`, `--rte-density`, `--rte-font-sans`, `--rte-font-mono`, `--rte-font-size`, `--rte-line-height`                                                                                                                                                                                                                    | `:root`, ancestral ou instância                   |
-| 3         | `--rte-surface`, `--rte-surface-raised`, `--rte-text`, `--rte-text-muted`, `--rte-border`, `--rte-focus`, `--rte-focus-width`, `--rte-danger`, `--rte-warning`, `--rte-success`, `--rte-code-bg`, `--rte-code-text`, `--rte-code-comment`, `--rte-code-keyword`, `--rte-code-string`, `--rte-code-number`, `--rte-code-function` | CSS que mira `.rte-root`, ou inline               |
-| Derivadas | `--rte-<cor>-hover`, `--rte-<cor>-active`, `--rte-<cor>-subtle`, `--rte-<cor>-border`, `--rte-<cor>-text`, `--rte-on-<cor>` (`<cor>` = `primary`, `secondary` ou `tertiary`)                                                                                                                                                     | Calculadas; leitura (ou CSS que mira `.rte-root`) |
+| Nível     | Variáveis                                                                                                                                                                                                                                                                                                                        | Onde sobrescrever                                                                                                         |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 1         | `--rte-primary`, `--rte-secondary`, `--rte-tertiary`                                                                                                                                                                                                                                                                             | `:root`, ancestral ou instância                                                                                           |
+| 2         | `--rte-radius`, `--rte-density`, `--rte-font-sans`, `--rte-font-mono`, `--rte-font-size`, `--rte-line-height`                                                                                                                                                                                                                    | `:root`, ancestral ou instância                                                                                           |
+| 3         | `--rte-surface`, `--rte-surface-raised`, `--rte-text`, `--rte-text-muted`, `--rte-border`, `--rte-focus`, `--rte-focus-width`, `--rte-danger`, `--rte-warning`, `--rte-success`, `--rte-code-bg`, `--rte-code-text`, `--rte-code-comment`, `--rte-code-keyword`, `--rte-code-string`, `--rte-code-number`, `--rte-code-function` | CSS que mira `.rte-root`, ou inline (`--rte-focus-width` também em `:root`/ancestral, salvo sob `prefers-contrast: more`) |
+| Derivadas | `--rte-<cor>-hover`, `--rte-<cor>-active`, `--rte-<cor>-subtle`, `--rte-<cor>-border`, `--rte-<cor>-text`, `--rte-on-<cor>` (`<cor>` = `primary`, `secondary` ou `tertiary`)                                                                                                                                                     | Calculadas; leitura (ou CSS que mira `.rte-root`)                                                                         |
 
-`--rte-neutral-tint` (`1` ou `0`) é a chave que `applyRteTheme` usa para a opção `neutral: 'gray'`; use a opção em vez de defini-la.
+`--rte-neutral-tint` (`1` = neutros tingidos pela `primary`, padrão; `0` = neutros cinza) é, na prática, pública: é o jeito **só com CSS** de escolher neutros cinza (`.rte-root { --rte-neutral-tint: 0; }`, ou em `:root`/ancestral, pois herda) e é o que `applyRteTheme` define para `neutral: 'gray'` no caminho nativo. Só `0` e `1` são suportados. No plano B ela **não** é lida da cascata: use a opção `neutral: 'gray'`. (Ainda não consta do R1 da spec; ver ADR 0002, pendências.)
 
 ## Plano B e API em JavaScript
 
@@ -144,7 +149,7 @@ import {
 | `parseColor(input)`                     | Lê uma cor CSS e devolve `[r, g, b]` em 0..1, ou `null` se inválida (máx. 200 caracteres)                                                                                                                                                                      |
 | `checkRteTheme(options)`                | Relatório de contraste (`{ ok, checks, invalid }`): 72 verificações, 36 por modo                                                                                                                                                                               |
 | `warnIfPoorTheme(options, warn?)`       | Em desenvolvimento: avisa (pt-BR, `console.warn` por padrão) sobre cores ilegíveis e verificações reprovadas; devolve o relatório                                                                                                                              |
-| `suggestRteColor(color)`                | Semente mais próxima (menor mudança de luminosidade OKLCH) que passa; `null` se a cor já passa, é ilegível ou nada próximo passa                                                                                                                               |
+| `suggestRteColor(color)`                | Semente mais próxima (menor mudança de luminosidade OKLCH, passo 0,01 até 0,5) que passa nas verificações do papel `primary` de `checkRteTheme`, como `#rrggbb`; `null` se a cor já passa, é ilegível ou nada próximo passa                                    |
 | `RTE_THEME_PRESETS`, `ANGULAR_DEFAULTS` | Presets e padrão do Angular                                                                                                                                                                                                                                    |
 
 ```ts
@@ -160,7 +165,7 @@ for (const [name, value] of Object.entries(vars))
 
 `parseColor`:
 
-- Em qualquer ambiente (Node ou navegador): `#hex` de 3, 4, 6 e 8 dígitos, `rgb()`, `hsl()` e `oklch()`.
+- Em qualquer ambiente (Node ou navegador): `#hex` de 3, 4, 6 e 8 dígitos, `rgb()`/`rgba()`, `hsl()`/`hsla()` e `oklch()`, com a gramática do CSS Color 4 (sintaxe com vírgulas, ou com espaços e `/ alfa`; ângulos em número ou `deg`). O que o CSS rejeita (por exemplo `rgb(255 0 0 0.5)` ou `rgb(1,,2,3)`) também é rejeitado; a concordância com `CSS.supports` é testada nos três motores.
 - Só no navegador, via `<canvas>`: nomes de cor (`red`), `color(display-p3 …)` e demais formas de cor sem contexto. Sem `document`, devolvem `null`.
 - `var()` **não** é resolvível por `parseColor` (o canvas não tem cascata): devolve `null`. Quem resolve `var()` é o CSS nativo (qualquer cor CSS, inclusive `var()`, como semente) e, no plano B, o `applyRteTheme`, no contexto do elemento.
 - Cor inválida: `null`. Cores fora do gamut sRGB são recortadas.
@@ -207,7 +212,7 @@ Em navegadores sem esses recursos, o `theme.css` sozinho não deriva as cores; u
 ## Garantias e limites
 
 - **Contraste por construção.** Texto sobre a cor (`on-*`), hover e active têm razão >= 4,5 para **todas** as 2^24 sementes sRGB de 8 bits (varredura exaustiva; mínimo 4,582). Grades de sementes (223 sRGB, 148 fora do sRGB e 12 junto ao limiar do `on-*`), em claro e escuro, dão 0 falhas nos três motores, no CSS nativo e no plano B; o teste de propriedade (`fast-check`, 5000 execuções por propriedade) não achou contraexemplo.
-- **Matiz dos fundos suaves.** Os neutros são tingidos pela `primary` (use `neutral: 'gray'` para cinza). Por isso o `*-subtle` tingido de `secondary`/`tertiary` pode ter desvio de matiz de até cerca de 33 graus em croma baixo (nos trios medidos), por desenho; `*-border` fica em até cerca de 5 graus.
+- **Matiz dos fundos suaves.** Os neutros são tingidos pela `primary` (use `neutral: 'gray'` para cinza). Por isso o `*-subtle` tingido de `secondary`/`tertiary` pode ter desvio de matiz de até ~33° nos trios medidos; uma varredura ampla chega a ~78° com croma ≈ 0,010 (visualmente desprezível, o neutro tingido domina o `subtle`), por desenho. `*-border` fica em até cerca de 5 graus nos trios medidos.
 - **Plano B equivale ao nativo.** ΔE (OKLab) medido, plano B contra CSS nativo: derivados lineares 0, texto até 0,0028, neutros até 0,0035, bordas até 0,0032 (spec R7: 0,019 e 0,041). É o piso de quantização de 8 bits.
 - **Tamanho (desvio do R11).** O R11 pede <= 3 kB min+gzip. O JS mede mais, e o orçamento é por cenário de importação (ADR 0002):
 

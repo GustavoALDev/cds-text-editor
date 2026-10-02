@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { contrastRatio } from '../../packages/theme/src/color/convert';
 import { loadThemePage } from './helpers/page';
-import { computed, shownOne } from './helpers/behavior';
+import { addCss, computed, shownOne } from './helpers/behavior';
 
 test.beforeEach(async ({ page }) => {
   await loadThemePage(page);
@@ -120,4 +120,24 @@ test.describe('R10', () => {
       limit,
     );
   });
+});
+
+test('--rte-focus-width herda de :root, exceto sob prefers-contrast: more (regra de .rte-root)', async ({
+  page,
+  browserName,
+}) => {
+  const css = ':root{--rte-focus-width:5px}';
+  await addCss(page, css);
+  expect(await computed(page, '--rte-focus-width')).toBe('5px');
+  await page.emulateMedia({ contrast: 'more' });
+  await loadThemePage(page);
+  const active = await page.evaluate(
+    () => matchMedia('(prefers-contrast: more)').matches,
+  );
+  test.skip(
+    !active,
+    `${browserName}: emulateMedia({contrast:'more'}) não ativa (prefers-contrast: more) neste motor`,
+  );
+  await addCss(page, css);
+  expect(await computed(page, '--rte-focus-width')).toBe('3px');
 });
