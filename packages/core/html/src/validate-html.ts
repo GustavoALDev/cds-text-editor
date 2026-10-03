@@ -2,7 +2,11 @@ import { Parser } from 'htmlparser2';
 import { isAllowedClass } from '../../src/schema/classes';
 import { normalizeAttribute } from '../../src/schema/rules';
 import { applyStyleFrom, sanitizeStyle } from '../../src/schema/style';
-import type { RteElementSpec, RteHtmlSchema } from '../../src/schema/types';
+import type {
+  RteAttrRule,
+  RteElementSpec,
+  RteHtmlSchema,
+} from '../../src/schema/types';
 import { resolveMaxDepth } from './walk';
 
 export type RteHtmlViolation = {
@@ -45,6 +49,15 @@ function own<T>(record: Record<string, T>, key: string): T | undefined {
   return Object.hasOwn(record, key) ? record[key] : undefined;
 }
 
+/** `tokens`: algum token informado fora de `values` (não pode ser descartado). */
+function hasUnknownToken(rule: RteAttrRule, value: string): boolean {
+  if (rule.kind !== 'tokens') return false;
+  const known = new Set(rule.values.map((v) => v.toLowerCase()));
+  return (rule.separator === ' ' ? value.split(ASCII_WS) : value.split(';'))
+    .map((x) => x.trim().toLowerCase())
+    .some((x) => x !== '' && !known.has(x));
+}
+
 const ASCII_WS = /[ \t\n\r\f]+/;
 const TEXTLESS = new Set(['script', 'style']);
 
@@ -60,13 +73,13 @@ function countDeclarations(style: string): number {
 function checkStyle(
   spec: RteElementSpec,
   value: string,
-  attrs: Record<string, string>,
+  attrs: Map<string, string>,
   canonical: boolean,
 ): boolean {
   if (spec.styleFrom) {
     // O `style` é regenerado a partir do atributo da paleta: só o canonical confere.
     if (!canonical) return true;
-    const source = own(attrs, spec.styleFrom.attribute);
+    const source = attrs.get(spec.styleFrom.attribute);
     if (source === undefined) return false;
     return applyStyleFrom(spec.styleFrom, source) === value;
   }
@@ -99,13 +112,14 @@ export function validateHtml(
   };
   const stack: Frame[] = [root];
   let stopped = false;
+  let current = new Map<string, string>();
 
   const top = (): Frame => stack[stack.length - 1] ?? root;
 
   function checkElement(
     frame: Frame,
     spec: RteElementSpec,
-    attrs: Record<string, string>,
+    attrs: Map<string, string>,
   ): void {
     const { tag, path } = frame;
     const report = (
@@ -119,12 +133,21 @@ export function validateHtml(
       out.push(v);
     };
 
-    for (const name of Object.keys(attrs)) {
-      const value = own(attrs, name) ?? '';
+    for (const [name, value] of attrs) {
       if (name === 'class') {
-        for (const token of splitTokens(value)) {
+        const tokens = splitTokens(value);
+        for (const token of tokens) {
           if (!isAllowedClass(spec, token))
             report('invalid-class', name, token);
+        }
+        // Forma canônica: não vazio, sem repetição, separado por um espaço.
+        if (
+          canonical &&
+          (tokens.length === 0 ||
+            new Set(tokens).size !== tokens.length ||
+            tokens.join(' ') !== value)
+        ) {
+          report('invalid-class', name, value);
         }
         continue;
       }
@@ -142,25 +165,51 @@ export function validateHtml(
         continue;
       }
       const normalized = normalizeAttribute(attrSpec.rule, value);
-      if (normalized === null) report('invalid-attribute', name, value);
-      else if (canonical && normalized !== value) {
+      if (normalized === null || hasUnknownToken(attrSpec.rule, value)) {
+        report('invalid-attribute', name, value);
+      } else if (canonical && normalized !== value) {
         report('non-canonical-attribute', name, value);
       }
     }
 
+    // O `style` do styleFrom é regenerado: no canonical ele precisa existir.
+    if (canonical && spec.styleFrom && !attrs.has('style')) {
+      const source = attrs.get(spec.styleFrom.attribute);
+      if (
+        source !== undefined &&
+        applyStyleFrom(spec.styleFrom, source) !== null
+      ) {
+        report('invalid-style', 'style');
+      }
+    }
+
     for (const [name, attrSpec] of Object.entries(spec.attributes)) {
-      if (attrSpec.required && !Object.hasOwn(attrs, name)) {
+      if (attrSpec.required && !attrs.has(name)) {
         report('missing-required-attribute', name);
       }
     }
 
+    // Valor do atributo já normalizado pela própria regra (`null` = ausente/inválido).
+    const normalizedValue = (name: string): string | null => {
+      const raw = attrs.get(name);
+      if (raw === undefined) return null;
+      const attrSpec = own(spec.attributes, name);
+      return attrSpec ? normalizeAttribute(attrSpec.rule, raw) : raw;
+    };
+
     for (const ensure of spec.ensureTokens ?? []) {
       if (ensure.when) {
         const w = ensure.when;
-        if (own(attrs, w.attribute) !== w.equals) continue;
+        if (normalizedValue(w.attribute) !== w.equals) continue;
       }
+      const value = normalizedValue(ensure.attribute) ?? '';
+      const rule = own(spec.attributes, ensure.attribute)?.rule;
+      const separator = rule?.kind === 'tokens' ? rule.separator : ' ';
       const present = new Set(
-        (own(attrs, ensure.attribute) ?? '').split(/[ \t\n\r\f;]+/),
+        value
+          .split(separator === ' ' ? ASCII_WS : ';')
+          .map((x) => x.trim())
+          .filter((x) => x !== ''),
       );
       const missing = ensure.tokens.filter((token) => !present.has(token));
       if (missing.length > 0) {
@@ -171,8 +220,16 @@ export function validateHtml(
 
   const parser: Parser = new Parser(
     {
-      onopentag(name, attrs) {
+      onopentagname() {
+        current = new Map();
+      },
+      onattribute(name, value) {
+        // Primeiro vence (como no parser); Map não perde `__proto__`.
+        if (!current.has(name)) current.set(name, value);
+      },
+      onopentag(name) {
         if (stopped) return;
+        const attrs = current;
         const parent = top();
         const prefix = parent.path ? `${parent.path}>` : '';
         const path = `${prefix}${name}[${parent.childCount}]`;

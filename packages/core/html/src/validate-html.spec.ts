@@ -59,7 +59,7 @@ describe('validateHtml', () => {
     ]);
     // `<__proto__>` não é tag em HTML (nome começa com `_`): o parser o trata como texto.
     expect(kinds('<__proto__>')).not.toContain('unknown-element');
-    expect(kinds('<p __proto__="x">a</p>')).not.toContain('invalid-attribute');
+    expect(kinds('<p __proto__="x">a</p>')).toEqual(['unknown-attribute']);
     expect(kinds('<p data-x="1">a</p>')).toEqual(['unknown-attribute']);
     expect(kinds('<p constructor="x">a</p>')).toEqual(['unknown-attribute']);
     expect(kinds('<p class="x">a</p>')).toEqual(['invalid-class']);
@@ -121,5 +121,41 @@ describe('validateHtml', () => {
       s,
     );
     expect(v).toMatchObject([{ kind: 'invalid-class', path: 'aside[0]>p[1]' }]);
+  });
+
+  describe('rodada de correção 1', () => {
+    it('styleFrom sem style: invalid-style só no canonical', () => {
+      const h = '<span data-rt-color="red">a</span>';
+      expect(kinds(h)).toEqual(['invalid-style']);
+      expect(kinds(h, 'accepted')).toEqual([]);
+    });
+
+    it('ensureTokens usa valores normalizados', () => {
+      const a = '<a href="https://a.com/" target="_BLANK">a</a>';
+      expect(kinds(a, 'accepted')).toEqual(['missing-ensured-token']);
+      const b =
+        '<a href="https://a.com/" target="_blank" rel="NOOPENER NOREFERRER">a</a>';
+      expect(kinds(b, 'accepted')).toEqual([]);
+      expect(kinds(b)).toEqual(['non-canonical-attribute']);
+    });
+
+    it('class fora da forma canônica', () => {
+      const f = (c: string) =>
+        `<figure class="${c}"><img src="https://a.com/x.png" alt="a" loading="lazy" decoding="async"></figure>`;
+      expect(kinds(f('rt-figure rt-figure--left'))).toEqual([]);
+      expect(kinds(f('rt-figure rt-figure--left rt-figure--left'))).toEqual([
+        'invalid-class',
+      ]);
+      expect(kinds(f('rt-figure  rt-figure--left'))).toEqual(['invalid-class']);
+      expect(kinds(f('rt-figure rt-figure--left'), 'accepted')).toEqual([]);
+      expect(kinds('<p class="">a</p>')).toEqual(['invalid-class']);
+    });
+
+    it('token desconhecido em tokens nunca é descartado', () => {
+      const h =
+        '<a href="https://a.com/" target="_blank" rel="noopener noreferrer evil">a</a>';
+      expect(kinds(h)).toEqual(['invalid-attribute']);
+      expect(kinds(h, 'accepted')).toEqual(['invalid-attribute']);
+    });
   });
 });
