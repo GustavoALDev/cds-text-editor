@@ -83,13 +83,17 @@ describe('createEditorExtensions: lista e ordem', () => {
 
   it('recursos ligados entram depois da base, na ordem da spec §6', () => {
     const names = createEditorExtensions({
-      features: { ...OFF, colors: true, code: true },
+      features: { ...OFF, colors: true, code: true, tables: true },
     }).map((e) => e.name);
     expect(names).toEqual([
       ...BASE_NAMES,
       'rtTextColor',
       'rtHighlight',
       'codeBlock',
+      'table',
+      'tableRow',
+      'tableHeader',
+      'tableCell',
     ]);
   });
 

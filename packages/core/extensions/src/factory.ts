@@ -8,6 +8,7 @@ import { createExtensionContext } from './context';
 import type { RteExtensionContext } from './context';
 import { createHighlightPlugin } from './highlight';
 import { createLinkExtension } from './link';
+import { createTableExtensions } from './tables';
 import type { RteEditorOptions } from './types';
 
 /**
@@ -31,6 +32,9 @@ export function createEditorExtensions(
       ? createColorExtensions(ctx)
       : []),
     ...(ctx.schema.features.includes('code') ? [createCodeBlock(ctx)] : []),
+    ...(ctx.schema.features.includes('tables')
+      ? createTableExtensions(ctx)
+      : []),
     ...(options.extensions ?? []),
   ];
   assertUniqueNames(list);
