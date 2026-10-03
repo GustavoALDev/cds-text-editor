@@ -6,6 +6,7 @@ import { createColorExtensions } from './colors';
 import { createContentExtension } from './content';
 import { createExtensionContext } from './context';
 import type { RteExtensionContext } from './context';
+import { createEmbedExtension } from './embed';
 import { createHighlightPlugin } from './highlight';
 import { createLinkExtension } from './link';
 import { createMediaExtensions } from './media';
@@ -40,6 +41,10 @@ export function createEditorExtensions(
     ...(ctx.schema.features.includes('tasks') ? createTaskExtensions(ctx) : []),
     ...(ctx.schema.features.includes('media')
       ? createMediaExtensions(ctx)
+      : []),
+    // Sem provedor ativo não há iframe no esquema (R2) e o nó não existe.
+    ...(ctx.schema.features.includes('embeds') && ctx.providers.length > 0
+      ? [createEmbedExtension(ctx)]
       : []),
     ...(options.extensions ?? []),
   ];

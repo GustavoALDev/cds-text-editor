@@ -90,6 +90,7 @@ describe('createEditorExtensions: lista e ordem', () => {
         tables: true,
         tasks: true,
         media: true,
+        embeds: true,
       },
     }).map((e) => e.name);
     expect(names).toEqual([
@@ -105,6 +106,7 @@ describe('createEditorExtensions: lista e ordem', () => {
       'rtTaskItem',
       'rtImage',
       'rtVideo',
+      'rtEmbed',
     ]);
   });
 

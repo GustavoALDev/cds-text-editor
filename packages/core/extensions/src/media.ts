@@ -50,8 +50,12 @@ type Check = (value: unknown) => unknown;
 type Checks = Record<string, Check>;
 type Attrs = Record<string, unknown>;
 
-/** Regra de um atributo do esquema (o recurso media precisa estar ligado). */
-function ruleOf(schema: RteHtmlSchema, tag: string, name: string): RteAttrRule {
+/** Regra de um atributo do esquema (o recurso do elemento precisa estar ligado). */
+export function ruleOf(
+  schema: RteHtmlSchema,
+  tag: string,
+  name: string,
+): RteAttrRule {
   const element = Object.hasOwn(schema.elements, tag)
     ? schema.elements[tag]
     : undefined;
@@ -72,7 +76,7 @@ function byRule(rule: RteAttrRule, value: unknown): string | null {
 }
 
 /** Espaço em branco do HTML colapsado e aparado (sem mexer em NBSP). */
-function cleanText(value: string): string {
+export function cleanText(value: string): string {
   return value.replace(/[ \t\n\f\r]+/g, ' ').replace(/^ | $/g, '');
 }
 
@@ -119,7 +123,7 @@ function strict(checks: Checks, base: Attrs, input: unknown): Attrs | null {
   return out;
 }
 
-function tagOf(element: Element): string {
+export function tagOf(element: Element): string {
   return element.tagName.toLowerCase();
 }
 
@@ -142,7 +146,7 @@ const NO_TEXT = new Set(['script', 'style', 'template']);
  * vira espaço (não junta palavras) e `script`/`style`/`template` são
  * ignorados.
  */
-function textWithout(
+export function textWithout(
   node: globalThis.Node,
   skip: (e: Element) => boolean = () => false,
 ): string {
@@ -164,7 +168,7 @@ function textWithout(
 }
 
 /** Filhos significativos: sem comentários e sem texto só de espaço. */
-function meaningfulChildren(element: Element): Element[] | null {
+export function meaningfulChildren(element: Element): Element[] | null {
   const out: Element[] = [];
   for (const child of Array.from(element.childNodes)) {
     if (child.nodeType === 8) continue;
@@ -213,12 +217,12 @@ function mediaOf(figure: Element, tag: 'img' | 'video'): Element | null {
   return media;
 }
 
-function figcaptionOf(figure: Element | null): Element | null {
+export function figcaptionOf(figure: Element | null): Element | null {
   return figure ? (childrenByTag(figure, 'figcaption')[0] ?? null) : null;
 }
 
 /** `figcaption` com `[legenda][ ][<small class="rt-credit">crédito</small>]`. */
-function captionSpec(caption: string, credit = ''): DOMOutputSpec[] {
+export function captionSpec(caption: string, credit = ''): DOMOutputSpec[] {
   if (!caption && !credit) return [];
   const small: DOMOutputSpec[] = credit
     ? [['small', { class: 'rt-credit' }, credit]]
@@ -228,7 +232,7 @@ function captionSpec(caption: string, credit = ''): DOMOutputSpec[] {
 }
 
 /** Elemento selecionado (`NodeSelection`) do tipo, ou `null`. */
-function selected(props: CommandProps, type: NodeType) {
+export function selected(props: CommandProps, type: NodeType) {
   const selection = props.tr.selection;
   return selection instanceof NodeSelection && selection.node.type === type
     ? { node: selection.node, pos: selection.from }
@@ -236,7 +240,11 @@ function selected(props: CommandProps, type: NodeType) {
 }
 
 /** Troca os atributos do nó selecionado, mantendo-o selecionado. */
-function update(props: CommandProps, pos: number, attrs: Attrs): boolean {
+export function update(
+  props: CommandProps,
+  pos: number,
+  attrs: Attrs,
+): boolean {
   if (props.dispatch) {
     props.tr.setNodeMarkup(pos, undefined, attrs);
     props.tr.setSelection(NodeSelection.create(props.tr.doc, pos));
@@ -244,7 +252,7 @@ function update(props: CommandProps, pos: number, attrs: Attrs): boolean {
   return true;
 }
 
-function nodeAttributes(defaults: Attrs): Attributes {
+export function nodeAttributes(defaults: Attrs): Attributes {
   // A leitura monta todos os atributos no `getAttrs` das regras; a
   // renderização é do `renderHTML` do nó.
   return Object.fromEntries(
