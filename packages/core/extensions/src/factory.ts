@@ -10,6 +10,7 @@ import { createEmbedExtension } from './embed';
 import { createHighlightPlugin } from './highlight';
 import { createLinkExtension } from './link';
 import { createMediaExtensions } from './media';
+import { createNewsBlockExtensions } from './news-blocks';
 import { createTableExtensions } from './tables';
 import { createTaskExtensions } from './tasks';
 import type { RteEditorOptions } from './types';
@@ -45,6 +46,9 @@ export function createEditorExtensions(
     // Sem provedor ativo não há iframe no esquema (R2) e o nó não existe.
     ...(ctx.schema.features.includes('embeds') && ctx.providers.length > 0
       ? [createEmbedExtension(ctx)]
+      : []),
+    ...(ctx.schema.features.includes('newsBlocks')
+      ? createNewsBlockExtensions(ctx)
       : []),
     ...(options.extensions ?? []),
   ];

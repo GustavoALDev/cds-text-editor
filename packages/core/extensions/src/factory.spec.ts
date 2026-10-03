@@ -91,6 +91,7 @@ describe('createEditorExtensions: lista e ordem', () => {
         tasks: true,
         media: true,
         embeds: true,
+        newsBlocks: true,
       },
     }).map((e) => e.name);
     expect(names).toEqual([
@@ -107,6 +108,14 @@ describe('createEditorExtensions: lista e ordem', () => {
       'rtImage',
       'rtVideo',
       'rtEmbed',
+      'rtPullquote',
+      'rtCallout',
+      'rtCalloutTitle',
+      'rtReadAlso',
+      'rtReadAlsoTitle',
+      'rtReadAlsoList',
+      'rtReadAlsoItem',
+      'rtLang',
     ]);
   });
 

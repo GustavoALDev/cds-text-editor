@@ -4,7 +4,7 @@ import { NodeSelection } from '@tiptap/pm/state';
 import type { Selection } from '@tiptap/pm/state';
 
 /** Faixa a substituir: o parágrafo vazio do cursor, se o pai aceitar o nó. */
-function emptyParagraph(
+export function emptyParagraph(
   selection: Selection,
   node: ProseMirrorNode,
 ): [number, number] | null {
@@ -22,7 +22,7 @@ function emptyParagraph(
  * (seleção de nó, cursor de lacuna); senão depois do bloco do fim da seleção,
  * subindo até um pai que aceite o nó.
  */
-function insertionPoint(
+export function insertionPoint(
   selection: Selection,
   node: ProseMirrorNode,
 ): number | null {

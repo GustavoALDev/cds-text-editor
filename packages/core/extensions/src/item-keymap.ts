@@ -5,12 +5,26 @@ import { TextSelection } from '@tiptap/pm/state';
 import type { Transaction } from '@tiptap/pm/state';
 import { canSplit } from '@tiptap/pm/transform';
 
+/** Opções de `itemsToParagraphs` e `createItemKeymap`. */
+export interface ItemsToParagraphsOptions {
+  /**
+   * Quando o contêiner da lista (o "Leia também") some, o que fica de cada
+   * filho dele além da lista (o título): um bloco ou `null` (descartado,
+   * o padrão).
+   */
+  orphan?: (node: ProseMirrorNode) => ProseMirrorNode | null;
+}
+
 /**
  * Troca os itens `first`–`last` da lista de profundidade `depth` (em `$pos`)
  * por parágrafos com o mesmo conteúdo, dividindo a lista ao redor deles;
- * partes vazias da lista somem. Devolve o deslocamento das posições dentro
- * dos itens trocados (cada parágrafo tem o tamanho do item) ou `null` se o
- * resultado não cabe no pai da lista.
+ * partes vazias da lista somem. Se o pai da lista não aceita parágrafos (o
+ * "Leia também"), divide o contêiner: a parte de antes fica com os outros
+ * filhos (o título), a de depois recebe os que a expressão de conteúdo exige
+ * (título vazio); sem itens antes, os outros filhos vão com a parte de
+ * depois; sem nenhuma parte, passam por `orphan`. Devolve o deslocamento
+ * das posições dentro dos itens trocados (cada parágrafo tem o tamanho do
+ * item) ou `null` se o resultado não cabe.
  */
 export function itemsToParagraphs(
   tr: Transaction,
@@ -18,6 +32,7 @@ export function itemsToParagraphs(
   depth: number,
   first: number,
   last: number,
+  options: ItemsToParagraphsOptions = {},
 ): number | null {
   const paragraph = tr.doc.type.schema.nodes['paragraph'];
   if (!paragraph || depth < 1) return null;
@@ -34,34 +49,72 @@ export function itemsToParagraphs(
     }
   });
   if (blocks.length !== last - first + 1) return null;
+  const head = first > 0 ? list.copy(list.content.cut(0, before)) : null;
+  const tail =
+    last < list.childCount - 1 ? list.copy(list.content.cut(end)) : null;
+  // Conteúdo do primeiro item trocado, antes da troca.
+  const itemStart = $pos.start(depth) + before + 1;
+  const replace = (level: number, parts: ProseMirrorNode[]): number | null => {
+    const fragment = Fragment.from(parts);
+    const at = $pos.index(level - 1);
+    if (!$pos.node(level - 1).canReplace(at, at + 1, fragment)) return null;
+    const from = $pos.before(level);
+    tr.replaceWith(from, $pos.after(level), fragment);
+    let offset = 0;
+    for (const part of parts) {
+      if (part === blocks[0]) break;
+      offset += part.nodeSize;
+    }
+    return from + offset + 1 - itemStart;
+  };
+  const direct = replace(depth, [
+    ...(head ? [head] : []),
+    ...blocks,
+    ...(tail ? [tail] : []),
+  ]);
+  if (direct !== null || depth < 2) return direct;
+  // Contêiner que só aceita a lista: divide o contêiner.
+  const box = $pos.node(depth - 1);
+  const listIndex = $pos.index(depth - 1);
+  const withList = (part: ProseMirrorNode) =>
+    box.copy(box.content.replaceChild(listIndex, part));
   const parts: ProseMirrorNode[] = [];
-  if (first > 0) parts.push(list.copy(list.content.cut(0, before)));
+  if (head) parts.push(withList(head));
+  else if (!tail) {
+    box.forEach((child, _offset, index) => {
+      if (index === listIndex) return;
+      const kept = options.orphan?.(child) ?? null;
+      if (kept) parts.push(kept);
+    });
+  }
   parts.push(...blocks);
-  if (last < list.childCount - 1) parts.push(list.copy(list.content.cut(end)));
-  const fragment = Fragment.from(parts);
-  const at = $pos.index(depth - 1);
-  if (!$pos.node(depth - 1).canReplace(at, at + 1, fragment)) return null;
-  tr.replaceWith($pos.before(depth), $pos.after(depth), fragment);
-  // O 1º parágrafo começa 1 depois do item (fecha a lista anterior) ou 1
-  // antes (some a abertura da lista).
-  return first > 0 ? 1 : -1;
+  if (tail) {
+    const rest = head
+      ? box.type.createAndFill(box.attrs, Fragment.from(tail))
+      : withList(tail);
+    if (!rest) return null;
+    parts.push(rest);
+  }
+  return replace(depth - 1, parts);
 }
 
 /**
  * Teclado de item de lista de bloco de texto (spec 03b, §6), usado pelas
  * tarefas e pelo "Leia também": `Enter` divide (o item novo sai com os
  * atributos padrão), `Enter` em item vazio sai da lista para um parágrafo e
- * `Backspace` no início transforma o item em parágrafo, dividindo a lista.
+ * `Backspace` no início transforma o item em parágrafo, dividindo a lista
+ * (ou o contêiner dela, ver `itemsToParagraphs`).
  */
 export function createItemKeymap(
   itemType: string,
+  options: ItemsToParagraphsOptions = {},
 ): Record<string, KeyboardShortcutCommand> {
   const toParagraph = (editor: Editor): boolean => {
     const { $from } = editor.state.selection;
     const depth = $from.depth - 1;
     const index = $from.index(depth);
     const tr = editor.state.tr;
-    const shift = itemsToParagraphs(tr, $from, depth, index, index);
+    const shift = itemsToParagraphs(tr, $from, depth, index, index, options);
     if (shift === null) return false;
     tr.setSelection(TextSelection.create(tr.doc, $from.start() + shift));
     editor.view.dispatch(tr.scrollIntoView());
