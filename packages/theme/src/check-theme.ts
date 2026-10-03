@@ -108,7 +108,7 @@ function readable(parse: ColorParser, value: string): boolean {
 /**
  * Roda as verificações de contraste (as 10 do spike para a primária, os mesmos C1/C2/C3/C6 para
  * secundária e terciária, e os tokens estáticos) nos dois modos sobre `createRteTheme`.
- * Nunca lança nem acessa o DOM. Campo omitido usa o padrão sem ser inválido; um valor ilegível
+ * Nunca lança. Não toca no DOM do documento (o `parseColor` padrão usa um `<canvas>` no navegador para nomes e `color()`). Campo omitido usa o padrão sem ser inválido; um valor ilegível
  * (parser devolve `null` ou lança) entra em `invalid`.
  */
 export function checkRteTheme(options: CheckThemeOptions = {}): RteThemeReport {
@@ -238,7 +238,7 @@ export function formatFailedCheckWarnings(
 
 /**
  * Avisa (pt-BR) sobre campos ilegíveis e verificações reprovadas; devolve o relatório.
- * Idempotente, sem efeitos além de chamar `warn`, sem acesso ao DOM. A análise nunca lança;
+ * Idempotente, sem efeitos além de chamar `warn`, sem tocar no DOM do documento (ver `checkRteTheme` sobre o canvas). A análise nunca lança;
  * se o `warn` fornecido lançar, o erro propaga (problema de quem o forneceu).
  */
 export function warnIfPoorTheme(
