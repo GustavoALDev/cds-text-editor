@@ -86,10 +86,41 @@ describe('tabelas: leitura e saída canônica', () => {
     );
   });
 
-  it('thead é lido e não sai; caption não aparece', () => {
+  it('scope é lido sem diferenciar maiúsculas ASCII', () => {
     expect(
       html(
-        '<table><caption>Legenda</caption><thead><tr><th><p>H</p></th></tr></thead><tbody><tr><td><p>a</p></td></tr></tbody></table>',
+        '<table><tbody><tr><th scope="COL"><p>a</p></th><th scope="Row"><p>b</p></th></tr></tbody></table>',
+      ),
+    ).toBe(
+      '<table><tbody><tr><th scope="col"><p>a</p></th><th scope="row"><p>b</p></th></tr></tbody></table>',
+    );
+  });
+
+  it('colgroup com rowspan na 1ª coluna sobrevive a uma digitação', () => {
+    const editor = editorWith(
+      '<table><colgroup><col style="width: 50px"><col style="width: 60px"><col style="width: 70px"></colgroup><tbody><tr><td rowspan="3"><p>a</p></td><td><p>b</p></td><td><p>c</p></td></tr><tr><td><p>d</p></td><td><p>e</p></td></tr><tr><td><p>f</p></td><td><p>g</p></td></tr></tbody></table>',
+    );
+    editor.commands.setTextSelection(4);
+    editor.commands.insertContent('x');
+    expect(getRteHtml(editor)).toContain(
+      '<colgroup><col style="width: 50px"><col style="width: 60px"><col style="width: 70px"></colgroup>',
+    );
+  });
+
+  it('o texto do caption vira parágrafo antes da tabela', () => {
+    expect(
+      html(
+        '<table><caption>Legenda importante</caption><tbody><tr><td><p>a</p></td></tr></tbody></table>',
+      ),
+    ).toBe(
+      '<p>Legenda importante</p><table><tbody><tr><td><p>a</p></td></tr></tbody></table>',
+    );
+  });
+
+  it('thead é lido e não sai', () => {
+    expect(
+      html(
+        '<table><thead><tr><th><p>H</p></th></tr></thead><tbody><tr><td><p>a</p></td></tr></tbody></table>',
       ),
     ).toBe(
       '<table><tbody><tr><th><p>H</p></th></tr><tr><td><p>a</p></td></tr></tbody></table>',

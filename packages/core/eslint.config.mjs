@@ -57,10 +57,6 @@ export default [
       '@nx/dependency-checks': [
         'error',
         {
-          // Peers opcionais da 03b (B2) que o código de extensions/src ainda não
-          // importa: cada tarefa retira daqui os que passar a importar; a lista
-          // some quando a fábrica (createEditorExtensions) usar todos.
-          ignoredDependencies: [],
           ignoredFiles: [
             '{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}',
             '{projectRoot}/vitest.config.{js,ts,mjs,mts}',

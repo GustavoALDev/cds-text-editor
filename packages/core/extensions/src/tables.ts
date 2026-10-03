@@ -90,6 +90,10 @@ function parseColwidth(element: HTMLElement): number[] | null {
   const row = element.parentElement;
   const table = element.closest('table');
   if (!row || !table) return null;
+  // Só a 1ª linha lê o colgroup (a única que renderColgroup usa): nas demais
+  // o rowspan de linhas anteriores desloca o índice; o fixTables do
+  // prosemirror-tables copia as larguras da 1ª linha para baixo.
+  if (table.querySelector('tr') !== row) return null;
   let index = 0;
   for (const sibling of Array.from(row.children)) {
     if (sibling === element) break;
@@ -121,7 +125,10 @@ function cellAttributes(header: boolean): Attributes {
           scope: {
             default: null,
             parseHTML: (element: HTMLElement) => {
-              const scope = element.getAttribute('scope');
+              const scope = (element.getAttribute('scope') ?? '').replace(
+                /[A-Z]/g,
+                (c) => String.fromCharCode(c.charCodeAt(0) + 32),
+              );
               return scope === 'col' || scope === 'row' ? scope : null;
             },
             renderHTML: (attributes: Record<string, unknown>) => {
@@ -207,7 +214,40 @@ export function createTableExtensions(
 ): AnyExtension[] {
   const table = Table.extend({
     parseHTML() {
-      return [{ tag: 'caption', ignore: true }, { tag: 'table' }];
+      return [
+        // O texto do caption vira um parágrafo imediatamente antes da tabela
+        // (o esquema nunca emite caption). O próprio elemento passa a ser o
+        // parágrafo e uma cópia sem caption entra logo depois, para o
+        // percurso do parser lê-la em seguida.
+        {
+          tag: 'table',
+          priority: 100,
+          node: 'paragraph',
+          getAttrs: (node) => {
+            const table = node as HTMLElement;
+            const caption = Array.from(table.children).find(
+              (child) => child.tagName.toLowerCase() === 'caption',
+            );
+            if (!caption) return false;
+            const text = (caption.textContent ?? '')
+              .replace(/\s+/g, ' ')
+              .trim();
+            const rest = table.cloneNode(true) as HTMLElement;
+            for (const child of Array.from(rest.children)) {
+              if (child.tagName.toLowerCase() === 'caption') child.remove();
+            }
+            if (text === '') {
+              caption.remove();
+              return false;
+            }
+            table.textContent = text;
+            table.after(rest);
+            return {};
+          },
+        },
+        { tag: 'caption', ignore: true },
+        { tag: 'table' },
+      ];
     },
     renderHTML({ node }) {
       const colgroup = renderColgroup(node);
