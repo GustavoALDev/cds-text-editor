@@ -8,7 +8,8 @@ const HEADINGS = new Set(['h2', 'h3', 'h4']);
 /**
  * Analisa `html` com o `DOMParser` de `doc`, retira o `id` de `h2`–`h4` e
  * reescreve cada `style` como o esquema o canonicaliza (`applyStyleFrom` com
- * `styleFrom`, senão `sanitizeStyle`); devolve o HTML reescrito.
+ * `styleFrom`, senão `sanitizeStyle`) como último atributo; devolve o HTML
+ * reescrito.
  */
 export function normalizeForCompare(
   html: string,
@@ -35,8 +36,11 @@ export function normalizeForCompare(
     } else if (spec?.styles) {
       clean = sanitizeStyle(spec.styles, style);
     }
+    // Sempre como último atributo: Chromium e WebKit reescrevem o `style` (e o
+    // movem para o fim) ao adotar o elemento em outro documento, como faz o
+    // `getHTML()` do Tiptap; a posição dele não faz parte do contrato.
+    el.removeAttribute('style');
     if (clean) el.setAttribute('style', clean);
-    else el.removeAttribute('style');
   }
   const outer = parsed.body.outerHTML;
   return outer.slice('<body>'.length, outer.length - '</body>'.length);
