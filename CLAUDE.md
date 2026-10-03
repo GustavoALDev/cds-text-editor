@@ -31,6 +31,12 @@ CI: `.github/workflows/ci.yml` roda no PR e no push para `main` (check:rules, te
 
 Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp` (e `NX_DAEMON=false` se o daemon do Nx atrapalhar).
 
+## Core (`packages/core`)
+
+- Entries: `/` (esquema, links, títulos, texto, imagem, rascunho, paleta), `/embeds` (`toEmbed` e provedores), `/html` (`htmlToText`, `extractToc`; único com `htmlparser2`).
+- `docs/html-schema.md` é gerado do esquema e conferido por teste; regenerar: `UPDATE_SCHEMA_DOC=1 npx nx test core --skip-nx-cache`.
+- Orçamento de tamanho por cenário em `packages/core/size-budget.json` (`nx run core:size`). Decisões: ADR 0003.
+
 ## Tema (`packages/theme`)
 
 - Testes de navegador do tema: `e2e/theme/*.spec.ts` (contraste, ΔE plano B × nativo, comportamentos, CSP, SSR); o harness/fixtures ficam em `e2e/theme/helpers/` e `e2e/fixtures/`.

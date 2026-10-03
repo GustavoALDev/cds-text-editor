@@ -38,7 +38,7 @@ Recursos (`RteFeatureId`): `base` e `links` (sempre ativos), `colors`, `code`, `
 - `href` aceito é sempre o **serializado pelo WHATWG URL** (host em punycode, o que neutraliza homógrafos IDN na comparação de domínios): `https:`, `http:`, `mailto:` (endereço válido, query opcional), `tel:` (`^tel:\+?[0-9][0-9().-]{0,30}$`), caminho relativo à raiz (`/…`) ou fragmento (`#…`). Rejeitados: qualquer outro esquema (`javascript:`, `data:`, `vbscript:`, `file:`…), `//…`, `\`, credenciais (`user:pass@`), caracteres de controle, mais de 2048 caracteres. Links relativos quebram fora do site (RSS, newsletter): documentado.
 - `target`: só `_blank`; ausente fica ausente (lição 10).
 - `rel`: subconjunto de `nofollow sponsored ugc noopener noreferrer`, em ordem canônica. Com `target="_blank"`, `noopener noreferrer` são garantidos; `linkPolicy.forceRel` (ex.: `nofollow ugc`, para conteúdo de usuário) é garantido em todo link.
-- `linkPolicy.blockedDomains`: host ASCII igual ao domínio ou terminado em `.<domínio>` (sem ponto final) é rejeitado. Imposto pelo sanitizador, não só pelo editor.
+- `linkPolicy.blockedDomains` (rejeita `'*'`): host ASCII igual ao domínio ou terminado em `.<domínio>` (sem ponto final) é rejeitado. Imposto pelo sanitizador, não só pelo editor.
 
 ### 4.3 `colors`
 - Texto: `<span data-rt-color="<nome>" style="color: <hex light>">`.
@@ -190,9 +190,9 @@ function getHtmlSchema(options?: {
 Semântica (interpretada só pelas funções do core):
 - **União por tag:** recursos que usam a mesma tag somam atributos e classes; a mesma propriedade/atributo em dois recursos precisa ter regra idêntica (testado). É seguro porque os atributos aceitos são inertes e cada atributo de URL pertence a uma só tag.
 - **Comprimento antes da regex:** toda regra com texto tem `maxLength`; nada é testado contra regex antes disso (anti-ReDoS).
-- **`style`:** declarações separadas por `;`, propriedade em minúsculas; rejeitados `!important`, `\`, comentários, `url(`, `expression`; declaração inválida é descartada (as outras ficam); saída canônica `prop: valor; prop: valor` por `serializeStyle`. Com `styleFrom`, o `style` de entrada é ignorado e regenerado do atributo (A3).
+- **`style`:** declarações separadas por `;`, propriedade em minúsculas; rejeitados `!important`, `\`, comentários, `url(`; declaração inválida é descartada (as outras ficam), exceto `expression`, que descarta o `style` inteiro; saída canônica `prop: valor; prop: valor` por `serializeStyle`. Com `styleFrom`, o `style` de entrada é ignorado e regenerado do atributo (A3).
 - **`tokens`:** saída em ordem canônica (a da lista `values`), sem repetição — sanitizar é idempotente.
-- **Funções públicas:** `matchesRule(rule, value)`, `isAllowedUrl(rule, value)` (WHATWG: remove TAB/LF/CR, apara C0/espaço, esquema sem diferenciar maiúsculas, rejeita credenciais e `\`; devolve a forma serializada), `sanitizeStyle(element, styleText)` → string canônica, `serializeTokens(rule, value)`.
+- **Funções públicas:** `matchesRule(rule, value)`, `isAllowedUrl(rule, value)` (WHATWG: remove TAB/LF/CR, apara C0/espaço, esquema sem diferenciar maiúsculas, rejeita credenciais e `\`; devolve a forma serializada), `sanitizeStyle(styles, styleText)` (`styles` = o mapa `styles` do elemento) → string canônica, `serializeTokens(rule, value)`.
 - `docs/html-schema.md` é **gerado** do esquema padrão e conferido por teste (drift).
 
 ## 6. Embeds (`/embeds`)
@@ -203,14 +203,15 @@ interface RteEmbedProvider {
   toEmbed(url: string): { src: string; height?: number; aspectRatio?: string } | null;
 }
 ```
+- `srcPatterns` não aceitam alternância (`|`) no nível 0 (agrupar: `^(?:a|b)$`).
 - `toEmbed(url, providers)` → `{ provider, src, title, width, height, aspectRatio? } | null`; o resultado do provedor é **revalidado** pelo core (host e `srcPatterns`), inclusive para provedores do consumidor.
 - Formatos: YouTube (`watch?v=`, `youtu.be/`, `/shorts/`, `/embed/`, com `t=`/`start=` → `?start=<s>`), Vimeo (`vimeo.com/<id>`, `player.vimeo.com/video/<id>`), Spotify (`open.spotify.com/{track|album|playlist|episode|show}/<id>` → `/embed/…`). O `src` é sempre **montado**, nunca copiado da entrada.
 
 ## 7. Utilitários puros (entry `/` salvo indicação)
-- **Links:** `normalizeHref(input, policy?)` → `string | null` (`site.com` → `https://site.com/`, e-mail → `mailto:`, saída serializada pelo WHATWG, rejeita o que a seção 4.2 rejeita); `RteLinkPolicy { protocols, allowRelative, defaultRel (padrão vazio), forceRel, blockedDomains, target: 'preserve' | 'blank' | 'never' }`; `getLinkAttributes(href, policy)` → `{ href, rel?, target? } | null`.
+- **Links:** `normalizeHref(input, policy?)` → `string | null` (`site.com` → `https://site.com/`, e-mail → `mailto:`, saída serializada pelo WHATWG, rejeita o que a seção 4.2 rejeita); `RteLinkPolicy { protocols (só `https`, `http`, `mailto`, `tel`), allowRelative, defaultRel (padrão vazio), forceRel, blockedDomains, target: 'preserve' | 'blank' | 'never' }`; `getLinkAttributes(href, policy)` → `{ href, rel?, target? } | null`.
 - **Títulos:** `slugify(text)` (NFKD sem acentos, minúsculas, `[^a-z0-9]+` → `-`, máx. 60); `createHeadingIds({ prefix, fallback = 'section' })` → `(text) => id`, com sufixos `-2`, `-3` para repetidos. Texto não latino gera o fallback (`section`, `section-2`…): documentado.
 - **Texto:** `countWords(text)` com `Intl.Segmenter` (palavras de CJK) e fallback por regex `[\p{L}\p{N}]+`; `readingTime(text, { wordsPerMinute = 200 })` (minutos, teto; 0 para vazio).
-- **HTML sem DOM (entry `/html`, dependência `htmlparser2` ^12, MIT, ~22 kB gzip, a mesma versão usada pelo sanitize-html):** `htmlToText(html)` (quebra linha nos limites de bloco; ignora `script`, `style`, `template`; a saída é texto e precisa ser escapada para voltar ao HTML: documentado) e `extractToc(html, { levels = [2, 3] })` → `{ id, text, level }[]` (ignora títulos sem id válido). Funcionam em SSR.
+- **HTML sem DOM (entry `/html`, dependência `htmlparser2` ^12, MIT, ~22 kB gzip, a mesma versão usada pelo sanitize-html):** `htmlToText(html, { maxDepth = 256 })` (quebra linha nos limites de bloco; ignora `script`, `style`, `template`; a saída é texto e precisa ser escapada para voltar ao HTML: documentado) e `extractToc(html, { levels = [2, 3], maxDepth = 256 })` → `{ id, text, level }[]` (ignora títulos sem id válido). Funcionam em SSR. Acima de `maxDepth` a leitura é truncada (devolve o coletado até ali, sem lançar), porque o `htmlparser2` é quadrático em aninhamento profundo.
 - **Imagem:** `computeResize({ width, height, dx, dy, corner, minWidth, maxWidth })` → `{ width, height }` inteiros, proporção mantida; `parseSrcset`/`formatSrcset`.
 - **Rascunho:** `interface DraftStorage { get(key): string | null; set(key, value): void; remove(key): void }`; `createLocalDraftStorage()` (localStorage com fallback em memória quando ausente ou lança; SSR incluído); `createDraftStore({ storage, key, maxAgeMs = 7 dias, now })` → `save(html)`, `load()` → `{ html, savedAt } | null` (expirado ou envelope inválido → `null`), `clear()`. Documentar: limpar no logout em computadores compartilhados.
 - **Paleta:** `RTE_TEXT_COLORS`, `RTE_HIGHLIGHT_COLORS` (dados da seção 4.3).
@@ -226,9 +227,9 @@ interface RteEmbedProvider {
 - **R8.** Sanitizar é idempotente no que o core define: `sanitizeStyle` e `serializeTokens` aplicados duas vezes dão o mesmo resultado (propriedade).
 
 ## 9. Critérios de aceite
-- [ ] Testes unitários e de propriedade verdes (Vitest, ambiente `node`); typecheck, lint, build, `verify-package` (publint/attw) verdes.
-- [ ] Contraste da paleta (seção 4.3) verificado por teste.
-- [ ] `docs/html-schema.md` gerado e conferido.
-- [ ] Orçamento de tamanho do core no CI; notices incluem as dependências de produção do core (pendência (a) do ADR 0001).
-- [ ] ADR 0003 registra as decisões e os desvios da spec 03 original.
-- [ ] Verificação em navegador real nos 3 motores: `isAllowedUrl`/`normalizeHref` comparados com o parser de URL do navegador (o que o navegador resolveria como esquema perigoso nunca é aceito); embeds de YouTube, Vimeo e Spotify carregam com o `sandbox`/`allow` da seção 4.8.
+- [x] Testes unitários e de propriedade verdes (Vitest, ambiente `node`); typecheck, lint, build, `verify-package` (publint/attw) verdes.
+- [x] Contraste da paleta (seção 4.3) verificado por teste.
+- [x] `docs/html-schema.md` gerado e conferido.
+- [x] Orçamento de tamanho do core no CI; notices incluem as dependências de produção do core (pendência (a) do ADR 0001).
+- [x] ADR 0003 registra as decisões e os desvios da spec 03 original.
+- [x] Verificação em navegador real nos 3 motores: `isAllowedUrl`/`normalizeHref` comparados com o parser de URL do navegador (o que o navegador resolveria como esquema perigoso nunca é aceito); embeds de YouTube, Vimeo e Spotify carregam com o `sandbox`/`allow` da seção 4.8. **Exceção:** Spotify é `test.fixme` no WebKit do Playwright (nunca dispara `load`, mesmo sem `sandbox`/`allow`); passa em Chromium e Firefox (ADR 0003).
