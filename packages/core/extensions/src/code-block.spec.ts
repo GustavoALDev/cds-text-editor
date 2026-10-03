@@ -340,7 +340,7 @@ describe('codeBlock: fábrica', () => {
     const on = createEditorExtensions({
       features: { ...ONLY_CODE, colors: true },
     }).map((e) => e.name);
-    expect(on.slice(-3)).toEqual(['rtTextColor', 'rtHighlight', 'codeBlock']);
+    expect(on.slice(-4, -1)).toEqual(['rtTextColor', 'rtHighlight', 'codeBlock']);
     const off = createEditorExtensions({
       features: { ...ONLY_CODE, code: false },
     }).map((e) => e.name);

@@ -11,6 +11,7 @@ import { createHighlightPlugin } from './highlight';
 import { createLinkExtension } from './link';
 import { createMediaExtensions } from './media';
 import { createNewsBlockExtensions } from './news-blocks';
+import { createPlaceholderExtension } from './placeholder';
 import { createTableExtensions } from './tables';
 import { createTaskExtensions } from './tasks';
 import type { RteEditorOptions } from './types';
@@ -50,6 +51,7 @@ export function createEditorExtensions(
     ...(ctx.schema.features.includes('newsBlocks')
       ? createNewsBlockExtensions(ctx)
       : []),
+    createPlaceholderExtension(ctx, options.placeholder),
     ...(options.extensions ?? []),
   ];
   assertUniqueNames(list);

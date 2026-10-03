@@ -69,6 +69,8 @@ export interface RteEditorOptions extends RteHtmlSchemaOptions {
   codeLanguages?: readonly RteCodeLanguage[];
   /** Lido a cada uso (lição 4). */
   labels?: RteContentLabelsSource;
+  /** Texto do documento vazio; função lida a cada uso (lição 4). */
+  placeholder?: string | (() => string);
   /** Padrão `minWidth: 48` (`computeResize`). */
   image?: { minWidth?: number };
   /** Extensões do consumidor, no fim da lista. */

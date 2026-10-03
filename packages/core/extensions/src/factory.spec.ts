@@ -78,7 +78,7 @@ function snapshot(value: unknown): unknown {
 describe('createEditorExtensions: lista e ordem', () => {
   it('recursos desligados: só a base, na ordem da spec §6', () => {
     const names = createEditorExtensions({ features: OFF }).map((e) => e.name);
-    expect(names).toEqual(BASE_NAMES);
+    expect(names).toEqual([...BASE_NAMES, 'rtPlaceholder']);
   });
 
   it('recursos ligados entram depois da base, na ordem da spec §6', () => {
@@ -116,13 +116,18 @@ describe('createEditorExtensions: lista e ordem', () => {
       'rtReadAlsoList',
       'rtReadAlsoItem',
       'rtLang',
+      'rtPlaceholder',
     ]);
   });
 
   it('extensões do consumidor entram por último', () => {
     const extra = Extension.create({ name: 'extra' });
     const list = createEditorExtensions({ features: OFF, extensions: [extra] });
-    expect(list.map((e) => e.name)).toEqual([...BASE_NAMES, 'extra']);
+    expect(list.map((e) => e.name)).toEqual([
+      ...BASE_NAMES,
+      'rtPlaceholder',
+      'extra',
+    ]);
     expect(list[list.length - 1]).toBe(extra);
   });
 
@@ -130,7 +135,7 @@ describe('createEditorExtensions: lista e ordem', () => {
     const names = createEditorExtensions({
       features: { ...OFF, search: true, slashCommands: true },
     }).map((e) => e.name);
-    expect(names).toEqual(BASE_NAMES);
+    expect(names).toEqual([...BASE_NAMES, 'rtPlaceholder']);
   });
 });
 
