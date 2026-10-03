@@ -6,6 +6,7 @@ import type { EditorView } from '@tiptap/pm/view';
 import { createLowlight } from 'lowlight';
 import type { RteCodeLanguage } from '../../code-languages/src/index';
 import type { RteElementSpec } from '../../src/schema/types';
+import { changedRanges } from './changed-ranges';
 import { resolveCodeLanguage } from './code-block';
 import type { RteExtensionContext } from './context';
 
@@ -48,25 +49,6 @@ function treeDecorations(root: HastNode, start: number): Decoration[] {
   };
   walk(root, []);
   return out;
-}
-
-/** Intervalos do documento final tocados pela transação (inclui `AttrStep`). */
-function changedRanges(tr: Transaction): [number, number][] {
-  let ranges: [number, number][] = [];
-  tr.mapping.maps.forEach((map, i) => {
-    ranges = ranges.map(([a, b]) => [map.map(a, -1), map.map(b, 1)]);
-    let any = false;
-    map.forEach((_oldFrom, _oldTo, from, to) => {
-      any = true;
-      ranges.push([from, to]);
-    });
-    // Passos de atributo (setNodeAttribute) têm mapa vazio: usa `pos`.
-    const step = tr.steps[i] as { pos?: unknown };
-    if (!any && typeof step?.pos === 'number') {
-      ranges.push([step.pos, step.pos + 1]);
-    }
-  });
-  return ranges;
 }
 
 /**
@@ -177,21 +159,22 @@ export function createHighlightPlugin(ctx: RteExtensionContext): Plugin {
     const size = doc.content.size;
     const seen = new Set<number>();
     for (const [a, b] of changedRanges(tr)) {
-      doc.nodesBetween(
-        Math.max(0, a - 1),
-        Math.min(size, Math.max(a, b) + 1),
-        (node, pos) => {
-          if (!isCodeBlock(node)) return true;
-          if (!seen.has(pos)) {
-            seen.add(pos);
-            const end = pos + node.nodeSize;
-            set = set
-              .remove(set.find(pos, end))
-              .add(doc, blockDecorations(node, pos));
-          }
-          return false;
-        },
-      );
+      const from = Math.max(0, Math.min(a, b) - 1);
+      const to = Math.min(size, Math.max(a, b) + 1);
+      // Tudo o que estava no trecho sai, seja qual for o tipo do nó agora
+      // (um bloco que virou parágrafo ou título não guarda realce).
+      set = set.remove(set.find(from, to));
+      doc.nodesBetween(from, to, (node, pos) => {
+        if (!node.isTextblock) return true;
+        if (!seen.has(pos)) {
+          seen.add(pos);
+          const end = pos + node.nodeSize;
+          set = set.remove(set.find(pos, end));
+          if (isCodeBlock(node))
+            set = set.add(doc, blockDecorations(node, pos));
+        }
+        return false;
+      });
     }
     return set;
   };

@@ -23,13 +23,14 @@ export function createEditorExtensions(
     createContentExtension(ctx),
     ...createBaseExtensions(ctx),
     createLinkExtension(ctx),
+    UndoRedo.configure(),
+    Dropcursor.configure(),
+    Gapcursor.configure(),
+    // Recursos ligados, na ordem da spec §6, depois da base.
     ...(ctx.schema.features.includes('colors')
       ? createColorExtensions(ctx)
       : []),
     ...(ctx.schema.features.includes('code') ? [createCodeBlock(ctx)] : []),
-    UndoRedo.configure(),
-    Dropcursor.configure(),
-    Gapcursor.configure(),
     ...(options.extensions ?? []),
   ];
   assertUniqueNames(list);

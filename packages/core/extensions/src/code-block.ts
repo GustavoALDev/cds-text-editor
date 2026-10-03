@@ -4,9 +4,11 @@ import {
   backtickInputRegex,
   tildeInputRegex,
 } from '@tiptap/extension-code-block';
+import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
 import type { RteCodeLanguage } from '../../code-languages/src/index';
 import { isAllowedClass } from '../../src/schema/classes';
 import type { RteElementSpec } from '../../src/schema/types';
+import { changedRanges } from './changed-ranges';
 import type { RteExtensionContext } from './context';
 
 declare module '@tiptap/core' {
@@ -79,6 +81,19 @@ function languageClassOf(pre: HTMLElement): string | null {
   return null;
 }
 
+/** `mode` dos dados de colagem do VS Code; JSON malformado ou sem `mode` → null. */
+function vscodeMode(raw: string): string | null {
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== 'object') return null;
+    const mode: unknown = (parsed as { mode?: unknown }).mode;
+    return typeof mode === 'string' && mode !== '' ? mode : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * `codeBlock`: o CodeBlock oficial com a linguagem resolvida na leitura, nos
  * comandos, nas regras de entrada e na renderização (spec 03b, B15). `Tab`
@@ -139,6 +154,12 @@ export function createCodeBlockExtension(ctx: RteExtensionContext) {
         toggleCodeBlock:
           (attributes) =>
           ({ commands }) => {
+            const raw = attributes?.language as unknown;
+            // Sem linguagem: alterna qualquer bloco de código (atributos
+            // vazios no teste de "ativo" do toggleNode), como o oficial.
+            if (raw === undefined || raw === null) {
+              return commands.toggleNode(this.name, 'paragraph');
+            }
             const attrs = attrsFor(attributes);
             return (
               attrs !== null &&
@@ -154,6 +175,78 @@ export function createCodeBlockExtension(ctx: RteExtensionContext) {
             return commands.updateAttributes(this.name, { language: id });
           },
       };
+    },
+    addProseMirrorPlugins() {
+      const type = this.type;
+      const editor = this.editor;
+      // Substitui o plugin de colagem do VS Code do oficial: linguagem
+      // resolvida e dados malformados ignorados em vez de lançar.
+      return [
+        new Plugin({
+          key: new PluginKey('rtCodeBlockVSCodePaste'),
+          props: {
+            handlePaste: (view, event) => {
+              const data = event.clipboardData;
+              if (!data || editor.isActive(type.name)) return false;
+              const text = data.getData('text/plain');
+              const mode = vscodeMode(data.getData('vscode-editor-data'));
+              if (!text || mode === null) return false;
+              const tr = view.state.tr;
+              tr.replaceSelectionWith(
+                type.create(
+                  { language: resolve(mode) },
+                  view.state.schema.text(text.replace(/\r\n?/g, '\n')),
+                ),
+              );
+              if (tr.selection.$from.parent.type !== type) {
+                tr.setSelection(
+                  TextSelection.near(
+                    tr.doc.resolve(Math.max(0, tr.selection.from - 2)),
+                  ),
+                );
+              }
+              tr.setMeta('paste', true);
+              view.dispatch(tr);
+              return true;
+            },
+          },
+        }),
+        new Plugin({
+          key: new PluginKey('rtCodeBlockLanguage'),
+          // `language` canônico (ou null) nos blocos tocados pela transação,
+          // venham de JSON, colagem ou comandos de terceiros. Idempotente:
+          // a segunda rodada não acha nada e devolve null (sem laço).
+          appendTransaction(transactions, _old, state) {
+            const doc = state.doc;
+            const size = doc.content.size;
+            const fixes = new Map<number, string | null>();
+            for (const tr of transactions) {
+              if (!tr.docChanged) continue;
+              for (const [a, b] of changedRanges(tr)) {
+                // Intervalos de transações anteriores do lote podem ter
+                // sido deslocados; o clamp e a nova checagem bastam.
+                doc.nodesBetween(
+                  Math.max(0, Math.min(a, b, size)),
+                  Math.min(size, Math.max(a, b)),
+                  (node, pos) => {
+                    if (node.type !== type) return true;
+                    const current: unknown = node.attrs['language'];
+                    const canon = resolve(current);
+                    if (canon !== current) fixes.set(pos, canon);
+                    return false;
+                  },
+                );
+              }
+            }
+            if (fixes.size === 0) return null;
+            const tr = state.tr;
+            for (const [pos, language] of fixes) {
+              tr.setNodeAttribute(pos, 'language', language);
+            }
+            return tr;
+          },
+        }),
+      ];
     },
     addInputRules() {
       const getAttributes = (match: RegExpMatchArray) => ({

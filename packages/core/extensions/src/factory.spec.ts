@@ -81,6 +81,18 @@ describe('createEditorExtensions: lista e ordem', () => {
     expect(names).toEqual(BASE_NAMES);
   });
 
+  it('recursos ligados entram depois da base, na ordem da spec §6', () => {
+    const names = createEditorExtensions({
+      features: { ...OFF, colors: true, code: true },
+    }).map((e) => e.name);
+    expect(names).toEqual([
+      ...BASE_NAMES,
+      'rtTextColor',
+      'rtHighlight',
+      'codeBlock',
+    ]);
+  });
+
   it('extensões do consumidor entram por último', () => {
     const extra = Extension.create({ name: 'extra' });
     const list = createEditorExtensions({ features: OFF, extensions: [extra] });

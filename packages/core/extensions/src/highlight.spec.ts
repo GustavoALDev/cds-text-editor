@@ -134,6 +134,26 @@ describe('realce: carga sob demanda', () => {
     expect(keywords(editor)).toEqual(['foo']);
   });
 
+  it.each([
+    ['setParagraph', (e: Editor) => e.commands.setParagraph()],
+    ['clearNodes', (e: Editor) => e.commands.clearNodes()],
+    ['toggleCodeBlock', (e: Editor) => e.commands.toggleCodeBlock()],
+    ['setHeading', (e: Editor) => e.commands.setHeading({ level: 2 })],
+  ])('%s tira o realce do bloco que deixou de ser código', async (_n, run) => {
+    const editor = editorWith(
+      TWO_BLOCKS,
+      fakeCatalog(async () => grammar),
+    );
+    await vi.waitFor(() => expect(keywords(editor)).toHaveLength(2));
+    editor.commands.setTextSelection(2);
+    expect(run(editor)).toBe(true);
+    expect(editor.state.doc.firstChild?.type.name).not.toBe('codeBlock');
+    expect(keywords(editor)).toEqual(['foo']);
+    expect(
+      editor.view.dom.firstElementChild?.querySelector('[class*="hljs"]'),
+    ).toBeNull();
+  });
+
   it('linguagem fora do catálogo: sem decoração e sem highlightAuto', async () => {
     const load = vi.fn(async () => grammar);
     const editor = editorWith(

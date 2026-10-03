@@ -24,7 +24,11 @@ const ONLY_CODE = {
 
 afterEach(() => destroyTestEditors());
 
-const codeSpec = getHtmlSchema().elements['code']!;
+const codeSpec = (() => {
+  const spec = getHtmlSchema().elements['code'];
+  if (!spec) throw new Error('esquema sem code');
+  return spec;
+})();
 
 function editorWith(
   content: string,
@@ -211,12 +215,112 @@ describe('codeBlock: comandos', () => {
   });
 });
 
+describe('codeBlock: alternar', () => {
+  it('toggleCodeBlock() sem argumento desfaz bloco com linguagem', () => {
+    const editor = editorWith('<pre><code class="language-js">x</code></pre>');
+    editor.commands.setTextSelection(2);
+    expect(editor.commands.toggleCodeBlock()).toBe(true);
+    expect(getRteHtml(editor)).toBe('<p>x</p>');
+  });
+
+  it('Mod-Alt-c desfaz bloco com linguagem', () => {
+    const editor = editorWith('<pre><code class="language-js">x</code></pre>');
+    editor.commands.setTextSelection(2);
+    editor.commands.keyboardShortcut('Mod-Alt-c');
+    expect(getRteHtml(editor)).toBe('<p>x</p>');
+    editor.commands.keyboardShortcut('Mod-Alt-c');
+    expect(getRteHtml(editor)).toBe('<pre><code>x</code></pre>');
+  });
+});
+
+/** Colagem simulada com dados do VS Code (`vscode-editor-data`). */
+function pasteVsCode(
+  editor: ReturnType<typeof editorWith>,
+  text: string,
+  vscode: string,
+): boolean {
+  const data: Record<string, string> = {
+    'text/plain': text,
+    'vscode-editor-data': vscode,
+  };
+  const event = Object.assign(new Event('paste'), {
+    clipboardData: { getData: (type: string) => data[type] ?? '' },
+  }) as unknown as ClipboardEvent;
+  const { view } = editor;
+  return (
+    view.someProp('handlePaste', (f) =>
+      f(view, event, view.state.doc.slice(0, 0)),
+    ) ?? false
+  );
+}
+
+describe('codeBlock: colagem do VS Code e linguagem canônica', () => {
+  it.each([
+    ['Weird Mode!', null],
+    ['TypeScript', 'typescript'],
+    ['js', 'javascript'],
+  ])('mode %s → language %s', (mode, expected) => {
+    const editor = editorWith('<p></p>', RTE_CODE_LANGUAGES);
+    editor.commands.setTextSelection(1);
+    expect(pasteVsCode(editor, 'a < b', JSON.stringify({ mode }))).toBe(true);
+    const block = editor.getJSON().content?.find((n) => n.type === 'codeBlock');
+    expect(block?.attrs?.['language']).toBe(expected);
+    expect((block?.content?.[0] as { text?: string } | undefined)?.text).toBe(
+      'a < b',
+    );
+  });
+
+  it.each(['{not json', JSON.stringify({ mode: 42 }), 'null', '"x"'])(
+    'dados malformados (%s) não lançam',
+    (vscode) => {
+      const editor = editorWith('<p></p>', RTE_CODE_LANGUAGES);
+      editor.commands.setTextSelection(1);
+      expect(() => pasteVsCode(editor, 'a', vscode)).not.toThrow();
+      expect(
+        validateHtml(getRteHtml(editor), editor.storage.rtContent.schema),
+      ).toEqual([]);
+    },
+  );
+
+  it('linguagem bruta vinda de JSON é normalizada na transação', () => {
+    const editor = editorWith('<p>x</p>', RTE_CODE_LANGUAGES);
+    editor.commands.insertContentAt(editor.state.doc.content.size, {
+      type: 'codeBlock',
+      attrs: { language: 'TS' },
+      content: [{ type: 'text', text: 'a' }],
+    });
+    editor.commands.insertContentAt(editor.state.doc.content.size, {
+      type: 'codeBlock',
+      attrs: { language: 'Weird Mode!' },
+      content: [{ type: 'text', text: 'b' }],
+    });
+    const langs = editor
+      .getJSON()
+      .content?.filter((n) => n.type === 'codeBlock')
+      .map((n) => n.attrs?.['language']);
+    expect(langs).toEqual(['typescript', null]);
+  });
+
+  it('documento já canônico não ganha transação extra', () => {
+    const editor = editorWith(
+      '<pre><code class="language-js">x</code></pre>',
+      RTE_CODE_LANGUAGES,
+    );
+    let count = 0;
+    editor.on('transaction', () => (count += 1));
+    editor.commands.setTextSelection(2);
+    editor.commands.insertContent('y');
+    expect(count).toBe(2);
+    expect(editor.state.doc.firstChild?.attrs['language']).toBe('javascript');
+  });
+});
+
 describe('codeBlock: fábrica', () => {
   it('entra depois das cores e só com o recurso ligado', () => {
     const on = createEditorExtensions({
       features: { ...ONLY_CODE, colors: true },
     }).map((e) => e.name);
-    expect(on.indexOf('codeBlock')).toBe(on.indexOf('rtHighlight') + 1);
+    expect(on.slice(-3)).toEqual(['rtTextColor', 'rtHighlight', 'codeBlock']);
     const off = createEditorExtensions({
       features: { ...ONLY_CODE, code: false },
     }).map((e) => e.name);
