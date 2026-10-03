@@ -192,14 +192,14 @@ describe('rtEmbed: leitura', () => {
     );
     const out = canonical(editor);
     expect(out).toBe(
-      `${YT_FIG}<iframe src="${NOCOOKIE}" title="${'a'.repeat(299)}" width="560" height="315" ${FIXED}></iframe><figcaption>Leg enda</figcaption></figure>`,
+      `${YT_FIG}<iframe src="${NOCOOKIE}" title="${'a'.repeat(299)}" width="560" height="315" style="aspect-ratio: 16 / 9" ${FIXED}></iframe><figcaption>Leg enda</figcaption></figure>`,
     );
     expect(out).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
   });
 
-  it('sem width/height → 640 × 360; style aspect-ratio lido', () => {
+  it('sem width/height → 640 × 360 com a proporção do provedor; style aspect-ratio lido', () => {
     expect(html(`<figure><iframe src="${NOCOOKIE}"></iframe></figure>`)).toBe(
-      `${YT_FIG}${ytIframe(undefined, false)}</figure>`,
+      `${YT_FIG}${ytIframe()}</figure>`,
     );
     expect(
       html(
@@ -210,13 +210,61 @@ describe('rtEmbed: leitura', () => {
     );
   });
 
+  it('iframe /embed/ colado sai igual à URL de página (dicas do toEmbed)', () => {
+    const SPOTIFY = 'https://open.spotify.com/embed';
+    const track = html(
+      `<iframe src="${SPOTIFY}/track/4uLU6hMCjMI75M1A2tKUQC"></iframe>`,
+    );
+    expect(track).toContain('width="640" height="152" loading=');
+    const album = html(
+      `<iframe src="${SPOTIFY}/album/4aawyAB9vmqN3uQ7FjRGTy"></iframe>`,
+    );
+    expect(album).toContain('width="640" height="352" loading=');
+    expect(html(`<iframe src="${NOCOOKIE}?start=90"></iframe>`)).toContain(
+      'style="aspect-ratio: 16 / 9"',
+    );
+    const pages: [string, string][] = [
+      [SPOTIFY_TRACK, `${SPOTIFY}/track/4uLU6hMCjMI75M1A2tKUQC`],
+      [
+        'https://open.spotify.com/album/4aawyAB9vmqN3uQ7FjRGTy',
+        `${SPOTIFY}/album/4aawyAB9vmqN3uQ7FjRGTy`,
+      ],
+      [`https://youtu.be/${ID}?t=90`, `${NOCOOKIE}?start=90`],
+      [`https://www.youtube.com/embed/${ID}`, NOCOOKIE],
+      ['https://vimeo.com/76979871', 'https://player.vimeo.com/video/76979871'],
+    ];
+    for (const [page, src] of pages) {
+      const editor = editorWith();
+      editor.commands.setEmbed(page);
+      expect(html(`<iframe src="${src}"></iframe>`), src).toBe(
+        canonical(editor),
+      );
+    }
+  });
+
+  it('proporção extrema não tira a altura do int(1, 10000) (leitura)', () => {
+    for (const [ratio, height] of [
+      ['1 / 16', '10000'],
+      ['1 / 9999', '10000'],
+      ['9999 / 1', '1'],
+    ]) {
+      expect(
+        html(
+          `<iframe src="${NOCOOKIE}" style="aspect-ratio: ${ratio}"></iframe>`,
+        ),
+      ).toBe(
+        `${YT_FIG}<iframe src="${NOCOOKIE}" title="YouTube" width="640" height="${height}" style="aspect-ratio: ${ratio}" ${FIXED}></iframe></figure>`,
+      );
+    }
+  });
+
   it('valores fixos e atributos estranhos da entrada não passam', () => {
     expect(
       html(
         `<iframe src="${NOCOOKIE}" title="T" width="0" height="x" sandbox="allow-top-navigation allow-scripts" allow="camera" referrerpolicy="unsafe-url" loading="eager" onload="x()" srcdoc="&lt;b&gt;"></iframe>`,
       ),
     ).toBe(
-      `${YT_FIG}<iframe src="${NOCOOKIE}" title="T" width="640" height="360" ${FIXED}></iframe></figure>`,
+      `${YT_FIG}<iframe src="${NOCOOKIE}" title="T" width="640" height="360" style="aspect-ratio: 16 / 9" ${FIXED}></iframe></figure>`,
     );
   });
 
@@ -226,7 +274,6 @@ describe('rtEmbed: leitura', () => {
       '<iframe src="javascript:alert(1)"></iframe>',
       '<iframe srcdoc="<script>x</script>"></iframe>',
       '<iframe src="https://www.youtube-nocookie.com/embed/curto"></iframe>',
-      `<iframe src="https://www.youtube-nocookie.com/embed/${ID}?autoplay=1"></iframe>`,
       `<iframe src="http://www.youtube-nocookie.com/embed/${ID}"></iframe>`,
       '<figure class="rt-embed"><iframe src="https://evil.com/x"></iframe></figure>',
     ]) {
@@ -236,11 +283,19 @@ describe('rtEmbed: leitura', () => {
     }
   });
 
+  it('src de embed com parâmetro fora do padrão é reescrito pelo toEmbed (sem autoplay)', () => {
+    expect(
+      html(
+        `<iframe src="https://www.youtube-nocookie.com/embed/${ID}?autoplay=1"></iframe>`,
+      ),
+    ).toBe(`${YT_FIG}${ytIframe()}</figure>`);
+  });
+
   it('srcdoc com src válido → embed sem srcdoc', () => {
     const out = html(
       `<iframe srcdoc="<script>x</script>" src="${NOCOOKIE}"></iframe>`,
     );
-    expect(out).toBe(`${YT_FIG}${ytIframe(undefined, false)}</figure>`);
+    expect(out).toBe(`${YT_FIG}${ytIframe()}</figure>`);
     expect(out).not.toContain('srcdoc');
   });
 
@@ -250,7 +305,7 @@ describe('rtEmbed: leitura', () => {
         '<figure class="rt-embed rt-embed--youtube" data-rt-provider="youtube"><iframe src="https://player.vimeo.com/video/1"></iframe></figure>',
       ),
     ).toBe(
-      `<figure class="rt-embed rt-embed--vimeo" data-rt-provider="vimeo"><iframe src="https://player.vimeo.com/video/1" title="Vimeo" width="640" height="360" ${FIXED}></iframe></figure>`,
+      `<figure class="rt-embed rt-embed--vimeo" data-rt-provider="vimeo"><iframe src="https://player.vimeo.com/video/1" title="Vimeo" width="640" height="360" style="aspect-ratio: 16 / 9" ${FIXED}></iframe></figure>`,
     );
   });
 
@@ -410,6 +465,40 @@ describe('rtEmbed: opções e JSON', () => {
         name: 'src',
       }),
     ]);
+  });
+
+  it('proporção extrema no JSON e no setEmbed do consumidor sai canônica', () => {
+    for (const [ratio, height] of [
+      ['1 / 16', '10000'],
+      ['9999 / 1', '1'],
+    ]) {
+      const editor = editorWith({
+        type: 'doc',
+        content: [
+          { type: 'rtEmbed', attrs: { src: NOCOOKIE, aspectRatio: ratio } },
+        ],
+      });
+      expect(canonical(editor)).toBe(
+        `${YT_FIG}<iframe src="${NOCOOKIE}" title="YouTube" width="640" height="${height}" style="aspect-ratio: ${ratio}" ${FIXED}></iframe></figure>`,
+      );
+    }
+    const tall: RteEmbedProvider = {
+      ...EXAMPLE,
+      toEmbed: (url) => {
+        const id = /(\d{1,6})$/.exec(url)?.[1];
+        return id
+          ? {
+              src: `https://embed.example.com/v/${id}`,
+              aspectRatio: '1 / 9999',
+            }
+          : null;
+      },
+    };
+    const editor = editorWith('', { embedProviders: [tall] });
+    expect(editor.commands.setEmbed('https://example.com/watch/7')).toBe(true);
+    expect(canonical(editor)).toContain(
+      'width="640" height="10000" style="aspect-ratio: 1 / 9999"',
+    );
   });
 
   it('JSON com src válido de outro provedor: provedor vem do src', () => {

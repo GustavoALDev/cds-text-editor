@@ -13,6 +13,7 @@ export interface RteEmbed {
 }
 
 const WIDTH = 640;
+const HEIGHT_MAX = 10000;
 const RATIO = /^([1-9]\d{0,3}) \/ ([1-9]\d{0,3})$/;
 
 /** Hosts normalizados do provedor, ou `null` se ele for recusado pelo validador. */
@@ -62,8 +63,16 @@ export function toEmbed(
       const height =
         typeof h === 'number' && Number.isInteger(h) && h > 0 && h <= 4000
           ? h
-          : Math.round(
-              WIDTH / (ratio ? Number(ratio[1]) / Number(ratio[2]) : 16 / 9),
+          : // Proporção extrema não pode sair do int(1, 10000) do esquema.
+            Math.min(
+              HEIGHT_MAX,
+              Math.max(
+                1,
+                Math.round(
+                  WIDTH /
+                    (ratio ? Number(ratio[1]) / Number(ratio[2]) : 16 / 9),
+                ),
+              ),
             );
       const embed: RteEmbed = {
         provider: provider.id,

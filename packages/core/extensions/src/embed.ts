@@ -38,13 +38,16 @@ declare module '@tiptap/core' {
 type Attrs = Record<string, unknown>;
 
 const WIDTH = 640;
+/** Teto de altura do `int(1, 10000)` do esquema para o `iframe`. */
+const HEIGHT_MAX = 10000;
 
 const EMBED_DEFAULTS: Attrs = {
   provider: null,
   src: null,
   title: '',
-  width: WIDTH,
-  height: 360,
+  // Sem tamanho no JSON a renderização deriva 640 × altura pela proporção.
+  width: null,
+  height: null,
   aspectRatio: null,
   caption: '',
 };
@@ -134,10 +137,32 @@ export function createEmbedExtension(ctx: RteExtensionContext): AnyExtension {
       : null;
   }
 
+  /**
+   * Dicas de altura e proporção do `toEmbed` para um `src` já de embed que o
+   * provedor reconhece e devolve igual: a URL de página e a de `/embed/` dão a
+   * mesma saída.
+   */
+  function withHints(found: Resolved): Resolved {
+    const embed = toEmbed(found.src, ctx.providers);
+    if (
+      !embed ||
+      embed.provider !== found.provider.id ||
+      direct(embed.src)?.src !== found.src
+    ) {
+      return found;
+    }
+    return {
+      ...found,
+      aspectRatio: embed.aspectRatio ?? null,
+      height: embed.height,
+    };
+  }
+
   /** `src` direto ou convertido de URL de página por `toEmbed`. */
   function resolve(value: unknown): Resolved | null {
     const found = direct(value);
-    if (found || typeof value !== 'string') return found;
+    if (found) return withHints(found);
+    if (typeof value !== 'string') return null;
     const embed = toEmbed(value, ctx.providers);
     const provider = embed ? byId.get(embed.provider) : undefined;
     // O `src` do `toEmbed` passa de novo pela regra do esquema.
@@ -189,7 +214,11 @@ export function createEmbedExtension(ctx: RteExtensionContext): AnyExtension {
       parts && parts[0] && parts[1]
         ? Math.round((WIDTH * parts[1]) / parts[0])
         : (hint ?? Math.round((WIDTH * 9) / 16));
-    return { width: WIDTH, height: fallback };
+    // Proporção extrema (1 / 16, 9999 / 1) não pode sair do int(1, 10000).
+    return {
+      width: WIDTH,
+      height: Math.min(HEIGHT_MAX, Math.max(1, fallback)),
+    };
   }
 
   function titleOf(value: unknown, provider: RteEmbedProvider | null): string {

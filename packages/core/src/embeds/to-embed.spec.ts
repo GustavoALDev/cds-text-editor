@@ -24,6 +24,19 @@ describe('toEmbed: YouTube', () => {
       aspectRatio: '16 / 9',
     });
   });
+  it('o próprio src nocookie /embed/ é reconhecido e volta igual', () => {
+    expect(toEmbed(`${YT}?start=90`)).toEqual({
+      provider: 'youtube',
+      src: `${YT}?start=90`,
+      title: 'YouTube',
+      width: 640,
+      height: 360,
+      aspectRatio: '16 / 9',
+    });
+    expect(
+      toEmbed('https://www.youtube-nocookie.com/watch?v=dQw4w9WgXcQ'),
+    ).toBeNull();
+  });
   it('youtu.be com t=42', () => {
     expect(toEmbed('https://youtu.be/dQw4w9WgXcQ?t=42')?.src).toBe(
       `${YT}?start=42`,
@@ -284,6 +297,27 @@ describe('validador único de provedor (toEmbed = getHtmlSchema)', () => {
     match: () => true,
     toEmbed: () => ({ src: 'https://embed.example.com/v/1' }),
     ...over,
+  });
+
+  it('altura derivada de proporção extrema fica em [1, 10000]', () => {
+    const at = (aspectRatio: string) =>
+      toEmbed('https://x.com/', [
+        provider({
+          toEmbed: () => ({
+            src: 'https://embed.example.com/v/1',
+            aspectRatio,
+          }),
+        }),
+      ]);
+    expect(at('1 / 9999')).toMatchObject({
+      height: 10000,
+      aspectRatio: '1 / 9999',
+    });
+    expect(at('1 / 16')).toMatchObject({ height: 10000 });
+    expect(at('9999 / 1')).toMatchObject({
+      height: 1,
+      aspectRatio: '9999 / 1',
+    });
   });
 
   it('recusa IP em qualquer forma, depois de interpretar a URL', () => {

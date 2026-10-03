@@ -29,6 +29,7 @@ function parseStart(value: string | null): number | null {
 }
 
 const YOUTUBE_HOSTS = new Set([
+  'www.youtube-nocookie.com',
   'youtube.com',
   'www.youtube.com',
   'm.youtube.com',
@@ -46,6 +47,9 @@ function youtubeParts(
   let short = false;
   if (u.hostname === 'youtu.be') {
     if (segs.length === 1) id = segs[0];
+  } else if (u.hostname === 'www.youtube-nocookie.com') {
+    // O próprio `src` de embed (colado num iframe) é reconhecido.
+    if (segs[0] === 'embed' && segs.length === 2) id = segs[1];
   } else if (segs[0] === 'watch' && segs.length === 1) {
     id = u.searchParams.get('v') ?? undefined;
   } else if (segs[0] === 'shorts' && segs.length === 2) {
