@@ -7,6 +7,7 @@ export {
   serializeTokens,
 } from './schema/rules';
 export { isAllowedUrl } from './schema/url';
+export { isAllowedClass } from './schema/classes';
 export { sanitizeStyle, applyStyleFrom } from './schema/style';
 export { RTE_TEXT_COLORS, RTE_HIGHLIGHT_COLORS } from './schema/palette';
 export type {

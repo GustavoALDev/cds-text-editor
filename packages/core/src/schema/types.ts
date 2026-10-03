@@ -111,10 +111,10 @@ export interface RteEmbedProvider {
 /** Opções de `getHtmlSchema`. */
 export interface RteHtmlSchemaOptions {
   features?: Partial<RteFeatures>;
-  embedProviders?: RteEmbedProvider[];
+  embedProviders?: readonly RteEmbedProvider[];
   /** Padrão `rt-`; casa `^[a-z][a-z0-9-]{0,15}$` (senão lança). */
   idPrefix?: string;
-  mediaHosts?: string[];
+  mediaHosts?: readonly string[];
   /** Padrão `true`. */
   allowRelativeMedia?: boolean;
   /**
