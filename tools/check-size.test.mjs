@@ -183,3 +183,39 @@ test('--config: arquivo de configuração ausente sai com 2', () => {
   );
   assert.equal(r.status, 2);
 });
+
+const FAKE_EXT_SOURCE = [
+  "import x from 'fake-ext';",
+  'export default x;',
+  '',
+].join(String.fromCharCode(10));
+
+test('bundleScenario: external mantém o pacote como import', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'check-size-ext-'));
+  const entry = join(dir, 'lib.js');
+  writeFileSync(entry, FAKE_EXT_SOURCE);
+  await assert.rejects(() => bundleScenario(entry, ['*']));
+  const code = await bundleScenario(entry, ['*'], { external: ['fake-ext'] });
+  assert.match(code, /fake-ext/);
+});
+
+test('--config: cenário com external mede', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'check-size-cfg-ext-'));
+  const entry = join(dir, 'lib.js');
+  writeFileSync(entry, FAKE_EXT_SOURCE);
+  const cfg = join(dir, 'cfg.json');
+  const run = (external) => {
+    writeFileSync(
+      cfg,
+      JSON.stringify({
+        scenarios: { ext: { entry, exports: ['*'], external } },
+        budgets: { ext: 100000 },
+      }),
+    );
+    return spawnSync('node', ['tools/check-size.mjs', '--config', cfg], {
+      encoding: 'utf8',
+    });
+  };
+  assert.equal(run(['fake-ext']).status, 0);
+  assert.equal(run(undefined).status, 2);
+});

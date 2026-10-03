@@ -39,6 +39,7 @@ export async function bundleScenario(distFile, exportsList, opts = {}) {
     minify: opts.minify ?? true,
     format: 'esm',
     treeShaking: true,
+    external: opts.external ?? [],
     write: false,
     logLevel: 'silent',
   });
@@ -47,18 +48,19 @@ export async function bundleScenario(distFile, exportsList, opts = {}) {
 
 /**
  * Mede cenários descritos num arquivo de configuração:
- * `{ scenarios: { nome: { entry, exports } }, budgets: { nome: bytes } }`.
+ * `{ scenarios: { nome: { entry, exports, external? } }, budgets: { nome: bytes } }`.
+ * `external` lista pacotes que ficam fora do bundle (peers do consumidor).
  * Os caminhos de `entry` são relativos à raiz do repositório (cwd).
  */
 export async function measureConfig(config) {
   const measurements = {};
-  for (const [name, { entry, exports: list }] of Object.entries(
+  for (const [name, { entry, exports: list, external }] of Object.entries(
     config.scenarios ?? {},
   )) {
     if (!entry || !Array.isArray(list) || list.length === 0) {
       throw new Error(`cenário "${name}" inválido: precisa de entry e exports`);
     }
-    const code = await bundleScenario(entry, list);
+    const code = await bundleScenario(entry, list, { external });
     measurements[name] = {
       min: Buffer.byteLength(code),
       gzip: await measureMinGzip(code),

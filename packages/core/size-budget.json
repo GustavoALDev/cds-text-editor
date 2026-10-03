@@ -23,6 +23,15 @@
     "html": {
       "entry": "packages/core/dist/html/index.js",
       "exports": ["*"]
+    },
+    "extensions": {
+      "entry": "packages/core/dist/extensions/index.js",
+      "exports": ["*"],
+      "external": ["@tiptap/*", "lowlight", "highlight.js", "highlight.js/*"]
+    },
+    "code-languages": {
+      "entry": "packages/core/dist/code-languages/index.js",
+      "exports": ["*"]
     }
   },
   "budgets": {
@@ -30,7 +39,9 @@
     "schema": 5824,
     "links": 3136,
     "draft": 896,
-    "embeds": 2880,
-    "html": 33600
+    "embeds": 3392,
+    "html": 35712,
+    "extensions": 30080,
+    "code-languages": 39744
   }
 }
