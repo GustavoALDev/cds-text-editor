@@ -496,13 +496,30 @@ export function createSearchExtension(_ctx: RteExtensionContext): AnyExtension {
 // a busca) devolve o mesmo objeto.
 const memo = new WeakMap<SearchPluginState, RteSearchState>();
 
+const IDLE_SEARCH: RteSearchState = Object.freeze({
+  query: '',
+  caseSensitive: false,
+  wholeWord: false,
+  matches: NO_MATCHES,
+  total: 0,
+  capped: false,
+  activeIndex: -1,
+  lastReplaced: null,
+});
+
 /**
  * Estado da busca (spec 03c, C18), congelado e memorizado; `null` sem a
  * extensão `rtSearch` (`features.search: false`).
  */
 export function getSearchState(editor: Editor): RteSearchState | null {
   const value = searchKey.getState(editor.state);
-  if (!value) return null;
+  // Editor sem `element` (SSR): o estado inicial do Tiptap ainda não tem
+  // plugins; com a extensão registrada, a busca está vazia.
+  if (!value) {
+    return editor.extensionManager.extensions.some((e) => e.name === 'rtSearch')
+      ? IDLE_SEARCH
+      : null;
+  }
   let result = memo.get(value);
   if (!result) {
     result = Object.freeze({

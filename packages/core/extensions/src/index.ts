@@ -15,3 +15,18 @@ export type {
   RteVideoAttrs,
   RteVideoTrack,
 } from './types';
+export { getRteTextStats } from './text-stats';
+export type { RteTextStats } from './text-stats';
+export { getCharLimitState } from './char-limit';
+export type { RteCharLimitState } from './char-limit';
+export { getSearchState } from './search';
+export type { RteSearchOptions, RteSearchState } from './search';
+export { getSlashMenuState } from './slash';
+export type { RteSlashMenuState } from './slash';
+export { RTE_SLASH_ITEMS, RTE_SLASH_LABELS } from './slash-items';
+export type {
+  RteSlashItem,
+  RteSlashItemId,
+  RteSlashLabels,
+  RteSlashOptions,
+} from './slash-items';

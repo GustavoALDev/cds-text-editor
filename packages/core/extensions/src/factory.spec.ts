@@ -13,6 +13,8 @@ import { getRteHtml } from './serialize';
 import { createTestEditor, destroyTestEditors } from './testing/editor';
 
 const OFF = {
+  search: false,
+  slashCommands: false,
   colors: false,
   code: false,
   tables: false,
@@ -78,13 +80,7 @@ function snapshot(value: unknown): unknown {
 describe('createEditorExtensions: lista e ordem', () => {
   it('recursos desligados: só a base, na ordem da spec §6', () => {
     const names = createEditorExtensions({ features: OFF }).map((e) => e.name);
-    expect(names).toEqual([
-      ...BASE_NAMES,
-      'rtPlaceholder',
-      'rtCharLimit',
-      'rtSearch',
-      'rtSlashCommand',
-    ]);
+    expect(names).toEqual([...BASE_NAMES, 'rtPlaceholder', 'rtCharLimit']);
   });
 
   it('recursos ligados entram depois da base, na ordem da spec §6', () => {
@@ -98,6 +94,8 @@ describe('createEditorExtensions: lista e ordem', () => {
         media: true,
         embeds: true,
         newsBlocks: true,
+        search: true,
+        slashCommands: true,
       },
     }).map((e) => e.name);
     expect(names).toEqual([
@@ -131,7 +129,10 @@ describe('createEditorExtensions: lista e ordem', () => {
 
   it('extensões do consumidor entram por último', () => {
     const extra = Extension.create({ name: 'extra' });
-    const list = createEditorExtensions({ features: OFF, extensions: [extra] });
+    const list = createEditorExtensions({
+      features: { ...OFF, search: true, slashCommands: true },
+      extensions: [extra],
+    });
     expect(list.map((e) => e.name)).toEqual([
       ...BASE_NAMES,
       'rtPlaceholder',
@@ -143,17 +144,31 @@ describe('createEditorExtensions: lista e ordem', () => {
     expect(list[list.length - 1]).toBe(extra);
   });
 
-  it('search registra rtSearch; slashCommands registra rtSlashCommand', () => {
-    const names = createEditorExtensions({
-      features: { ...OFF, search: true, slashCommands: true },
-    }).map((e) => e.name);
-    expect(names).toEqual([
+  it('search e slashCommands ligam cada extensão de forma independente', () => {
+    const only = (features: Record<string, boolean>) =>
+      createEditorExtensions({ features: { ...OFF, ...features } }).map(
+        (e) => e.name,
+      );
+    expect(only({ search: true })).toEqual([
       ...BASE_NAMES,
       'rtPlaceholder',
       'rtCharLimit',
       'rtSearch',
+    ]);
+    expect(only({ slashCommands: true })).toEqual([
+      ...BASE_NAMES,
+      'rtPlaceholder',
+      'rtCharLimit',
       'rtSlashCommand',
     ]);
+  });
+
+  it('slash.items que devolve id repetido lança TypeError', () => {
+    expect(() =>
+      createEditorExtensions({
+        slash: { items: (defaults) => defaults.concat(defaults.slice(0, 1)) },
+      }),
+    ).toThrow(TypeError);
   });
 });
 
