@@ -228,6 +228,28 @@ describe('assertEmbedProvider (endurecido)', () => {
         TypeError,
       );
   });
+  it('recusa alternância de topo que escapa da âncora', () => {
+    for (const p of [
+      String.raw`^a|.*$`,
+      String.raw`^https://a\.com/x$|^.*$`,
+      String.raw`^(a)|.*$`,
+      String.raw`^[\]]|.*$`,
+    ])
+      expect(() => assertEmbedProvider({ ...base, srcPatterns: [p] })).toThrow(
+        TypeError,
+      );
+  });
+  it('aceita alternância dentro de grupo ou de classe', () => {
+    for (const p of [
+      String.raw`^https://a\.com/(x|y)$`,
+      String.raw`^https://a\.com/[|]$`,
+      String.raw`^https://a\.com/\|$`,
+      String.raw`^https://a\.com/[(](x|y)$`,
+    ])
+      expect(() =>
+        assertEmbedProvider({ ...base, srcPatterns: [p] }),
+      ).not.toThrow();
+  });
   it('toEmbed ignora provedor com curinga amplo', () => {
     const evil: RteEmbedProvider = {
       id: 'evil',

@@ -650,6 +650,16 @@ describe('getHtmlSchema: opções', () => {
     expect(isAllowedUrl(href, 'https://пример.рф/')).toBeNull();
   });
 
+  it('linkPolicy: curinga em blockedDomains lança; domínio bloqueia apex e subdomínios', () => {
+    expect(() =>
+      getHtmlSchema({ linkPolicy: { blockedDomains: ['*.evil.com'] } }),
+    ).toThrow(TypeError);
+    const s = getHtmlSchema({ linkPolicy: { blockedDomains: ['evil.com'] } });
+    const href = s.elements['a']?.attributes['href']?.rule as RteUrlRule;
+    expect(isAllowedUrl(href, 'https://evil.com/')).toBeNull();
+    expect(isAllowedUrl(href, 'https://a.evil.com/')).toBeNull();
+  });
+
   it('mediaHosts restringe img, video, poster, track e srcset', () => {
     const s = getHtmlSchema({ mediaHosts: ['CDN.site.com.'] });
     const rules: RteUrlRule[] = [

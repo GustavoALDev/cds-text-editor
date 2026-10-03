@@ -128,15 +128,21 @@ export function mergeElements(a: Elements, b: Elements): Elements {
 
 /**
  * Host de configuração na forma comparável: ASCII (punycode), minúsculas,
- * sem ponto final; preserva o curinga `*.`. Lança `TypeError` se não for um
+ * sem ponto final; preserva o curinga `*.` (se permitido). Lança `TypeError` se não for um
  * nome de host.
  */
-function normalizeHost(option: string, host: unknown): string {
+function normalizeHost(
+  option: string,
+  host: unknown,
+  allowWildcard: boolean,
+): string {
   const fail = (): never => {
     throw new TypeError(`${option}: host "${String(host)}" inválido.`);
   };
   if (typeof host !== 'string') return fail();
   const wildcard = host.startsWith('*.');
+  // Domínio bloqueado já cobre os subdomínios (seção 4.2); curinga deixaria o apex passar.
+  if (!allowWildcard && host.includes('*')) return fail();
   const name = (wildcard ? host.slice(2) : host).replace(/\.$/, '');
   if (name === '') return fail();
   let parsed: string;
@@ -155,8 +161,9 @@ function normalizeHost(option: string, host: unknown): string {
 function normalizeHosts(
   option: string,
   hosts: readonly unknown[] = [],
+  allowWildcard = true,
 ): string[] {
-  return union(hosts.map((h) => normalizeHost(option, h)));
+  return union(hosts.map((h) => normalizeHost(option, h, allowWildcard)));
 }
 
 function normalizeForceRel(tokens: readonly unknown[] = []): string[] {
@@ -232,6 +239,7 @@ export function getHtmlSchema(
     blockedDomains: normalizeHosts(
       'linkPolicy.blockedDomains',
       options.linkPolicy?.blockedDomains,
+      false,
     ),
     forceRel: normalizeForceRel(options.linkPolicy?.forceRel),
     providers,

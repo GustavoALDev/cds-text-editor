@@ -160,6 +160,33 @@ function checkHost(id: string, host: unknown): void {
 }
 
 /**
+ * `|` fora de grupo e de classe: `^a|.*$` começa com `^` e termina com `$`,
+ * mas a segunda alternativa casa qualquer coisa. Ignora caracteres escapados
+ * (`\x`) e classes (`[...]`).
+ */
+function hasTopLevelAlternation(pattern: string): boolean {
+  let depth = 0;
+  let inClass = false;
+  for (let i = 0; i < pattern.length; i++) {
+    const c = pattern[i];
+    if (c === '\\') {
+      i++;
+    } else if (inClass) {
+      if (c === ']') inClass = false;
+    } else if (c === '[') {
+      inClass = true;
+    } else if (c === '(') {
+      depth++;
+    } else if (c === ')') {
+      depth--;
+    } else if (c === '|' && depth === 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Recusa provedores inseguros: `sandbox` com `allow-scripts` + `allow-same-origin`
  * só é seguro se o host do embed nunca for a origem do site.
  */
@@ -185,9 +212,10 @@ export function assertEmbedProvider(p: RteEmbedProvider): void {
         ok = false;
       }
     }
+    if (ok && hasTopLevelAlternation(pat as string)) ok = false;
     if (!ok) {
       throw new TypeError(
-        `Provedor de embed "${p.id}": srcPattern "${String(pat)}" precisa ser uma regex válida ancorada (^…$).`,
+        `Provedor de embed "${p.id}": srcPattern "${String(pat)}" precisa ser uma regex válida ancorada (^…$), sem "|" fora de grupo.`,
       );
     }
   }
