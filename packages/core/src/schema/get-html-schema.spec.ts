@@ -875,6 +875,41 @@ describe('provedores de embed: mesmo validador do toEmbed', () => {
     expect(() => getHtmlSchema({ embedProviders: [a, b] })).toThrow(TypeError);
   });
 
+  it('quantificador logo depois da / do prefixo lança', () => {
+    for (const pat of [
+      String.raw`^https://embed\.example\.com/?.*$`,
+      String.raw`^https://embed\.example\.com/{0}v/\d+$`,
+      String.raw`^https://embed\.example\.com/*v/\d+$`,
+      String.raw`^https://embed\.example\.com/+v/\d+$`,
+    ])
+      expect(
+        () =>
+          getHtmlSchema({ embedProviders: [provider({ srcPatterns: [pat] })] }),
+        pat,
+      ).toThrow(TypeError);
+    for (const pat of [
+      String.raw`^https://embed\.example\.com/\?id=\d+$`,
+      String.raw`^https://embed\.example\.com/(?:v|e)/\d+$`,
+    ])
+      expect(() =>
+        getHtmlSchema({ embedProviders: [provider({ srcPatterns: [pat] })] }),
+      ).not.toThrow();
+  });
+
+  it('bypass A + B: ^https://a\\.com/?.*$ não aceita a.com.x.net', () => {
+    const a = provider({
+      id: 'a',
+      hosts: ['a.com'],
+      srcPatterns: [String.raw`^https://a\.com/?.*$`],
+    });
+    const b = provider({
+      id: 'b',
+      hosts: ['*.x.net', 'b.x.net'],
+      srcPatterns: [String.raw`^https://b\.x\.net/v/[0-9]+$`],
+    });
+    expect(() => getHtmlSchema({ embedProviders: [a, b] })).toThrow(TypeError);
+  });
+
   it('padrões padrão continuam válidos', () => {
     expect(() =>
       getHtmlSchema({ embedProviders: [...DEFAULT_EMBED_PROVIDERS] }),

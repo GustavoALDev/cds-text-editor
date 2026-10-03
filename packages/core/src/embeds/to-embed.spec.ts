@@ -343,6 +343,50 @@ describe('validador único de provedor (toEmbed = getHtmlSchema)', () => {
     }
   });
 
+  it('quantificador logo depois da / do prefixo é recusado', () => {
+    for (const pat of [
+      String.raw`^https://embed\.example\.com/?.*$`,
+      String.raw`^https://embed\.example\.com/{0}v/\d+$`,
+      String.raw`^https://embed\.example\.com/*v/\d+$`,
+      String.raw`^https://embed\.example\.com/+v/\d+$`,
+    ]) {
+      const p = provider({ srcPatterns: [pat] });
+      expect(() => assertEmbedProvider(p), pat).toThrow(TypeError);
+      expect(toEmbed('https://embed.example.com/v/1', [p]), pat).toBeNull();
+    }
+  });
+
+  it('padrões com o que vem depois da / sem quantificador continuam aceitos', () => {
+    for (const pat of [
+      String.raw`^https://embed\.example\.com/v/\d+$`,
+      String.raw`^https://embed\.example\.com/\?id=\d+$`,
+      String.raw`^https://embed\.example\.com/(?:v|e)/\d+$`,
+    ])
+      expect(
+        () => assertEmbedProvider(provider({ srcPatterns: [pat] })),
+        pat,
+      ).not.toThrow();
+    expect(
+      toEmbed('https://embed.example.com/v/1', [provider({})]),
+    ).not.toBeNull();
+  });
+
+  it('bypass A + B: ^https://a\\.com/?.*$ não deixa passar a.com.x.net', () => {
+    const a = provider({
+      id: 'a',
+      hosts: ['a.com'],
+      srcPatterns: [String.raw`^https://a\.com/?.*$`],
+      toEmbed: () => ({ src: 'https://a.com.x.net/x' }),
+    });
+    const b = provider({
+      id: 'b',
+      hosts: ['*.x.net', 'b.x.net'],
+      srcPatterns: [String.raw`^https://b\.x\.net/v/\d+$`],
+    });
+    expect(() => assertEmbedProvider(a)).toThrow(TypeError);
+    expect(toEmbed('https://a.com/x', [a, b])).toBeNull();
+  });
+
   it('provedor só com hosts curinga não pode ser usado', () => {
     const p = provider({ hosts: ['*.example.com'] });
     expect(() => assertEmbedProvider(p)).toThrow(TypeError);

@@ -78,6 +78,10 @@ function hasTopLevelAlternation(pattern: string): boolean {
  * provedor** + `/`. Assim cada padrão fixa o host, e a união de padrões no
  * iframe não deixa o padrão de um provedor aceitar o host de outro. Um
  * provedor só com hosts curinga não tem como ser usado.
+ *
+ * Logo depois da `/` não pode vir quantificador (`?`, `*`, `+`, `{`): com
+ * `^https://a\.com/?.*$` a barra vira opcional e o padrão aceitaria
+ * `https://a.com.outro-provedor.net/x`.
  */
 export function validateEmbedProvider(p: RteEmbedProvider): string[] {
   const id: unknown = p.id;
@@ -118,10 +122,14 @@ export function validateEmbedProvider(p: RteEmbedProvider): string[] {
     if (
       !ok ||
       hasTopLevelAlternation(pat as string) ||
-      !prefixes.some((prefix) => (pat as string).startsWith(prefix))
+      !prefixes.some(
+        (prefix) =>
+          (pat as string).startsWith(prefix) &&
+          !'?*+{'.includes((pat as string)[prefix.length] ?? ''),
+      )
     ) {
       throw new TypeError(
-        `Provedor de embed "${id}": srcPattern "${String(pat)}" precisa ser regex válida ^https://<host sem curinga do provedor, escapado, em punycode>/…$, sem "|" fora de grupo.`,
+        `Provedor de embed "${id}": srcPattern "${String(pat)}" precisa ser regex válida ^https://<host sem curinga do provedor, escapado, em punycode>/…$ (sem quantificador logo depois da /), sem "|" fora de grupo.`,
       );
     }
   }
