@@ -533,3 +533,150 @@ describe('rtImage: comandos', () => {
     });
   });
 });
+
+describe('figure: só mídia filha direta (A1: o texto fica)', () => {
+  const fig = (src: string, extra = '') =>
+    `${FIG}<img src="${src}" alt="" ${IMG}>${extra}</figure>`;
+
+  it('figure com outro conteúdo mantém o texto e a imagem', () => {
+    expect(html('<figure><p>Texto longo</p><img src="/a.jpg"></figure>')).toBe(
+      `<p>Texto longo</p>${fig('/a.jpg')}`,
+    );
+  });
+
+  it('duas imagens na figure: as duas ficam', () => {
+    expect(html('<figure><img src="/a.jpg"><img src="/b.jpg"></figure>')).toBe(
+      `${fig('/a.jpg')}${fig('/b.jpg')}`,
+    );
+  });
+
+  it('img dentro de tabela na figure não vira a imagem da figure', () => {
+    const out = html(
+      '<figure><table><tbody><tr><td>Célula</td></tr></tbody></table><img src="/a.jpg"></figure>',
+    );
+    expect(out).toContain('Célula');
+    expect(out).toContain(fig('/a.jpg'));
+  });
+
+  it('img dentro do figcaption não é a imagem da figure', () => {
+    expect(
+      html('<figure><figcaption><img src="/b.jpg">Leg</figcaption></figure>'),
+    ).toBe(`${fig('/b.jpg')}<p>Leg</p>`);
+    expect(
+      html(
+        '<figure><img src="/a.jpg"><figcaption>Leg<img src="/b.jpg"></figcaption></figure>',
+      ),
+    ).toBe(`${fig('/a.jpg')}<p>Leg</p>${fig('/b.jpg')}`);
+  });
+
+  it('citação em destaque com img (newsBlocks desligado) mantém o texto', () => {
+    const out = html(
+      '<figure class="rt-pullquote"><blockquote><p>Citação forte<img src="/a.jpg"></p></blockquote><figcaption><cite>Ana</cite>, editora</figcaption></figure>',
+    );
+    expect(out).toBe(
+      `<blockquote><p>Citação forte</p>${fig('/a.jpg')}</blockquote><p>Ana, editora</p>`,
+    );
+  });
+
+  it('img dentro de um único a ou picture filho direto é aceito', () => {
+    expect(
+      html(
+        '<figure class="rt-figure rt-figure--right"><a href="https://site.com/"><img src="/a.jpg"></a><figcaption>L</figcaption></figure>',
+      ),
+    ).toBe(
+      `<figure class="rt-figure rt-figure--right"><img src="/a.jpg" alt="" ${IMG}><figcaption>L</figcaption></figure>`,
+    );
+    expect(
+      html(
+        '<figure><picture><source srcset="/a.webp"> <img src="/a.jpg"></picture></figure>',
+      ),
+    ).toBe(fig('/a.jpg'));
+  });
+
+  it('video fora de filho direto não vira a mídia da figure', () => {
+    const out = html(
+      '<figure><p>Antes</p><video src="/v.mp4"></video><figcaption>Leg</figcaption></figure>',
+    );
+    expect(out).toBe(
+      '<p>Antes</p><figure class="rt-figure rt-figure--video"><video src="/v.mp4" controls="" preload="metadata" playsinline=""></video></figure><p>Leg</p>',
+    );
+  });
+});
+
+describe('figcaption: texto da legenda', () => {
+  it('br vira espaço; script, style e template são ignorados', () => {
+    expect(
+      html(
+        '<figure><img src="/a.jpg"><figcaption>Linha<br>dois<script>x()</script><style>p{}</style><template>t</template> <small class="rt-credit">Foto<br>Ana</small></figcaption></figure>',
+      ),
+    ).toBe(
+      `${FIG}<img src="/a.jpg" alt="" ${IMG}><figcaption>Linha dois <small class="rt-credit">Foto Ana</small></figcaption></figure>`,
+    );
+    expect(
+      html(
+        '<figure><video src="/v.mp4"></video><figcaption>Um<br>dois</figcaption></figure>',
+      ),
+    ).toBe(
+      '<figure class="rt-figure rt-figure--video"><video src="/v.mp4" controls="" preload="metadata" playsinline=""></video><figcaption>Um dois</figcaption></figure>',
+    );
+  });
+});
+
+describe('URLs revalidadas na renderização e mediaHosts', () => {
+  it('JSON de vídeo: poster javascript: e track com src data: são descartados', () => {
+    const editor = editorWith({
+      type: 'doc',
+      content: [
+        {
+          type: 'rtVideo',
+          attrs: {
+            src: '/v.mp4',
+            poster: 'javascript:x',
+            tracks: [
+              {
+                kind: 'captions',
+                src: 'data:text/vtt,x',
+                srclang: 'pt',
+                label: 'X',
+              },
+              { kind: 'captions', src: '/ok.vtt', srclang: 'pt', label: 'OK' },
+            ],
+          },
+        },
+      ],
+    });
+    expect(canonical(editor)).toBe(
+      '<figure class="rt-figure rt-figure--video"><video src="/v.mp4" controls="" preload="metadata" playsinline=""><track kind="captions" src="/ok.vtt" srclang="pt" label="OK"></video></figure>',
+    );
+  });
+
+  it('mediaHosts: src de outro host sai inerte do JSON e é recusado por setImage', () => {
+    const options = { mediaHosts: ['cdn.site.com'] };
+    const json = editorWith(
+      {
+        type: 'doc',
+        content: [
+          { type: 'rtImage', attrs: { src: 'https://outro.com/a.jpg' } },
+        ],
+      },
+      options,
+    );
+    const out = getRteHtml(json);
+    expect(out).toBe(`${FIG}<img alt="" ${IMG}></figure>`);
+    expect(
+      validateHtml(out, json.storage.rtContent.schema, { mode: 'accepted' }),
+    ).toEqual([
+      expect.objectContaining({
+        kind: 'missing-required-attribute',
+        name: 'src',
+      }),
+    ]);
+    const editor = editorWith('<p></p>', options);
+    expect(editor.commands.setImage({ src: 'https://outro.com/a.jpg' })).toBe(
+      false,
+    );
+    expect(
+      editor.commands.setImage({ src: 'https://cdn.site.com/a.jpg' }),
+    ).toBe(true);
+  });
+});

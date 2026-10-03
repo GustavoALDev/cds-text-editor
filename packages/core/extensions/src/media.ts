@@ -26,9 +26,13 @@ declare module '@tiptap/core' {
       setImageAlign: (align: RteImageAlign) => ReturnType;
     };
     rtVideo: {
-      /** Insere o vídeo (lição 14: substitui o parágrafo vazio do cursor). */
+      /**
+       * Insere o vídeo (lição 14: substitui o parágrafo vazio do cursor).
+       * Faixas inválidas são descartadas, não recusadas; só `tracks` que não
+       * seja lista devolve `false`.
+       */
       setVideo: (attrs: RteVideoAttrs) => ReturnType;
-      /** Muda atributos do vídeo selecionado. */
+      /** Muda atributos do vídeo selecionado (faixas inválidas descartadas). */
       updateVideo: (attrs: Partial<RteVideoAttrs>) => ReturnType;
     };
   }
@@ -129,16 +133,83 @@ function childrenByTag(element: Element, tag: string): Element[] {
 const isCredit = (element: Element): boolean =>
   tagOf(element) === 'small' && hasClass(element, 'rt-credit');
 
-/** Texto de `node` sem os elementos que `skip` aceita (só lê o DOM). */
-function textWithout(node: globalThis.Node, skip: (e: Element) => boolean) {
+// Elementos cujo conteúdo não é texto visível.
+const NO_TEXT = new Set(['script', 'style', 'template']);
+
+/**
+ * Texto de `node` sem os elementos que `skip` aceita (só lê o DOM): `br`
+ * vira espaço (não junta palavras) e `script`/`style`/`template` são
+ * ignorados.
+ */
+function textWithout(
+  node: globalThis.Node,
+  skip: (e: Element) => boolean = () => false,
+): string {
   let out = '';
   for (const child of Array.from(node.childNodes)) {
-    if (child.nodeType === 3) out += child.nodeValue ?? '';
-    else if (child.nodeType === 1 && !skip(child as Element)) {
-      out += textWithout(child, skip);
+    if (child.nodeType === 3) {
+      out += child.nodeValue ?? '';
+      continue;
+    }
+    if (child.nodeType !== 1) continue;
+    const element = child as Element;
+    const tag = tagOf(element);
+    if (tag === 'br') out += ' ';
+    else if (!NO_TEXT.has(tag) && !skip(element)) {
+      out += textWithout(element, skip);
     }
   }
   return out;
+}
+
+/** Filhos significativos: sem comentários e sem texto só de espaço. */
+function meaningfulChildren(element: Element): Element[] | null {
+  const out: Element[] = [];
+  for (const child of Array.from(element.childNodes)) {
+    if (child.nodeType === 8) continue;
+    if (child.nodeType === 3) {
+      if (BLANK.test(child.nodeValue ?? '')) continue;
+      return null;
+    }
+    if (child.nodeType === 1) out.push(child as Element);
+  }
+  return out;
+}
+
+/**
+ * Mídia da `figure` (03a §4.7): `tag` filho direto ou, para `img`, dentro de
+ * um único `a`/`picture` filho direto. Além dela só pode haver um
+ * `figcaption` sem mídia; qualquer outro conteúdo devolve `null`, e a
+ * leitura genérica preserva tudo (A1: o texto fica).
+ */
+function mediaOf(figure: Element, tag: 'img' | 'video'): Element | null {
+  const children = meaningfulChildren(figure);
+  if (!children) return null;
+  let media: Element | null = null;
+  let captions = 0;
+  for (const child of children) {
+    const name = tagOf(child);
+    if (name === 'figcaption') {
+      captions += 1;
+      if (captions > 1 || child.querySelector('img, video, iframe')) {
+        return null;
+      }
+      continue;
+    }
+    if (media) return null;
+    if (name === tag) media = child;
+    else if (tag === 'img' && (name === 'a' || name === 'picture')) {
+      const inner = meaningfulChildren(child);
+      const imgs = inner?.filter((e) => tagOf(e) === 'img') ?? [];
+      const rest = inner?.filter(
+        (e) =>
+          tagOf(e) !== 'img' && !(name === 'picture' && tagOf(e) === 'source'),
+      );
+      if (imgs.length !== 1 || !rest || rest.length > 0) return null;
+      media = imgs[0] ?? null;
+    } else return null;
+  }
+  return media;
 }
 
 function figcaptionOf(figure: Element | null): Element | null {
@@ -297,7 +368,7 @@ export function createMediaExtensions(
       sizes: img.getAttribute('sizes'),
       align,
       caption: caption ? textWithout(caption, isCredit) : undefined,
-      credit: credit ? (credit.textContent ?? '') : undefined,
+      credit: credit ? textWithout(credit) : undefined,
     });
   }
 
@@ -324,7 +395,7 @@ export function createMediaExtensions(
         label: track.getAttribute('label'),
         default: track.hasAttribute('default'),
       })),
-      caption: caption ? (caption.textContent ?? '') : undefined,
+      caption: caption ? textWithout(caption) : undefined,
     });
   }
 
@@ -351,8 +422,7 @@ export function createMediaExtensions(
         {
           tag: 'figure',
           getAttrs: (figure) => {
-            if (figure.querySelector('video')) return false;
-            const img = figure.querySelector('img');
+            const img = mediaOf(figure, 'img');
             return img ? readImage(img, figure) : false;
           },
         },
@@ -439,7 +509,7 @@ export function createMediaExtensions(
         {
           tag: 'figure',
           getAttrs: (figure) => {
-            const element = figure.querySelector('video');
+            const element = mediaOf(figure, 'video');
             return element ? readVideo(element, figure) : false;
           },
         },
