@@ -98,7 +98,12 @@ describe('normalizeAttribute', () => {
     fc.assert(
       fc.property(
         fc.constantFrom(...rules),
-        fc.oneof(fc.string(), fc.webUrl()),
+        fc.oneof(
+          fc.string(),
+          fc.string({ unit: 'binary' }),
+          fc.string({ unit: 'binary' }).map((x) => `https://a.com/${x}`),
+          fc.webUrl(),
+        ),
         (r, v) => {
           const once = normalizeAttribute(r, v);
           if (once === null) return;

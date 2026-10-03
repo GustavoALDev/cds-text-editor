@@ -72,5 +72,6 @@ export function isAllowedUrl(rule: RteUrlRule, value: string): string | null {
 
   if (rule.patterns && !rule.patterns.some((p) => new RegExp(p).test(url.href)))
     return null;
-  return url.href;
+  // A forma canônica (percent-encoding, punycode) pode crescer: vale o mesmo limite.
+  return url.href.length > rule.maxLength ? null : url.href;
 }

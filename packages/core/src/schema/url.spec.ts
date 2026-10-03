@@ -69,6 +69,17 @@ describe('isAllowedUrl', () => {
     expect(isAllowedUrl(p, 'https://a.com/v/x')).toBeNull();
   });
 
+  it('rejeita quando a forma canônica excede maxLength', () => {
+    const v = 'https://a.com/' + 'é'.repeat(700);
+    expect(v.length).toBeLessThanOrEqual(link.maxLength);
+    expect(isAllowedUrl(link, v)).toBeNull();
+    const idn = { ...link, maxLength: 20 };
+    expect(isAllowedUrl(idn, 'https://пример.рф')).toBeNull();
+    const ok = isAllowedUrl(link, 'https://a.com/é');
+    expect(ok).toBe('https://a.com/%C3%A9');
+    expect(isAllowedUrl(link, ok as string)).toBe(ok);
+  });
+
   it('propriedade: esquemas perigosos ofuscados nunca passam', () => {
     fc.assert(
       fc.property(dangerousUrl, (v) => {
@@ -80,12 +91,21 @@ describe('isAllowedUrl', () => {
 
   it('propriedade: saída não nula é segura e idempotente', () => {
     fc.assert(
-      fc.property(fc.oneof(fc.string(), fc.webUrl(), dangerousUrl), (v) => {
-        const out = isAllowedUrl(link, v);
-        if (out === null) return;
-        expect(out).toMatch(/^(?!(?:javascript|data|vbscript|file):)/i);
-        expect(isAllowedUrl(link, out)).toBe(out);
-      }),
+      fc.property(
+        fc.oneof(
+          fc.string(),
+          fc.string({ unit: 'binary' }),
+          fc.webUrl(),
+          fc.string({ unit: 'binary' }).map((x) => `https://a.com/${x}`),
+          dangerousUrl,
+        ),
+        (v) => {
+          const out = isAllowedUrl(link, v);
+          if (out === null) return;
+          expect(out).toMatch(/^(?!(?:javascript|data|vbscript|file):)/i);
+          expect(isAllowedUrl(link, out)).toBe(out);
+        },
+      ),
       { numRuns: 2000 },
     );
   });

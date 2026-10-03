@@ -63,7 +63,8 @@ export function normalizeAttribute(
         if (url === null || /[\s,]/.test(url)) return null;
         c.url = url;
       }
-      return formatSrcset(candidates);
+      const out = formatSrcset(candidates);
+      return out.length > rule.maxLength ? null : out;
     }
     case 'tokens':
       return serializeTokens(rule, value);
