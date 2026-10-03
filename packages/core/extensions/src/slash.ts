@@ -135,7 +135,7 @@ function opensMenu(
   const before = $pos.nodeBefore;
   if (before === null) return true;
   const text = before.isText ? (before.text ?? '') : '';
-  return text.endsWith(' ') || text.endsWith(' ');
+  return text.endsWith(' ') || text.endsWith('\u00A0');
 }
 
 /**
@@ -179,8 +179,12 @@ function nextState(
       ? CLOSED_STATE
       : { ...CLOSED_STATE, pendingUi: action.ui };
   }
-  // `pendingUi` vale só para o estado da execução.
-  let value = prev.pendingUi === null ? prev : CLOSED_STATE;
+  // `pendingUi` vale só para o estado da execução e para as transações que
+  // os `appendTransaction` acrescentam a ela no mesmo despacho: o
+  // `view.update` só roda depois de todas.
+  const keep =
+    prev.pendingUi === null || tr.getMeta('appendedTransaction') !== undefined;
+  let value = keep ? prev : CLOSED_STATE;
   if (pending && opensMenu(tr, pending, newState.doc)) {
     value = { open: true, from: pending.from, activeIndex: 0, pendingUi: null };
   } else if (prev.open && tr.docChanged) {
@@ -240,7 +244,14 @@ const memo = new WeakMap<EditorState, RteSlashMenuState>();
  * com o editor não editável.
  */
 export function getSlashMenuState(editor: Editor): RteSlashMenuState {
-  const { state } = editor;
+  return menuAt(editor, editor.state);
+}
+
+/**
+ * Estado do menu em `state` (o do editor ou o encadeável de um comando);
+ * memorizado só para o `EditorState` do editor.
+ */
+function menuAt(editor: Editor, state: EditorState): RteSlashMenuState {
   const value = slashKey.getState(state);
   const storage = storageOf(editor);
   if (!value?.open || !storage || !editor.isEditable) return CLOSED_MENU;
@@ -268,7 +279,7 @@ export function getSlashMenuState(editor: Editor): RteSlashMenuState {
     items,
     activeIndex: Math.min(value.activeIndex, items.length - 1),
   });
-  memo.set(state, result);
+  if (state === editor.state) memo.set(state, result);
   return result;
 }
 
@@ -306,7 +317,7 @@ export function createSlashCommandExtension(
           (index) =>
           ({ editor, state, tr, dispatch }) => {
             if (!openState(state, tr)) return false;
-            const { open, items: visible } = getSlashMenuState(editor);
+            const { open, items: visible } = menuAt(editor, state);
             if (
               !open ||
               !Number.isInteger(index) ||
@@ -329,7 +340,7 @@ export function createSlashCommandExtension(
           (index) =>
           ({ editor, state, tr, chain }) => {
             if (!openState(state, tr)) return false;
-            const current = getSlashMenuState(editor);
+            const current = menuAt(editor, state);
             const at = index ?? current.activeIndex;
             const { range } = current;
             if (

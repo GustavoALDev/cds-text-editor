@@ -5,6 +5,7 @@
 // Reproduzir uma falha da propriedade: `FC_SEED=<n> npx vitest run
 // extensions/src/slash.spec.ts`; `FC_RUNS` muda o número de execuções.
 import type { Editor } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { Transaction } from '@tiptap/pm/state';
 import * as fc from 'fast-check';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -76,7 +77,7 @@ describe('abertura (C13)', () => {
 
   it.each([
     ['depois de espaço', ' '],
-    ['depois de NBSP', ' '],
+    ['depois de NBSP', '\u00A0'],
   ])('abre %s', (_name, space) => {
     const editor = make('<p>abc</p>');
     cursorAfter(editor, 'abc');
@@ -499,6 +500,37 @@ describe('execução (C15)', () => {
     expect(onUiItem).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    ['só de meta', false],
+    ['que muda o documento', true],
+  ])(
+    'onUiItem chamado uma vez com appendTransaction %s em toda transação',
+    (_name, changesDoc) => {
+      const onUiItem = vi.fn();
+      const editor = make('<p></p>', { slash: { onUiItem } });
+      const key = new PluginKey('appendAlways');
+      editor.registerPlugin(
+        new Plugin({
+          key,
+          appendTransaction(trs, _old, state) {
+            if (trs.some((t) => t.getMeta(key))) return null;
+            const tr = state.tr.setMeta(key, true);
+            // Passo de documento sem efeito visível (AttrStep no 1º bloco).
+            if (changesDoc) tr.setNodeAttribute(0, 'textAlign', null);
+            return tr;
+          },
+        }),
+      );
+      typeText(editor, '/ima');
+      expect(pressKey(editor, 'Enter')).toBe(true);
+      expect(onUiItem).toHaveBeenCalledTimes(1);
+      expect(onUiItem).toHaveBeenCalledWith('image', editor);
+      expect(menu(editor).open).toBe(false);
+      typeText(editor, 'a');
+      expect(onUiItem).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it('onUiItem que lança não interrompe a entrada', () => {
     const editor = make('<p></p>', {
       slash: {
@@ -552,6 +584,13 @@ describe('execução (C15)', () => {
     typeText(editor, 'zzz');
     expect(editor.commands.runSlashItem()).toBe(false);
     expect(getRteHtml(editor)).toBe('<p>/tazzz</p>');
+  });
+
+  it('runSlashItem lê o estado da cadeia (seleção movida antes do "/")', () => {
+    const editor = make();
+    typeText(editor, '/tab');
+    expect(editor.chain().setTextSelection(1).runSlashItem().run()).toBe(false);
+    expect(editor.state.doc.textContent).toBe('/tab');
   });
 
   it('can().runSlashItem() não muda nada', () => {
