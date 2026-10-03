@@ -156,12 +156,12 @@ describe('link: JSON, autolink e colagem', () => {
       ],
     });
     const html = getRteHtml(editor);
-    expect(html).toBe('<p><a>x</a></p>');
+    expect(html).toBe('<p>x</p>');
     expect(
       validateHtml(html, editor.storage.rtContent.schema, {
         mode: 'accepted',
       }).map((i) => i.kind),
-    ).toEqual(['missing-required-attribute']);
+    ).toEqual([]);
   });
 
   it('autolink de site.com ao digitar o espaço', () => {
@@ -184,5 +184,118 @@ describe('link: JSON, autolink e colagem', () => {
       new Event('paste') as ClipboardEvent,
     );
     expect(getRteHtml(editor)).not.toContain('javascript');
+  });
+});
+
+type TestEditor = ReturnType<typeof createTestEditor>;
+
+function typeText(editor: TestEditor, text: string): void {
+  editor.commands.focus('end');
+  for (const ch of text) {
+    const { from, to } = editor.state.selection;
+    editor.view.dispatch(editor.state.tr.insertText(ch, from, to));
+  }
+}
+
+const paste = () => new Event('paste') as ClipboardEvent;
+
+describe('link: política em autolink e colagem sobre seleção', () => {
+  it('colar URL bloqueada sobre seleção não cria link', () => {
+    const editor = createTestEditor(
+      { features: OFF, linkPolicy: { blockedDomains: ['evil.com'] } },
+      '<p>texto</p>',
+    );
+    editor.commands.selectAll();
+    editor.view.pasteText('https://evil.com', paste());
+    expect(JSON.stringify(editor.getJSON())).not.toContain('"link"');
+  });
+
+  it('autolink respeita blockedDomains e protocols', () => {
+    const a = createTestEditor(
+      { features: OFF, linkPolicy: { blockedDomains: ['evil.com'] } },
+      '<p></p>',
+    );
+    typeText(a, 'evil.com ');
+    expect(JSON.stringify(a.getJSON())).not.toContain('"link"');
+    const b = createTestEditor(
+      { features: OFF, linkPolicy: { protocols: ['https'] } },
+      '<p></p>',
+    );
+    typeText(b, 'http://a.com ');
+    expect(JSON.stringify(b.getJSON())).not.toContain('"link"');
+  });
+});
+
+describe('link: toggleLink', () => {
+  const attrsOf = (e: TestEditor) =>
+    e.getJSON().content?.[0]?.content?.[0]?.marks?.[0]?.attrs;
+
+  it('normaliza href', () => {
+    const e = createTestEditor({ features: OFF }, '<p>A</p>');
+    e.commands.selectAll();
+    expect(e.commands.toggleLink({ href: 'site.com' })).toBe(true);
+    expect(attrsOf(e)).toEqual({ href: 'https://site.com/', target: null });
+  });
+
+  it('target fora do contrato vira null', () => {
+    const e = createTestEditor({ features: OFF }, '<p>A</p>');
+    e.commands.selectAll();
+    expect(
+      e.commands.toggleLink({ href: 'https://a.com', target: '_SELF' }),
+    ).toBe(true);
+    expect(attrsOf(e)).toEqual({ href: 'https://a.com/', target: null });
+  });
+
+  it('sem href ou href inválido devolve false', () => {
+    const e = createTestEditor({ features: OFF }, '<p>A</p>');
+    const before = e.getJSON();
+    e.commands.selectAll();
+    const toggle = e.commands.toggleLink as (a?: unknown) => boolean;
+    expect(toggle()).toBe(false);
+    expect(toggle({})).toBe(false);
+    expect(toggle({ href: 'javascript:x' })).toBe(false);
+    expect(e.getJSON()).toEqual(before);
+  });
+});
+
+describe('link: href canônico guardado', () => {
+  it('autolink guarda https://site.com/', () => {
+    const e = createTestEditor({ features: OFF }, '<p></p>');
+    typeText(e, 'site.com ');
+    expect(JSON.stringify(e.getJSON())).toContain('"href":"https://site.com/"');
+  });
+
+  it('colar <a> guarda href canônico', () => {
+    const e = createTestEditor({ features: OFF }, '<p></p>');
+    e.commands.focus('end');
+    e.view.pasteHTML('<a href="https://site.com">A</a>', paste());
+    expect(JSON.stringify(e.getJSON())).toContain('"href":"https://site.com/"');
+  });
+
+  it('edição alheia não mexe em outro link não canônico', () => {
+    const e = createTestEditor({ features: OFF }, '<p>a</p><p>L</p>');
+    const linkType = e.schema.marks['link']!;
+    const second = e.state.doc.child(0).nodeSize;
+    const legacy = linkType.create({
+      href: 'https://legacy.com',
+      target: null,
+    });
+    // applyInner não roda o appendTransaction: o estado fica com marca legada.
+    e.view.updateState(
+      (
+        e.state as unknown as { applyInner(tr: unknown): typeof e.state }
+      ).applyInner(e.state.tr.addMark(second + 1, second + 2, legacy)),
+    );
+    const before = e.state.doc.child(1);
+    e.view.dispatch(e.state.tr.insertText('b', 2));
+    expect(e.state.doc.child(1)).toBe(before);
+    expect(e.state.doc.child(1).child(0).marks[0]?.attrs['href']).toBe(
+      'https://legacy.com',
+    );
+    // Tocando o trecho, vira canônico.
+    e.view.dispatch(e.state.tr.insertText('c', second + 2));
+    expect(e.state.doc.child(1).child(0).marks[0]?.attrs['href']).toBe(
+      'https://legacy.com/',
+    );
   });
 });
