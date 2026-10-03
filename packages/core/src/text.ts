@@ -26,3 +26,15 @@ export function readingTime(
   }
   return Math.ceil(countWords(text) / wpm);
 }
+
+/**
+ * Pontos de código de `text`, sem contar `\n` e `\r` (spec 03c, C5). Um
+ * substituto solto conta 1; grafemas compostos contam cada ponto de código.
+ */
+export function countCharacters(text: string): number {
+  let count = 0;
+  for (const char of String(text)) {
+    if (char !== '\n' && char !== '\r') count++;
+  }
+  return count;
+}

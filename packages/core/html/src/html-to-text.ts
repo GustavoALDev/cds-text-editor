@@ -1,30 +1,5 @@
+import { TEXT_BLOCK_TAGS, collapseTextLine } from '../../src/text-lines';
 import { resolveMaxDepth, walkHtml } from './walk';
-
-/** Elementos que quebram linha nos dois limites (abertura e fechamento). */
-const BLOCKS = new Set([
-  'p',
-  'h1',
-  'h2',
-  'h3',
-  'h4',
-  'h5',
-  'h6',
-  'li',
-  'blockquote',
-  'pre',
-  'figure',
-  'figcaption',
-  'tr',
-  'div',
-  'section',
-  'article',
-  'aside',
-  'ul',
-  'ol',
-  'table',
-  'hr',
-  'br',
-]);
 
 export interface HtmlToTextOptions {
   /** Profundidade máxima de elementos (padrão 256); `RangeError` se não for inteiro positivo. */
@@ -47,15 +22,15 @@ export function htmlToText(
   const lines: string[] = [];
   let line = '';
   const flush = () => {
-    const t = line.replace(/\s+/g, ' ').trim();
+    const t = collapseTextLine(line);
     if (t) lines.push(t);
     line = '';
   };
   walkHtml(
     html,
     {
-      open: (name) => BLOCKS.has(name) && flush(),
-      close: (name) => BLOCKS.has(name) && flush(),
+      open: (name) => TEXT_BLOCK_TAGS.has(name) && flush(),
+      close: (name) => TEXT_BLOCK_TAGS.has(name) && flush(),
       text: (data) => {
         line += data;
       },

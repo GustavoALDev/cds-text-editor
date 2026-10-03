@@ -27,7 +27,7 @@ export { normalizeHref, getLinkAttributes, DEFAULT_LINK_POLICY } from './links';
 export type { RteLinkPolicy } from './links';
 
 export { slugify, createHeadingIds } from './headings';
-export { countWords, readingTime } from './text';
+export { countCharacters, countWords, readingTime } from './text';
 
 export { computeResize, parseSrcset, formatSrcset } from './image';
 export type { RteResizeCorner, RteResizeInput, SrcsetCandidate } from './image';
