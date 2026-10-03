@@ -83,7 +83,14 @@ describe('createEditorExtensions: lista e ordem', () => {
 
   it('recursos ligados entram depois da base, na ordem da spec §6', () => {
     const names = createEditorExtensions({
-      features: { ...OFF, colors: true, code: true, tables: true, tasks: true },
+      features: {
+        ...OFF,
+        colors: true,
+        code: true,
+        tables: true,
+        tasks: true,
+        media: true,
+      },
     }).map((e) => e.name);
     expect(names).toEqual([
       ...BASE_NAMES,
@@ -96,6 +103,8 @@ describe('createEditorExtensions: lista e ordem', () => {
       'tableCell',
       'rtTaskList',
       'rtTaskItem',
+      'rtImage',
+      'rtVideo',
     ]);
   });
 

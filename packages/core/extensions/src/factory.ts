@@ -8,6 +8,7 @@ import { createExtensionContext } from './context';
 import type { RteExtensionContext } from './context';
 import { createHighlightPlugin } from './highlight';
 import { createLinkExtension } from './link';
+import { createMediaExtensions } from './media';
 import { createTableExtensions } from './tables';
 import { createTaskExtensions } from './tasks';
 import type { RteEditorOptions } from './types';
@@ -37,6 +38,9 @@ export function createEditorExtensions(
       ? createTableExtensions(ctx)
       : []),
     ...(ctx.schema.features.includes('tasks') ? createTaskExtensions(ctx) : []),
+    ...(ctx.schema.features.includes('media')
+      ? createMediaExtensions(ctx)
+      : []),
     ...(options.extensions ?? []),
   ];
   assertUniqueNames(list);

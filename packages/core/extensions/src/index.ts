@@ -9,4 +9,7 @@ export type {
   RteContentLabelsSource,
   RteEditorOptions,
   RteImageAlign,
+  RteImageAttrs,
+  RteVideoAttrs,
+  RteVideoTrack,
 } from './types';

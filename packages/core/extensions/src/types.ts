@@ -9,6 +9,46 @@ export type RteCalloutVariant = 'info' | 'success' | 'warning' | 'danger';
 /** Alinhamentos da imagem (`rtImage.align`). */
 export type RteImageAlign = 'left' | 'center' | 'right' | 'full';
 
+/**
+ * Atributos de `rtImage` (B10: legenda e crédito em texto puro). Padrões:
+ * `alt: null` (não informado; sai `alt=""`), `align: 'center'`,
+ * `caption: ''`, `credit: ''`.
+ */
+export interface RteImageAttrs {
+  src: string;
+  alt?: string | null;
+  width?: number | null;
+  height?: number | null;
+  srcset?: string | null;
+  sizes?: string | null;
+  align?: RteImageAlign;
+  caption?: string;
+  credit?: string;
+}
+
+/** Faixa de texto do vídeo (WCAG 1.2.2). */
+export interface RteVideoTrack {
+  kind: 'captions' | 'subtitles';
+  src: string;
+  srclang: string;
+  label: string;
+  default?: boolean;
+}
+
+/**
+ * Atributos de `rtVideo`. Padrões: `preload: 'metadata'`, `tracks: []`,
+ * `caption: ''`.
+ */
+export interface RteVideoAttrs {
+  src: string;
+  width?: number | null;
+  height?: number | null;
+  poster?: string | null;
+  preload?: 'metadata' | 'none';
+  tracks?: RteVideoTrack[];
+  caption?: string;
+}
+
 /** Rótulos do conteúdo (títulos sintetizados e nome acessível das tarefas). */
 export interface RteContentLabels {
   calloutTitles: Record<RteCalloutVariant, string>;
