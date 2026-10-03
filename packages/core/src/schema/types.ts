@@ -91,7 +91,10 @@ export interface RteHtmlSchema {
   elements: Record<string, RteElementSpec>;
   /** Tags de cada recurso (documentação). */
   byFeature: Partial<Record<RteFeatureId, string[]>>;
-  palette: { text: RtePaletteColor[]; highlight: RtePaletteColor[] };
+  palette: {
+    text: readonly RtePaletteColor[];
+    highlight: readonly RtePaletteColor[];
+  };
 }
 
 export interface RteEmbedProvider {
