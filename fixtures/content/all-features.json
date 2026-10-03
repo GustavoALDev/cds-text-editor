@@ -1,0 +1,1301 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "heading",
+      "attrs": {
+        "textAlign": "left",
+        "level": 2
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Título principal"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "textAlign": null
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Parágrafo com "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "bold"
+            }
+          ],
+          "text": "negrito"
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "italic"
+            }
+          ],
+          "text": "itálico"
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "underline"
+            }
+          ],
+          "text": "sublinhado"
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "strike"
+            }
+          ],
+          "text": "riscado"
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "code"
+            }
+          ],
+          "text": "código"
+        },
+        {
+          "type": "text",
+          "text": ", H"
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "subscript"
+            }
+          ],
+          "text": "2"
+        },
+        {
+          "type": "text",
+          "text": "O e x"
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "superscript"
+            }
+          ],
+          "text": "2"
+        },
+        {
+          "type": "text",
+          "text": "; texto com &, <, \" e espaço não separável."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "attrs": {
+        "textAlign": "center",
+        "level": 3
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Subtítulo"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "textAlign": "justify"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Parágrafo justificado."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "attrs": {
+        "textAlign": "right",
+        "level": 4
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Detalhe"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "attrs": {
+        "textAlign": "justify",
+        "level": 2
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Título principal"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "attrs": {
+        "textAlign": null,
+        "level": 3
+      }
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "textAlign": null
+      },
+      "content": [
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "https://example.com/",
+                "target": null
+              }
+            }
+          ],
+          "text": "site"
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "https://example.com/nova",
+                "target": "_blank"
+              }
+            }
+          ],
+          "text": "nova aba"
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "mailto:fulana@example.com",
+                "target": null
+              }
+            }
+          ],
+          "text": "e-mail"
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "tel:+5511999999999",
+                "target": null
+              }
+            }
+          ],
+          "text": "telefone"
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "/sobre",
+                "target": null
+              }
+            }
+          ],
+          "text": "relativo"
+        },
+        {
+          "type": "text",
+          "text": " e "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "#rt-subtitulo",
+                "target": null
+              }
+            }
+          ],
+          "text": "fragmento"
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "textAlign": null
+      },
+      "content": [
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtTextColor",
+              "attrs": {
+                "color": "gray"
+              }
+            }
+          ],
+          "text": "cinza"
+        },
+        {
+          "type": "text",
+          "text": " "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtTextColor",
+              "attrs": {
+                "color": "red"
+              }
+            }
+          ],
+          "text": "vermelho"
+        },
+        {
+          "type": "text",
+          "text": " "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtTextColor",
+              "attrs": {
+                "color": "orange"
+              }
+            }
+          ],
+          "text": "laranja"
+        },
+        {
+          "type": "text",
+          "text": " "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtTextColor",
+              "attrs": {
+                "color": "green"
+              }
+            }
+          ],
+          "text": "verde"
+        },
+        {
+          "type": "text",
+          "text": " "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtTextColor",
+              "attrs": {
+                "color": "blue"
+              }
+            }
+          ],
+          "text": "azul"
+        },
+        {
+          "type": "text",
+          "text": " "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtTextColor",
+              "attrs": {
+                "color": "purple"
+              }
+            }
+          ],
+          "text": "roxo"
+        },
+        {
+          "type": "text",
+          "text": " "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtTextColor",
+              "attrs": {
+                "color": "pink"
+              }
+            }
+          ],
+          "text": "rosa"
+        },
+        {
+          "type": "text",
+          "text": " "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtTextColor",
+              "attrs": {
+                "color": "teal"
+              }
+            }
+          ],
+          "text": "verde-azulado"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "textAlign": null
+      },
+      "content": [
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtHighlight",
+              "attrs": {
+                "color": "yellow"
+              }
+            }
+          ],
+          "text": "amarelo"
+        },
+        {
+          "type": "text",
+          "text": " "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtHighlight",
+              "attrs": {
+                "color": "green"
+              }
+            }
+          ],
+          "text": "verde"
+        },
+        {
+          "type": "text",
+          "text": " "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtHighlight",
+              "attrs": {
+                "color": "blue"
+              }
+            }
+          ],
+          "text": "azul"
+        },
+        {
+          "type": "text",
+          "text": " "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtHighlight",
+              "attrs": {
+                "color": "pink"
+              }
+            }
+          ],
+          "text": "rosa"
+        },
+        {
+          "type": "text",
+          "text": " "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtHighlight",
+              "attrs": {
+                "color": "orange"
+              }
+            }
+          ],
+          "text": "laranja"
+        },
+        {
+          "type": "text",
+          "text": " "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtHighlight",
+              "attrs": {
+                "color": "purple"
+              }
+            }
+          ],
+          "text": "roxo"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "textAlign": null
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Cor e idioma: "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtTextColor",
+              "attrs": {
+                "color": "blue"
+              }
+            },
+            {
+              "type": "rtLang",
+              "attrs": {
+                "lang": "en",
+                "dir": null
+              }
+            }
+          ],
+          "text": "hello"
+        },
+        {
+          "type": "text",
+          "text": "; direção: "
+        },
+        {
+          "type": "text",
+          "marks": [
+            {
+              "type": "rtLang",
+              "attrs": {
+                "lang": "ar",
+                "dir": "rtl"
+              }
+            }
+          ],
+          "text": "مرحبا"
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "type": "codeBlock",
+      "attrs": {
+        "language": "javascript"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "const a = 1;\nconsole.log(a < 2);"
+        }
+      ]
+    },
+    {
+      "type": "codeBlock",
+      "attrs": {
+        "language": null
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "texto puro\n  recuado"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "content": [
+        {
+          "type": "tableRow",
+          "content": [
+            {
+              "type": "tableHeader",
+              "attrs": {
+                "colspan": 1,
+                "rowspan": 1,
+                "scope": "col",
+                "colwidth": [
+                  200
+                ]
+              },
+              "content": [
+                {
+                  "type": "paragraph",
+                  "attrs": {
+                    "textAlign": null
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Nome"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "tableHeader",
+              "attrs": {
+                "colspan": 2,
+                "rowspan": 1,
+                "scope": "col",
+                "colwidth": null
+              },
+              "content": [
+                {
+                  "type": "paragraph",
+                  "attrs": {
+                    "textAlign": null
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Valores"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "tableRow",
+          "content": [
+            {
+              "type": "tableCell",
+              "attrs": {
+                "colspan": 3,
+                "rowspan": 1,
+                "colwidth": null
+              },
+              "content": [
+                {
+                  "type": "paragraph",
+                  "attrs": {
+                    "textAlign": null
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Célula mesclada"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "tableRow",
+          "content": [
+            {
+              "type": "tableHeader",
+              "attrs": {
+                "colspan": 1,
+                "rowspan": 2,
+                "scope": "row",
+                "colwidth": null
+              },
+              "content": [
+                {
+                  "type": "paragraph",
+                  "attrs": {
+                    "textAlign": null
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Grupo"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "tableCell",
+              "attrs": {
+                "colspan": 1,
+                "rowspan": 2,
+                "colwidth": null
+              },
+              "content": [
+                {
+                  "type": "paragraph",
+                  "attrs": {
+                    "textAlign": null
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "a"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "tableCell",
+              "attrs": {
+                "colspan": 1,
+                "rowspan": 1,
+                "colwidth": null
+              },
+              "content": [
+                {
+                  "type": "paragraph",
+                  "attrs": {
+                    "textAlign": null
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "b"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "tableRow",
+          "content": [
+            {
+              "type": "tableCell",
+              "attrs": {
+                "colspan": 1,
+                "rowspan": 1,
+                "colwidth": null
+              },
+              "content": [
+                {
+                  "type": "paragraph",
+                  "attrs": {
+                    "textAlign": null
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "c"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "rtTaskList",
+      "content": [
+        {
+          "type": "rtTaskItem",
+          "attrs": {
+            "checked": true
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "Tarefa feita"
+            }
+          ]
+        },
+        {
+          "type": "rtTaskItem",
+          "attrs": {
+            "checked": false
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "Tarefa pendente"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "rtImage",
+      "attrs": {
+        "src": "https://example.com/a.jpg",
+        "alt": "Foto A",
+        "width": 1200,
+        "height": 800,
+        "srcset": "https://example.com/a-600.jpg 600w, https://example.com/a-1200.jpg 1200w",
+        "sizes": "(max-width: 600px) 100vw, 600px",
+        "align": "left",
+        "caption": "Legenda A",
+        "credit": "Foto: Fulana"
+      }
+    },
+    {
+      "type": "rtImage",
+      "attrs": {
+        "src": "/img/b.png",
+        "alt": "Foto B",
+        "width": null,
+        "height": null,
+        "srcset": null,
+        "sizes": null,
+        "align": "center",
+        "caption": "Só legenda",
+        "credit": ""
+      }
+    },
+    {
+      "type": "rtImage",
+      "attrs": {
+        "src": "https://example.com/c.jpg",
+        "alt": "Foto C",
+        "width": 400,
+        "height": 300,
+        "srcset": null,
+        "sizes": null,
+        "align": "right",
+        "caption": "",
+        "credit": "Foto: Beltrano"
+      }
+    },
+    {
+      "type": "rtImage",
+      "attrs": {
+        "src": "https://example.com/d.jpg",
+        "alt": "",
+        "width": 1600,
+        "height": 400,
+        "srcset": null,
+        "sizes": null,
+        "align": "full",
+        "caption": "",
+        "credit": ""
+      }
+    },
+    {
+      "type": "rtVideo",
+      "attrs": {
+        "src": "https://example.com/v.mp4",
+        "width": 640,
+        "height": 360,
+        "poster": "https://example.com/v.jpg",
+        "preload": "metadata",
+        "tracks": [
+          {
+            "kind": "captions",
+            "src": "https://example.com/v.pt.vtt",
+            "srclang": "pt-BR",
+            "label": "Português",
+            "default": true
+          },
+          {
+            "kind": "subtitles",
+            "src": "https://example.com/v.en.vtt",
+            "srclang": "en",
+            "label": "English",
+            "default": false
+          }
+        ],
+        "caption": "Vídeo enviado"
+      }
+    },
+    {
+      "type": "rtEmbed",
+      "attrs": {
+        "provider": "youtube",
+        "src": "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+        "title": "YouTube",
+        "width": 560,
+        "height": 315,
+        "aspectRatio": "16 / 9",
+        "caption": "Vídeo do YouTube"
+      }
+    },
+    {
+      "type": "rtEmbed",
+      "attrs": {
+        "provider": "youtube",
+        "src": "https://www.youtube-nocookie.com/embed/aqz-KE-bpKQ",
+        "title": "YouTube",
+        "width": 315,
+        "height": 560,
+        "aspectRatio": "9 / 16",
+        "caption": ""
+      }
+    },
+    {
+      "type": "rtEmbed",
+      "attrs": {
+        "provider": "vimeo",
+        "src": "https://player.vimeo.com/video/76979871",
+        "title": "Vimeo",
+        "width": 640,
+        "height": 360,
+        "aspectRatio": "16 / 9",
+        "caption": "Vídeo do Vimeo"
+      }
+    },
+    {
+      "type": "rtEmbed",
+      "attrs": {
+        "provider": "spotify",
+        "src": "https://open.spotify.com/embed/track/4uLU6hMCjMI75M1A2tKUQC",
+        "title": "Spotify",
+        "width": 640,
+        "height": 152,
+        "aspectRatio": null,
+        "caption": ""
+      }
+    },
+    {
+      "type": "rtPullquote",
+      "attrs": {
+        "author": "Fulana de Tal",
+        "role": "editora"
+      },
+      "content": [
+        {
+          "type": "paragraph",
+          "attrs": {
+            "textAlign": null
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "Uma frase marcante."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "rtPullquote",
+      "attrs": {
+        "author": "Beltrano",
+        "role": ""
+      },
+      "content": [
+        {
+          "type": "paragraph",
+          "attrs": {
+            "textAlign": null
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "Só com autor."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "rtPullquote",
+      "attrs": {
+        "author": "",
+        "role": "porta-voz"
+      },
+      "content": [
+        {
+          "type": "paragraph",
+          "attrs": {
+            "textAlign": null
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "Só com cargo."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "rtCallout",
+      "attrs": {
+        "variant": "info"
+      },
+      "content": [
+        {
+          "type": "rtCalloutTitle",
+          "content": [
+            {
+              "type": "text",
+              "text": "Informação"
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "attrs": {
+            "textAlign": null
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "Texto informativo."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "rtCallout",
+      "attrs": {
+        "variant": "success"
+      },
+      "content": [
+        {
+          "type": "rtCalloutTitle",
+          "content": [
+            {
+              "type": "text",
+              "text": "Sucesso"
+            }
+          ]
+        },
+        {
+          "type": "bulletList",
+          "content": [
+            {
+              "type": "listItem",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "attrs": {
+                    "textAlign": null
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Item da caixa"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "rtCallout",
+      "attrs": {
+        "variant": "warning"
+      },
+      "content": [
+        {
+          "type": "rtCalloutTitle",
+          "content": [
+            {
+              "type": "text",
+              "text": "Atenção"
+            }
+          ]
+        },
+        {
+          "type": "orderedList",
+          "attrs": {
+            "start": 1
+          },
+          "content": [
+            {
+              "type": "listItem",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "attrs": {
+                    "textAlign": null
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Passo"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "rtCallout",
+      "attrs": {
+        "variant": "danger"
+      },
+      "content": [
+        {
+          "type": "rtCalloutTitle",
+          "content": [
+            {
+              "type": "text",
+              "text": "Perigo"
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "attrs": {
+            "textAlign": null
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "Não faça isso."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "rtReadAlso",
+      "content": [
+        {
+          "type": "rtReadAlsoTitle",
+          "content": [
+            {
+              "type": "text",
+              "text": "Leia também"
+            }
+          ]
+        },
+        {
+          "type": "rtReadAlsoList",
+          "content": [
+            {
+              "type": "rtReadAlsoItem",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "link",
+                      "attrs": {
+                        "href": "https://example.com/materia-1",
+                        "target": null
+                      }
+                    }
+                  ],
+                  "text": "Primeira matéria"
+                }
+              ]
+            },
+            {
+              "type": "rtReadAlsoItem",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "link",
+                      "attrs": {
+                        "href": "https://example.com/materia-2",
+                        "target": null
+                      }
+                    }
+                  ],
+                  "text": "Segunda matéria"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "orderedList",
+      "attrs": {
+        "start": 3
+      },
+      "content": [
+        {
+          "type": "listItem",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Terceiro"
+                }
+              ]
+            },
+            {
+              "type": "bulletList",
+              "content": [
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "attrs": {
+                        "textAlign": null
+                      },
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "Aninhado"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "listItem",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": null
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Quarto"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "horizontalRule"
+    },
+    {
+      "type": "paragraph",
+      "attrs": {
+        "textAlign": null
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Linha um"
+        },
+        {
+          "type": "hardBreak"
+        },
+        {
+          "type": "text",
+          "text": "linha dois"
+        }
+      ]
+    },
+    {
+      "type": "blockquote",
+      "content": [
+        {
+          "type": "paragraph",
+          "attrs": {
+            "textAlign": null
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "Citação simples."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

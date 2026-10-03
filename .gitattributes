@@ -1,0 +1,3 @@
+# Fixtures de conteúdo comparados byte a byte (spec 03b, §7.2): LF em todo checkout,
+# inclusive com core.autocrlf=true no Windows.
+fixtures/content/** text eol=lf
