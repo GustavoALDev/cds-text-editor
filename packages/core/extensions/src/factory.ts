@@ -1,6 +1,7 @@
 import type { AnyExtension } from '@tiptap/core';
 import { Dropcursor, Gapcursor, UndoRedo } from '@tiptap/extensions';
 import { createBaseExtensions } from './base';
+import { createColorExtensions } from './colors';
 import { createContentExtension } from './content';
 import { createExtensionContext } from './context';
 import { createLinkExtension } from './link';
@@ -19,6 +20,9 @@ export function createEditorExtensions(
     createContentExtension(ctx),
     ...createBaseExtensions(ctx),
     createLinkExtension(ctx),
+    ...(ctx.schema.features.includes('colors')
+      ? createColorExtensions(ctx)
+      : []),
     UndoRedo.configure(),
     Dropcursor.configure(),
     Gapcursor.configure(),
