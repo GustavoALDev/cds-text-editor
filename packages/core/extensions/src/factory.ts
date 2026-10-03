@@ -1,9 +1,12 @@
 import type { AnyExtension } from '@tiptap/core';
 import { Dropcursor, Gapcursor, UndoRedo } from '@tiptap/extensions';
 import { createBaseExtensions } from './base';
+import { createCodeBlockExtension } from './code-block';
 import { createColorExtensions } from './colors';
 import { createContentExtension } from './content';
 import { createExtensionContext } from './context';
+import type { RteExtensionContext } from './context';
+import { createHighlightPlugin } from './highlight';
 import { createLinkExtension } from './link';
 import type { RteEditorOptions } from './types';
 
@@ -23,6 +26,7 @@ export function createEditorExtensions(
     ...(ctx.schema.features.includes('colors')
       ? createColorExtensions(ctx)
       : []),
+    ...(ctx.schema.features.includes('code') ? [createCodeBlock(ctx)] : []),
     UndoRedo.configure(),
     Dropcursor.configure(),
     Gapcursor.configure(),
@@ -30,6 +34,15 @@ export function createEditorExtensions(
   ];
   assertUniqueNames(list);
   return list;
+}
+
+/** `codeBlock` com o plugin de realce (um `lowlight` por editor, B15). */
+function createCodeBlock(ctx: RteExtensionContext): AnyExtension {
+  return createCodeBlockExtension(ctx).extend({
+    addProseMirrorPlugins() {
+      return [...(this.parent?.() ?? []), createHighlightPlugin(ctx)];
+    },
+  });
 }
 
 function assertUniqueNames(list: readonly AnyExtension[]): void {
