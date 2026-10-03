@@ -46,6 +46,17 @@ function ref(doc: ProseMirrorNode, labels?: RteContentLabelsSource) {
 const docOf = (html: string) => createTestEditor({}, html).state.doc;
 
 describe('getRteTextStats', () => {
+  it('labels que lança vale como ausente (en)', () => {
+    const doc = docOf(
+      '<aside class="rt-callout rt-callout--warning"><p class="rt-callout__title"></p><p>corpo</p></aside>',
+    );
+    const bad: RteContentLabelsSource = () => {
+      throw new Error('falha');
+    };
+    expect(() => getRteTextStats(doc, { labels: bad })).not.toThrow();
+    expect(getRteTextStats(doc, { labels: bad })).toEqual(ref(doc));
+  });
+
   it('fixture all-features: igual a htmlToText(serializeRteHtml)', () => {
     const doc = createTestEditor(
       { codeLanguages: RTE_CODE_LANGUAGES },

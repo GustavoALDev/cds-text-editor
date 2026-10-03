@@ -59,6 +59,23 @@ export const RTE_CONTENT_LABELS: Readonly<
   ),
 });
 
+/** Função que lança ou não devolve objeto vale como ausente (lição 4). */
+function readSource(
+  source: RteContentLabelsSource | undefined,
+): Partial<RteContentLabels> | undefined {
+  let value: unknown = source;
+  if (typeof source === 'function') {
+    try {
+      value = source();
+    } catch {
+      return undefined;
+    }
+  }
+  return value !== null && typeof value === 'object'
+    ? (value as Partial<RteContentLabels>)
+    : undefined;
+}
+
 /**
  * Resolve a fonte de rótulos sobre `en`. Uma fonte por função é chamada a
  * cada resolução; `calloutTitles` é mesclado variante a variante. Só chaves
@@ -68,8 +85,7 @@ export function resolveContentLabels(
   source?: RteContentLabelsSource,
 ): RteContentLabels {
   const base = RTE_CONTENT_LABELS.en;
-  const partial: Partial<RteContentLabels> | undefined =
-    typeof source === 'function' ? source() : source;
+  const partial = readSource(source);
   const titles = { ...base.calloutTitles };
   const given: unknown = partial?.calloutTitles;
   if (given !== null && typeof given === 'object') {

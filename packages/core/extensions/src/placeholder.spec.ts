@@ -116,6 +116,22 @@ describe('placeholder dos títulos de caixa', () => {
     ).toBe('Atención');
   });
 
+  it('labels que lança vale como ausente (en), sem exceção', () => {
+    const editor = make(
+      {
+        labels: () => {
+          throw new Error('falha');
+        },
+      },
+      CALLOUT,
+    );
+    const title = () => editor.view.dom.querySelector('p.rt-callout__title');
+    expect(title()?.getAttribute('data-placeholder')).toBe('Warning');
+    expect(() => touch(editor)).not.toThrow();
+    expect(title()?.getAttribute('data-placeholder')).toBe('Warning');
+    expect(getRteHtml(editor)).toContain('Warning');
+  });
+
   it('Leia também vazio, sem labels', () => {
     const editor = make(
       {},
