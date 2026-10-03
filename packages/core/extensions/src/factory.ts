@@ -14,6 +14,7 @@ import { createMediaExtensions } from './media';
 import { createNewsBlockExtensions } from './news-blocks';
 import { createPlaceholderExtension } from './placeholder';
 import { createSearchExtension } from './search';
+import { createSlashCommandExtension } from './slash';
 import { createTableExtensions } from './tables';
 import { createTaskExtensions } from './tasks';
 import type { RteEditorOptions } from './types';
@@ -57,6 +58,9 @@ export function createEditorExtensions(
     createPlaceholderExtension(ctx, options.placeholder),
     createCharLimitExtension(ctx, options.charLimit),
     ...(options.features?.search !== false ? [createSearchExtension(ctx)] : []),
+    ...(options.features?.slashCommands !== false
+      ? [createSlashCommandExtension(ctx, options.slash)]
+      : []),
     ...(options.extensions ?? []),
   ];
   assertUniqueNames(list);

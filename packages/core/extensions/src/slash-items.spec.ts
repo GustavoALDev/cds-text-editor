@@ -146,6 +146,29 @@ describe('resolveSlashItems', () => {
     ).toThrow(/dup/);
   });
 
+  it('entrada que não é objeto ou resultado que não é array lança TypeError em pt-BR', () => {
+    const ctx = createExtensionContext();
+    for (const entry of [null, undefined, 1, 'a']) {
+      const call = () =>
+        resolveSlashItems(ctx, [entry as unknown as RteSlashItem]);
+      expect(call).toThrow(TypeError);
+      expect(call).toThrow(/^slash\.items: item inválido/);
+    }
+    for (const result of [null, undefined, 'abc', { id: 'x' }]) {
+      const call = () =>
+        resolveSlashItems(
+          ctx,
+          () => result as unknown as readonly RteSlashItem[],
+        );
+      expect(call).toThrow(TypeError);
+      expect(call).toThrow(/^slash\.items: esperava um array/);
+    }
+    const notArray = { id: 'x' } as unknown as readonly RteSlashItem[];
+    expect(() => resolveSlashItems(ctx, notArray)).toThrow(
+      /^slash\.items: esperava um array/,
+    );
+  });
+
   it('constructor é aceito e o título é o próprio id', () => {
     const ctx = createExtensionContext();
     const item: RteSlashItem = { id: 'constructor' };

@@ -83,6 +83,7 @@ describe('createEditorExtensions: lista e ordem', () => {
       'rtPlaceholder',
       'rtCharLimit',
       'rtSearch',
+      'rtSlashCommand',
     ]);
   });
 
@@ -124,6 +125,7 @@ describe('createEditorExtensions: lista e ordem', () => {
       'rtPlaceholder',
       'rtCharLimit',
       'rtSearch',
+      'rtSlashCommand',
     ]);
   });
 
@@ -135,12 +137,13 @@ describe('createEditorExtensions: lista e ordem', () => {
       'rtPlaceholder',
       'rtCharLimit',
       'rtSearch',
+      'rtSlashCommand',
       'extra',
     ]);
     expect(list[list.length - 1]).toBe(extra);
   });
 
-  it('search registra rtSearch; slashCommands é aceito e ignorado', () => {
+  it('search registra rtSearch; slashCommands registra rtSlashCommand', () => {
     const names = createEditorExtensions({
       features: { ...OFF, search: true, slashCommands: true },
     }).map((e) => e.name);
@@ -149,6 +152,7 @@ describe('createEditorExtensions: lista e ordem', () => {
       'rtPlaceholder',
       'rtCharLimit',
       'rtSearch',
+      'rtSlashCommand',
     ]);
   });
 });

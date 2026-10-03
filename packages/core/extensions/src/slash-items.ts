@@ -202,6 +202,12 @@ function availableDefaults(ctx: RteExtensionContext): readonly RteSlashItem[] {
   });
 }
 
+function kindOf(value: unknown): string {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
+}
+
 /**
  * Itens do menu: os embutidos disponíveis (por recurso) e, se houver, o
  * `items` do consumidor aplicado. `TypeError` para `id` inválido ou repetido.
@@ -217,9 +223,19 @@ export function resolveSlashItems(
       : typeof items === 'function'
         ? items(defaults)
         : items;
+  if (!Array.isArray(result)) {
+    throw new TypeError(
+      `slash.items: esperava um array de itens (recebido ${kindOf(result)})`,
+    );
+  }
   const seen = new Set<string>();
-  for (const entry of result) {
-    const id: unknown = entry.id;
+  for (const entry of result as readonly unknown[]) {
+    if (typeof entry !== 'object' || entry === null) {
+      throw new TypeError(
+        `slash.items: item inválido (${kindOf(entry)}); use um objeto com id`,
+      );
+    }
+    const id: unknown = (entry as { id?: unknown }).id;
     if (typeof id !== 'string' || !ID_PATTERN.test(id)) {
       throw new TypeError(
         `slash.items: id inválido (${JSON.stringify(id)}); use ${ID_PATTERN.source}`,
