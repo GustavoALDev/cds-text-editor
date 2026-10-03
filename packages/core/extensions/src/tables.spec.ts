@@ -2,6 +2,7 @@
 import { Extension } from '@tiptap/core';
 import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
 import { EditorState, Plugin } from '@tiptap/pm/state';
+import { CellSelection } from '@tiptap/pm/tables';
 import { afterEach, describe, expect, it } from 'vitest';
 import { validateHtml } from '../../html/src/validate-html';
 import { createEditorExtensions } from './factory';
@@ -293,6 +294,87 @@ describe('tabelas: canonização sem laço com o fixTables', () => {
     },
     5000,
   );
+});
+
+describe('tabelas: colspan > 100 criado por comando não trava', () => {
+  // `colwidth` de cada célula: null ou uma largura por coluna coberta.
+  function expectCoherent(editor: ReturnType<typeof editorWith>) {
+    editor.state.doc.check();
+    editor.state.doc.descendants((node) => {
+      if (node.type.name !== 'tableCell') return true;
+      const colwidth = node.attrs['colwidth'] as number[] | null;
+      if (colwidth !== null) {
+        expect(colwidth).toHaveLength(node.attrs['colspan'] as number);
+      }
+      return true;
+    });
+    expect(
+      validateHtml(getRteHtml(editor), editor.storage.rtContent.schema, {
+        mode: 'canonical',
+      }),
+    ).toEqual([]);
+  }
+
+  // 1ª linha: célula de colspan 100 (colunas de 50px e 60px) + coluna de
+  // 120px; 2ª linha: célula simples + célula de colspan 100 (60px na 1ª).
+  // A 2ª coluna com largura em outra linha faz o fixTables reescrever o
+  // colwidth da célula alargada com o comprimento do colspan real.
+  const TABLE =
+    '<table><tbody><tr><td colspan="100" colwidth="50,60"><p>a</p></td><td colwidth="120"><p>b</p></td></tr>' +
+    '<tr><td><p>c</p></td><td colspan="100" colwidth="60"><p>d</p></td></tr></tbody></table>';
+
+  function setup() {
+    const { extension, arm } = watchdog();
+    const editor = createTestEditor(
+      { features: ONLY_TABLES, extensions: [extension] },
+      TABLE,
+    );
+    const text = (t: string) => {
+      let pos = -1;
+      editor.state.doc.descendants((node, p) => {
+        if (node.isText && node.text === t) pos = p;
+      });
+      return pos;
+    };
+    const cell = (t: string) => editor.state.doc.resolve(text(t)).before(-1);
+    return { editor, arm, text, cell };
+  }
+
+  it('addColumnAfter alarga a célula de colspan 100 para 101 e converge', () => {
+    const { editor, arm, text } = setup();
+    arm();
+    editor.commands.setTextSelection(text('c'));
+    arm();
+    expect(editor.commands.addColumnAfter()).toBe(true);
+    const spans: number[] = [];
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === 'tableCell') {
+        spans.push(node.attrs['colspan'] as number);
+      }
+    });
+    expect(spans).toEqual([101, 1, 1, 1, 100]);
+    expectCoherent(editor);
+  }, 10000);
+
+  it('mergeCells cobrindo 101 colunas converge', () => {
+    const { editor, arm, cell } = setup();
+    arm();
+    editor.view.dispatch(
+      editor.state.tr.setSelection(
+        CellSelection.create(editor.state.doc, cell('a'), cell('b')),
+      ),
+    );
+    arm();
+    expect(editor.commands.mergeCells()).toBe(true);
+    const spans: number[] = [];
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === 'tableCell') {
+        spans.push(node.attrs['colspan'] as number);
+      }
+    });
+    expect(spans[0]).toBe(101);
+    expectCoherent(editor);
+  }, 10000);
 });
 
 describe('tabelas: intervalos do lote mapeados ao documento final', () => {

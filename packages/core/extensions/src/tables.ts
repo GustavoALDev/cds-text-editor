@@ -26,6 +26,18 @@ function span(value: unknown): number {
     : 1;
 }
 
+/**
+ * `colspan` real de um nó do documento: inteiro ≥ 1, sem o teto de 100.
+ * Comandos (`addColumnAfter`, `mergeCells`) podem criar colspan > 100, e o
+ * `fixTables` escreve `colwidth` com esse comprimento; cortar no teto faria
+ * os dois se alternarem para sempre. Entrada externa continua em `span()`.
+ */
+function nodeSpan(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1
+    ? value
+    : 1;
+}
+
 /** Largura em px limitada a 1–9999; 0 = sem largura (valor inválido ou < 1). */
 function width(value: unknown): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
@@ -157,6 +169,9 @@ function renderColgroup(node: ProseMirrorNode) {
   const cols: ['col', Record<string, string>][] = [];
   let any = false;
   row.forEach((cell) => {
+    // `span()`, não `nodeSpan()`: o `colspan` sai pelo mesmo `span()` (> 100
+    // vira 1), e os `col` precisam somar o que a saída declara para o HTML
+    // seguir válido e coerente com o próprio colgroup.
     const colspan = span(cell.attrs['colspan']);
     const widths = canonicalColwidth(cell.attrs['colwidth'], colspan);
     for (let i = 0; i < colspan; i += 1) {
@@ -202,7 +217,10 @@ function clampWidthsPlugin(): Plugin {
         table?.descendants((node, offset) => {
           if (!isCell(node)) return true;
           const current: unknown = node.attrs['colwidth'];
-          const canon = canonicalColwidth(current, span(node.attrs['colspan']));
+          const canon = canonicalColwidth(
+            current,
+            nodeSpan(node.attrs['colspan']),
+          );
           if (JSON.stringify(canon) !== JSON.stringify(current)) {
             fixes.set(tablePos + 1 + offset, canon);
           }
