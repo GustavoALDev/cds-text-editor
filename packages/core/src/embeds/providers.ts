@@ -1,5 +1,12 @@
 import type { RteEmbedProvider } from '../schema/types';
 
+/** Congela o provedor e seus arrays: a allowlist padrão não pode ser ampliada em tempo de execução. */
+function freezeProvider(p: RteEmbedProvider): RteEmbedProvider {
+  Object.freeze(p.hosts);
+  Object.freeze(p.srcPatterns);
+  return Object.freeze(p);
+}
+
 /** Interpreta `URL` sem lançar; só aceita `https:`. */
 function parseHttps(url: string): URL | null {
   try {
@@ -53,7 +60,7 @@ function youtubeParts(
   return { id, short, start };
 }
 
-export const YOUTUBE_PROVIDER: RteEmbedProvider = {
+export const YOUTUBE_PROVIDER: RteEmbedProvider = freezeProvider({
   id: 'youtube',
   name: 'YouTube',
   hosts: ['www.youtube-nocookie.com'],
@@ -69,7 +76,7 @@ export const YOUTUBE_PROVIDER: RteEmbedProvider = {
       aspectRatio: p.short ? '9 / 16' : '16 / 9',
     };
   },
-};
+});
 
 function vimeoId(url: string): string | null {
   const u = parseHttps(url);
@@ -84,7 +91,7 @@ function vimeoId(url: string): string | null {
   return id !== undefined && /^\d{1,12}$/.test(id) ? id : null;
 }
 
-export const VIMEO_PROVIDER: RteEmbedProvider = {
+export const VIMEO_PROVIDER: RteEmbedProvider = freezeProvider({
   id: 'vimeo',
   name: 'Vimeo',
   hosts: ['player.vimeo.com'],
@@ -96,7 +103,7 @@ export const VIMEO_PROVIDER: RteEmbedProvider = {
       ? null
       : { src: `https://player.vimeo.com/video/${id}`, aspectRatio: '16 / 9' };
   },
-};
+});
 
 function spotifyParts(url: string): { type: string; id: string } | null {
   const u = parseHttps(url);
@@ -110,7 +117,7 @@ function spotifyParts(url: string): { type: string; id: string } | null {
   return /^[A-Za-z0-9]{22}$/.test(id) ? { type, id } : null;
 }
 
-export const SPOTIFY_PROVIDER: RteEmbedProvider = {
+export const SPOTIFY_PROVIDER: RteEmbedProvider = freezeProvider({
   id: 'spotify',
   name: 'Spotify',
   hosts: ['open.spotify.com'],
@@ -126,13 +133,31 @@ export const SPOTIFY_PROVIDER: RteEmbedProvider = {
       height: p.type === 'track' || p.type === 'episode' ? 152 : 352,
     };
   },
-};
+});
 
-export const DEFAULT_EMBED_PROVIDERS: readonly RteEmbedProvider[] = [
-  YOUTUBE_PROVIDER,
-  VIMEO_PROVIDER,
-  SPOTIFY_PROVIDER,
-];
+export const DEFAULT_EMBED_PROVIDERS: readonly RteEmbedProvider[] =
+  Object.freeze([YOUTUBE_PROVIDER, VIMEO_PROVIDER, SPOTIFY_PROVIDER]);
+
+const IPV4 = /^\d{1,3}(\.\d{1,3}){3}$/;
+
+function checkHost(id: string, host: unknown): void {
+  const fail = (motivo: string): never => {
+    throw new TypeError(
+      `Provedor de embed "${id}": host "${String(host)}" recusado (${motivo}).`,
+    );
+  };
+  if (typeof host !== 'string') return fail('precisa ser texto');
+  const h = host.toLowerCase();
+  const name = h.startsWith('*.') ? h.slice(2) : h;
+  if (name.includes('*')) return fail('curinga só é aceito como prefixo "*."');
+  if (h.startsWith('[') || name.includes(':')) return fail('IPv6 não é aceito');
+  if (!name.includes('.')) return fail('precisa ter ponto');
+  if (name.split('.').some((label) => label === ''))
+    return fail('rótulo vazio');
+  if (IPV4.test(name)) return fail('IP literal não é aceito');
+  if (name === 'localhost' || name.endsWith('.localhost'))
+    return fail('localhost não é aceito');
+}
 
 /**
  * Recusa provedores inseguros: `sandbox` com `allow-scripts` + `allow-same-origin`
@@ -144,20 +169,26 @@ export function assertEmbedProvider(p: RteEmbedProvider): void {
       `Provedor de embed "${p.id}": "hosts" não pode ser vazio.`,
     );
   }
-  for (const host of p.hosts) {
-    if (
-      typeof host !== 'string' ||
-      !host.includes('.') ||
-      host.toLowerCase() === 'localhost'
-    ) {
-      throw new TypeError(
-        `Provedor de embed "${p.id}": host "${String(host)}" recusado (precisa ter ponto e não pode ser localhost).`,
-      );
-    }
-  }
+  for (const host of p.hosts) checkHost(p.id, host);
   if (!Array.isArray(p.srcPatterns) || p.srcPatterns.length === 0) {
     throw new TypeError(
       `Provedor de embed "${p.id}": "srcPatterns" é obrigatório.`,
     );
+  }
+  for (const pat of p.srcPatterns) {
+    let ok =
+      typeof pat === 'string' && pat.startsWith('^') && pat.endsWith('$');
+    if (ok) {
+      try {
+        new RegExp(pat);
+      } catch {
+        ok = false;
+      }
+    }
+    if (!ok) {
+      throw new TypeError(
+        `Provedor de embed "${p.id}": srcPattern "${String(pat)}" precisa ser uma regex válida ancorada (^…$).`,
+      );
+    }
   }
 }

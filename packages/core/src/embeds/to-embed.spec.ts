@@ -176,7 +176,7 @@ describe('revalidação e provedores do consumidor', () => {
   });
 });
 
-describe('assertEmbedProvider', () => {
+describe('assertEmbedProvider (endurecido)', () => {
   const base = YOUTUBE_PROVIDER;
   it('aceita os padrões', () => {
     for (const p of DEFAULT_EMBED_PROVIDERS)
@@ -187,10 +187,7 @@ describe('assertEmbedProvider', () => {
       SPOTIFY_PROVIDER,
     ]);
   });
-  it('recusa hosts sem ponto, localhost e srcPatterns vazio', () => {
-    expect(() =>
-      assertEmbedProvider({ ...base, hosts: ['localhost'] }),
-    ).toThrow(TypeError);
+  it('recusa intranet e listas vazias', () => {
     expect(() => assertEmbedProvider({ ...base, hosts: ['intranet'] })).toThrow(
       TypeError,
     );
@@ -200,5 +197,55 @@ describe('assertEmbedProvider', () => {
     expect(() => assertEmbedProvider({ ...base, hosts: [] })).toThrow(
       TypeError,
     );
+  });
+  const bad = (hosts: string[]) =>
+    expect(() => assertEmbedProvider({ ...base, hosts })).toThrow(TypeError);
+  it('recusa hosts perigosos', () => {
+    for (const h of [
+      '*.com',
+      '*.localhost',
+      'localhost',
+      'a.localhost',
+      '127.0.0.1',
+      '[::1]',
+      '.',
+      'a..b',
+      '.a.com',
+      'a.com.',
+      '*.',
+      'a.*.com',
+    ])
+      bad([h]);
+  });
+  it('aceita curinga com domínio real', () => {
+    expect(() =>
+      assertEmbedProvider({ ...base, hosts: ['*.example.com'] }),
+    ).not.toThrow();
+  });
+  it('recusa srcPatterns sem âncora ou inválidos', () => {
+    for (const p of ['https://', '^https://a', 'https://a$', '^(', '', '.*'])
+      expect(() => assertEmbedProvider({ ...base, srcPatterns: [p] })).toThrow(
+        TypeError,
+      );
+  });
+  it('toEmbed ignora provedor com curinga amplo', () => {
+    const evil: RteEmbedProvider = {
+      id: 'evil',
+      name: 'Evil',
+      hosts: ['*.com'],
+      srcPatterns: ['https://'],
+      match: () => true,
+      toEmbed: () => ({ src: 'https://evil.com/a?autoplay=1' }),
+    };
+    expect(toEmbed('https://x.com/', [evil])).toBeNull();
+  });
+  it('provedores padrão são imutáveis', () => {
+    for (const p of [...DEFAULT_EMBED_PROVIDERS]) {
+      expect(Object.isFrozen(p)).toBe(true);
+      expect(Object.isFrozen(p.hosts)).toBe(true);
+      expect(Object.isFrozen(p.srcPatterns)).toBe(true);
+    }
+    expect(Object.isFrozen(DEFAULT_EMBED_PROVIDERS)).toBe(true);
+    expect(() => YOUTUBE_PROVIDER.hosts.push('evil.com')).toThrow(TypeError);
   });
 });
