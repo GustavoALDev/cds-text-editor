@@ -1,4 +1,6 @@
+import { getFeatureElements } from './get-html-schema';
 import type {
+  RteFeatureId,
   RteAttrRule,
   RteAttrSpec,
   RteElementSpec,
@@ -38,7 +40,9 @@ function urlRule(r: RteUrlRule): string {
 function ruleSummary(r: RteAttrRule): string {
   switch (r.kind) {
     case 'enum':
-      return `enum: ${r.values.join(' | ')}`;
+      return r.values.length === 1
+        ? `valor fixo: "${r.values[0]}"`
+        : `enum: ${r.values.join(' | ')}`;
     case 'pattern':
       return `padrão: ${r.pattern} (até ${r.maxLength})`;
     case 'int':
@@ -58,8 +62,11 @@ function ruleSummary(r: RteAttrRule): string {
 
 function attrLine(name: string, spec: RteAttrSpec): string {
   let text = `${name}: ${ruleSummary(spec.rule)}`;
+  if (spec.rule.kind === 'bool' && spec.required && spec.default === '')
+    return code(`${name}: sempre presente`);
   if (spec.required) text += ' [obrigatório]';
-  if (spec.default !== undefined) text += ` [padrão: ${spec.default}]`;
+  if (spec.default !== undefined && spec.default !== '')
+    text += ` [padrão: ${spec.default}]`;
   return code(text);
 }
 
@@ -124,7 +131,12 @@ function table(header: string[], rows: string[][]): string[] {
 }
 
 /** Markdown (pt-BR) do esquema: uma seção por recurso e as paletas. Determinístico. */
-export function renderHtmlSchemaMarkdown(schema: RteHtmlSchema): string {
+export function renderHtmlSchemaMarkdown(
+  schema: RteHtmlSchema,
+  featureElements: Partial<
+    Record<RteFeatureId, Record<string, RteElementSpec>>
+  > = getFeatureElements(),
+): string {
   const out: string[] = [
     '# Esquema de HTML aceito',
     '',
@@ -135,8 +147,9 @@ export function renderHtmlSchemaMarkdown(schema: RteHtmlSchema): string {
   ];
   for (const [feature, tags] of Object.entries(schema.byFeature)) {
     out.push(`## ${TITLES[feature] ?? feature}`, '');
+    const own = featureElements[feature as RteFeatureId] ?? {};
     const rows = (tags ?? []).map((tag) => {
-      const spec = schema.elements[tag] ?? { attributes: {} };
+      const spec = own[tag] ?? schema.elements[tag] ?? { attributes: {} };
       return [
         code(`<${tag}>`),
         cell(attributeLines(spec)),

@@ -219,20 +219,14 @@ const BUILDERS: [RteFeatureId, Builder][] = [
   ['newsBlocks', newsBlocksFeature],
 ];
 
-/**
- * Esquema declarativo do HTML aceito (spec 03a, seção 5): só dados,
- * congelado em profundidade e serializável em JSON. Lança `RangeError` para
- * `idPrefix` inválido e `TypeError` para provedor, host ou `forceRel` inválidos.
- */
-export function getHtmlSchema(
-  options: RteHtmlSchemaOptions = {},
-): RteHtmlSchema {
+/** Contexto de recursos a partir das opções (validando-as). */
+function buildContext(options: RteHtmlSchemaOptions): FeatureContext {
   const idPrefix = options.idPrefix ?? DEFAULT_ID_PREFIX;
   assertIdPrefix(idPrefix);
   const providers = options.embedProviders ?? DEFAULT_EMBED_PROVIDERS;
   checkProviders(providers);
 
-  const ctx: FeatureContext = {
+  return {
     idPrefix,
     mediaHosts: normalizeHosts('mediaHosts', options.mediaHosts),
     allowRelativeMedia: options.allowRelativeMedia ?? true,
@@ -250,6 +244,31 @@ export function getHtmlSchema(
     textColors: RTE_TEXT_COLORS,
     highlightColors: RTE_HIGHLIGHT_COLORS,
   };
+}
+
+/**
+ * Elementos de cada recurso isoladamente (sem a união), para a documentação.
+ * Interno: não exportado pelo `index.ts`.
+ */
+export function getFeatureElements(
+  options: RteHtmlSchemaOptions = {},
+): Partial<Record<RteFeatureId, Elements>> {
+  const ctx = buildContext(options);
+  const out: Partial<Record<RteFeatureId, Elements>> = {};
+  for (const [id, build] of BUILDERS) out[id] = build(ctx);
+  return out;
+}
+
+/**
+ * Esquema declarativo do HTML aceito (spec 03a, seção 5): só dados,
+ * congelado em profundidade e serializável em JSON. Lança `RangeError` para
+ * `idPrefix` inválido e `TypeError` para provedor, host ou `forceRel` inválidos.
+ */
+export function getHtmlSchema(
+  options: RteHtmlSchemaOptions = {},
+): RteHtmlSchema {
+  const idPrefix = options.idPrefix ?? DEFAULT_ID_PREFIX;
+  const ctx = buildContext(options);
 
   const enabled = options.features ?? {};
   const features: RteFeatureId[] = [];
