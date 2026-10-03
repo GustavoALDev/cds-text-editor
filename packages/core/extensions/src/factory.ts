@@ -1,9 +1,9 @@
 import type { AnyExtension } from '@tiptap/core';
-import { Link } from '@tiptap/extension-link';
 import { Dropcursor, Gapcursor, UndoRedo } from '@tiptap/extensions';
 import { createBaseExtensions } from './base';
 import { createContentExtension } from './content';
 import { createExtensionContext } from './context';
+import { createLinkExtension } from './link';
 import type { RteEditorOptions } from './types';
 
 /**
@@ -18,12 +18,7 @@ export function createEditorExtensions(
   const list: AnyExtension[] = [
     createContentExtension(ctx),
     ...createBaseExtensions(ctx),
-    // Provisório: a Tarefa 5 troca pelo Link estendido com a política (B14).
-    Link.configure({
-      openOnClick: false,
-      defaultProtocol: 'https',
-      HTMLAttributes: { target: null, rel: null, class: null },
-    }),
+    createLinkExtension(ctx),
     UndoRedo.configure(),
     Dropcursor.configure(),
     Gapcursor.configure(),
