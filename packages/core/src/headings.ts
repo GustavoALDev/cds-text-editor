@@ -10,7 +10,7 @@ const ID_MAX_LENGTH = 80;
  */
 export function slugify(text: string, maxLength = 60): string {
   const slug = String(text)
-    .normalize('NFD')
+    .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -34,10 +34,12 @@ export function createHeadingIds(
     );
   }
   const used = new Set<string>();
+  const next = new Map<string, number>();
   return (text: string): string => {
     const base = prefix + (slugify(text) || fallback);
     let id = base;
-    for (let n = 2; used.has(id); n++) {
+    for (let n = next.get(base) ?? 2; used.has(id); n++) {
+      next.set(base, n + 1);
       const suffix = `-${n}`;
       id =
         base.slice(0, ID_MAX_LENGTH - suffix.length).replace(/-+$/g, '') +

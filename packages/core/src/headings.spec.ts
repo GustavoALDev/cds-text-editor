@@ -12,6 +12,9 @@ describe('slugify', () => {
     expect(slugify('a'.repeat(100))).toHaveLength(60);
     expect(slugify('abc-def', 4)).toBe('abc');
   });
+  it('dobra compatibilidade (largura total, ligaduras)', () => {
+    expect(slugify('ＡＢＣ ﬁm')).toBe('abc-fim');
+  });
   it('sem letras latinas devolve vazio', () => {
     expect(slugify('🚀')).toBe('');
   });
@@ -36,17 +39,22 @@ describe('createHeadingIds', () => {
     expect(() => createHeadingIds({ fallback: '' })).toThrow(RangeError);
     expect(() => createHeadingIds({ prefix: 'X' })).toThrow(RangeError);
   });
-  it('respeita maxLength 80 mesmo com sufixo', () => {
-    const id = createHeadingIds({ prefix: 'abcdefghijklmno-' });
-    const title = 'palavra '.repeat(30);
+  it('respeita maxLength 80 mesmo com sufixo (força o corte)', () => {
+    const prefix = 'abcdefghijklmno-';
+    const id = createHeadingIds({ prefix });
+    const title = 'a'.repeat(100);
+    const base = prefix + 'a'.repeat(60);
     const seen = new Set<string>();
-    for (let i = 0; i < 120; i++) {
+    let trimmed = 0;
+    for (let i = 1; i <= 10000; i++) {
       const v = id(title);
       expect(v.length).toBeLessThanOrEqual(80);
-      expect(v).toMatch(/^[a-z][a-z0-9-]*[a-z0-9]$/);
+      expect(v).toMatch(/^abcdefghijklmno-[a-z0-9]+(?:-[a-z0-9]+)*$/);
       expect(seen.has(v)).toBe(false);
       seen.add(v);
+      if (i > 1 && v.length < base.length + `-${i}`.length) trimmed++;
     }
+    expect(trimmed).toBeGreaterThan(0);
   });
   it('propriedade: ids válidos no esquema e sem repetição', () => {
     const rule = getHtmlSchema().elements['h2']?.attributes['id']?.rule;
