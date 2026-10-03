@@ -4,7 +4,6 @@ import {
 } from '../embeds/providers';
 import {
   type FeatureContext,
-  REL_VALUES,
   baseFeature,
   codeFeature,
   colorsFeature,
@@ -15,6 +14,7 @@ import {
   tablesFeature,
   tasksFeature,
 } from './features';
+import { normalizeHosts, normalizeRelTokens } from './hosts';
 import { DEFAULT_ID_PREFIX, assertIdPrefix } from './id-prefix';
 import { RTE_HIGHLIGHT_COLORS, RTE_TEXT_COLORS } from './palette';
 import type {
@@ -126,60 +126,6 @@ export function mergeElements(a: Elements, b: Elements): Elements {
   return out;
 }
 
-/**
- * Host de configuração na forma comparável: ASCII (punycode), minúsculas,
- * sem ponto final; preserva o curinga `*.` (se permitido). Lança `TypeError` se não for um
- * nome de host.
- */
-function normalizeHost(
-  option: string,
-  host: unknown,
-  allowWildcard: boolean,
-): string {
-  const fail = (): never => {
-    throw new TypeError(`${option}: host "${String(host)}" inválido.`);
-  };
-  if (typeof host !== 'string') return fail();
-  const wildcard = host.startsWith('*.');
-  // Domínio bloqueado já cobre os subdomínios (seção 4.2); curinga deixaria o apex passar.
-  if (!allowWildcard && host.includes('*')) return fail();
-  const name = (wildcard ? host.slice(2) : host).replace(/\.$/, '');
-  if (name === '') return fail();
-  let parsed: string;
-  try {
-    parsed = new URL(`https://${name}/`).hostname.replace(/\.$/, '');
-  } catch {
-    return fail();
-  }
-  // ASCII precisa sair igual (só minúsculas): "a/b", "a:1" ou IPs abreviados são erro.
-  // eslint-disable-next-line no-control-regex
-  if (/^[\x00-\x7f]*$/.test(name) && parsed !== name.toLowerCase())
-    return fail();
-  return wildcard ? `*.${parsed}` : parsed;
-}
-
-function normalizeHosts(
-  option: string,
-  hosts: readonly unknown[] = [],
-  allowWildcard = true,
-): string[] {
-  return union(hosts.map((h) => normalizeHost(option, h, allowWildcard)));
-}
-
-function normalizeForceRel(tokens: readonly unknown[] = []): string[] {
-  const given = new Set<string>();
-  for (const t of tokens) {
-    const v = typeof t === 'string' ? t.trim().toLowerCase() : '';
-    if (!REL_VALUES.includes(v)) {
-      throw new TypeError(
-        `linkPolicy.forceRel: token "${String(t)}" fora de ${REL_VALUES.join(' ')}.`,
-      );
-    }
-    given.add(v);
-  }
-  return REL_VALUES.filter((v) => given.has(v));
-}
-
 const PROVIDER_ID = /^[a-z][a-z0-9-]{0,31}$/;
 
 function checkProviders(providers: readonly RteEmbedProvider[]): void {
@@ -235,7 +181,10 @@ function buildContext(options: RteHtmlSchemaOptions): FeatureContext {
       options.linkPolicy?.blockedDomains,
       false,
     ),
-    forceRel: normalizeForceRel(options.linkPolicy?.forceRel),
+    forceRel: normalizeRelTokens(
+      'linkPolicy.forceRel',
+      options.linkPolicy?.forceRel,
+    ),
     providers,
     providerHosts: normalizeHosts(
       'embedProviders.hosts',

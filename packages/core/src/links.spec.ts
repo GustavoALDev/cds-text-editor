@@ -37,6 +37,21 @@ describe('normalizeHref', () => {
       normalizeHref('a.com', { blockedDomains: ['*.a.com'] }),
     ).toThrow(TypeError);
   });
+  it('blockedDomains IDN bloqueia o href em punycode', () => {
+    expect(
+      normalizeHref('https://exämple.com', { blockedDomains: ['exämple.com'] }),
+    ).toBeNull();
+  });
+  it.each(['evil.com:443', 'evil.com/', '*.evil.com'])(
+    'blockedDomains recusa %j',
+    (d) =>
+      expect(() => normalizeHref('a.com', { blockedDomains: [d] })).toThrow(
+        TypeError,
+      ),
+  );
+  it.each(['javascript', 'data', 'https:'])('protocols %j lança', (p) =>
+    expect(() => normalizeHref('a.com', { protocols: [p] })).toThrow(TypeError),
+  );
   it('política padrão', () => {
     expect(DEFAULT_LINK_POLICY).toEqual({
       protocols: ['https', 'http', 'mailto', 'tel'],

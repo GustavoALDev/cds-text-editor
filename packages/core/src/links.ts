@@ -1,4 +1,5 @@
 import { REL_VALUES } from './schema/features';
+import { normalizeHosts, normalizeRelTokens } from './schema/hosts';
 import type { RteUrlRule } from './schema/types';
 import { isAllowedUrl } from './schema/url';
 
@@ -29,30 +30,19 @@ function resolvePolicy(policy: Partial<RteLinkPolicy>): RteLinkPolicy {
   return { ...DEFAULT_LINK_POLICY, ...policy };
 }
 
-function normalizeBlocked(domains: readonly string[]): string[] {
-  return domains.map((d) => {
-    if (typeof d !== 'string' || d.includes('*') || d.trim() === '') {
-      throw new TypeError(
-        `linkPolicy.blockedDomains: host "${String(d)}" inválido.`,
-      );
-    }
-    return d.trim().toLowerCase().replace(/\.$/, '');
-  });
-}
-
-function relTokens(option: string, tokens: readonly string[]): string[] {
-  return tokens.map((t) => {
-    const v = typeof t === 'string' ? t.trim().toLowerCase() : '';
-    if (!REL_VALUES.includes(v)) {
-      throw new TypeError(
-        `linkPolicy.${option}: token "${String(t)}" fora de ${REL_VALUES.join(' ')}.`,
-      );
-    }
-    return v;
-  });
-}
+const SAFE_PROTOCOLS = ['https', 'http', 'mailto', 'tel'];
 
 function urlRule(policy: RteLinkPolicy): RteUrlRule {
+  for (const proto of policy.protocols) {
+    if (
+      typeof proto !== 'string' ||
+      !SAFE_PROTOCOLS.includes(proto.toLowerCase())
+    ) {
+      throw new TypeError(
+        `linkPolicy.protocols: "${String(proto)}" fora de ${SAFE_PROTOCOLS.join(' ')}.`,
+      );
+    }
+  }
   const rule: RteUrlRule = {
     kind: 'url',
     schemes: [...policy.protocols],
@@ -60,7 +50,11 @@ function urlRule(policy: RteLinkPolicy): RteUrlRule {
     fragment: policy.allowRelative,
     maxLength: URL_MAX,
   };
-  const blocked = normalizeBlocked(policy.blockedDomains);
+  const blocked = normalizeHosts(
+    'linkPolicy.blockedDomains',
+    policy.blockedDomains,
+    false,
+  );
   if (blocked.length > 0) rule.blockedHosts = blocked;
   return rule;
 }
@@ -94,8 +88,8 @@ export function getLinkAttributes(
   options: { target?: '_blank' | null } = {},
 ): { href: string; rel?: string; target?: '_blank' } | null {
   const p = resolvePolicy(policy);
-  const defaults = relTokens('defaultRel', p.defaultRel);
-  const forced = relTokens('forceRel', p.forceRel);
+  const defaults = normalizeRelTokens('linkPolicy.defaultRel', p.defaultRel);
+  const forced = normalizeRelTokens('linkPolicy.forceRel', p.forceRel);
   const normalized = normalizeHref(href, p);
   if (normalized === null) return null;
 
