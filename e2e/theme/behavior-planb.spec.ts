@@ -320,3 +320,58 @@ test('plano B R8: prefers-contrast: more faz a borda igual ao texto secundário'
     await cleanup(page);
   }
 });
+
+test('plano B: override de nível 3 do consumidor (.rte-root) vale como no nativo, e subtle/border saem da superfície dele', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await addCss(
+    page,
+    '.rte-root{--rte-surface:#fffdf7;--rte-danger:#c62828;--rte-primary-text:#123456}',
+  );
+  const names = [
+    'surface',
+    'danger',
+    'primary-text',
+    'focus',
+    'primary-subtle',
+    'primary-border',
+    'secondary-subtle',
+    'text',
+    'warning',
+  ];
+  for (const mode of ['light', 'dark'] as const) {
+    // Referência: o caminho nativo, com o mesmo CSS do consumidor.
+    await apply(page, { primary: '#0ea5e9', mode });
+    const native = await shown(page, names);
+    await cleanup(page);
+    await apply(page, { primary: '#0ea5e9', mode, force: true });
+    const planB = await shown(page, names);
+    expect(planB['surface'], mode).toEqual([255, 253, 247]);
+    expect(planB['danger'], mode).toEqual([198, 40, 40]);
+    expect(planB['primary-text'], mode).toEqual([18, 52, 86]);
+    // --rte-focus = var(--rte-primary-text) também segue o override, como no CSS.
+    expect(planB['focus'], mode).toEqual([18, 52, 86]);
+    for (const n of names)
+      for (let i = 0; i < 3; i++)
+        expect(
+          Math.abs(planB[n]![i]! - native[n]![i]!),
+          `${mode} ${n} nativo=${native[n]} planoB=${planB[n]}`,
+        ).toBeLessThanOrEqual(2);
+    // Os overrides não foram gravados inline; os demais tokens, sim (o plano B rodou).
+    const raw = await inline(page, [
+      'surface',
+      'danger',
+      'focus',
+      'text',
+      'warning',
+    ]);
+    expect(raw['surface'], mode).toBe('');
+    expect(raw['danger'], mode).toBe('');
+    expect(raw['focus'], mode).toBe('');
+    expect(raw['text'], mode).not.toBe('');
+    expect(raw['warning'], mode).not.toBe('');
+    await cleanup(page);
+  }
+  expect(errors).toEqual([]);
+});

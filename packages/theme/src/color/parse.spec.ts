@@ -138,6 +138,10 @@ describe('parseColor (sem DOM)', () => {
     expect(parseColor('oklch(0.7 0.2 150 / 0)')).toBeNull();
     expect(parseColor('#00000000')).toBeNull();
     expect(parseColor('#0000')).toBeNull();
+    // Negativo é recortado para 0 pelo CSS: também transparente.
+    expect(parseColor('rgb(0 0 0 / -1)')).toBeNull();
+    expect(parseColor('rgba(10, 20, 30, -0.5)')).toBeNull();
+    expect(parseColor('oklch(0.7 0.2 150 / -10%)')).toBeNull();
     expect(hex('rgba(10,20,30,0.5)')).toBe('#0a141e');
     expect(hex('#000000ff')).toBe('#000000');
   });

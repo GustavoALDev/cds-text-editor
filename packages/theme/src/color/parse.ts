@@ -68,7 +68,8 @@ function args(body: string): Args | null {
   if (!c) return null;
   if (alpha !== undefined) {
     const a = /\s/.test(alpha) ? null : token(alpha);
-    if (!a || a.unit === 'deg' || a.value === 0) return null;
+    // Alfa <= 0 é transparente (o CSS recorta negativos para 0): cor inválida como semente.
+    if (!a || a.unit === 'deg' || a.value <= 0) return null;
   }
   return { c: c as Args['c'], legacy };
 }

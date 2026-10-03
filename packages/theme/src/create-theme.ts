@@ -42,6 +42,17 @@ type NeutralName = keyof typeof NEUTRAL_SPEC;
 export function createRteTheme(
   options: CreateRteThemeOptions = {},
 ): RteThemeVariables {
+  return buildRteTheme(options);
+}
+
+/**
+ * Uso interno (não exportado por `index.ts`): `createRteTheme` com a superfície sobrescrita pelo
+ * consumidor (`surface`, sRGB 0..1), da qual saem `*-subtle` e `*-border`, como no theme.css.
+ */
+export function buildRteTheme(
+  options: CreateRteThemeOptions,
+  surface?: Rgb,
+): RteThemeVariables {
   const parse = options.parseColor ?? parseColor;
   const resolve = (value: string | undefined, fallback: string): Rgb => {
     let parsed: Rgb | null = null;
@@ -68,7 +79,7 @@ export function createRteTheme(
     const [L, cap] = NEUTRAL_SPEC[name][mode];
     return [L, Math.min(c, cap) * tint, h];
   };
-  const surfaceOk = neutral('surface');
+  const surfaceOk = surface ? toOklch(toLinear(surface)) : neutral('surface');
 
   const tokens: Record<string, Rgb> = {};
   for (const name of Object.keys(NEUTRAL_SPEC) as NeutralName[])

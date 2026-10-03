@@ -8,6 +8,8 @@ Rodar nos 3 navegadores (chromium, firefox, webkit): `npx playwright test -c e2e
 - `CHROME`: caminho de um binário Chromium/Chrome alternativo (`launchOptions.executablePath`). Opcional; sem ele o Playwright usa o navegador de `~/.cache/ms-playwright`.
 - `LD_LIBRARY_PATH`: necessário em WSL/Ubuntu sem as libs dos navegadores (o helper define).
 
+- `E2E_NETWORK=1`: liga `e2e/core/embeds.spec.ts` (YouTube, Vimeo e Spotify de verdade; precisa de rede). O CI não define; sem ela o spec é pulado.
+
 ## Setup (uma vez)
 
 ```bash
@@ -56,3 +58,15 @@ export LD_LIBRARY_PATH=$HOME/.cache/playwright-libs/root/usr/lib/x86_64-linux-gn
 
 - `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`: a validação de dependências do Playwright consulta `ldconfig -p` (libGLESv2, libx264), que não enxerga a pasta extraída.
 - Edita o wrapper `~/.cache/ms-playwright/webkit-*/minibrowser-*/MiniBrowser`, que sobrescreve o `LD_LIBRARY_PATH`, para preservar o valor herdado (idempotente; guarda uma cópia única em `MiniBrowser.cds-orig` e avisa se o ajuste não pegar; refeito a cada execução, útil após atualizar o WebKit).
+
+## Specs do core (`e2e/core`)
+
+- `url-parity.spec.ts`: paridade das funções de URL do core com o `URL` de cada motor; `embeds.spec.ts`: embeds reais (só com `E2E_NETWORK=1`). Usam `helpers/page.ts` (`window.RteCore`).
+- Editor da 03b (E1–E6 da spec 03b, §7.6), com `helpers/editor-page.ts`: bundle IIFE `window.RteEditorLab` (`helpers/editor-bundle.ts`, gerado uma vez por worker), página em `https://rte.test` com o PNG 1×1 em `/e2e.png` e toda outra requisição abortada, editor da fábrica em `#editor` como `window.editor`.
+  - `editor-contract.spec.ts` (E1): `fixtures/content/all-features.html` é ponto fixo de `getRteHtml`; `editor.getHTML()` é aceito pelo esquema e só difere na forma/posição do `style` (Chromium e WebKit o movem para o fim) e nos ids.
+  - `editor-paste.spec.ts` (E2): cada caso de `fixtures/content/tolerant-cases.json` por `view.pasteHTML`.
+  - `editor-resize.spec.ts` (E3): as 4 alças com o mouse real, `minWidth`, `Escape`, um passo de desfazer, captura de ponteiro e nenhum `dragstart` nativo.
+  - `editor-tasks.spec.ts` (E4): clique, `Tab` e `Space` no checkbox, `aria-label`, `Enter`/`Backspace` nos itens. No Firefox o `Tab` parte do cursor (por isso o teste começa num parágrafo antes da lista).
+  - `editor-highlight.spec.ts` (E5): gramática carregada sob demanda (só a usada), decorações `hljs-*` e a saída sem `hljs`.
+  - `editor-links.spec.ts` (E6): autolink ao digitar e ids de título na carga inicial.
+- Rodar só o core: `npx playwright test -c e2e e2e/core --workers=4` (mais workers deixam o Firefox instável no Windows).

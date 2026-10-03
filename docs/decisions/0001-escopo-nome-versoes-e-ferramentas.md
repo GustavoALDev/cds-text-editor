@@ -71,7 +71,7 @@ Emenda à R14: allowlist inclui 0BSD (`tslib`, dependência de runtime dos pacot
 
 ## Decisões em aberto (com prazo)
 
-- **(a) Notices e dependências de produção do workspace.** O gerador de `THIRD-PARTY-NOTICES.md` usa `--production` a partir da raiz e não enxerga dependências de produção dos pacotes do workspace. Usar as entradas não-dev do lockfile, como o `check-licenses`. Prazo: antes da spec 04 (entrada do `sanitize-html`).
+- **(a) Notices e dependências de produção do workspace. RESOLVIDA (2026-10-03, ADR 0003):** `tools/generate-notices.mjs` lista o fecho transitivo das `dependencies` dos pacotes do workspace (peers excluídos). Texto original: o gerador de `THIRD-PARTY-NOTICES.md` usa `--production` a partir da raiz e não enxerga dependências de produção dos pacotes do workspace. Usar as entradas não-dev do lockfile, como o `check-licenses`. Prazo: antes da spec 04 (entrada do `sanitize-html`).
 - **(b) Política de dependência entre pacotes.** Definir `dependency` com `^0.x` versus `peerDependency` com faixa; configurar `onlyUpdatePeerDependentsWhenOutOfRange` no Changesets; o `@nx/dependency-checks` escreve `0.0.0` exato nos peers. Codificar a regra em `tools/check-repo-rules.mjs`. Prazo: antes do primeiro import entre pacotes (spec 04).
 - **(c) Fluxo de publicação de `angular` e `render`.** `npm pack` na pasta do pacote gera tarball de fontes; publicar `dist/packages/*`. Criar guard contra publicar a partir do fonte e checar o `TODO-AUTOR` do `dist/LICENSE` na publicação. O fluxo de publicação é Changesets; os blocos de Nx Release foram removidos dos `project.json`. Prazo: antes da spec 09.
 

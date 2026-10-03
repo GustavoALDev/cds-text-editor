@@ -208,6 +208,23 @@ describe('theme.css', () => {
     }
   });
 
+  it('toda cor relativa fixa o alfa em 1 (semente translúcida não deixa derivado translúcido)', () => {
+    const relative = [...code.matchAll(/(?:color|oklch|oklab)\(from /g)];
+    expect(relative).toHaveLength(31);
+    for (const m of relative) {
+      const start = m.index ?? 0;
+      let depth = 0;
+      let k = start + m[0].indexOf('(');
+      for (; k < code.length; k++) {
+        if (code[k] === '(') depth++;
+        else if (code[k] === ')' && --depth === 0) break;
+      }
+      expect(code.slice(k - 4, k + 1), code.slice(start, start + 40)).toBe(
+        ' / 1)',
+      );
+    }
+  });
+
   it('degrau on-*/hover/active exato: ganho == STEP_GAIN, limiar == WHITE_Y', () => {
     expect(css).not.toMatch(/\*\s*1000\s*,/);
     const gains = [...code.matchAll(/\)\s*\*\s*(\d+)\s*,\s*1\)/g)].map((m) =>
@@ -240,7 +257,7 @@ describe('theme.css', () => {
     const NUM = String.raw`(\d+(?:\.\d+)?)`;
 
     it('neutros: L e teto de C (claro e escuro) == NEUTRAL_SPEC', () => {
-      const one = String.raw`oklch\(from var\(--rte-primary\) ${NUM} calc\(min\(c, ${NUM}\) \* var\(--rte-neutral-tint\)\) h\)`;
+      const one = String.raw`oklch\(from var\(--rte-primary\) ${NUM} calc\(min\(c, ${NUM}\) \* var\(--rte-neutral-tint\)\) h / 1\)`;
       const re = new RegExp(`^light-dark\\(${one}, ${one}\\)$`);
       for (const [name, spec] of Object.entries(NEUTRAL_SPEC)) {
         const m = re.exec(decl(name));
@@ -302,7 +319,7 @@ describe('theme.css', () => {
       for (const role of ROLES)
         for (const kind of ['subtle', 'border'] as const) {
           const m = new RegExp(
-            `^color-mix\\(in oklab, var\\(--rte-${role}\\) (\\d+)%, var\\(--rte-surface\\)\\)$`,
+            `^color-mix\\(in oklab, oklab\\(from var\\(--rte-${role}\\) l a b / 1\\) (\\d+)%, var\\(--rte-surface\\)\\)$`,
           ).exec(decl(`${role}-${kind}`));
           expect(m, `${role}-${kind}`).not.toBeNull();
           expect(Number(m?.[1]), `${role}-${kind}`).toBe(MIX_PCT[kind]);

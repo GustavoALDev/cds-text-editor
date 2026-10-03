@@ -24,6 +24,10 @@
     "src/**/*.spec.js",
     "src/**/*.test.jsx",
     "src/**/*.spec.jsx",
-    "src/**/*.d.ts"
+    "src/**/*.d.ts",
+    "embeds/src/**/*.spec.ts",
+    "html/src/**/*.spec.ts",
+    "extensions/src/**/*.ts",
+    "code-languages/src/**/*.spec.ts"
   ]
 }
