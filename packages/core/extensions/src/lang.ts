@@ -61,12 +61,11 @@ export function createLangExtension(ctx: RteExtensionContext) {
     },
     renderHTML({ mark }) {
       // Revalida (JSON não passa pela leitura, B9).
-      const attrs: Record<string, string> = {};
+      // Sem `lang` válido, `dir` sozinho não sai (o `lang` é obrigatório).
       const lang = tag(mark.attrs['lang']);
+      if (lang === null) return ['span', 0];
       const dir = direction(mark.attrs['dir']);
-      if (lang !== null) attrs['lang'] = lang;
-      if (dir !== null) attrs['dir'] = dir;
-      return ['span', attrs, 0];
+      return ['span', dir === null ? { lang } : { lang, dir }, 0];
     },
     addCommands() {
       return {

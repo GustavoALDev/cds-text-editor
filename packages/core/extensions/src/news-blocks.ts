@@ -130,15 +130,62 @@ function calloutChildren(element: Element): Element[] | null {
   );
 }
 
-function readAlsoChildren(element: Element): Element[] | null {
-  return boxChildren(
-    element,
-    READ_ALSO_TITLE_CLASS,
-    (rest) =>
-      rest.length === 1 &&
-      tagOf(rest[0] as Element) === 'ul' &&
-      !isTaskList(rest[0] as Element),
+// Filhos de bloco: o `li` com algum deles não é um item de texto.
+const BLOCK_TAGS = new Set([
+  'address',
+  'article',
+  'aside',
+  'blockquote',
+  'details',
+  'div',
+  'dl',
+  'fieldset',
+  'figure',
+  'footer',
+  'form',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'header',
+  'hr',
+  'li',
+  'main',
+  'nav',
+  'ol',
+  'p',
+  'pre',
+  'section',
+  'table',
+  'ul',
+]);
+
+/**
+ * Item do "Leia também": `li` que não é tarefa, com conteúdo inline ou um
+ * único `p` (sem nada além de espaço e comentários).
+ */
+function isReadAlsoItem(li: Element): boolean {
+  if (tagOf(li) !== 'li' || hasClass(li, 'rt-task')) return false;
+  if (li.getAttribute('data-type') === 'taskItem') return false;
+  const blocks = Array.from(li.children).filter((child) =>
+    BLOCK_TAGS.has(tagOf(child)),
   );
+  if (blocks.length === 0) return true;
+  const only = meaningfulChildren(li);
+  const block = only?.length === 1 ? only[0] : undefined;
+  return block !== undefined && block === blocks[0] && tagOf(block) === 'p';
+}
+
+function readAlsoChildren(element: Element): Element[] | null {
+  return boxChildren(element, READ_ALSO_TITLE_CLASS, (rest) => {
+    const list = rest[0];
+    if (rest.length !== 1 || !list) return false;
+    if (tagOf(list) !== 'ul' || isTaskList(list)) return false;
+    const items = meaningfulChildren(list);
+    return items !== null && items.length > 0 && items.every(isReadAlsoItem);
+  });
 }
 
 /**
@@ -188,8 +235,17 @@ function captionAttrs(caption: Element | null): {
     Array.from(caption.children).find((child) => tagOf(child) === 'cite') ??
     null;
   const author = cite ? cleanText(textWithout(cite)) : '';
-  const rest = cleanText(textWithout(caption, (element) => element === cite));
-  return { author, role: cleanText(rest.replace(/^,/, '')) };
+  const rest = textWithout(caption, (element) => element === cite);
+  return { author, role: roleText(rest) };
+}
+
+/**
+ * Cargo canônico: texto puro sem vírgulas e espaços iniciais (a vírgula da
+ * saída separa autor e cargo), para saída → leitura → saída ser ponto fixo.
+ */
+function roleText(value: string): string {
+  // Depois do cleanText, o único espaço possível é o U+0020.
+  return cleanText(value).replace(/^[, ]+/, '');
 }
 
 /** Texto puro canônico de autor/cargo; `null` se não for texto. */
@@ -209,7 +265,7 @@ function pullquoteInput(
     if (given[name] === undefined) continue;
     const value = plainText(given[name]);
     if (value === null) return null;
-    out[name] = value;
+    out[name] = name === 'role' ? roleText(value) : value;
   }
   return out;
 }
@@ -313,7 +369,7 @@ export function createNewsBlockExtensions(
     renderHTML({ node }) {
       // Revalida (JSON não passa pela leitura, B9).
       const author = plainText(node.attrs['author']) ?? '';
-      const role = plainText(node.attrs['role']) ?? '';
+      const role = roleText(plainText(node.attrs['role']) ?? '');
       const quote: DOMOutputSpec = ['blockquote', 0];
       if (!author && !role) return ['figure', { class: 'rt-pullquote' }, quote];
       // Texto solto é filho válido de um array de saída do ProseMirror.
@@ -682,6 +738,7 @@ export function createNewsBlockExtensions(
     },
     addKeyboardShortcuts() {
       return createItemKeymap(READ_ALSO_ITEM, {
+        splitContainer: true,
         // Sem a caixa, só um título editado sobra (como no unsetCallout).
         orphan: (node) => {
           const text = node.textContent;

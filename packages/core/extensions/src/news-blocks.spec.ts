@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { validateHtml } from '../../html/src/validate-html';
 import { createEditorExtensions } from './factory';
 import { RTE_CONTENT_LABELS } from './labels';
+import { itemsToParagraphs } from './item-keymap';
 import { getRteHtml } from './serialize';
 import { createTestEditor, destroyTestEditors } from './testing/editor';
 import type { RteEditorOptions } from './types';
@@ -268,6 +269,34 @@ describe('blocos de notícia: leitura', () => {
     expect(out).toContain('B');
   });
 
+  it('Leia também com li de tarefa ou li com dois p: o texto fica, sem caixa', () => {
+    for (const li of [
+      '<li class="rt-task">A</li>',
+      '<li data-type="taskItem"><p>A</p></li>',
+      '<li><p>A</p><p>B</p></li>',
+      '<li>A<ul><li>B</li></ul></li>',
+    ]) {
+      const out = html(`<aside class="rt-read-also"><ul>${li}</ul></aside>`);
+      expect(out).not.toContain('rt-read-also');
+      expect(out).toContain('A');
+    }
+    expect(
+      html(
+        '<aside class="rt-read-also"><ul><li><p>A</p><p>B</p></li></ul></aside>',
+      ),
+    ).toContain('B');
+  });
+
+  it('Leia também com li inline com marcas e li > p único com espaços', () => {
+    expect(
+      html(
+        '<aside class="rt-read-also"><ul><li><a href="https://a.com/"><strong>A</strong></a></li><li> <p>B</p> </li></ul></aside>',
+      ),
+    ).toBe(
+      '<aside class="rt-read-also" role="note"><p class="rt-read-also__title">Read also</p><ul><li><a href="https://a.com/"><strong>A</strong></a></li><li>B</li></ul></aside>',
+    );
+  });
+
   it('ul e li fora do Leia também continuam listas comuns', () => {
     expect(html('<ul><li><p>a</p></li></ul>')).toBe(
       '<ul><li><p>a</p></li></ul>',
@@ -465,6 +494,38 @@ describe('blocos de notícia: comandos', () => {
     expect(editor.commands.updatePullquote({ author: 'X' })).toBe(false);
   });
 
+  it('cargo com vírgula/espaços iniciais é guardado sem eles (ponto fixo)', () => {
+    const editor = editorWith(PULLQUOTE);
+    cursorIn(editor, 'Frase', 0);
+    expect(editor.commands.updatePullquote({ author: '', role: ' , ,x' })).toBe(
+      true,
+    );
+    expect(editor.state.doc.firstChild?.attrs['role']).toBe('x');
+    const out = canonical(editor);
+    expect(out).toContain('<figcaption>x</figcaption>');
+    expect(html(out)).toBe(out);
+    // JSON com o cargo cru: a saída já sai canônica e é ponto fixo
+    const fromJson = html({
+      type: 'doc',
+      content: [
+        {
+          type: 'rtPullquote',
+          attrs: { author: 'Ana', role: ',x' },
+          content: [
+            { type: 'paragraph', content: [{ type: 'text', text: 'F' }] },
+          ],
+        },
+      ],
+    });
+    expect(fromJson).toContain('<figcaption><cite>Ana</cite>, x</figcaption>');
+    expect(html(fromJson)).toBe(fromJson);
+    // leitura: vírgulas repetidas antes do cargo
+    const read = editorWith(
+      '<figure class="rt-pullquote"><blockquote><p>F</p></blockquote><figcaption><cite>Ana</cite>, , editora</figcaption></figure>',
+    );
+    expect(read.state.doc.firstChild?.attrs['role']).toBe('editora');
+  });
+
   it('setPullquote recusa entrada inválida e blocos que não são parágrafos', () => {
     const editor = editorWith('<ul><li><p>a</p></li></ul>');
     expect(editor.commands.setPullquote({ author: 1 as never })).toBe(false);
@@ -551,6 +612,22 @@ describe('blocos de notícia: teclado', () => {
     expect(press(b, 'Backspace')).toBe(true);
     expect(canonical(b)).toBe('<p>Meu</p><p>A</p>');
     expect(cursorBlock(b)).toEqual(['paragraph', 'A', 0]);
+  });
+
+  it('sem splitContainer, itemsToParagraphs não divide o contêiner', () => {
+    const editor = editorWith(BOX('<li>A</li><li>B</li>'), PT);
+    cursorIn(editor, 'B', 0);
+    const { $from } = editor.state.selection;
+    const depth = $from.depth - 1;
+    const index = $from.index(depth);
+    const tr = editor.state.tr;
+    expect(itemsToParagraphs(tr, $from, depth, index, index)).toBeNull();
+    expect(tr.docChanged).toBe(false);
+    expect(
+      itemsToParagraphs(tr, $from, depth, index, index, {
+        splitContainer: true,
+      }),
+    ).not.toBeNull();
   });
 
   it('Enter no único item vazio: a caixa vira um parágrafo vazio', () => {

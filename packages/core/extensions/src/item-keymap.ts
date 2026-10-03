@@ -13,13 +13,18 @@ export interface ItemsToParagraphsOptions {
    * o padrão).
    */
   orphan?: (node: ProseMirrorNode) => ProseMirrorNode | null;
+  /**
+   * Liga a divisão do contêiner quando o pai da lista não aceita parágrafos
+   * (só o "Leia também"); desligada, o resultado é `null`.
+   */
+  splitContainer?: boolean;
 }
 
 /**
  * Troca os itens `first`–`last` da lista de profundidade `depth` (em `$pos`)
  * por parágrafos com o mesmo conteúdo, dividindo a lista ao redor deles;
- * partes vazias da lista somem. Se o pai da lista não aceita parágrafos (o
- * "Leia também"), divide o contêiner: a parte de antes fica com os outros
+ * partes vazias da lista somem. Se o pai da lista não aceita parágrafos e
+ * `splitContainer` está ligado (o "Leia também"), divide o contêiner: a parte de antes fica com os outros
  * filhos (o título), a de depois recebe os que a expressão de conteúdo exige
  * (título vazio); sem itens antes, os outros filhos vão com a parte de
  * depois; sem nenhuma parte, passam por `orphan`. Devolve o deslocamento
@@ -72,7 +77,7 @@ export function itemsToParagraphs(
     ...blocks,
     ...(tail ? [tail] : []),
   ]);
-  if (direct !== null || depth < 2) return direct;
+  if (direct !== null || depth < 2 || !options.splitContainer) return direct;
   // Contêiner que só aceita a lista: divide o contêiner.
   const box = $pos.node(depth - 1);
   const listIndex = $pos.index(depth - 1);

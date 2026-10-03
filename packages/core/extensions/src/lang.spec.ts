@@ -77,7 +77,7 @@ describe('rtLang: leitura e saída', () => {
     );
   });
 
-  it('JSON com lang/dir inválidos: span sem os atributos inválidos', () => {
+  it('JSON com lang/dir inválidos: sem dir inválido; sem lang, nenhum atributo', () => {
     const json = (attrs: object) => ({
       type: 'doc',
       content: [
@@ -93,8 +93,10 @@ describe('rtLang: leitura e saída', () => {
       '<p><span lang="en">a</span></p>',
     );
     expect(roundTrip(json({ lang: '1', dir: 'rtl' }))).toBe(
-      '<p><span dir="rtl">a</span></p>',
+      '<p><span>a</span></p>',
     );
+    // e a saída relida é texto comum (o span sem lang não é marca)
+    expect(roundTrip('<p><span>a</span></p>')).toBe('<p>a</p>');
   });
 });
 
