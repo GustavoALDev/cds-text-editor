@@ -372,6 +372,33 @@ describe('rtEmbed: leitura', () => {
 });
 
 describe('rtEmbed: opções e JSON', () => {
+  it('JSON sem aspectRatio usa a proporção do provedor (ponto fixo da releitura)', () => {
+    const json = (provider: string, src: string) => ({
+      type: 'doc',
+      content: [
+        {
+          type: 'rtEmbed',
+          attrs: { provider, src, title: '', aspectRatio: null },
+        },
+      ],
+    });
+    const yt = editorWith(json('youtube', NOCOOKIE));
+    const out = canonical(yt);
+    expect(out).toBe(`${YT_FIG}${ytIframe()}</figure>`);
+    expect(html(out)).toBe(out);
+    // Spotify não tem proporção: continua sem style
+    const spotify = canonical(
+      editorWith(
+        json(
+          'spotify',
+          'https://open.spotify.com/embed/track/4uLU6hMCjMI75M1A2tKUQC',
+        ),
+      ),
+    );
+    expect(spotify).not.toContain('aspect-ratio');
+    expect(html(spotify)).toBe(spotify);
+  });
+
   it('embedProviders: [] → sem rtEmbed e sem setEmbed', () => {
     const names = createEditorExtensions({
       features: ONLY_EMBEDS,

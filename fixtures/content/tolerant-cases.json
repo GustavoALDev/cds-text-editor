@@ -1,0 +1,170 @@
+[
+  {
+    "name": "h1 vira h2 com id",
+    "input": "<h1>Título principal</h1>",
+    "expected": "<h2 id=\"rt-titulo-principal\">Título principal</h2>"
+  },
+  {
+    "name": "h5 e h6 viram h4",
+    "input": "<h5>Cinco</h5><h6>Seis</h6>",
+    "expected": "<h4 id=\"rt-cinco\">Cinco</h4><h4 id=\"rt-seis\">Seis</h4>"
+  },
+  {
+    "name": "p com só img vira figure sem parágrafo vazio",
+    "input": "<p><img src=\"https://example.com/a.png\" alt=\"Foto\"></p>",
+    "expected": "<figure class=\"rt-figure rt-figure--center\"><img src=\"https://example.com/a.png\" alt=\"Foto\" loading=\"lazy\" decoding=\"async\"></figure>"
+  },
+  {
+    "name": "p com espaços e img vira figure sem parágrafo vazio",
+    "input": "<p> <img src=\"https://example.com/a.png\" alt=\"Foto\"> </p>",
+    "expected": "<figure class=\"rt-figure rt-figure--center\"><img src=\"https://example.com/a.png\" alt=\"Foto\" loading=\"lazy\" decoding=\"async\"></figure>"
+  },
+  {
+    "name": "p com texto e img divide",
+    "input": "<p>Antes <img src=\"https://example.com/a.png\" alt=\"Foto\"> depois</p>",
+    "expected": "<p>Antes</p><figure class=\"rt-figure rt-figure--center\"><img src=\"https://example.com/a.png\" alt=\"Foto\" loading=\"lazy\" decoding=\"async\"></figure><p> depois</p>"
+  },
+  {
+    "name": "img sem alt",
+    "input": "<img src=\"https://example.com/a.png\">",
+    "expected": "<figure class=\"rt-figure rt-figure--center\"><img src=\"https://example.com/a.png\" alt=\"\" loading=\"lazy\" decoding=\"async\"></figure>"
+  },
+  {
+    "name": "a sem target continua sem target",
+    "input": "<p><a href=\"https://example.com/\">Link</a></p>",
+    "expected": "<p><a href=\"https://example.com/\">Link</a></p>"
+  },
+  {
+    "name": "href sem esquema normalizado",
+    "input": "<p><a href=\"site.com\">Site</a></p>",
+    "expected": "<p><a href=\"https://site.com/\">Site</a></p>"
+  },
+  {
+    "name": "href javascript: descartado e texto fica",
+    "input": "<p><a href=\"javascript:alert(1)\">Clique</a> aqui</p>",
+    "expected": "<p>Clique aqui</p>"
+  },
+  {
+    "name": "href data: descartado e texto fica",
+    "input": "<p><a href=\"data:text/html,x\">Dados</a></p>",
+    "expected": "<p>Dados</p>"
+  },
+  {
+    "name": "img com src javascript: descartada",
+    "input": "<p>Texto</p><img src=\"javascript:alert(1)\" alt=\"X\">",
+    "expected": "<p>Texto</p>"
+  },
+  {
+    "name": "img com src data: descartada",
+    "input": "<p>Texto</p><img src=\"data:image/png;base64,AAAA\" alt=\"X\">",
+    "expected": "<p>Texto</p>"
+  },
+  {
+    "name": "target _BLANK com rel garantido",
+    "input": "<p><a href=\"https://example.com/\" target=\"_BLANK\">Nova aba</a></p>",
+    "expected": "<p><a href=\"https://example.com/\" target=\"_blank\" rel=\"noopener noreferrer\">Nova aba</a></p>"
+  },
+  {
+    "name": "tarefas do Tiptap",
+    "input": "<ul data-type=\"taskList\"><li data-type=\"taskItem\" data-checked=\"true\"><label><input type=\"checkbox\" checked><span></span></label><div><p>Feita</p></div></li><li data-type=\"taskItem\" data-checked=\"false\"><label><input type=\"checkbox\"><span></span></label><div><p>Pendente</p></div></li></ul>",
+    "expected": "<ul class=\"rt-tasks\"><li class=\"rt-task\"><label><input type=\"checkbox\" disabled=\"\" checked=\"\">Feita</label></li><li class=\"rt-task\"><label><input type=\"checkbox\" disabled=\"\">Pendente</label></li></ul>"
+  },
+  {
+    "name": "tarefa do Tiptap com dois parágrafos",
+    "input": "<ul data-type=\"taskList\"><li data-type=\"taskItem\" data-checked=\"true\"><label><input type=\"checkbox\" checked><span></span></label><div><p>A</p><p>B</p></div></li></ul>",
+    "expected": "<ul class=\"rt-tasks\"><li class=\"rt-task\"><label><input type=\"checkbox\" disabled=\"\" checked=\"\">A</label></li></ul><p>B</p>"
+  },
+  {
+    "name": "tarefas do Tiptap aninhadas",
+    "input": "<ul data-type=\"taskList\"><li data-type=\"taskItem\" data-checked=\"false\"><label><input type=\"checkbox\"><span></span></label><div><p>A</p><ul data-type=\"taskList\"><li data-type=\"taskItem\" data-checked=\"true\"><label><input type=\"checkbox\" checked><span></span></label><div><p>A1</p></div></li></ul></div></li><li data-type=\"taskItem\" data-checked=\"false\"><label><input type=\"checkbox\"><span></span></label><div><p>B</p></div></li></ul>",
+    "expected": "<ul class=\"rt-tasks\"><li class=\"rt-task\"><label><input type=\"checkbox\" disabled=\"\">A</label></li></ul><ul class=\"rt-tasks\"><li class=\"rt-task\"><label><input type=\"checkbox\" disabled=\"\" checked=\"\">A1</label></li></ul><ul class=\"rt-tasks\"><li class=\"rt-task\"><label><input type=\"checkbox\" disabled=\"\">B</label></li></ul>"
+  },
+  {
+    "name": "mark com data-color #ff0 vira yellow",
+    "input": "<p><mark data-color=\"#ff0\">Realce</mark></p>",
+    "expected": "<p><mark data-rt-color=\"yellow\" style=\"background-color: #fff3a3\">Realce</mark></p>"
+  },
+  {
+    "name": "span com color: red fica sem cor",
+    "input": "<p><span style=\"color: red\">Vermelho</span></p>",
+    "expected": "<p>Vermelho</p>"
+  },
+  {
+    "name": "data-rt-color com style falso tem style regenerado",
+    "input": "<p><span data-rt-color=\"red\" style=\"color: #000000\">Cor</span></p>",
+    "expected": "<p><span data-rt-color=\"red\" style=\"color: #b3261e\">Cor</span></p>"
+  },
+  {
+    "name": "language-js vira javascript com catálogo",
+    "input": "<pre><code class=\"language-js\">const a = 1;</code></pre>",
+    "expected": "<pre><code class=\"language-javascript\">const a = 1;</code></pre>"
+  },
+  {
+    "name": "language-js mantido como js sem catálogo",
+    "input": "<pre><code class=\"language-js\">const a = 1;</code></pre>",
+    "options": {
+      "codeLanguages": []
+    },
+    "expected": "<pre><code class=\"language-js\">const a = 1;</code></pre>"
+  },
+  {
+    "name": "ol com start 0 e type a vira ol",
+    "input": "<ol start=\"0\" type=\"a\"><li><p>Um</p></li><li><p>Dois</p></li></ol>",
+    "expected": "<ol><li><p>Um</p></li><li><p>Dois</p></li></ol>"
+  },
+  {
+    "name": "tabela do Tiptap",
+    "input": "<table style=\"min-width: 125px\"><colgroup><col style=\"width: 100px\"><col style=\"min-width: 25px\"></colgroup><tbody><tr><th colspan=\"1\" rowspan=\"1\" colwidth=\"100\"><p>A</p></th><th colspan=\"1\" rowspan=\"1\"><p>B</p></th></tr><tr><td colspan=\"1\" rowspan=\"1\" colwidth=\"100\"><p>1</p></td><td colspan=\"1\" rowspan=\"1\"><p>2</p></td></tr></tbody></table>",
+    "expected": "<table><colgroup><col style=\"width: 100px\"><col></colgroup><tbody><tr><th><p>A</p></th><th><p>B</p></th></tr><tr><td><p>1</p></td><td><p>2</p></td></tr></tbody></table>"
+  },
+  {
+    "name": "iframe do YouTube /embed/ vira embed nocookie",
+    "input": "<iframe src=\"https://www.youtube.com/embed/dQw4w9WgXcQ\" width=\"560\" height=\"315\"></iframe>",
+    "expected": "<figure class=\"rt-embed rt-embed--youtube\" data-rt-provider=\"youtube\"><iframe src=\"https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ\" title=\"YouTube\" width=\"560\" height=\"315\" style=\"aspect-ratio: 16 / 9\" loading=\"lazy\" referrerpolicy=\"strict-origin-when-cross-origin\" allow=\"encrypted-media; fullscreen; picture-in-picture\" allowfullscreen=\"\" sandbox=\"allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox\"></iframe></figure>"
+  },
+  {
+    "name": "iframe de host desconhecido descartado",
+    "input": "<p>Antes</p><iframe src=\"https://evil.example/embed/x\"></iframe><p>Depois</p>",
+    "expected": "<p>Antes</p><p>Depois</p>"
+  },
+  {
+    "name": "iframe com srcdoc descartado",
+    "input": "<p>Antes</p><iframe srcdoc=\"<script>alert(1)</script>\"></iframe><p>Depois</p>",
+    "expected": "<p>Antes</p><p>Depois</p>"
+  },
+  {
+    "name": "id colado em título é recalculado",
+    "input": "<h2 id=\"colado\">Seção</h2>",
+    "expected": "<h2 id=\"rt-secao\">Seção</h2>"
+  },
+  {
+    "name": "text-align start fica sem estilo",
+    "input": "<p style=\"text-align: start\">Início</p>",
+    "expected": "<p>Início</p>"
+  },
+  {
+    "name": "figure genérica com figcaption",
+    "input": "<figure><img src=\"https://example.com/a.png\" alt=\"Foto\"><figcaption>Legenda</figcaption></figure>",
+    "expected": "<figure class=\"rt-figure rt-figure--center\"><img src=\"https://example.com/a.png\" alt=\"Foto\" loading=\"lazy\" decoding=\"async\"><figcaption>Legenda</figcaption></figure>"
+  },
+  {
+    "name": "caixa sem título ganha título sintetizado",
+    "input": "<aside class=\"rt-callout rt-callout--info\"><p>Corpo</p></aside>",
+    "expected": "<aside class=\"rt-callout rt-callout--info\" role=\"note\"><p class=\"rt-callout__title\">Information</p><p>Corpo</p></aside>"
+  },
+  {
+    "name": "Leia também com li > p",
+    "input": "<aside class=\"rt-read-also\"><ul><li><p><a href=\"https://example.com/a\">A</a></p></li><li><p><a href=\"https://example.com/b\">B</a></p></li></ul></aside>",
+    "expected": "<aside class=\"rt-read-also\" role=\"note\"><p class=\"rt-read-also__title\">Read also</p><ul><li><a href=\"https://example.com/a\">A</a></li><li><a href=\"https://example.com/b\">B</a></li></ul></aside>"
+  },
+  {
+    "name": "video com source",
+    "input": "<video controls><source src=\"https://example.com/v.mp4\" type=\"video/mp4\"></video>",
+    "expected": "<figure class=\"rt-figure rt-figure--video\"><video src=\"https://example.com/v.mp4\" controls=\"\" preload=\"metadata\" playsinline=\"\"></video></figure>"
+  },
+  {
+    "name": "b com font-weight normal do Google Docs",
+    "input": "<b style=\"font-weight:normal;\" id=\"docs-internal-guid-1\"><p dir=\"ltr\"><span>Texto</span> <b>forte</b></p></b>",
+    "expected": "<p>Texto <strong>forte</strong></p>"
+  }
+]

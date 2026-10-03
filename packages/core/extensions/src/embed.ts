@@ -275,8 +275,16 @@ export function createEmbedExtension(ctx: RteExtensionContext): AnyExtension {
       const provider =
         found?.provider ??
         (typeof id === 'string' ? (byId.get(id) ?? null) : null);
-      const ratio = ratioOf(a['aspectRatio']);
-      const size = dimensions(a['width'], a['height'], ratio, null);
+      // Proporção ausente = a do provedor para o `src` (a mesma que a leitura
+      // do HTML acrescenta): a saída é ponto fixo da releitura.
+      const hints = found ? withHints(found) : null;
+      const ratio = ratioOf(a['aspectRatio']) ?? hints?.aspectRatio ?? null;
+      const size = dimensions(
+        a['width'],
+        a['height'],
+        ratio,
+        hints?.height ?? null,
+      );
       const caption =
         typeof a['caption'] === 'string' ? cleanText(a['caption']) : '';
       return [
