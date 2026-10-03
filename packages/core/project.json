@@ -41,6 +41,13 @@
         "command": "tsc -p packages/core/tsconfig.spec.json --noEmit",
         "cwd": "{workspaceRoot}"
       }
+    },
+    "test": {
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/docs/html-schema.md"
+      ]
     }
   }
 }
