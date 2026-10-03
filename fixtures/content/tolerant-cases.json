@@ -22,7 +22,7 @@
   {
     "name": "p com texto e img divide",
     "input": "<p>Antes <img src=\"https://example.com/a.png\" alt=\"Foto\"> depois</p>",
-    "expected": "<p>Antes</p><figure class=\"rt-figure rt-figure--center\"><img src=\"https://example.com/a.png\" alt=\"Foto\" loading=\"lazy\" decoding=\"async\"></figure><p> depois</p>"
+    "expected": "<p>Antes</p><figure class=\"rt-figure rt-figure--center\"><img src=\"https://example.com/a.png\" alt=\"Foto\" loading=\"lazy\" decoding=\"async\"></figure><p>depois</p>"
   },
   {
     "name": "img sem alt",

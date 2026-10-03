@@ -218,8 +218,19 @@ export function createStringDocument(): Document {
   return doc as unknown as Document;
 }
 
+/**
+ * Pré-processamento da entrada do HTML (WHATWG 13.2.3.5) já na escrita: CR e
+ * CRLF viram LF e NUL vira U+FFFD, como a releitura faria. Sem isso a saída
+ * não seria ponto fixo (o CR de um bloco de código voltaria como LF).
+ */
+function preprocess(text: string): string {
+  return text.replace(/\r\n?/g, '\n').replace(/\0/g, REPLACEMENT_CHAR);
+}
+
+const REPLACEMENT_CHAR = String.fromCharCode(0xfffd);
+
 function escapeText(text: string): string {
-  return text
+  return preprocess(text)
     .replace(/&/g, '&amp;')
     .replace(/\u00a0/g, '&nbsp;')
     .replace(/</g, '&lt;')
@@ -227,7 +238,7 @@ function escapeText(text: string): string {
 }
 
 function escapeAttribute(text: string): string {
-  return text
+  return preprocess(text)
     .replace(/&/g, '&amp;')
     .replace(/\u00a0/g, '&nbsp;')
     .replace(/"/g, '&quot;')
@@ -238,7 +249,7 @@ function escapeAttribute(text: string): string {
 /**
  * Escreve o HTML de um nó do documento de strings. Desvio deliberado do
  * algoritmo: o texto de `script`/`style` também é escapado (nenhum dos dois
- * está no contrato). Nó de outro documento com `nodeType: 1` é escrito pelo
+ * está no contrato), e texto e atributos passam por `preprocess`. Nó de outro documento com `nodeType: 1` é escrito pelo
  * `outerHTML`; sem ele, lança `TypeError`.
  */
 export function writeHtml(node: unknown): string {

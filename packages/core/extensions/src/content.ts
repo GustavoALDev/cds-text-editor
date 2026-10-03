@@ -1,6 +1,7 @@
 import { Extension } from '@tiptap/core';
 import type { RteHtmlSchema } from '../../src/schema/types';
 import type { RteExtensionContext } from './context';
+import { installDomParser } from './dom-parser';
 import type { RteContentLabels } from './types';
 
 /** Armazenamento `editor.storage.rtContent`, lido por `getRteHtml`. */
@@ -21,6 +22,10 @@ declare module '@tiptap/core' {
 export function createContentExtension(ctx: RteExtensionContext) {
   return Extension.create<Record<string, never>, RteContentStorage>({
     name: 'rtContent',
+    onBeforeCreate() {
+      // antes do conteúdo inicial: todo HTML lido passa pelo parser do editor
+      installDomParser(this.editor.schema);
+    },
     addStorage() {
       return {
         schema: ctx.schema,

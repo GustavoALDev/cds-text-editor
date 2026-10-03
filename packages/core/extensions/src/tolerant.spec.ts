@@ -25,12 +25,16 @@ vi.setConfig({ testTimeout: 30_000 });
 
 afterEach(() => destroyTestEditors());
 
+function editorFor(options?: RteEditorOptions, content?: string) {
+  return createTestEditor(
+    { codeLanguages: RTE_CODE_LANGUAGES, ...options },
+    content,
+  );
+}
+
 /** Editor vazio com opções padrão (catálogo completo) e `input` colado. */
 function paste(input: string, options?: RteEditorOptions): string {
-  const editor = createTestEditor({
-    codeLanguages: RTE_CODE_LANGUAGES,
-    ...options,
-  });
+  const editor = editorFor(options);
   editor.commands.focus('end');
   editor.view.pasteHTML(input, new Event('paste') as ClipboardEvent);
   return getRteHtml(editor);
@@ -47,4 +51,13 @@ describe('tolerant-cases.json', () => {
     expect(validateHtml(c.expected, S)).toEqual([]);
     expect(paste(c.input, c.options)).toBe(c.expected);
   });
+
+  // A saída é ponto fixo da releitura: setContent e colagem do `expected`.
+  it.each(CASES.map((c) => [c.name, c] as const))(
+    'ponto fixo: %s',
+    (_name, c) => {
+      expect(getRteHtml(editorFor(c.options, c.expected))).toBe(c.expected);
+      expect(paste(c.expected, c.options)).toBe(c.expected);
+    },
+  );
 });

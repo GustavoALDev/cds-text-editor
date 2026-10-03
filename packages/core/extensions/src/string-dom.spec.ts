@@ -75,3 +75,15 @@ describe('createStringDocument', () => {
     expect(writeHtml(br)).toBe('<br>');
   });
 });
+
+describe('writeHtml: pré-processamento da entrada', () => {
+  it('CR/CRLF viram LF e NUL vira U+FFFD em texto e atributo', () => {
+    const doc = createStringDocument();
+    const pre = doc.createElement('pre');
+    pre.setAttribute('title', 'a\r\nb\rc\0');
+    pre.appendChild(doc.createTextNode('x\r\n\ty\rz\0'));
+    expect(writeHtml(pre)).toBe(
+      `<pre title="a\nb\nc${String.fromCharCode(0xfffd)}">x\n\ty\nz${String.fromCharCode(0xfffd)}</pre>`,
+    );
+  });
+});
