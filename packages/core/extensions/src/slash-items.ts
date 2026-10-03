@@ -140,6 +140,21 @@ function notInsideTable(state: SelectionState): boolean {
   return true;
 }
 
+/**
+ * Pré-voo das listas: a lista mais próxima da seleção não é `name`. Desligar
+ * a lista (`toggle*List` dentro dela) passa no `can()`, mas o `liftListItem`
+ * do PM falha na mesma transação depois do `deleteRange` da consulta (ele
+ * compara posições do documento atual com o mapeamento da transação inteira).
+ */
+function notInsideList(state: SelectionState, name: string): boolean {
+  const { $from } = state.selection;
+  for (let depth = $from.depth; depth > 0; depth--) {
+    const type = $from.node(depth).type.name;
+    if (type === 'bulletList' || type === 'orderedList') return type !== name;
+  }
+  return true;
+}
+
 function builtin(
   id: RteSlashItemId,
   group: string,
@@ -154,8 +169,16 @@ export const RTE_SLASH_ITEMS: readonly RteSlashItem[] = Object.freeze([
   builtin('heading2', 'text', (c) => c.setHeading({ level: 2 })),
   builtin('heading3', 'text', (c) => c.setHeading({ level: 3 })),
   builtin('heading4', 'text', (c) => c.setHeading({ level: 4 })),
-  builtin('bulletList', 'lists', (c) => c.toggleBulletList()),
-  builtin('orderedList', 'lists', (c) => c.toggleOrderedList()),
+  builtin('bulletList', 'lists', (c) =>
+    c
+      .command(({ state }) => notInsideList(state, 'bulletList'))
+      .toggleBulletList(),
+  ),
+  builtin('orderedList', 'lists', (c) =>
+    c
+      .command(({ state }) => notInsideList(state, 'orderedList'))
+      .toggleOrderedList(),
+  ),
   builtin('taskList', 'lists', (c) => c.toggleTaskList()),
   builtin('blockquote', 'blocks', (c) => c.setBlockquote()),
   builtin('codeBlock', 'blocks', (c) => c.setCodeBlock()),

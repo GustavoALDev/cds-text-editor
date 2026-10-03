@@ -1,5 +1,6 @@
 import { Extension } from '@tiptap/core';
 import type { AnyExtension, Editor } from '@tiptap/core';
+import { closeHistory } from '@tiptap/pm/history';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
@@ -31,7 +32,8 @@ export const SLASH_QUERY_MAX = 30;
 
 /**
  * Estado interno do plugin. `from` é a posição do `/`; `pendingUi` guarda o
- * item de UI a entregar ao `onUiItem` depois do despacho (execução, tarefa 8).
+ * item de UI a entregar ao `onUiItem` depois do despacho (C15); dura só o
+ * estado criado pela execução.
  */
 export interface SlashPluginState {
   readonly open: boolean;
@@ -40,9 +42,14 @@ export interface SlashPluginState {
   readonly pendingUi: string | null;
 }
 
-/** Ações da *meta* do plugin (transações só de estado). */
+/**
+ * Ações da *meta* do plugin: `close` e `activate` vêm de transações só de
+ * estado; `run` vem da execução de um item (fecha e grava `pendingUi`).
+ */
 export type SlashAction =
-  { type: 'close' } | { type: 'activate'; index: number };
+  | { type: 'close' }
+  | { type: 'activate'; index: number }
+  | { type: 'run'; ui: string | null };
 
 /** Armazenamento `editor.storage.rtSlashCommand` (lido pelo getter). */
 export interface RteSlashStorage {
@@ -54,7 +61,8 @@ export interface RteSlashStorage {
 
 declare module '@tiptap/core' {
   interface Storage {
-    rtSlashCommand: RteSlashStorage;
+    /** Ausente com `features.slashCommands: false`. */
+    rtSlashCommand?: RteSlashStorage;
   }
   interface Commands<ReturnType> {
     rtSlashCommand: {
@@ -62,6 +70,11 @@ declare module '@tiptap/core' {
       setSlashActiveIndex: (index: number) => ReturnType;
       /** Fecha o menu; o mesmo `/` não reabre (C13). */
       closeSlashMenu: () => ReturnType;
+      /**
+       * Executa o item `index` dos visíveis (padrão: o ativo) numa transação:
+       * apaga `/consulta` e roda o comando; item de UI chama `onUiItem` (C15).
+       */
+      runSlashItem: (index?: number) => ReturnType;
     };
   }
 }
@@ -160,7 +173,14 @@ function nextState(
   newState: EditorState,
   pending: Pending | null,
 ): SlashPluginState {
-  let value = prev;
+  const action = tr.getMeta(slashKey) as SlashAction | undefined;
+  if (action?.type === 'run') {
+    return action.ui === null
+      ? CLOSED_STATE
+      : { ...CLOSED_STATE, pendingUi: action.ui };
+  }
+  // `pendingUi` vale só para o estado da execução.
+  let value = prev.pendingUi === null ? prev : CLOSED_STATE;
   if (pending && opensMenu(tr, pending, newState.doc)) {
     value = { open: true, from: pending.from, activeIndex: 0, pendingUi: null };
   } else if (prev.open && tr.docChanged) {
@@ -175,7 +195,6 @@ function nextState(
     const before = queryAt(oldState, prev.from);
     if (before?.query !== current.query) value = { ...value, activeIndex: 0 };
   }
-  const action = tr.getMeta(slashKey) as SlashAction | undefined;
   if (action?.type === 'close') return CLOSED_STATE;
   if (action?.type === 'activate' && action.index !== value.activeIndex) {
     value = { ...value, activeIndex: action.index };
@@ -306,12 +325,74 @@ export function createSlashCommandExtension(
             if (dispatch) stateOnly(tr, { type: 'close' });
             return true;
           },
+        runSlashItem:
+          (index) =>
+          ({ editor, state, tr, chain }) => {
+            if (!openState(state, tr)) return false;
+            const current = getSlashMenuState(editor);
+            const at = index ?? current.activeIndex;
+            const { range } = current;
+            if (
+              !current.open ||
+              range === null ||
+              !Number.isInteger(at) ||
+              at < 0 ||
+              at >= current.items.length
+            ) {
+              return false;
+            }
+            const id = current.items[at]?.id;
+            const entry = storageOf(editor)?.items.find((i) => i.id === id);
+            if (entry === undefined) return false;
+            const command =
+              typeof entry.command === 'function' ? entry.command : null;
+            const action: SlashAction = {
+              type: 'run',
+              ui: command === null ? entry.id : null,
+            };
+            // Mesma transação (C15): um passo de desfazer, sem fundir com a
+            // digitação de `/consulta`.
+            const base = chain()
+              .command(({ tr: next, dispatch }) => {
+                if (dispatch) closeHistory(next).setMeta(slashKey, action);
+                return true;
+              })
+              .deleteRange(range);
+            return (command ? command(base, editor) : base).run();
+          },
+      };
+    },
+    addKeyboardShortcuts() {
+      // Só com o menu aberto (e o editor editável); sem itens, só `Escape`.
+      // `Tab` nunca é capturado (C16, WCAG 2.1.2).
+      const move =
+        (step: number) =>
+        ({ editor }: { editor: Editor }): boolean => {
+          const {
+            open,
+            items: visible,
+            activeIndex,
+          } = getSlashMenuState(editor);
+          if (!open || visible.length === 0) return false;
+          const next = (activeIndex + step + visible.length) % visible.length;
+          return editor.commands.setSlashActiveIndex(next);
+        };
+      return {
+        ArrowDown: move(1),
+        ArrowUp: move(-1),
+        Enter: ({ editor }) => {
+          const { open, items: visible } = getSlashMenuState(editor);
+          return open && visible.length > 0 && editor.commands.runSlashItem();
+        },
+        Escape: ({ editor }) =>
+          getSlashMenuState(editor).open && editor.commands.closeSlashMenu(),
       };
     },
     addProseMirrorPlugins() {
       // Por editor: o `/` visto no `handleTextInput`, consumido no próximo
       // `apply` (seja ele a transação padrão da digitação ou não).
       let pending: Pending | null = null;
+      const { editor } = this;
       return [
         new Plugin<SlashPluginState>({
           key: slashKey,
@@ -341,10 +422,28 @@ export function createSlashCommandExtension(
             },
           },
           view: () => ({
-            update(view: EditorView) {
+            update(view: EditorView, prevState: EditorState) {
+              const value = slashKey.getState(view.state);
               // O editor deixou de ser editável com o menu aberto (C13).
-              if (!view.editable && slashKey.getState(view.state)?.open) {
+              // Despacho reentrante: o `updatePluginViews` em curso já recebeu
+              // o estado anterior; o aninhado aplica o fechamento e roda de novo
+              // os `update` com o estado fechado, que não despacha outra vez.
+              if (!view.editable && value?.open) {
                 view.dispatch(stateOnly(view.state.tr, { type: 'close' }));
+                return;
+              }
+              // Item de UI (C15): uma chamada, com o estado da execução já
+              // aplicado (`/consulta` apagada, menu fechado). O mesmo estado
+              // visto de novo (`setProps`) não repete a chamada.
+              const id = value?.pendingUi;
+              if (id == null || slashKey.getState(prevState) === value) return;
+              const onUiItem = options?.onUiItem;
+              if (typeof onUiItem !== 'function') return;
+              try {
+                onUiItem(id, editor);
+              } catch {
+                // Função do consumidor que lança vale como ausente: nunca
+                // lança durante a entrada (lição 4).
               }
             },
           }),
