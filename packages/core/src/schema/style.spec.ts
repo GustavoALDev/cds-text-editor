@@ -44,6 +44,15 @@ describe('sanitizeStyle', () => {
     );
   });
 
+  it('descarta !important com espaço ou maiúsculas', () => {
+    const text: Record<string, RteAttrRule> = {
+      width: { kind: 'text', maxLength: 40 },
+    };
+    expect(sanitizeStyle(text, 'width: 5px ! important')).toBe('');
+    expect(sanitizeStyle(text, 'width: 5px !IMPORTANT')).toBe('');
+    expect(sanitizeStyle(styles, 'text-align: center !IMPORTANT')).toBe('');
+  });
+
   it('descarta o estilo inteiro com barra invertida, comentário ou expression', () => {
     expect(sanitizeStyle(styles, 'text-align: left; \\61 ')).toBe('');
     expect(sanitizeStyle(styles, 'text-align: left /* x */')).toBe('');

@@ -40,7 +40,7 @@ export function sanitizeStyle(
     if (!rule) continue;
     const raw = trimAscii(decl.slice(colon + 1)).replace(ASCII_WS, ' ');
     const lower = lowerAscii(raw);
-    if (lower.includes('!important') || lower.includes('url(')) continue;
+    if (lower.includes('!') || lower.includes('url(')) continue;
     const value = normalizeAttribute(rule, raw);
     if (value === null) continue;
     found.set(prop, value);
