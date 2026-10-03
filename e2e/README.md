@@ -8,6 +8,8 @@ Rodar nos 3 navegadores (chromium, firefox, webkit): `npx playwright test -c e2e
 - `CHROME`: caminho de um binário Chromium/Chrome alternativo (`launchOptions.executablePath`). Opcional; sem ele o Playwright usa o navegador de `~/.cache/ms-playwright`.
 - `LD_LIBRARY_PATH`: necessário em WSL/Ubuntu sem as libs dos navegadores (o helper define).
 
+- `E2E_NETWORK=1`: liga `e2e/core/embeds.spec.ts` (YouTube, Vimeo e Spotify de verdade; precisa de rede). O CI não define; sem ela o spec é pulado.
+
 ## Setup (uma vez)
 
 ```bash
