@@ -1,0 +1,167 @@
+# ADR 0004: Extensões de conteúdo, fábrica e teste de contrato
+
+- Status: aceita (2026-10-03)
+- Spec de origem: `docs/specs/03b-extensoes-de-conteudo.md` (parte 2 de 3 da spec 03)
+
+## Contexto
+
+A spec 03a (ADR 0003) fixou o contrato do HTML como dados (`getHtmlSchema`). Faltava o lado que **produz** esse HTML: as extensões Tiptap, a fábrica que monta a lista delas, um serializador canônico que dê a mesma saída em Node, jsdom e nos 3 motores, a leitura tolerante de HTML colado e um teste de contrato que falhe quando uma extensão muda sem o esquema (lição 9). O código do modelo (MyPresentation) foi perdido: as extensões foram escritas do zero sobre Tiptap 3.31.4. Este ADR registra as decisões B1–B23 da spec, as decisões tomadas durante a execução (rulings), as mudanças na spec, os números medidos e as pendências.
+
+## Decisão
+
+### (a) Decisões da spec (B1–B23)
+
+| #   | Decisão                                                                                                                                                                                                       | Motivo                                                                                                                                                                                                  |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B1  | Todo código que importa Tiptap/ProseMirror fica no entry `@cds/rte-core/extensions` (e as gramáticas em `/code-languages`); `.`, `/embeds` e `/html` sem Tiptap, imposto por `no-restricted-imports`.         | Lição 8 (barrel puxando o editor); o sanitizador no servidor importa `.` sem carregar o editor.                                                                                                         |
+| B2  | Só os pacotes oficiais necessários (todos MIT, 3.31.4): `@tiptap/core`, `@tiptap/pm`, as extensões avulsas da marcação, `@tiptap/extensions`, `lowlight` 3.3.0 (MIT) e `highlight.js` 11 (BSD-3-Clause).      | Só o necessário para a marcação da 03a; licenças dentro do gate; nada Pro/Cloud.                                                                                                                        |
+| B3  | Sem `@tiptap/starter-kit`.                                                                                                                                                                                    | Ele declara `@tiptap/core`/`@tiptap/pm` exatos em `dependencies`: com outra versão no consumidor, o npm instala uma segunda cópia do ProseMirror em silêncio. As avulsas usam peer exato e falham alto. |
+| B4  | Pacotes de B2 como `peerDependencies` opcionais do core (`^3.31.4`, `^3.3.0`, `^11.11.1`); exatos nas `devDependencies` da raiz; o `@cds/rte-angular` os declara obrigatórios.                                | Uma só cópia do ProseMirror, controlada pelo consumidor; quem só sanitiza no servidor não baixa Tiptap nem `highlight.js`.                                                                              |
+| B5  | Piso Tiptap 3.31.4, que é o "mínimo" da matriz de CI da spec 08.                                                                                                                                              | Peers exatos exigem todos os `@tiptap/*` na mesma versão; testar só o que se suporta.                                                                                                                   |
+| B6  | Não usados: `extension-text-style`/`Color`/`-highlight`, `extension-code-block-lowlight`, `extension-image`, `TaskList`/`TaskItem` oficiais, `TrailingNode`, `@tiptap/static-renderer`, `@tiptap/html`.       | Cada um diverge do contrato (cor CSS livre, `highlightAuto`, sem `figure`, `paragraph+`, `<p></p>` final) ou traz peer pesado (React, happy-dom).                                                       |
+| B7  | Serializador canônico próprio sem DOM: `serializeRteHtml` usa o `DOMSerializer` com um documento de strings e escreve pelo algoritmo de serialização do HTML; `getRteHtml(editor)` é a saída oficial.         | Desde o `prosemirror-model` 1.25 o `style` passa pelo CSSOM e o `getHTML()` muda por motor; sem DOM a saída é idêntica em todo lugar e funciona em SSR.                                                 |
+| B8  | Ids de título calculados na serialização, função pura dos textos em ordem; o nó não guarda `id`; ids colados ignorados.                                                                                       | Cobre a carga inicial sem transação (lição 10) e o SSR; sem _DOM clobbering_; determinístico. Custo: mudar o texto muda o id.                                                                           |
+| B9  | Toda regra de atributo vem do `getHtmlSchema(options)` montado uma vez pela fábrica; validação na leitura e de novo na renderização.                                                                          | Uma fonte só (03a R1); JSON (`format: 'json'`) não passa pela leitura.                                                                                                                                  |
+| B10 | Legenda, crédito, autor e cargo são atributos de texto puro.                                                                                                                                                  | O "buraco" de conteúdo do ProseMirror precisa ser filho único, o que impede `figcaption` editável ao lado de `img`/`small`.                                                                             |
+| B11 | Tarefa como bloco de texto (`rtTaskItem`, `inline*`, sem aninhamento) renderizada como `{ dom, contentDOM }` com o documento de renderização; `contentDOM` = o `label`.                                       | Única forma de gerar `<label><input …>Texto</label>`.                                                                                                                                                   |
+| B12 | Títulos de caixa e de "Leia também" são nós filhos editáveis; sintetizados quando faltam; título vazio sai com o rótulo na serialização.                                                                      | WCAG 1.4.1 (o tipo não depende só de cor); sem a síntese o ProseMirror expulsa o conteúdo da caixa.                                                                                                     |
+| B13 | Cores por marcas próprias que leem só `data-rt-color`; `style` de entrada nunca é lido; `<mark>` de outro editor vira `yellow`.                                                                               | A3 e lição 9.                                                                                                                                                                                           |
+| B14 | `Link` oficial estendido guardando só `href`/`target`; `rel`/`target` de `getLinkAttributes` na renderização; `openOnClick: false`, `defaultProtocol: 'https'`.                                               | O padrão do Tiptap põe `target="_blank" rel="noopener noreferrer nofollow"` em todo link (contra a lição 10).                                                                                           |
+| B15 | `CodeBlock` oficial + plugin próprio de decorações com um `lowlight` vazio por editor; linguagem não registrada fica sem realce; gramáticas por `import()`; padrão `codeLanguages: []`.                       | Sob demanda, sem `lowlight/common` nem `highlightAuto`; decorações nunca vão para o HTML.                                                                                                               |
+| B16 | Tabelas oficiais estendidas: `table` sem `style`, `colgroup` só com largura, `col` só com `width`, sem `align` em célula.                                                                                     | O oficial gera `style="min-width…"` e atributos fora do esquema.                                                                                                                                        |
+| B17 | NodeView de redimensionamento só DOM, no core, sobre `computeResize`; um arrasto = uma transação; `Escape` cancela; `setImageSize` como alternativa sem arrasto (WCAG 2.5.7).                                 | Lição 12 e SSR.                                                                                                                                                                                         |
+| B18 | Fábrica com opções superconjunto de `RteHtmlSchemaOptions`; instâncias novas por chamada; valores dinâmicos por função (lição 4); extensões do consumidor no fim; nome repetido lança `TypeError`.            | Configurável sem fork; editor e esquema não divergem por configuração.                                                                                                                                  |
+| B19 | Nomes próprios com prefixo `rt`; oficiais mantêm o nome; nomes e atributos são API pública.                                                                                                                   | Sem colisão com extensões oficiais do consumidor; formato JSON estável (spec 05).                                                                                                                       |
+| B20 | `validateHtml` (entry `/html`) e `isAllowedClass` (entry `.`) públicos já na 03b; os interpretadores que transformam (`ensureTokens`, `requireChild`, `required`/`default`/`onInvalid`) continuam na spec 04. | O teste de contrato precisa conferir classes e o resto sem lista paralela. Antecipa a parte de **leitura** da decisão 16 do ADR 0003; a parte que transforma continua com a spec 04.                    |
+| B21 | Testes do editor em Vitest com jsdom por arquivo; o SSR do `/extensions` roda em `node` sem armadilhas de getter.                                                                                             | O `prosemirror-view` testa `typeof document` ao importar; em Node real os globais são ausentes e o import funciona.                                                                                     |
+| B22 | Fixtures compartilhados em `fixtures/content/` (`all-features.html` ponto fixo, `all-features.json` gerado, `tolerant-cases.json`).                                                                           | As specs 04 e 06 consomem o mesmo arquivo sem importar código de outro pacote.                                                                                                                          |
+| B23 | Primeira tarefa: correção herdada da 03a no validador de provedor (R1: sem quantificador logo depois da `/` do host).                                                                                         | Pendência que enfraquecia o pareamento host × padrão do `iframe`. Feita em `e059e35`; 03a §6, decisão 14 do ADR 0003 e `schema/features.ts` corrigidos.                                                 |
+
+### (b) Decisões tomadas durante a execução (rulings)
+
+Cada uma com o motivo e o custo se estiver errada.
+
+**Esquema, validador e entries**
+
+1. **`requireChild` é "um dentre"** em `validateHtml`: a união do esquema soma as listas por tag, e basta um dos filhos exigidos. `__proto__` não é nome de tag no HTML; o teste de protótipo usa `constructor`/`tostring` e um atributo `__proto__`. Custo: a spec 04 precisa adotar a mesma semântica.
+2. **O validador é simétrico à regra do `style` ("nada descartado").** No modo `canonical`, `class` vazio ou com token repetido é violação; no modo `accepted`, token de classe desconhecido é violação, e não descarte silencioso. O validador é o oráculo do contrato. Custo: HTML aceito pelo sanitizador pode ser recusado pelo oráculo.
+3. **Peers ainda sem uso.** O `ignoredDependencies` do `@nx/dependency-checks` começou com os 23 peers não importados, e cada tarefa removeu os que passou a usar. Na tarefa das tabelas a lista ficou vazia e foi removida junto com o comentário. Custo: um peer sem uso passaria despercebido até ser removido da lista.
+4. **`writeHtml` escapa texto também em `script`/`style`.** É mais restrito que o algoritmo do HTML, mas o esquema não aceita essas tags, então serve só de defesa. Custo: nenhum.
+5. **Orçamentos recalculados pela fórmula `ceil(medido × 1,15 / 64) × 64`.** O cenário `embeds` foi para 3392 depois de crescer 32 B com o validador das Tarefas 1 e 13, e o `html` foi para 35712 com o `validateHtml`. O `code-languages` é medido no pior caso, com as 24 gramáticas embutidas pelo esbuild (que não as separa em _chunks_ sem `splitting`), como o plano decidiu. Custo: orçamento mais folgado que o necessário.
+
+**Fábrica e base**
+
+6. **Nomes reais `dropCursor`/`gapCursor`.** O Tiptap 3.31.4 registra `Dropcursor`/`Gapcursor` com esses nomes, e pela B19 os oficiais mantêm o nome. A spec §4/§6 dizia `dropcursor`/`gapcursor` e foi corrigida. Custo: nenhum.
+7. **Ordem da fábrica corrigida:** cores e código entram **depois** de `undoRedo`/`dropCursor`/`gapCursor`, como manda a §6. A ordem tinha desviado na tarefa das cores, e um teste da sequência completa passou a cobri-la. Custo: nenhum.
+8. **Checagem da lição 4** ("nenhuma extensão muda o próprio `options`"): primitivos comparados por `Object.is` e objetos/funções por cópia profunda, porque o getter `options` do Tiptap 3 recria objetos. Custo: uma mutação sutil de função com o mesmo código-fonte passaria.
+9. **`heading.level` padrão é 2** (no oficial é 1), porque `h1` não existe no contrato. Custo: nenhum. JSON sem nível vira `h2`.
+
+**Links**
+
+10. **Href canônico guardado no JSON.** Um `appendTransaction`, restrito às faixas alteradas, reescreve as marcas `link` para o `href` canônico de `getLinkAttributes`. Cobre o autolink, a colagem e o `toggleLink` herdado, que gravava `href`/`target` fora do contrato. Colar uma URL sobre uma seleção também aplica a política (R9). Custo: trabalho por transação em documentos grandes.
+11. **Href inválido vindo de JSON perde a marca** na primeira transação que passa pela faixa (o mesmo `appendTransaction`), em vez de virar `<a>` inerte. É mais seguro e mantém a saída canônica. Sem transação (conteúdo inicial, SSR), a renderização ainda produz o `<a>` sem `href` da §4. A propriedade de idempotência (b) gera só documentos válidos, como explica a decisão 26. Custo: nenhum de segurança.
+
+**Cores e idioma**
+
+12. **Cor e idioma no mesmo trecho saem como `span` aninhados** (`<span data-rt-color…><span lang…>`), nunca num `span` só: o ProseMirror serializa cada marca como um elemento. A leitura de `span[data-rt-color]` usa `consuming: false`, para um `span` colado com os dois atributos casar as duas marcas. Custo: um elemento a mais na saída.
+13. **`rtLang` com `lang` inválido vindo de JSON sai sem atributos** (sem `dir` solto), porque `dir` sem `lang` viola a §4 e não seria relido. Custo: nenhum.
+
+**Código**
+
+14. **O plugin de realce registra cada gramática sob o nosso `id` e os aliases** no `lowlight` vazio do editor (`createLowlight()`). Custo: nenhum.
+15. **Linguagem do bloco gravada sempre canônica** por `appendTransaction` nas faixas alteradas, como nos links. Cobre a colagem do VS Code (`mode` cru) e qualquer caminho futuro. `toggleCodeBlock()` sem argumento desliga um bloco que tem linguagem, e as decorações somem quando o bloco vira parágrafo. Custo: trabalho por transação.
+
+**Tabelas**
+
+16. **O texto de `<caption>` é descartado** na leitura (`{ tag: 'caption', ignore: true }`). A primeira versão transformava a legenda num parágrafo antes da tabela, mas a regra mutava o DOM de entrada no `getAttrs`: corrompia o DOM de quem chamou e não era idempotente. A alternativa limpa, normalizar antes do _parse_ em todos os caminhos, espalharia lógica por `setContent`, `insertContent` e colagem, e o editor nunca produz `caption`. Custo: o texto da legenda de uma tabela colada se perde.
+17. **`colwidth` do `colgroup` só na 1ª linha**, com o índice somando `colspan`. A versão anterior ignorava `rowspan`, e o `fixTables` corrompia as larguras na 1ª edição. `scope` é comparado sem diferenciar maiúsculas. Custo: nenhum.
+
+**Tarefas**
+
+18. **Marcação de leitura: `li` com `label` transparente.** A regra de `li.rt-task` lê o `li` inteiro, o `label` é um invólucro inline transparente e o `input` some. A tabela da §4 dizia "conteúdo = `label`" e foi corrigida. Custo: nenhum.
+19. **Regra do `p` em tarefa colada (formato do Tiptap):** o `p` só vira o texto da tarefa se antes dele houver apenas espaço, comentário ou `label`/`input` vazios. Com texto antes, o `p` sai da lista como parágrafo. Isso evita juntar palavras (`"XY"`). Custo: uma tarefa colada com dois blocos vira tarefa + parágrafo.
+20. **Teclado das tarefas:** `Enter` no **início** de uma tarefa marcada insere um item vazio desmarcado **antes**, e a tarefa continua marcada, com o cursor nela. Antes o texto ia para um item novo desmarcado, o que invertia o estado. `Enter` num item vazio **no meio** da lista divide a lista: o parágrafo fica entre as duas partes. Custo: nenhum.
+
+**Mídia e embeds**
+
+21. **Mídia (`media.ts`):** as regras de `figure` só pegam `img`/`video` filhos diretos, e o resto do conteúdo fica (A1: "o texto fica"). `br` na legenda vira espaço; `script`/`style`/`template` são ignorados na legenda; `track` sem `kind` vira `subtitles`; `setVideo` descarta `tracks` inválidas; o nó fica selecionado depois de inserido. JSON e `updateAttributes` guardam valores crus, a renderização revalida (B9) e a NodeView valida antes de escrever no DOM. Custo: nenhum.
+22. **Altura derivada da proporção grampeada em [1, 10000]**, no editor e também no `toEmbed` da 03a (era pendência "altura derivada sem limite" do ADR 0003). Custo: nenhum.
+23. **Colar a URL da página ou o `/embed/` dá a mesma saída:** `direct()` deriva altura e proporção de `toEmbed(src)` quando o `src` canônico é do mesmo provedor (Spotify 152/352, YouTube 16 / 9). Custo: nenhum.
+24. **`YOUTUBE_PROVIDER.match` aceita `www.youtube-nocookie.com/embed/ID`** (só esse caminho do `nocookie`). `/embed/ID?autoplay=1` colado vira o `src` canônico sem `autoplay`, porque o `src` é sempre montado pelo provedor. Custo: nenhum de segurança.
+25. **Proporção ausente no JSON cai para a do provedor** na renderização (a mesma que a leitura do HTML acrescenta). Antes um embed com `aspectRatio: null` não era ponto fixo da releitura. Custo: nenhum.
+
+**Leitura, escrita e propriedades**
+
+26. **Propriedade de idempotência (b):** gera só documentos válidos e exige `validateHtml(…) = []` antes de comparar. O `<a>` inerte da §4 e a perda da marca da decisão 11 ficam fora da comparação de propósito. A propriedade (a) usa valores hostis também em `variant`, `color`, `lang`, `dir`, `textAlign`, `start`, `author` e `role`; inclui `file` na regex de perigo, CR no código e strings binárias nos geradores. A (b) foi ampliada para títulos, listas aninhadas, marcas, cor + idioma, tabelas, tarefas e as três caixas. É a principal rede de segurança do editor. Custo: suíte mais lenta (o `core:test` leva cerca de 1 min 16 s).
+27. **`RteDOMParser` instalado em `schema.cached.domParser`**, o cache que `DOMParser.fromSchema` consulta (API pública do ProseMirror): `setContent`, `insertContent` e a colagem passam por ele. Ele tira o espaço ASCII inicial do 1º texto de cada bloco de texto que nasce da divisão de um pai (`<p>a <img> b</p>` → `<p>b</p>`), sem o que a saída deixaria de ser ponto fixo. Ressalva: `clipboardParser`/`domParser` próprios do consumidor (`editorProps`) pulam esse corte, e com `preserveWhitespace` ele também não roda. Custo: um consumidor com parser próprio pode ver um espaço inicial a mais depois de mídia colada.
+28. **CR e NUL normalizados na escrita:** `writeHtml` aplica o pré-processamento da entrada do HTML (CR/CRLF → LF, NUL → U+FFFD) a texto e atributos, como a releitura faria. Sem isso, um CR num bloco de código voltaria como LF e a saída não seria ponto fixo. Custo: o HTML nunca contém CR, mesmo que o JSON contenha.
+
+**Caixas e "Leia também"**
+
+29. **Título ausente é sintetizado vazio e preenchido na serialização.** O `contentElement` devolve uma `div` destacada com um título **vazio** e **clones** dos filhos, sem mutar a entrada. A normalização (b) da §5 escreve o rótulo da variante (ou `labels.readAlsoTitle`) no título vazio. Assim o rótulo segue o idioma de quem serializa. Custo: no editor, o título sintetizado aparece vazio até a spec 05 dar um _placeholder_.
+30. **Teclado do "Leia também" divide a caixa.** Como o `aside` só aceita título + lista, `Enter` num item vazio e `Backspace` no início dividem o **contêiner**: a parte de antes fica com o título, a de depois ganha um título vazio, e o parágrafo vai entre as duas. A divisão do contêiner é opcional no `createItemKeymap` (`splitContainer`), e só o "Leia também" a liga; as tarefas não. Sem itens, um título editado vira parágrafo, e o título igual ao rótulo padrão some. Os itens do "Leia também" exigem `li` não-tarefa com conteúdo inline ou um `p`. O cargo da citação em destaque é ponto fixo (sem a vírgula inicial). Custo: o comportamento de teclado difere do de uma lista comum.
+31. **Ids pelo texto do elemento:** a normalização (a) da §5 calcula o id a partir do `textContent` do `h2`–`h4` já serializado. `getRteHeadings` usa o `textContent` do nó, que dá o mesmo texto. O invariante só está documentado (ver pendências). Custo: nenhum.
+
+**Navegador real**
+
+32. **Posição do `style` no `getHTML()`:** Chromium e WebKit movem o `style` para o fim dos atributos quando o Tiptap adota os nós num documento novo; o Firefox mantém a posição. O `normalizeForCompare` (`extensions/src/testing/compare.ts`) remove o `style` e o recoloca como último atributo. O `getRteHtml` é byte a byte igual ao fixture nos 3 motores. Custo: nenhum (só o ajudante de comparação).
+33. **`Tab` no Firefox parte do cursor:** com o cursor no texto de uma tarefa, o Firefox pula o checkbox desse item, que vem antes no DOM, e `Shift+Tab` chega a ele. Chromium e WebKit partem do início da área editável. O checkbox está na ordem de foco nos 3 motores; o E4 começa num parágrafo antes da lista e confere os dois sentidos. Fica como nota para a navegação por teclado da spec 05.
+
+### (c) Mudanças na spec durante a execução
+
+A spec 03b foi ajustada onde a execução divergiu:
+
+- §4: nomes `dropCursor`/`gapCursor`; `caption` descartado com o texto; tarefas lidas como `li` com `label` transparente, com a regra do `p` (decisão 19); cor + idioma como `span` aninhados; títulos sintetizados vazios; `aspect-ratio` de embed pelo provedor quando falta; `nocookie` `/embed/` aceito; links do JSON com `href` canônico e perda da marca com `href` perigoso depois de uma transação.
+- §5: CR/NUL pré-processados na escrita; `RteDOMParser` em `schema.cached.domParser` e a ressalva do `clipboardParser` do consumidor.
+- §6: ordem da fábrica com `dropCursor`/`gapCursor`; teclado das tarefas (`Enter` no início, `Enter` em item vazio do meio) e do "Leia também" (divide a caixa).
+- §7.3: cor + idioma como `span` aninhados.
+- §7.6: Firefox `Tab` e reordenação do `style` em Chromium/WebKit.
+- §8 R16: números medidos.
+
+### (d) Números medidos (2026-10-03)
+
+| Cenário                    | min (B) | min+gzip (B) | Orçamento (B) |
+| -------------------------- | ------- | ------------ | ------------- |
+| `whole`                    | 22634   | 8362         | 9280          |
+| `schema`                   | 13931   | 5206         | 5824          |
+| `links`                    | 6829    | 2723         | 3136          |
+| `draft`                    | 1288    | 671          | 896           |
+| `embeds`                   | 7340    | 2912         | 3392          |
+| `html`                     | 74058   | 31018        | 35712         |
+| `extensions` (externos)    | 77516   | 26123        | 30080         |
+| `code-languages`           | 109093  | 34511        | 39744         |
+| `extensions` sem externos¹ | 512904  | 165672       | —             |
+
+¹ Informativo (R16): o `/extensions` com Tiptap, ProseMirror, `linkifyjs` e `lowlight` embutidos, sem as gramáticas. O `whole` cresceu 170 B com o `isAllowedClass`; o `html`, cerca de 1,6 kB com o `validateHtml`. O `code-languages` é o pior caso (as 24 gramáticas embutidas). Num bundler com `splitting`, cada gramática vira um _chunk_ carregado por `load()`; o app da spec 07 confere os _chunks_ do Angular.
+
+### (e) Verificação em navegador real
+
+`e2e/core/editor-*.spec.ts` (E1–E6) rodam em Chromium, Firefox e WebKit sobre um IIFE do esbuild (`window.RteEditorLab`), com toda requisição externa abortada. Os testes são E1 contrato (byte a byte e árvore DOM contra o `getHTML()`), E2 colagem dos 33 casos de `tolerant-cases.json` por `view.pasteHTML`, E3 redimensionamento nos 4 cantos (uma transação, `minWidth`, `Escape`, um passo de desfazer), E4 tarefas (clique, `Tab`/`Space`, `aria-label`, `Enter`/`Backspace`), E5 realce sob demanda e E6 autolink e ids na carga. Nenhum bug de extensão apareceu no navegador. Os achados foram as decisões 32 e 33. O bundle do E2E embute as gramáticas; o "sob demanda" é verificado espionando `load()`, não pela rede.
+
+## Pendências conhecidas
+
+Itens `minor` adiados nas revisões; não são decisões. Agrupados por área.
+
+- **Validador e esquema (`validate-html.ts`):** o modo `canonical` não confere maiúsculas em nomes de tag/atributo nem o escape de entidades (o teste byte a byte do fixture cobre); texto solto no topo ou dentro de `ul` não é conferido (o validador não tem modelo de conteúdo); o rótulo `#doctype` vale para toda _processing instruction_; faltam testes (`ensureTokens` sem `when`, `style` em elemento sem `styles`, CDATA, `checked="checked"` no `accepted`).
+- **Provedor de embed (`validate-provider.ts`, `to-embed.ts`):** metade do teste A+B do `toEmbed` não depende da correção (asserir que o padrão `/?` de fato casaria `a.com.x.net`); a regra recusa `\/` escapado logo depois do host (documentar na mensagem); faltam testes do `toEmbed` para `nocookie` `/embed/ID?autoplay&mute&controls` e outros caminhos `nocookie`, e para `start=0`/`0090` sem dicas.
+- **Lint e entries:** a regra B1 não pega `import()` dinâmico de `@tiptap/*`/`lowlight`/`highlight.js` em `.`, `/embeds` e `/html` (usar `no-restricted-syntax` em `ImportExpression`); `el['innerHTML']` computado e `insertAdjacentHTML` não são barrados; avisos `no-non-null-assertion` em `src/image.spec.ts:121` e nos specs E2E novos poluem a saída do gate.
+- **Serializador e documento de strings (`serialize.ts`, `string-dom.ts`, `dom-parser.ts`):** `getRteHeadings` conta nós `heading` e o serializador conta `h2`–`h4` de saída (invariante só documentado); `insertBefore` sem checagem de hierarquia (um ciclo estoura a pilha); stub de `PointerEvent` nunca exercitado no teste e `createElementNS` minúsculo não documentado; o JSDoc do `dom-parser` diz que `insertContent` passa pelo corte, mas o Tiptap usa `preserveWhitespace: 'full'` nesse caminho; linha longa no JSDoc de `string-dom.ts`; nomes públicos extras (`RteContentLabelsSource`, `SerializeRteHtmlOptions`, `RteHeading`, `RteContentStorage`) a citar no documento de API.
+- **Fábrica e base (`factory.ts`, `base.ts`):** a regra de entrada do `ol` grava `start` fora da faixa no JSON (0, 999999; o HTML normaliza); nome repetido **dentro** dos pacotes do consumidor (`addExtensions`) não é detectado.
+- **Plugins canônicos (`changed-ranges.ts`, `link.ts`, `code-block.ts`, `tables.ts`) — triar primeiro:** `changed-ranges.ts` só cobre `AttrStep` (`pos`), e `link.ts` tem cópia própria que cobre `from`/`to`; unificar o helper (`pos` + `from`/`to` + mapear faixas entre transações em lote) e usar em `link.ts` e `code-block.ts`; o plugin de atributo canônico está duplicado em `tables.ts` e `code-block.ts`; `setLink` normaliza duas vezes.
+- **Links (testes):** faltam `defaultRel`, `target: 'never'`, `insertContent` com `javascript:`, maiúsculas/ofuscação no JSON, saída exata da colagem e o canônico do `<a>` inerte.
+- **Cores (`colors.ts`):** faltam cor com negrito/link, `unset` sem cor, nome vazio, `colors: false` para todos os comandos; ramo defensivo inalcançável em `colors.ts:246`.
+- **Código (`code-languages`, `highlight.ts`):** faltam casos de `aliases` que não é lista e `id` que não é string; a varredura de import estático só olha linha única; comentários de `destroy`/pendência e de `requestLoad` em `init`/`apply`; `validateHtml` também no `highlight.spec`; um U+212A invisível num teste.
+- **Tabelas (`tables.ts`):** `colwidth` inválido presente não cai para o `col`; faltam testes de tabelas aninhadas com `colgroup`, `thead` + `scope`/`colspan` e o caminho `setNodeMarkup` do redimensionamento de coluna.
+- **Tarefas (`tasks.ts`, `task-view.ts`):** `li.rt-task` sem `context`; `syncEditable` só no evento `update`; `toggleTaskList` não junta listas vizinhas.
+- **Mídia e NodeView de imagem (`media.ts`, `image-view.ts`, `embed.ts`):** faltam asserções para espaço/comentário/texto depois da `img` na `figure`; `minWidth` inválido é grampeado em silêncio (validar no `context.ts` com `TypeError`); `pointerId` não conferido (multitoque pode conduzir ou encerrar o arraste); testes fracos (_spy_ criado tarde; `destroy` não confere `capture=true` no `keydown`); `ignoreMutation` devolve `true` para tudo; o redimensionamento e os comandos reescrevem atributos extras de `rtImage` para o padrão; helpers internos exportados por `media.ts` (mover para `figure-helpers.ts`); manter `width` válido e derivar só a altura; `sizeRule` usado também para `height`; faltam testes de mídia + embeds juntos, Spotify álbum (352) e dois `iframe`.
+- **Caixas e idioma (`news-blocks.ts`, `lang.ts`):** `setCallout` pode aninhar em `li`/célula conforme a posição do parágrafo (decidir e testar); faltam testes de `Enter` em item vazio do meio do "Leia também" e de `Enter` no meio do título; helpers duplicados com `media.ts` (`dom-helpers.ts`).
+- **Contrato, cobertura e propriedades (`contract.spec.ts`, `coverage.spec.ts`, `properties.spec.ts`):** os casos "recurso desligado" não conferem a ausência da marcação diretamente (dependem da poda do esquema) — triar; o provedor do consumidor é registrado mas nunca renderizado; a mutação confere só o tipo da violação; a cobertura ignora valores de `enum`; casos Word/`mso`, `thead`, `caption` e `figure` com conteúdo extra estão fora do JSON compartilhado; o teste de tipos do `index.spec.ts` usa `as` (usar `satisfies`) e `toHaveLength(7)` só vale em compilação.
+- **E2E (`e2e/core/`):** _sleep_ fixo de 200 ms em `editor-highlight.spec.ts:48`; a checagem de "sem arraste nativo" passa mesmo sem `dragstart`; o E2 não confere o ponto fixo no navegador; instabilidade do Firefox com mais de 4 _workers_ não investigada (na verificação final, com 4 _workers_, fechar o contexto do Firefox estourou 30 s uma vez em `E2: h1 vira h2 com id`, sem falha de asserção; passou ao repetir).
+
+## Consequências
+
+- **Spec 04:** consome `fixtures/content/all-features.html` (`sanitize(fixture) === fixture`) e `validateHtml`, constrói o filtro de classes sobre `isAllowedClass` e continua dona dos interpretadores que transformam. Precisa adotar `requireChild` como "um dentre" (decisão 1).
+- **Spec 05:** `value = getRteHtml(editor)`; cria o `Editor` com `injectCSS: false` (CSP); fornece o CSS das alças (com `touch-action: none`), das tarefas e das classes `hljs-*`; dá _placeholder_ ao título de caixa vazio (decisão 29); a navegação por teclado das tarefas leva em conta o `Tab` do Firefox (decisão 33); um `clipboardParser` próprio pula o corte do `RteDOMParser` (decisão 27).
+- **Spec 06:** o mesmo fixture alimenta a comparação visual editor × página.
+- **Spec 08:** matriz com Tiptap 3.31.4 e o último 3.x; o fixture ponto fixo e o contrato pegam mudanças de `renderHTML`/`parseHTML` das extensões oficiais.
+- Mudar a marcação exige mudar o esquema, regenerar `docs/html-schema.md`, o fixture e o JSON (`UPDATE_FIXTURES=1 npx nx test core --skip-nx-cache`).

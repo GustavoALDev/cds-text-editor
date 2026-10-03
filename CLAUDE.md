@@ -25,6 +25,7 @@ npx playwright test -c e2e                              # E2E nos 3 navegadores 
 e2e/with-browser-libs.sh npx playwright test -c e2e     # idem em WSL/Ubuntu sem sudo (libs em ~/.cache/playwright-libs; ver e2e/README.md)
 npx nx test theme                                       # unitários + propriedade do tema; FC_SEED=<n> FC_RUNS=<n> mudam a semente/execuções do fast-check
 npx changeset                                           # registrar mudança de pacote
+UPDATE_FIXTURES=1 npx nx test core --skip-nx-cache     # regenera fixtures/content/all-features.json (drift do JSON do fixture)
 ```
 
 CI: `.github/workflows/ci.yml` roda no PR e no push para `main` (check:rules, test:tools, notices sem drift, `nx affected -t lint typecheck build test verify-package size`, check:licenses (depois do build, para ler o `dist`), `typecheck:e2e`, E2E nos 3 navegadores com `playwright install --with-deps`).
@@ -33,9 +34,11 @@ Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp`
 
 ## Core (`packages/core`)
 
-- Entries: `/` (esquema, links, títulos, texto, imagem, rascunho, paleta), `/embeds` (`toEmbed` e provedores), `/html` (`htmlToText`, `extractToc`; único com `htmlparser2`).
+- Entries: `/` (esquema, links, títulos, texto, imagem, rascunho, paleta, `isAllowedClass`), `/embeds` (`toEmbed` e provedores), `/html` (`htmlToText`, `extractToc`, `validateHtml`; único com `htmlparser2`), `/extensions` (extensões Tiptap, `createEditorExtensions`, `getRteHtml`/`serializeRteHtml`) e `/code-languages` (gramáticas do `highlight.js` sob demanda). Só `/extensions` e `/code-languages` importam `@tiptap/*`/`lowlight`/`highlight.js` (lint); esses pacotes são peers opcionais do core e devDependencies exatas na raiz.
+- Fixtures de conteúdo compartilhados em `fixtures/content/` (raiz): `all-features.html` (escrito à mão, ponto fixo de `getRteHtml`), `all-features.json` (gerado; regenerar com `UPDATE_FIXTURES=1 npx nx test core --skip-nx-cache`) e `tolerant-cases.json` (leitura tolerante, no Vitest e no Playwright). Consumidos pelas specs 04 e 06 sem importar código do core.
+- Testes do editor em `packages/core/extensions/src/*.spec.ts` com `// @vitest-environment jsdom`; navegador real em `e2e/core/editor-*.spec.ts`.
 - `docs/html-schema.md` é gerado do esquema e conferido por teste; regenerar: `UPDATE_SCHEMA_DOC=1 npx nx test core --skip-nx-cache`.
-- Orçamento de tamanho por cenário em `packages/core/size-budget.json` (`nx run core:size`). Decisões: ADR 0003.
+- Orçamento de tamanho por cenário em `packages/core/size-budget.json` (`nx run core:size`). Decisões: ADR 0003 (esquema) e ADR 0004 (extensões).
 
 ## Tema (`packages/theme`)
 
