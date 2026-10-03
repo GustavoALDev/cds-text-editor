@@ -1,0 +1,81 @@
+import { isAllowedUrl } from '../schema/url';
+import { assertEmbedProvider, DEFAULT_EMBED_PROVIDERS } from './providers';
+import type { RteEmbedProvider } from '../schema/types';
+
+export interface RteEmbed {
+  provider: string;
+  src: string;
+  title: string;
+  width: number;
+  height: number;
+  aspectRatio?: string;
+}
+
+const WIDTH = 640;
+const RATIO = /^([1-9]\d{0,3}) \/ ([1-9]\d{0,3})$/;
+
+function isValid(p: RteEmbedProvider): boolean {
+  try {
+    assertEmbedProvider(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Converte uma URL de página em dados de embed. O `src` é revalidado pelo core
+ * (https, host e `srcPatterns` do provedor), inclusive para provedores do consumidor.
+ * Nunca lança por URL ruim ou provedor defeituoso.
+ */
+export function toEmbed(
+  url: string,
+  providers: readonly RteEmbedProvider[] = DEFAULT_EMBED_PROVIDERS,
+): RteEmbed | null {
+  if (typeof url !== 'string') return null;
+  for (const provider of providers) {
+    if (!isValid(provider)) continue;
+    try {
+      if (!provider.match(url)) continue;
+      const result = provider.toEmbed(url);
+      if (!result) continue;
+      const src = isAllowedUrl(
+        {
+          kind: 'url',
+          schemes: ['https'],
+          relative: false,
+          fragment: false,
+          hosts: provider.hosts,
+          patterns: provider.srcPatterns,
+          maxLength: 2048,
+        },
+        result.src,
+      );
+      if (src === null) continue;
+      const ratio =
+        result.aspectRatio !== undefined
+          ? RATIO.exec(result.aspectRatio)
+          : null;
+      const h = result.height;
+      const height =
+        typeof h === 'number' && Number.isInteger(h) && h > 0 && h <= 4000
+          ? h
+          : Math.round(
+              WIDTH / (ratio ? Number(ratio[1]) / Number(ratio[2]) : 16 / 9),
+            );
+      const embed: RteEmbed = {
+        provider: provider.id,
+        src,
+        title: provider.name,
+        width: WIDTH,
+        height,
+      };
+      if (ratio && result.aspectRatio !== undefined)
+        embed.aspectRatio = result.aspectRatio;
+      return embed;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
