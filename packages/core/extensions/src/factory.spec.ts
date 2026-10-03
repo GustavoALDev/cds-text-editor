@@ -78,7 +78,7 @@ function snapshot(value: unknown): unknown {
 describe('createEditorExtensions: lista e ordem', () => {
   it('recursos desligados: só a base, na ordem da spec §6', () => {
     const names = createEditorExtensions({ features: OFF }).map((e) => e.name);
-    expect(names).toEqual([...BASE_NAMES, 'rtPlaceholder']);
+    expect(names).toEqual([...BASE_NAMES, 'rtPlaceholder', 'rtCharLimit']);
   });
 
   it('recursos ligados entram depois da base, na ordem da spec §6', () => {
@@ -117,6 +117,7 @@ describe('createEditorExtensions: lista e ordem', () => {
       'rtReadAlsoItem',
       'rtLang',
       'rtPlaceholder',
+      'rtCharLimit',
     ]);
   });
 
@@ -126,6 +127,7 @@ describe('createEditorExtensions: lista e ordem', () => {
     expect(list.map((e) => e.name)).toEqual([
       ...BASE_NAMES,
       'rtPlaceholder',
+      'rtCharLimit',
       'extra',
     ]);
     expect(list[list.length - 1]).toBe(extra);
@@ -135,7 +137,7 @@ describe('createEditorExtensions: lista e ordem', () => {
     const names = createEditorExtensions({
       features: { ...OFF, search: true, slashCommands: true },
     }).map((e) => e.name);
-    expect(names).toEqual([...BASE_NAMES, 'rtPlaceholder']);
+    expect(names).toEqual([...BASE_NAMES, 'rtPlaceholder', 'rtCharLimit']);
   });
 });
 
@@ -159,6 +161,17 @@ describe('createEditorExtensions: erros', () => {
       });
     expect(call).toThrow(TypeError);
     expect(call).toThrow(/"x"/);
+  });
+
+  it('charLimit inválido lança RangeError; 0, null e função passam', () => {
+    for (const bad of [-1, 1.5, Infinity, NaN, '5' as never]) {
+      expect(() => createEditorExtensions({ charLimit: bad })).toThrow(
+        RangeError,
+      );
+    }
+    for (const ok of [0, null, () => -1]) {
+      expect(() => createEditorExtensions({ charLimit: ok })).not.toThrow();
+    }
   });
 
   it('idPrefix inválido lança RangeError (como getHtmlSchema)', () => {

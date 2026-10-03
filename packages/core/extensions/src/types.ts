@@ -71,6 +71,11 @@ export interface RteEditorOptions extends RteHtmlSchemaOptions {
   labels?: RteContentLabelsSource;
   /** Texto do documento vazio; função lida a cada uso (lição 4). */
   placeholder?: string | (() => string);
+  /**
+   * Limite de caracteres da entrada direta (spec 03c, C4/C6): inteiro `>= 0`
+   * ou `null` (sem limite); função lida a cada verificação (lição 4).
+   */
+  charLimit?: number | null | (() => number | null | undefined);
   /** Padrão `minWidth: 48` (`computeResize`). */
   image?: { minWidth?: number };
   /** Extensões do consumidor, no fim da lista. */

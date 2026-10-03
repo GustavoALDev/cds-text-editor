@@ -442,7 +442,8 @@ describe('tabelas: fábrica', () => {
   it('quatro extensões, na ordem, com as opções da spec', () => {
     const list = createEditorExtensions({ features: ONLY_TABLES });
     const names = list.map((e) => e.name);
-    expect(names.slice(-5, -1)).toEqual([
+    const start = names.indexOf('table');
+    expect(names.slice(start, start + 4)).toEqual([
       'table',
       'tableRow',
       'tableHeader',

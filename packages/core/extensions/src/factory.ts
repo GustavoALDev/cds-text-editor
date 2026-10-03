@@ -1,6 +1,7 @@
 import type { AnyExtension } from '@tiptap/core';
 import { Dropcursor, Gapcursor, UndoRedo } from '@tiptap/extensions';
 import { createBaseExtensions } from './base';
+import { assertCharLimit, createCharLimitExtension } from './char-limit';
 import { createCodeBlockExtension } from './code-block';
 import { createColorExtensions } from './colors';
 import { createContentExtension } from './content';
@@ -25,6 +26,7 @@ export function createEditorExtensions(
   options: RteEditorOptions = {},
 ): AnyExtension[] {
   const ctx = createExtensionContext(options);
+  assertCharLimit(options.charLimit);
   const list: AnyExtension[] = [
     createContentExtension(ctx),
     ...createBaseExtensions(ctx),
@@ -52,6 +54,7 @@ export function createEditorExtensions(
       ? createNewsBlockExtensions(ctx)
       : []),
     createPlaceholderExtension(ctx, options.placeholder),
+    createCharLimitExtension(ctx, options.charLimit),
     ...(options.extensions ?? []),
   ];
   assertUniqueNames(list);
