@@ -208,6 +208,33 @@ describe('tarefas: leitura tolerante', () => {
     );
   });
 
+  it('texto antes do p não se junta a ele: o p sai da lista', () => {
+    expect(
+      html(
+        '<ul class="rt-tasks"><li class="rt-task"><label>X</label><p>Y</p></li></ul>',
+      ),
+    ).toBe(
+      '<ul class="rt-tasks"><li class="rt-task"><label><input type="checkbox" disabled="">X</label></li></ul><p>Y</p>',
+    );
+    expect(
+      html(
+        '<ul data-type="taskList"><li data-type="taskItem">Hello<p>World</p></li></ul>',
+      ),
+    ).toBe(
+      '<ul class="rt-tasks"><li class="rt-task"><label><input type="checkbox" disabled="">Hello</label></li></ul><p>World</p>',
+    );
+  });
+
+  it('espaço em branco e label vazio antes do p não impedem o texto', () => {
+    expect(
+      html(
+        '<ul data-type="taskList"><li data-type="taskItem" data-checked="true">\n  <label><input type="checkbox" checked><span></span></label>\n  <p>A</p></li></ul>',
+      ),
+    ).toBe(
+      '<ul class="rt-tasks"><li class="rt-task"><label><input type="checkbox" disabled="" checked="">A</label></li></ul>',
+    );
+  });
+
   it('subtarefa: sem ul dentro de li.rt-task, textos A, A1, B na ordem', () => {
     const out = html(
       '<ul data-type="taskList"><li data-type="taskItem" data-checked="false"><label><input type="checkbox"><span></span></label><div><p>A</p><ul data-type="taskList"><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked><span></span></label><div><p>A1</p></div></li></ul></div></li><li data-type="taskItem" data-checked="false"><div><p>B</p></div></li></ul>',
@@ -233,7 +260,7 @@ describe('tarefas: leitura tolerante', () => {
   it('o parse não muta o DOM de entrada (dois parses do mesmo elemento)', () => {
     const editor = editorWith('<p></p>');
     const input =
-      '<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked><span></span></label><div><p>A</p><p>B</p></div></li></ul><ul class="rt-tasks"><li>X</li></ul>';
+      '<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked><span></span></label><div><p>A</p><p>B</p></div></li></ul><ul class="rt-tasks"><li>X</li></ul><ul class="rt-tasks"><li class="rt-task"><label>X</label><p>Y</p></li></ul><ul data-type="taskList"><li data-type="taskItem">Hello<p>World</p></li></ul>';
     const source = parseBody(input);
     const before = source.outerHTML;
     editor.commands.setContent(input);
@@ -334,6 +361,33 @@ describe('tarefas: teclado', () => {
     expect(canonical(editor)).toBe(
       '<ul class="rt-tasks"><li class="rt-task"><label><input type="checkbox" disabled="" checked="">A</label></li><li class="rt-task"><label><input type="checkbox" disabled="">B</label></li></ul>',
     );
+  });
+
+  it('Enter no início de A marcada: item vazio desmarcado antes, A continua marcada', () => {
+    const editor = editorWith(AB);
+    cursorIn(editor, 'A', 0);
+    expect(press(editor, 'Enter')).toBe(true);
+    expect(canonical(editor)).toBe(
+      '<ul class="rt-tasks"><li class="rt-task"><label><input type="checkbox" disabled=""></label></li><li class="rt-task"><label><input type="checkbox" disabled="" checked="">A</label></li></ul>',
+    );
+    const { $from } = editor.state.selection;
+    expect($from.parent.textContent).toBe('A');
+    expect($from.parent.attrs['checked']).toBe(true);
+    expect($from.parentOffset).toBe(0);
+  });
+
+  it('Enter em item vazio do meio divide a lista: lista, <p></p>, lista', () => {
+    const editor = editorWith(
+      '<ul class="rt-tasks"><li class="rt-task"><label><input type="checkbox" disabled="">A</label></li><li class="rt-task"><label><input type="checkbox" disabled=""></label></li><li class="rt-task"><label><input type="checkbox" disabled="">C</label></li></ul>',
+    );
+    cursorIn(editor, '', 0);
+    expect(press(editor, 'Enter')).toBe(true);
+    expect(canonical(editor)).toBe(
+      '<ul class="rt-tasks"><li class="rt-task"><label><input type="checkbox" disabled="">A</label></li></ul><p></p><ul class="rt-tasks"><li class="rt-task"><label><input type="checkbox" disabled="">C</label></li></ul>',
+    );
+    const { $from } = editor.state.selection;
+    expect($from.parent.type.name).toBe('paragraph');
+    expect($from.parent.content.size).toBe(0);
   });
 
   it('Enter em item vazio sai para <p></p> depois da lista', () => {

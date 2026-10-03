@@ -54,19 +54,30 @@ function parseChecked(li: HTMLElement): boolean {
   return false;
 }
 
+// Espaço em branco do HTML (sem `trim()`, que também remove NBSP etc.).
+const BLANK = /^[ \t\n\f\r]*$/;
+
 /**
- * O `p` é o texto da tarefa só se for o primeiro bloco do conteúdo (antes
- * dele, no máximo `label`/`input` do formato do Tiptap). Os demais saem da
- * lista como parágrafos. Sem efeito colateral no DOM de entrada.
+ * O `p` é o texto da tarefa só se for o primeiro conteúdo do item: antes
+ * dele, só espaço em branco, comentários e `label`/`input` sem texto (o
+ * formato do Tiptap). Senão ele sai da lista como parágrafo, para que nenhum
+ * texto anterior se junte a ele. Só lê o DOM de entrada.
  */
 function isTaskText(element: HTMLElement): boolean {
   for (
-    let sibling = element.previousElementSibling;
+    let sibling = element.previousSibling;
     sibling;
-    sibling = sibling.previousElementSibling
+    sibling = sibling.previousSibling
   ) {
-    const tag = tagOf(sibling);
+    if (sibling.nodeType === 8) continue;
+    if (sibling.nodeType === 3) {
+      if (BLANK.test(sibling.nodeValue ?? '')) continue;
+      return false;
+    }
+    if (sibling.nodeType !== 1) return false;
+    const tag = tagOf(sibling as Element);
     if (tag !== 'label' && tag !== 'input') return false;
+    if (!BLANK.test(sibling.textContent ?? '')) return false;
   }
   return true;
 }

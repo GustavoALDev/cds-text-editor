@@ -78,7 +78,17 @@ export function createItemKeymap(
         return toParagraph(editor);
       }
       const tr = editor.state.tr.deleteSelection();
-      const pos = tr.selection.from;
+      const $pos = tr.selection.$from;
+      if ($pos.parentOffset === 0 && $pos.parent.content.size > 0) {
+        // No início: item novo com os atributos padrão antes; o item atual
+        // (e os seus atributos) continua com o cursor.
+        const empty = $pos.parent.type.createAndFill();
+        if (!empty) return false;
+        tr.insert($pos.before(), empty);
+        editor.view.dispatch(tr.scrollIntoView());
+        return true;
+      }
+      const pos = $pos.pos;
       const types = [{ type: $from.parent.type, attrs: null }];
       if (!canSplit(tr.doc, pos, 1, types)) return false;
       const marks = editor.state.storedMarks ?? tr.selection.$from.marks();
