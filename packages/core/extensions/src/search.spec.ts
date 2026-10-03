@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-// Busca (spec 03c, C8–C10, C12, R5): literal, por bloco de texto, com teto,
-// decorações, navegação circular e índice incremental.
+// Busca e substituição (spec 03c, C8–C12, R5): literal, por bloco de texto,
+// com teto, decorações, navegação circular, índice incremental e substituir
+// um/todos.
 //
 // Reproduzir uma falha da propriedade: `FC_SEED=<n> npx vitest run
 // extensions/src/search.spec.ts`; `FC_RUNS` muda o número de execuções.
@@ -8,12 +9,15 @@ import { getSchema } from '@tiptap/core';
 import type { Editor } from '@tiptap/core';
 import type { Transaction } from '@tiptap/pm/state';
 import { TextSelection } from '@tiptap/pm/state';
+import { TableMap } from '@tiptap/pm/tables';
 import * as fc from 'fast-check';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { validateHtml } from '../../html/src/validate-html';
 import { createEditorExtensions } from './factory';
-import { searchProbe } from './search-index';
-import { getSearchState } from './search';
+import { foldCase, searchProbe } from './search-index';
+import { getSearchState, normalizeReplacement } from './search';
 import type { RteSearchOptions, RteSearchState } from './search';
+import { getRteHtml } from './serialize';
 import { createTestEditor, destroyTestEditors } from './testing/editor';
 import { text, validDoc } from './testing/doc-arbitraries';
 import { referenceMatches } from './testing/search-reference';
@@ -297,25 +301,202 @@ describe('índice incremental (R5)', () => {
   });
 });
 
-describe('propriedade: igual à referência ingênua (R5)', () => {
+describe('comandos encadeados e opções ausentes', () => {
+  // Numa cadeia, o estado do plugin é o de antes da cadeia: comando de busca
+  // depois de outro comando de busca, ou navegação/substituição depois de
+  // mudar o documento, devolve `false` sem efeito (documentado em search.ts).
+  it('setSearchQuery().nextSearchMatch(): a consulta vale, a navegação não', () => {
+    const editor = createTestEditor({}, '<p>a a</p>');
+    editor.commands.setTextSelection(1);
+    expect(editor.chain().setSearchQuery('a').nextSearchMatch().run()).toBe(
+      false,
+    );
+    expect(state(editor)).toMatchObject({ query: 'a', activeIndex: 0 });
+    expect(editor.state.selection.from).toBe(1);
+    expect(editor.commands.nextSearchMatch()).toBe(true);
+    expect(state(editor).activeIndex).toBe(1);
+  });
+
+  it('insertContent().nextSearchMatch(): sem exceção, só a edição vale', () => {
+    const editor = createTestEditor({}, '<p>a a a</p>');
+    editor.commands.setTextSelection(1);
+    q(editor, 'a');
+    editor.commands.nextSearchMatch();
+    const run = () =>
+      editor.chain().insertContentAt(1, 'bbbbbbbbbb ').nextSearchMatch().run();
+    expect(run).not.toThrow();
+    expect(editor.state.doc.textContent).toBe('bbbbbbbbbb a a a');
+    const s = state(editor);
+    expect(s.matches).toEqual(referenceMatches(editor.state.doc, 'a'));
+    // O ativo continua no mesmo trecho (mapeado), sem avançar.
+    expect(s.activeIndex).toBe(1);
+  });
+
+  it('substituir encadeado depois de busca ou de edição: false sem efeito', () => {
+    const editor = createTestEditor({}, '<p>a a</p>');
+    q(editor, 'a');
+    expect(
+      editor.chain().setSearchQuery('a').replaceSearchMatch('b').run(),
+    ).toBe(false);
+    expect(
+      editor.chain().insertContentAt(1, 'x').replaceAllSearchMatches('b').run(),
+    ).toBe(false);
+    expect(getRteHtml(editor)).toBe('<p>xa a</p>');
+  });
+
+  it('opções null valem como ausentes', () => {
+    const editor = createTestEditor({}, '<p>Gato gato</p>');
+    q(editor, 'gato', { caseSensitive: true });
+    expect(() => editor.commands.setSearchOptions(null as never)).not.toThrow();
+    expect(state(editor)).toMatchObject({ caseSensitive: true, total: 1 });
+    expect(() =>
+      editor.commands.setSearchQuery('Gato', null as never),
+    ).not.toThrow();
+    expect(state(editor)).toMatchObject({ caseSensitive: true, total: 1 });
+  });
+});
+
+describe('substituição (C10, C11)', () => {
+  it('normalizeReplacement: quebras de linha e NUL', () => {
+    expect(normalizeReplacement('a\r\nb\rc\nd', false)).toBe('a b c d');
+    expect(normalizeReplacement('a\r\nb\rc\nd', true)).toBe('a\nb\nc\nd');
+    const fffd = String.fromCharCode(0xfffd);
+    expect(normalizeReplacement('\0', false)).toBe(fffd);
+    expect(normalizeReplacement('a\0b', true)).toBe(`a${fffd}b`);
+  });
+
+  it('substituir um: herda as marcas; o ativo passa ao próximo', () => {
+    const editor = createTestEditor({}, '<p><strong>gato</strong> gato</p>');
+    editor.commands.setTextSelection(1);
+    q(editor, 'gato');
+    const trs: Transaction[] = [];
+    editor.on('transaction', ({ transaction }) => trs.push(transaction));
+    expect(editor.commands.replaceSearchMatch('cão')).toBe(true);
+    expect(trs).toHaveLength(1);
+    expect(getRteHtml(editor)).toBe('<p><strong>cão</strong> gato</p>');
+    const s = state(editor);
+    expect(s.lastReplaced).toBe(1);
+    expect(s.activeIndex).toBe(0);
+    expect(texts(editor, s)).toEqual(['gato']);
+    expect(s.matches[0]).toEqual({ from: 5, to: 9 });
+    expect(active(editor)).toHaveLength(1);
+  });
+
+  it('gato → gatos duas vezes troca os dois; vazio apaga', () => {
+    const editor = createTestEditor({}, '<p>gato gato</p>');
+    editor.commands.setTextSelection(1);
+    q(editor, 'gato');
+    expect(editor.commands.replaceSearchMatch('gatos')).toBe(true);
+    expect(editor.commands.replaceSearchMatch('gatos')).toBe(true);
+    expect(getRteHtml(editor)).toBe('<p>gatos gatos</p>');
+
+    const empty = createTestEditor({}, '<p>a gato b</p>');
+    q(empty, 'gato');
+    expect(empty.commands.replaceSearchMatch('')).toBe(true);
+    expect(empty.state.doc.textContent).toBe('a  b');
+    expect(state(empty)).toMatchObject({ total: 0, lastReplaced: 1 });
+  });
+
+  it('quebra de linha: espaço no parágrafo, \\n no código; $& literal', () => {
+    const p = createTestEditor({}, '<p>x</p>');
+    q(p, 'x');
+    expect(p.commands.replaceSearchMatch('a\nb')).toBe(true);
+    expect(getRteHtml(p)).toBe('<p>a b</p>');
+
+    const code = createTestEditor({}, '<pre><code>x</code></pre>');
+    q(code, 'x');
+    expect(code.commands.replaceAllSearchMatches('a\r\nb')).toBe(true);
+    expect(getRteHtml(code)).toBe('<pre><code>a\nb</code></pre>');
+
+    const literal = createTestEditor({}, '<p>x</p>');
+    q(literal, 'x');
+    expect(literal.commands.replaceAllSearchMatches('$&$1')).toBe(true);
+    expect(literal.state.doc.textContent).toBe('$&$1');
+  });
+
+  it('substituir tudo: cada trecho herda as suas marcas', () => {
+    const editor = createTestEditor(
+      {},
+      '<p><em>ab</em> <strong>ab</strong></p>',
+    );
+    q(editor, 'ab');
+    expect(editor.commands.replaceAllSearchMatches('x')).toBe(true);
+    expect(getRteHtml(editor)).toBe('<p><em>x</em> <strong>x</strong></p>');
+    expect(state(editor)).toMatchObject({ total: 0, lastReplaced: 2 });
+  });
+
+  it('substituir tudo sem teto, numa transação: um undo restaura', () => {
+    const editor = createTestEditor({}, `<p>${'a '.repeat(1500).trim()}</p>`);
+    const original = getRteHtml(editor);
+    expect(q(editor, 'a').capped).toBe(true);
+    const trs: Transaction[] = [];
+    editor.on('transaction', ({ transaction }) => trs.push(transaction));
+    expect(editor.commands.replaceAllSearchMatches('b')).toBe(true);
+    expect(trs).toHaveLength(1);
+    expect(editor.state.doc.textContent).toBe('b '.repeat(1500).trim());
+    expect(state(editor)).toMatchObject({ total: 0, lastReplaced: 1500 });
+    expect(editor.commands.undo()).toBe(true);
+    expect(getRteHtml(editor)).toBe(original);
+  });
+
+  it('não funde com a digitação anterior (Review Focus 5)', () => {
+    const editor = createTestEditor({}, '<p>gato</p>');
+    editor.commands.setTextSelection(5);
+    typeText(editor, 'z');
+    q(editor, 'gato');
+    expect(editor.commands.replaceAllSearchMatches('x')).toBe(true);
+    expect(editor.state.doc.textContent).toBe('xz');
+    editor.commands.undo();
+    expect(editor.state.doc.textContent).toBe('gatoz');
+  });
+
+  it('editor não editável ou sem resultado: false sem efeito', () => {
+    const editor = createTestEditor({}, '<p>a a</p>');
+    q(editor, 'a');
+    editor.setEditable(false);
+    expect(editor.commands.replaceSearchMatch('b')).toBe(false);
+    expect(editor.commands.replaceAllSearchMatches('b')).toBe(false);
+    expect(getRteHtml(editor)).toBe('<p>a a</p>');
+    expect(state(editor).lastReplaced).toBeNull();
+    expect(q(editor, 'a ').total).toBe(1);
+
+    editor.setEditable(true);
+    q(editor, 'zzz');
+    expect(editor.commands.replaceSearchMatch('b')).toBe(false);
+    expect(editor.commands.replaceAllSearchMatches('b')).toBe(false);
+    expect(getRteHtml(editor)).toBe('<p>a a</p>');
+  });
+});
+
+describe('propriedades (R5)', () => {
   const schema = getSchema(createEditorExtensions());
 
-  it('documentos válidos × consultas × opções', () => {
+  /** Trecho de 1 a 8 pontos de código do texto (`null` sem texto). */
+  const excerptOf = (json: object): fc.Arbitrary<string> | null => {
+    const points = [...schema.nodeFromJSON(json).textContent];
+    if (points.length === 0) return null;
+    return fc
+      .tuple(fc.nat({ max: points.length - 1 }), fc.integer({ min: 1, max: 8 }))
+      .map(([i, n]) => points.slice(i, i + n).join(''));
+  };
+
+  /** Faixas de conteúdo dos blocos de texto do documento. */
+  const textBlocks = (editor: Editor) => {
+    const out: { from: number; to: number }[] = [];
+    editor.state.doc.descendants((node, pos) => {
+      if (!node.isTextblock) return true;
+      out.push({ from: pos + 1, to: pos + 1 + node.content.size });
+      return false;
+    });
+    return out;
+  };
+
+  it('igual à referência ingênua: do zero, setContent e edição parcial', () => {
     const editor = createTestEditor({}, '<p></p>');
     fc.assert(
       fc.property(
         validDoc.chain((json) => {
-          const docText = schema.nodeFromJSON(json).textContent;
-          const points = [...docText];
-          const excerpt =
-            points.length === 0
-              ? fc.constant('')
-              : fc
-                  .tuple(
-                    fc.nat({ max: points.length - 1 }),
-                    fc.integer({ min: 1, max: 8 }),
-                  )
-                  .map(([i, n]) => points.slice(i, i + n).join(''));
+          const excerpt = excerptOf(json) ?? fc.constant('');
           return fc.tuple(
             fc.constant(json),
             fc.oneof(
@@ -325,9 +506,15 @@ describe('propriedade: igual à referência ingênua (R5)', () => {
               excerpt,
             ),
             fc.record({ caseSensitive: fc.boolean(), wholeWord: fc.boolean() }),
+            fc.record({
+              block: fc.nat(),
+              at: fc.nat(),
+              remove: fc.nat({ max: 4 }),
+              insert: fc.oneof(fc.constant(''), text, excerpt),
+            }),
           );
         }),
-        ([json, query, options]) => {
+        ([json, query, options, edit]) => {
           const expected = () =>
             referenceMatches(
               editor.state.doc,
@@ -340,6 +527,83 @@ describe('propriedade: igual à referência ingênua (R5)', () => {
           expect(state(editor).matches).toEqual(expected());
           // Consulta sobre o documento: índice do zero.
           expect(q(editor, query, options).matches).toEqual(expected());
+          // Edição parcial num bloco: o cache poupa os demais blocos.
+          const blocks = textBlocks(editor);
+          const block = blocks[edit.block % Math.max(1, blocks.length)];
+          if (!block) return;
+          const from = block.from + (edit.at % (block.to - block.from + 1));
+          const to = Math.min(block.to, from + edit.remove);
+          editor.view.dispatch(
+            editor.state.tr.insertText(edit.insert, from, to),
+          );
+          expect(state(editor).matches).toEqual(expected());
+        },
+      ),
+      { seed: SEED, numRuns: RUNS },
+    );
+  });
+
+  it('replaceAll(r) sem ponto de código da consulta: 0 resultados, válido, um undo', () => {
+    const editor = createTestEditor({}, '<p></p>');
+    const S = editor.storage.rtContent.schema;
+    // `r` não vazio: apagar poderia juntar as sobras num novo resultado.
+    const noQueryPoint = (query: string) => {
+      const banned = new Set(foldCase(query));
+      return fc
+        .string({ minLength: 1 })
+        .filter(
+          (r) =>
+            ![
+              ...foldCase(
+                r +
+                  normalizeReplacement(r, false) +
+                  normalizeReplacement(r, true),
+              ),
+            ].some((c) => banned.has(c)),
+        );
+    };
+    // Tabelas que continuam com problemas depois do `fixTables` da carga ficam
+    // de fora: o prosemirror-tables volta a corrigi-las a cada mudança nelas,
+    // inclusive no `undo`, o que não tem relação com a substituição.
+    const tablesSettled = () => {
+      let ok = true;
+      editor.state.doc.descendants((node) => {
+        if (node.type.spec['tableRole'] === 'table') {
+          if (TableMap.get(node).problems) ok = false;
+          return false;
+        }
+        return ok;
+      });
+      return ok;
+    };
+    fc.assert(
+      fc.property(
+        validDoc.chain((json) => {
+          const excerpt = excerptOf(json);
+          if (excerpt === null) return fc.constant(null);
+          return excerpt.chain((query) =>
+            fc.tuple(
+              fc.constant(json),
+              fc.constant(query),
+              noQueryPoint(query),
+            ),
+          );
+        }),
+        (input) => {
+          fc.pre(input !== null);
+          const [json, query, r] = input;
+          editor.commands.setContent(json);
+          fc.pre(tablesSettled());
+          const original = getRteHtml(editor);
+          q(editor, query, { caseSensitive: false, wholeWord: false });
+          const replaced = editor.commands.replaceAllSearchMatches(r);
+          expect(state(editor).total).toBe(0);
+          const html = getRteHtml(editor);
+          expect(validateHtml(html, S, { mode: 'canonical' })).toEqual([]);
+          if (replaced) {
+            expect(editor.commands.undo()).toBe(true);
+          }
+          expect(getRteHtml(editor)).toBe(original);
         },
       ),
       { seed: SEED, numRuns: RUNS },

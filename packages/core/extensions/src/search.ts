@@ -1,8 +1,9 @@
 import { Extension } from '@tiptap/core';
 import type { AnyExtension, CommandProps, Editor } from '@tiptap/core';
+import { closeHistory } from '@tiptap/pm/history';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
-import type { Transaction } from '@tiptap/pm/state';
+import type { EditorState, Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { RteExtensionContext } from './context';
 import { truncateText } from './limits';
@@ -50,6 +51,10 @@ declare module '@tiptap/core' {
       nextSearchMatch: () => ReturnType;
       /** Resultado anterior (circular): seleciona e rola, sem focar. */
       previousSearchMatch: () => ReturnType;
+      /** Substitui o ativo (texto literal); o ativo passa ao próximo. */
+      replaceSearchMatch: (replacement: string) => ReturnType;
+      /** Substitui todos os resultados, sem teto, num passo de desfazer. */
+      replaceAllSearchMatches: (replacement: string) => ReturnType;
     };
   }
 }
@@ -82,7 +87,9 @@ export type SearchAction =
       wholeWord: boolean;
     }
   | { type: 'clear' }
-  | { type: 'activate'; index: number };
+  | { type: 'activate'; index: number }
+  /** Substituição: ativo = primeiro em ou depois de `anchor` (fim do inserido). */
+  | { type: 'replaced'; anchor: number; count: number };
 
 export const searchKey = new PluginKey<SearchPluginState>('rtSearch');
 
@@ -233,6 +240,19 @@ function applyAction(
         decorations: buildDecorations(tr.doc, value.matches, i),
       };
     }
+    case 'replaced': {
+      // `value` já reflete o documento novo (`afterEdit` roda antes).
+      const activeIndex = firstAtOrAfter(value.matches, action.anchor);
+      return {
+        ...value,
+        activeIndex,
+        lastReplaced: action.count,
+        decorations:
+          activeIndex === value.activeIndex
+            ? value.decorations
+            : buildDecorations(tr.doc, value.matches, activeIndex),
+      };
+    }
   }
 }
 
@@ -244,10 +264,73 @@ function boolOr(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
+/*
+ * Comandos encadeados (`editor.chain()`): o `state` da cadeia só acompanha
+ * `doc` e `selection`; o estado do plugin continua o de antes da cadeia e
+ * todos os comandos escrevem a mesma *meta*. Em vez de reconstituir o estado
+ * intermediário, a regra é recusar o que leria dados defasados:
+ * - todo comando de busca devolve `false` sem efeito se a transação já leva
+ *   uma *meta* da busca (`chain().setSearchQuery(q).nextSearchMatch()` aplica
+ *   a consulta e recusa a navegação);
+ * - navegação e substituição, que usam posições dos resultados, também
+ *   recusam se a transação já mudou o documento
+ *   (`chain().insertContent(x).nextSearchMatch()` só insere).
+ * Consulta, opções e `clearSearch` depois de editar continuam valendo: o
+ * `apply` reindexa sobre o documento final.
+ */
+function hasSearchMeta(tr: Transaction): boolean {
+  return tr.getMeta(searchKey) !== undefined;
+}
+
+/** Estado para comando que lê posições (navegar, substituir); ver acima. */
+function positionsState(
+  state: EditorState,
+  tr: Transaction,
+): SearchPluginState | undefined {
+  if (hasSearchMeta(tr) || tr.docChanged) return undefined;
+  return searchKey.getState(state);
+}
+
+/**
+ * Texto de substituição (C11): NUL vira U+FFFD; CRLF/CR/LF viram espaço fora
+ * de bloco de código e `\n` dentro dele.
+ */
+export function normalizeReplacement(text: string, inCode: boolean): string {
+  return text
+    .replace(/\0/g, String.fromCharCode(0xfffd))
+    .replace(/\r\n|\r|\n/g, inCode ? '\n' : ' ');
+}
+
+/**
+ * Troca `from..to` pelo texto literal com as marcas do início do trecho (como
+ * `insertText`, mas sem ler `storedMarks`); vazio apaga. Devolve o fim do
+ * texto inserido.
+ */
+function replaceRange(
+  tr: Transaction,
+  from: number,
+  to: number,
+  replacement: string,
+): number {
+  const $from = tr.doc.resolve(from);
+  const $to = tr.doc.resolve(to);
+  const value = normalizeReplacement(
+    replacement,
+    $from.parent.type.spec.code === true,
+  );
+  if (value === '') {
+    tr.delete(from, to);
+  } else {
+    const marks = $from.marksAcross($to) ?? [];
+    tr.replaceWith(from, to, tr.doc.type.schema.text(value, marks));
+  }
+  return from + value.length;
+}
+
 /** Navegação: seleciona o resultado e rola até ele, sem focar (C12). */
 function navigate(step: 1 | -1): (props: CommandProps) => boolean {
   return ({ state, tr, dispatch }) => {
-    const current = searchKey.getState(state);
+    const current = positionsState(state, tr);
     const n = current?.matches.length ?? 0;
     if (!current || n === 0) return false;
     const from = current.activeIndex;
@@ -273,19 +356,20 @@ export function createSearchExtension(_ctx: RteExtensionContext): AnyExtension {
     addCommands() {
       return {
         setSearchQuery:
-          (query, options = {}) =>
+          (query, options) =>
           ({ state, tr, dispatch }) => {
             const current = searchKey.getState(state);
-            if (!current) return false;
+            if (!current || hasSearchMeta(tr)) return false;
+            const opts = options ?? {};
             if (dispatch) {
               stateOnly(tr, {
                 type: 'setQuery',
                 query: truncateText(String(query), MAX_SEARCH_QUERY),
                 caseSensitive: boolOr(
-                  options.caseSensitive,
+                  opts.caseSensitive,
                   current.caseSensitive,
                 ),
-                wholeWord: boolOr(options.wholeWord, current.wholeWord),
+                wholeWord: boolOr(opts.wholeWord, current.wholeWord),
               });
             }
             return true;
@@ -294,16 +378,17 @@ export function createSearchExtension(_ctx: RteExtensionContext): AnyExtension {
           (options) =>
           ({ state, tr, dispatch }) => {
             const current = searchKey.getState(state);
-            if (!current) return false;
+            if (!current || hasSearchMeta(tr)) return false;
+            const opts = options ?? {};
             if (dispatch) {
               stateOnly(tr, {
                 type: 'setQuery',
                 query: current.query,
                 caseSensitive: boolOr(
-                  options.caseSensitive,
+                  opts.caseSensitive,
                   current.caseSensitive,
                 ),
-                wholeWord: boolOr(options.wholeWord, current.wholeWord),
+                wholeWord: boolOr(opts.wholeWord, current.wholeWord),
               });
             }
             return true;
@@ -314,6 +399,7 @@ export function createSearchExtension(_ctx: RteExtensionContext): AnyExtension {
             const current = searchKey.getState(state);
             if (
               !current ||
+              hasSearchMeta(tr) ||
               (current.query === '' && current.lastReplaced === null)
             ) {
               return false;
@@ -323,6 +409,63 @@ export function createSearchExtension(_ctx: RteExtensionContext): AnyExtension {
           },
         nextSearchMatch: () => navigate(1),
         previousSearchMatch: () => navigate(-1),
+        replaceSearchMatch:
+          (replacement) =>
+          ({ editor, state, tr, dispatch }) => {
+            if (!editor.isEditable) return false;
+            const current = positionsState(state, tr);
+            const match = current?.matches[current.activeIndex];
+            if (!match) return false;
+            if (dispatch) {
+              const anchor = replaceRange(
+                tr,
+                match.from,
+                match.to,
+                String(replacement),
+              );
+              const action: SearchAction = {
+                type: 'replaced',
+                anchor,
+                count: 1,
+              };
+              closeHistory(tr).setMeta(searchKey, action);
+            }
+            return true;
+          },
+        replaceAllSearchMatches:
+          (replacement) =>
+          ({ editor, state, tr, dispatch }) => {
+            if (!editor.isEditable) return false;
+            const current = positionsState(state, tr);
+            if (!current?.matcher) return false;
+            // Sem teto (C10): todos os resultados, com o cache da consulta.
+            const { matches } = collectMatches(
+              state.doc,
+              current.matcher,
+              current.cache,
+              Infinity,
+            );
+            const last = matches.at(-1);
+            if (!last) return false;
+            if (dispatch) {
+              const text = String(replacement);
+              // Do último ao primeiro, numa transação: as posições anteriores
+              // ainda valem a cada troca.
+              const end = replaceRange(tr, last.from, last.to, text);
+              for (let i = matches.length - 2; i >= 0; i--) {
+                const m = matches[i] as RteSearchMatch;
+                replaceRange(tr, m.from, m.to, text);
+              }
+              // Ativo: o primeiro depois do último trecho trocado (circular).
+              const action: SearchAction = {
+                type: 'replaced',
+                anchor: tr.mapping.slice(1).map(end),
+                count: matches.length,
+              };
+              closeHistory(tr).setMeta(searchKey, action);
+            }
+            return true;
+          },
       };
     },
     addProseMirrorPlugins() {
