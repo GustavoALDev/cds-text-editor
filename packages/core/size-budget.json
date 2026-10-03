@@ -1,0 +1,36 @@
+{
+  "scenarios": {
+    "whole": {
+      "entry": "packages/core/dist/index.js",
+      "exports": ["*"]
+    },
+    "schema": {
+      "entry": "packages/core/dist/index.js",
+      "exports": ["getHtmlSchema"]
+    },
+    "links": {
+      "entry": "packages/core/dist/index.js",
+      "exports": ["normalizeHref", "getLinkAttributes"]
+    },
+    "draft": {
+      "entry": "packages/core/dist/index.js",
+      "exports": ["createDraftStore", "createLocalDraftStorage"]
+    },
+    "embeds": {
+      "entry": "packages/core/dist/embeds/index.js",
+      "exports": ["*"]
+    },
+    "html": {
+      "entry": "packages/core/dist/html/index.js",
+      "exports": ["*"]
+    }
+  },
+  "budgets": {
+    "whole": 9280,
+    "schema": 5824,
+    "links": 3136,
+    "draft": 896,
+    "embeds": 2880,
+    "html": 33600
+  }
+}

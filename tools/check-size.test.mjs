@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 import {
   SCENARIOS,
@@ -132,4 +133,53 @@ test('CLI: arquivo ausente sai com 2 e mensagem clara', () => {
   });
   assert.equal(r.status, 2);
   assert.match(r.stderr, /não encontrado/);
+});
+
+test('--config: mede cada cenário e reporta estouro de orçamento', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'check-size-'));
+  const entry = join(dir, 'lib.js');
+  writeFileSync(
+    entry,
+    [
+      `export const a = "${'x'.repeat(50)}";`,
+      `export function big() { return [${Array.from({ length: 300 }, (_, i) => `"s${i * 7919}"`).join(',')}]; }`,
+      '',
+    ].join('\n'),
+  );
+  const run = (budgets) => {
+    const cfg = join(dir, 'cfg.json');
+    writeFileSync(
+      cfg,
+      JSON.stringify({
+        scenarios: {
+          whole: { entry, exports: ['*'] },
+          small: { entry, exports: ['a'] },
+        },
+        budgets,
+      }),
+    );
+    return spawnSync('node', ['tools/check-size.mjs', '--config', cfg], {
+      encoding: 'utf8',
+    });
+  };
+  const ok = run({ whole: 100000, small: 100000 });
+  assert.equal(ok.status, 0, ok.stderr);
+  assert.match(ok.stdout, /whole/);
+  assert.match(ok.stdout, /small/);
+  const bad = run({ whole: 100000, small: 1 });
+  assert.equal(bad.status, 1);
+  assert.match(bad.stderr, /small/);
+  assert.match(bad.stderr, /orçamento/);
+  assert.doesNotMatch(bad.stderr, /cenário "whole" estourou/);
+});
+
+test('--config: arquivo de configuração ausente sai com 2', () => {
+  const r = spawnSync(
+    'node',
+    ['tools/check-size.mjs', '--config', '/nao/existe.json'],
+    {
+      encoding: 'utf8',
+    },
+  );
+  assert.equal(r.status, 2);
 });

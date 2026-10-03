@@ -45,6 +45,28 @@ export async function bundleScenario(distFile, exportsList, opts = {}) {
   return result.outputFiles[0].text;
 }
 
+/**
+ * Mede cenários descritos num arquivo de configuração:
+ * `{ scenarios: { nome: { entry, exports } }, budgets: { nome: bytes } }`.
+ * Os caminhos de `entry` são relativos à raiz do repositório (cwd).
+ */
+export async function measureConfig(config) {
+  const measurements = {};
+  for (const [name, { entry, exports: list }] of Object.entries(
+    config.scenarios ?? {},
+  )) {
+    if (!entry || !Array.isArray(list) || list.length === 0) {
+      throw new Error(`cenário "${name}" inválido: precisa de entry e exports`);
+    }
+    const code = await bundleScenario(entry, list);
+    measurements[name] = {
+      min: Buffer.byteLength(code),
+      gzip: await measureMinGzip(code),
+    };
+  }
+  return measurements;
+}
+
 /** Mede um cenário: `{ min, gzip }` em bytes. */
 export async function measureScenario(distFile, name) {
   const exportsList = SCENARIOS[name];
@@ -113,7 +135,8 @@ async function main() {
   const argv = process.argv.slice(2);
   if (argv.length === 0) {
     console.error(
-      'uso: node tools/check-size.mjs <dist/index.js> [--budget cenário=bytes …]',
+      'uso: node tools/check-size.mjs <dist/index.js> [--budget cenário=bytes …]\n' +
+        '     node tools/check-size.mjs --config <arquivo.json>',
     );
     process.exit(2);
   }
@@ -122,18 +145,30 @@ async function main() {
     : {};
   let parsed;
   try {
-    parsed = parseArgs(argv, fileBudgets);
-    const measurements = {};
-    for (const name of Object.keys(SCENARIOS)) {
-      measurements[name] = await measureScenario(parsed.file, name);
+    let measurements = {};
+    let budgets;
+    if (argv[0] === '--config') {
+      if (!argv[1]) throw new Error('--config exige um arquivo .json');
+      if (!existsSync(argv[1])) {
+        throw new Error(`arquivo não encontrado: ${resolve(argv[1])}`);
+      }
+      const config = JSON.parse(readFileSync(argv[1], 'utf8'));
+      measurements = await measureConfig(config);
+      budgets = config.budgets ?? {};
+    } else {
+      parsed = parseArgs(argv, fileBudgets);
+      for (const name of Object.keys(SCENARIOS)) {
+        measurements[name] = await measureScenario(parsed.file, name);
+      }
+      budgets = parsed.budgets;
     }
-    const errors = checkSizes(measurements, parsed.budgets);
+    const errors = checkSizes(measurements, budgets);
     if (errors.length > 0) {
-      console.error(formatTable(measurements, parsed.budgets));
+      console.error(formatTable(measurements, budgets));
       for (const e of errors) console.error(`erro: ${e}`);
       process.exit(1);
     }
-    console.log(formatTable(measurements, parsed.budgets));
+    console.log(formatTable(measurements, budgets));
     console.log('tamanhos (min+gzip) dentro do orçamento');
   } catch (e) {
     console.error(`erro: ${e.message}`);

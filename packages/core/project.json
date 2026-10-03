@@ -48,6 +48,21 @@
         "^production",
         "{workspaceRoot}/docs/html-schema.md"
       ]
+    },
+    "size": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "inputs": [
+        "production",
+        "^production",
+        "{workspaceRoot}/tools/check-size.mjs",
+        "{projectRoot}/size-budget.json"
+      ],
+      "cache": true,
+      "options": {
+        "command": "node tools/check-size.mjs --config packages/core/size-budget.json",
+        "cwd": "{workspaceRoot}"
+      }
     }
   }
 }
