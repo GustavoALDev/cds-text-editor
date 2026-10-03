@@ -23,14 +23,114 @@
       "types": "./dist/html/index.d.ts",
       "default": "./dist/html/index.js"
     },
+    "./extensions": {
+      "types": "./dist/extensions/index.d.ts",
+      "default": "./dist/extensions/index.js"
+    },
     "./code-languages": {
       "types": "./dist/code-languages/index.d.ts",
       "default": "./dist/code-languages/index.js"
     }
   },
   "peerDependencies": {
-    "@tiptap/core": "^3.0.0",
-    "@tiptap/pm": "^3.0.0"
+    "@tiptap/core": "^3.31.4",
+    "@tiptap/extension-blockquote": "^3.31.4",
+    "@tiptap/extension-bold": "^3.31.4",
+    "@tiptap/extension-code": "^3.31.4",
+    "@tiptap/extension-code-block": "^3.31.4",
+    "@tiptap/extension-document": "^3.31.4",
+    "@tiptap/extension-hard-break": "^3.31.4",
+    "@tiptap/extension-heading": "^3.31.4",
+    "@tiptap/extension-horizontal-rule": "^3.31.4",
+    "@tiptap/extension-italic": "^3.31.4",
+    "@tiptap/extension-link": "^3.31.4",
+    "@tiptap/extension-list": "^3.31.4",
+    "@tiptap/extension-paragraph": "^3.31.4",
+    "@tiptap/extension-strike": "^3.31.4",
+    "@tiptap/extension-subscript": "^3.31.4",
+    "@tiptap/extension-superscript": "^3.31.4",
+    "@tiptap/extension-table": "^3.31.4",
+    "@tiptap/extension-text": "^3.31.4",
+    "@tiptap/extension-text-align": "^3.31.4",
+    "@tiptap/extension-underline": "^3.31.4",
+    "@tiptap/extensions": "^3.31.4",
+    "@tiptap/pm": "^3.31.4",
+    "highlight.js": "^11.11.1",
+    "lowlight": "^3.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@tiptap/core": {
+      "optional": true
+    },
+    "@tiptap/extension-blockquote": {
+      "optional": true
+    },
+    "@tiptap/extension-bold": {
+      "optional": true
+    },
+    "@tiptap/extension-code": {
+      "optional": true
+    },
+    "@tiptap/extension-code-block": {
+      "optional": true
+    },
+    "@tiptap/extension-document": {
+      "optional": true
+    },
+    "@tiptap/extension-hard-break": {
+      "optional": true
+    },
+    "@tiptap/extension-heading": {
+      "optional": true
+    },
+    "@tiptap/extension-horizontal-rule": {
+      "optional": true
+    },
+    "@tiptap/extension-italic": {
+      "optional": true
+    },
+    "@tiptap/extension-link": {
+      "optional": true
+    },
+    "@tiptap/extension-list": {
+      "optional": true
+    },
+    "@tiptap/extension-paragraph": {
+      "optional": true
+    },
+    "@tiptap/extension-strike": {
+      "optional": true
+    },
+    "@tiptap/extension-subscript": {
+      "optional": true
+    },
+    "@tiptap/extension-superscript": {
+      "optional": true
+    },
+    "@tiptap/extension-table": {
+      "optional": true
+    },
+    "@tiptap/extension-text": {
+      "optional": true
+    },
+    "@tiptap/extension-text-align": {
+      "optional": true
+    },
+    "@tiptap/extension-underline": {
+      "optional": true
+    },
+    "@tiptap/extensions": {
+      "optional": true
+    },
+    "@tiptap/pm": {
+      "optional": true
+    },
+    "highlight.js": {
+      "optional": true
+    },
+    "lowlight": {
+      "optional": true
+    }
   },
   "repository": {
     "type": "git",

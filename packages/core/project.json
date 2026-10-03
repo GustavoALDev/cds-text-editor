@@ -46,7 +46,8 @@
       "inputs": [
         "default",
         "^production",
-        "{workspaceRoot}/docs/html-schema.md"
+        "{workspaceRoot}/docs/html-schema.md",
+        "{workspaceRoot}/fixtures/content/**/*"
       ]
     },
     "size": {

@@ -9,6 +9,7 @@
     "src/**/*.ts",
     "embeds/src/**/*.ts",
     "html/src/**/*.ts",
+    "extensions/src/**/*.ts",
     "code-languages/src/**/*.ts"
   ],
   "exclude": [
@@ -24,6 +25,9 @@
     "src/**/*.spec.js",
     "src/**/*.test.jsx",
     "src/**/*.spec.jsx",
-    "src/**/testing/**"
+    "src/**/testing/**",
+    "extensions/src/**/*.spec.ts",
+    "extensions/src/testing/**",
+    "code-languages/src/**/*.spec.ts"
   ]
 }

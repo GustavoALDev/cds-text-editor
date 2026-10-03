@@ -12,7 +12,7 @@ export default defineConfig(() => ({
     globals: true,
     environment: 'node',
     include: [
-      '{src,tests,embeds/src,html/src}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+      '{src,tests,embeds/src,html/src,extensions/src,code-languages/src}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
     ],
     reporters: ['default'],
     coverage: {
