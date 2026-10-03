@@ -9,21 +9,50 @@ const LICENSE_FILE_RE = /^(licen[sc]e|copying)(\.(md|txt|markdown))?$/i;
 const EMPTY =
   '# Avisos de terceiros\n\nNenhuma dependência de produção de terceiros no momento.\n';
 
-// Mesmo critério de tools/check-licenses.mjs: entradas `node_modules/*` do lockfile que vão ao
-// consumidor (não dev/devOptional) e não são pacotes do workspace (sem node_modules/ ou link).
+// Resolve `dep` a partir do diretório `from` como o npm: caminho aninhado primeiro, depois içado.
+function resolveDependency(packages, from, dep) {
+  let base = from;
+  for (;;) {
+    const key = base ? `${base}/${MARKER}${dep}` : `${MARKER}${dep}`;
+    if (packages[key]) return key;
+    if (!base) return undefined;
+    const i = base.lastIndexOf(`/${MARKER}`);
+    base = i === -1 ? '' : base.slice(0, i);
+  }
+}
+
+// Fecho transitivo das `dependencies` (e optionalDependencies instaladas) de produção dos pacotes do
+// workspace (entradas do lockfile sem node_modules/ na chave, exceto a raiz). `peerDependencies` e
+// devDependencies ficam de fora: o consumidor instala os peers por conta própria.
 export function productionEntries(lock) {
+  const { packages } = lock;
+  const queue = [];
+  for (const [key, entry] of Object.entries(packages)) {
+    if (key === '' || key.includes(MARKER) || entry.link) continue;
+    queue.push([key, entry]);
+  }
+  const seen = new Set();
   const out = new Map();
-  for (const [key, entry] of Object.entries(lock.packages)) {
-    if (!key.includes(MARKER) || entry.link || entry.dev || entry.devOptional)
-      continue;
-    const name = nameOf(key);
-    const version = entry.version ?? '0.0.0';
-    out.set(`${name}@${version}`, {
-      key,
-      name,
-      version,
-      license: typeof entry.license === 'string' ? entry.license : 'UNKNOWN',
-    });
+  while (queue.length) {
+    const [from, entry] = queue.shift();
+    const deps = { ...entry.dependencies, ...entry.optionalDependencies };
+    for (const dep of Object.keys(deps)) {
+      const key = resolveDependency(packages, from, dep);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      const resolved = packages[key];
+      if (resolved.link) continue;
+      const name = nameOf(key);
+      const version = resolved.version ?? '0.0.0';
+      out.set(`${name}@${version}`, {
+        key,
+        name,
+        version,
+        license:
+          typeof resolved.license === 'string' ? resolved.license : 'UNKNOWN',
+      });
+      queue.push([key, resolved]);
+    }
   }
   return [...out.values()].sort(
     (a, b) =>

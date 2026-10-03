@@ -36,4 +36,24 @@ describe('htmlToText', () => {
   it('não vaza conteúdo de script malformado', () => {
     expect(htmlToText('<script>segredo<p>a')).not.toContain('segredo');
   });
+
+  it('limita aninhamento profundo (DoS) e devolve o prefixo coletado', () => {
+    const t0 = performance.now();
+    expect(htmlToText('<div>'.repeat(200_000) + 'x')).toBe('');
+    expect(performance.now() - t0).toBeLessThan(1000);
+    expect(htmlToText('a<div>'.repeat(5) + 'b', { maxDepth: 2 })).toBe(
+      'a\na\na',
+    );
+  });
+
+  it('mantém conteúdo até maxDepth e respeita maxDepth customizado', () => {
+    expect(htmlToText('<div>'.repeat(256) + 'x')).toBe('x');
+    expect(htmlToText('<div>'.repeat(257) + 'x')).toBe('');
+    expect(htmlToText('<div><div>x', { maxDepth: 2 })).toBe('x');
+    expect(htmlToText('<div><div>x', { maxDepth: 1 })).toBe('');
+  });
+
+  it.each([0, -1, 1.5, Number.NaN])('maxDepth %s inválido lança', (n) => {
+    expect(() => htmlToText('x', { maxDepth: n })).toThrow(RangeError);
+  });
 });

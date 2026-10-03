@@ -41,4 +41,25 @@ describe('extractToc', () => {
       'ab',
     );
   });
+
+  it('devolve texto decodificado (deve ser escapado pelo chamador)', () => {
+    expect(
+      extractToc('<h2 id="rt-x">&lt;img src=x onerror=1&gt;</h2>'),
+    ).toEqual([{ id: 'rt-x', text: '<img src=x onerror=1>', level: 2 }]);
+  });
+
+  it('limita aninhamento profundo e valida maxDepth', () => {
+    const t0 = performance.now();
+    expect(
+      extractToc('<div>'.repeat(200_000) + '<h2 id="rt-a">x</h2>'),
+    ).toEqual([]);
+    expect(performance.now() - t0).toBeLessThan(1000);
+    expect(
+      extractToc('<div><h2 id="rt-a">x</h2>', { maxDepth: 2 }),
+    ).toHaveLength(1);
+    expect(extractToc('<div><h2 id="rt-a">x</h2>', { maxDepth: 1 })).toEqual(
+      [],
+    );
+    expect(() => extractToc('', { maxDepth: 0 })).toThrow(RangeError);
+  });
 });

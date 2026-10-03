@@ -1,9 +1,10 @@
 import { getHtmlSchema } from '../../src/schema/get-html-schema';
 import { matchesRule } from '../../src/schema/rules';
-import { walkHtml } from './walk';
+import { resolveMaxDepth, walkHtml } from './walk';
 
 export interface RteTocEntry {
   id: string;
+  /** Texto puro já decodificado: escape ou use `textContent` antes de inserir em HTML. */
   text: string;
   level: number;
 }
@@ -13,6 +14,8 @@ export interface ExtractTocOptions {
   levels?: number[];
   /** Prefixo dos ids (padrão `'rt-'`); `RangeError` se inválido. */
   idPrefix?: string;
+  /** Profundidade máxima de elementos (padrão 256); `RangeError` se não for inteiro positivo. */
+  maxDepth?: number;
 }
 
 const HEADING = /^h([1-6])$/;
@@ -20,11 +23,16 @@ const HEADING = /^h([1-6])$/;
 /**
  * Extrai o sumário (títulos com id válido) de um HTML, sem DOM. O id é validado pela mesma
  * regra do esquema; títulos sem id ou com id inválido são ignorados. Nunca lança por HTML malformado.
+ *
+ * `text` é TEXTO PURO já decodificado (`&lt;img&gt;` vira `<img>`): deve ser escapado, ou atribuído via
+ * `textContent`, antes de voltar a HTML. Acima de `maxDepth` a leitura é truncada: devolve as entradas
+ * coletadas até ali, sem lançar.
  */
 export function extractToc(
   html: string,
   options: ExtractTocOptions = {},
 ): RteTocEntry[] {
+  const maxDepth = resolveMaxDepth(options.maxDepth);
   const levels = new Set(options.levels ?? [2, 3]);
   const schema = getHtmlSchema(
     options.idPrefix === undefined ? {} : { idPrefix: options.idPrefix },
@@ -41,29 +49,33 @@ export function extractToc(
     current = null;
   };
 
-  walkHtml(html, {
-    open(name, attributes) {
-      const m = HEADING.exec(name);
-      if (!m) return;
-      finish();
-      const level = Number(m[1]);
-      const id = attributes['id'];
-      if (
-        levels.has(level) &&
-        id !== undefined &&
-        idRule !== undefined &&
-        matchesRule(idRule, id)
-      ) {
-        current = { id, level, text: '' };
-      }
+  walkHtml(
+    html,
+    {
+      open(name, attributes) {
+        const m = HEADING.exec(name);
+        if (!m) return;
+        finish();
+        const level = Number(m[1]);
+        const id = attributes['id'];
+        if (
+          levels.has(level) &&
+          id !== undefined &&
+          idRule !== undefined &&
+          matchesRule(idRule, id)
+        ) {
+          current = { id, level, text: '' };
+        }
+      },
+      close(name) {
+        if (HEADING.test(name)) finish();
+      },
+      text(data) {
+        if (current) current.text += data;
+      },
     },
-    close(name) {
-      if (HEADING.test(name)) finish();
-    },
-    text(data) {
-      if (current) current.text += data;
-    },
-  });
+    maxDepth,
+  );
   finish();
   return entries;
 }
