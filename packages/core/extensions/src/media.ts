@@ -5,6 +5,7 @@ import { NodeSelection } from '@tiptap/pm/state';
 import { normalizeAttribute } from '../../src/schema/rules';
 import type { RteAttrRule, RteHtmlSchema } from '../../src/schema/types';
 import type { RteExtensionContext } from './context';
+import { ImageView } from './image-view';
 import { replaceEmptyParagraphWith } from './insert';
 import { truncateText } from './limits';
 import type {
@@ -456,6 +457,16 @@ export function createMediaExtensions(
         ['img', img],
         ...captionSpec(a['caption'] as string, a['credit'] as string),
       ];
+    },
+    addNodeView() {
+      return ({ node, view, getPos }) =>
+        new ImageView({
+          node,
+          view,
+          getPos,
+          normalize: (attrs) => loose(imageChecks, IMAGE_DEFAULTS, attrs),
+          minWidth: ctx.imageMinWidth,
+        });
     },
     addCommands() {
       const type = () => this.type;
