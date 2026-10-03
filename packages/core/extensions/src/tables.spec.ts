@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
 import { afterEach, describe, expect, it } from 'vitest';
 import { validateHtml } from '../../html/src/validate-html';
 import { createEditorExtensions } from './factory';
@@ -107,14 +108,26 @@ describe('tabelas: leitura e saída canônica', () => {
     );
   });
 
-  it('o texto do caption vira parágrafo antes da tabela', () => {
+  it('caption é descartado: sem legenda e sem parágrafo', () => {
     expect(
       html(
-        '<table><caption>Legenda importante</caption><tbody><tr><td><p>a</p></td></tr></tbody></table>',
+        '<table><caption>Legenda</caption><tbody><tr><td>a</td></tr></tbody></table>',
       ),
-    ).toBe(
-      '<p>Legenda importante</p><table><tbody><tr><td><p>a</p></td></tr></tbody></table>',
-    );
+    ).toBe('<table><tbody><tr><td><p>a</p></td></tr></tbody></table>');
+  });
+
+  it('parse de um elemento vivo não o altera e é idempotente', () => {
+    const host = new window.DOMParser().parseFromString(
+      '<div><table><caption>Legenda</caption><tbody><tr><td>a</td></tr></tbody></table></div>',
+      'text/html',
+    ).body;
+    const before = host.outerHTML;
+    const editor = editorWith('<p></p>');
+    const parser = PMDOMParser.fromSchema(editor.schema);
+    const first = parser.parse(host).toJSON();
+    const second = parser.parse(host).toJSON();
+    expect(host.outerHTML).toBe(before);
+    expect(second).toEqual(first);
   });
 
   it('thead é lido e não sai', () => {

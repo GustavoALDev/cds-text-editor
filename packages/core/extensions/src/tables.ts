@@ -214,40 +214,9 @@ export function createTableExtensions(
 ): AnyExtension[] {
   const table = Table.extend({
     parseHTML() {
-      return [
-        // O texto do caption vira um parágrafo imediatamente antes da tabela
-        // (o esquema nunca emite caption). O próprio elemento passa a ser o
-        // parágrafo e uma cópia sem caption entra logo depois, para o
-        // percurso do parser lê-la em seguida.
-        {
-          tag: 'table',
-          priority: 100,
-          node: 'paragraph',
-          getAttrs: (node) => {
-            const table = node as HTMLElement;
-            const caption = Array.from(table.children).find(
-              (child) => child.tagName.toLowerCase() === 'caption',
-            );
-            if (!caption) return false;
-            const text = (caption.textContent ?? '')
-              .replace(/\s+/g, ' ')
-              .trim();
-            const rest = table.cloneNode(true) as HTMLElement;
-            for (const child of Array.from(rest.children)) {
-              if (child.tagName.toLowerCase() === 'caption') child.remove();
-            }
-            if (text === '') {
-              caption.remove();
-              return false;
-            }
-            table.textContent = text;
-            table.after(rest);
-            return {};
-          },
-        },
-        { tag: 'caption', ignore: true },
-        { tag: 'table' },
-      ];
+      // O texto do caption é descartado (limitação conhecida): o esquema
+      // nunca emite caption e o parse não pode mutar o DOM de entrada.
+      return [{ tag: 'caption', ignore: true }, { tag: 'table' }];
     },
     renderHTML({ node }) {
       const colgroup = renderColgroup(node);
