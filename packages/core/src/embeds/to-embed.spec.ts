@@ -217,9 +217,12 @@ describe('assertEmbedProvider (endurecido)', () => {
     ])
       bad([h]);
   });
-  it('aceita curinga com domínio real', () => {
+  it('aceita curinga com domínio real (ao lado de um host literal)', () => {
     expect(() =>
-      assertEmbedProvider({ ...base, hosts: ['*.example.com'] }),
+      assertEmbedProvider({
+        ...base,
+        hosts: ['*.example.com', ...base.hosts],
+      }),
     ).not.toThrow();
   });
   it('recusa srcPatterns sem âncora ou inválidos', () => {
@@ -247,7 +250,7 @@ describe('assertEmbedProvider (endurecido)', () => {
       String.raw`^https://a\.com/[(](x|y)$`,
     ])
       expect(() =>
-        assertEmbedProvider({ ...base, srcPatterns: [p] }),
+        assertEmbedProvider({ ...base, hosts: ['a.com'], srcPatterns: [p] }),
       ).not.toThrow();
   });
   it('toEmbed ignora provedor com curinga amplo', () => {
@@ -269,5 +272,92 @@ describe('assertEmbedProvider (endurecido)', () => {
     }
     expect(Object.isFrozen(DEFAULT_EMBED_PROVIDERS)).toBe(true);
     expect(() => YOUTUBE_PROVIDER.hosts.push('evil.com')).toThrow(TypeError);
+  });
+});
+
+describe('validador único de provedor (toEmbed = getHtmlSchema)', () => {
+  const provider = (over: Partial<RteEmbedProvider>): RteEmbedProvider => ({
+    id: 'acme',
+    name: 'Acme',
+    hosts: ['embed.example.com'],
+    srcPatterns: [String.raw`^https://embed\.example\.com/v/\d+$`],
+    match: () => true,
+    toEmbed: () => ({ src: 'https://embed.example.com/v/1' }),
+    ...over,
+  });
+
+  it('recusa IP em qualquer forma, depois de interpretar a URL', () => {
+    for (const host of [
+      '*.0.1',
+      '127.1',
+      '0x7f.0.0.1',
+      '127.0.0.1',
+      '[::1]',
+      '[0:0:0:0:0:0:0:1]',
+      '１２７.０.０.１',
+      'LOCALHOST.',
+      'x.localhost',
+    ]) {
+      const p = provider({
+        hosts: [host],
+        srcPatterns: [String.raw`^https://[0-9a-f.:\[\]]+/x$`],
+        toEmbed: () => ({ src: 'https://127.0.0.1/x' }),
+      });
+      expect(() => assertEmbedProvider(p), host).toThrow(TypeError);
+      expect(toEmbed('https://example.com/', [p]), host).toBeNull();
+    }
+  });
+
+  it('host IDN funciona (normalizado para punycode)', () => {
+    const p = provider({
+      hosts: ['пример.рф'],
+      srcPatterns: [String.raw`^https://xn--e1afmkfd\.xn--p1ai/v/\d+$`],
+      toEmbed: () => ({ src: 'https://пример.рф/v/1' }),
+    });
+    expect(() => assertEmbedProvider(p)).not.toThrow();
+    expect(toEmbed('https://example.com/', [p])?.src).toBe(
+      'https://xn--e1afmkfd.xn--p1ai/v/1',
+    );
+  });
+
+  it('id fora de ^[a-z][a-z0-9-]{0,31}$ é recusado', () => {
+    for (const id of ['Bad Id', 'x" onload="', '', '1abc', 'a'.repeat(33)]) {
+      const p = provider({ id });
+      expect(() => assertEmbedProvider(p), id).toThrow(TypeError);
+      expect(toEmbed('https://example.com/', [p]), id).toBeNull();
+    }
+  });
+
+  it('srcPattern precisa fixar um host literal do próprio provedor', () => {
+    for (const pat of [
+      String.raw`^https://[a-z.]+/embed/[0-9]+$`,
+      String.raw`^https://embed\.example\.com.*$`,
+      String.raw`^https://embed\.example\.com\.evil\.com/v$`,
+      String.raw`^https://other\.example\.com/v$`,
+      String.raw`^http://embed\.example\.com/v$`,
+      String.raw`^https://embed.example.com/v$`,
+    ]) {
+      const p = provider({ srcPatterns: [pat] });
+      expect(() => assertEmbedProvider(p), pat).toThrow(TypeError);
+      expect(toEmbed('https://example.com/', [p]), pat).toBeNull();
+    }
+  });
+
+  it('provedor só com hosts curinga não pode ser usado', () => {
+    const p = provider({ hosts: ['*.example.com'] });
+    expect(() => assertEmbedProvider(p)).toThrow(TypeError);
+    expect(
+      assertEmbedProvider(
+        provider({ hosts: ['*.example.com', 'embed.example.com'] }),
+      ),
+    ).toBeUndefined();
+  });
+
+  it('host com caractere de URL é recusado', () => {
+    for (const host of ['ü@evil.com', 'evil.com/ü', 'a.com:443', 'a b.com'])
+      expect(
+        () => assertEmbedProvider(provider({ hosts: [host] })),
+        host,
+      ).toThrow(TypeError);
   });
 });

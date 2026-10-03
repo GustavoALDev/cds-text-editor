@@ -318,6 +318,8 @@ export function embedsFeature(ctx: FeatureContext): Elements {
             relative: false,
             fragment: false,
             hosts: [...ctx.providerHosts],
+            // A união é segura: cada padrão começa com ^https://<host literal do
+            // próprio provedor>/ (validateEmbedProvider), então fixa o host.
             patterns: ctx.providers.flatMap((p) => [...p.srcPatterns]),
             maxLength: URL_MAX,
           },

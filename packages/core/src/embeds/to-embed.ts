@@ -1,5 +1,6 @@
 import { isAllowedUrl } from '../schema/url';
-import { assertEmbedProvider, DEFAULT_EMBED_PROVIDERS } from './providers';
+import { DEFAULT_EMBED_PROVIDERS } from './providers';
+import { validateEmbedProvider } from './validate-provider';
 import type { RteEmbedProvider } from '../schema/types';
 
 export interface RteEmbed {
@@ -14,12 +15,12 @@ export interface RteEmbed {
 const WIDTH = 640;
 const RATIO = /^([1-9]\d{0,3}) \/ ([1-9]\d{0,3})$/;
 
-function isValid(p: RteEmbedProvider): boolean {
+/** Hosts normalizados do provedor, ou `null` se ele for recusado pelo validador. */
+function validHosts(p: RteEmbedProvider): string[] | null {
   try {
-    assertEmbedProvider(p);
-    return true;
+    return validateEmbedProvider(p);
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -34,7 +35,8 @@ export function toEmbed(
 ): RteEmbed | null {
   if (typeof url !== 'string') return null;
   for (const provider of providers) {
-    if (!isValid(provider)) continue;
+    const hosts = validHosts(provider);
+    if (hosts === null) continue;
     try {
       if (!provider.match(url)) continue;
       const result = provider.toEmbed(url);
@@ -45,7 +47,7 @@ export function toEmbed(
           schemes: ['https'],
           relative: false,
           fragment: false,
-          hosts: provider.hosts,
+          hosts,
           patterns: provider.srcPatterns,
           maxLength: 2048,
         },

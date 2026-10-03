@@ -117,5 +117,9 @@ export interface RteHtmlSchemaOptions {
   mediaHosts?: string[];
   /** Padrão `true`. */
   allowRelativeMedia?: boolean;
+  /**
+   * Só `blockedDomains` e `forceRel` chegam ao esquema (e ao sanitizador);
+   * `protocols` e `allowRelative` do `RteLinkPolicy` valem só no editor.
+   */
   linkPolicy?: { blockedDomains?: string[]; forceRel?: string[] };
 }

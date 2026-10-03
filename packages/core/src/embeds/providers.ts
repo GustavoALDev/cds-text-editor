@@ -1,4 +1,5 @@
 import type { RteEmbedProvider } from '../schema/types';
+import { validateEmbedProvider } from './validate-provider';
 
 /** Congela o provedor e seus arrays: a allowlist padrão não pode ser ampliada em tempo de execução. */
 function freezeProvider(p: RteEmbedProvider): RteEmbedProvider {
@@ -138,85 +139,11 @@ export const SPOTIFY_PROVIDER: RteEmbedProvider = freezeProvider({
 export const DEFAULT_EMBED_PROVIDERS: readonly RteEmbedProvider[] =
   Object.freeze([YOUTUBE_PROVIDER, VIMEO_PROVIDER, SPOTIFY_PROVIDER]);
 
-const IPV4 = /^\d{1,3}(\.\d{1,3}){3}$/;
-
-function checkHost(id: string, host: unknown): void {
-  const fail = (motivo: string): never => {
-    throw new TypeError(
-      `Provedor de embed "${id}": host "${String(host)}" recusado (${motivo}).`,
-    );
-  };
-  if (typeof host !== 'string') return fail('precisa ser texto');
-  const h = host.toLowerCase();
-  const name = h.startsWith('*.') ? h.slice(2) : h;
-  if (name.includes('*')) return fail('curinga só é aceito como prefixo "*."');
-  if (h.startsWith('[') || name.includes(':')) return fail('IPv6 não é aceito');
-  if (!name.includes('.')) return fail('precisa ter ponto');
-  if (name.split('.').some((label) => label === ''))
-    return fail('rótulo vazio');
-  if (IPV4.test(name)) return fail('IP literal não é aceito');
-  if (name === 'localhost' || name.endsWith('.localhost'))
-    return fail('localhost não é aceito');
-}
-
-/**
- * `|` fora de grupo e de classe: `^a|.*$` começa com `^` e termina com `$`,
- * mas a segunda alternativa casa qualquer coisa. Ignora caracteres escapados
- * (`\x`) e classes (`[...]`).
- */
-function hasTopLevelAlternation(pattern: string): boolean {
-  let depth = 0;
-  let inClass = false;
-  for (let i = 0; i < pattern.length; i++) {
-    const c = pattern[i];
-    if (c === '\\') {
-      i++;
-    } else if (inClass) {
-      if (c === ']') inClass = false;
-    } else if (c === '[') {
-      inClass = true;
-    } else if (c === '(') {
-      depth++;
-    } else if (c === ')') {
-      depth--;
-    } else if (c === '|' && depth === 0) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /**
  * Recusa provedores inseguros: `sandbox` com `allow-scripts` + `allow-same-origin`
- * só é seguro se o host do embed nunca for a origem do site.
+ * só é seguro se o host do embed nunca for a origem do site. É o mesmo
+ * validador usado por `getHtmlSchema` e `toEmbed` (ver `validateEmbedProvider`).
  */
 export function assertEmbedProvider(p: RteEmbedProvider): void {
-  if (!Array.isArray(p.hosts) || p.hosts.length === 0) {
-    throw new TypeError(
-      `Provedor de embed "${p.id}": "hosts" não pode ser vazio.`,
-    );
-  }
-  for (const host of p.hosts) checkHost(p.id, host);
-  if (!Array.isArray(p.srcPatterns) || p.srcPatterns.length === 0) {
-    throw new TypeError(
-      `Provedor de embed "${p.id}": "srcPatterns" é obrigatório.`,
-    );
-  }
-  for (const pat of p.srcPatterns) {
-    let ok =
-      typeof pat === 'string' && pat.startsWith('^') && pat.endsWith('$');
-    if (ok) {
-      try {
-        new RegExp(pat);
-      } catch {
-        ok = false;
-      }
-    }
-    if (ok && hasTopLevelAlternation(pat as string)) ok = false;
-    if (!ok) {
-      throw new TypeError(
-        `Provedor de embed "${p.id}": srcPattern "${String(pat)}" precisa ser uma regex válida ancorada (^…$), sem "|" fora de grupo.`,
-      );
-    }
-  }
+  validateEmbedProvider(p);
 }

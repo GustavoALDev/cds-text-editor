@@ -811,3 +811,103 @@ describe('mergeElements', () => {
     expect(a.p.classes.values).toEqual(['x']);
   });
 });
+
+describe('provedores de embed: mesmo validador do toEmbed', () => {
+  const provider = (over: Partial<RteEmbedProvider>): RteEmbedProvider => ({
+    id: 'acme',
+    name: 'Acme',
+    hosts: ['embed.example.com'],
+    srcPatterns: [String.raw`^https://embed\.example\.com/v/\d+$`],
+    match: () => false,
+    toEmbed: () => null,
+    ...over,
+  });
+
+  it('IP em qualquer forma lança', () => {
+    for (const host of ['*.0.1', '127.1', '0x7f.0.0.1', '127.0.0.1', '[::1]'])
+      expect(
+        () =>
+          getHtmlSchema({
+            embedProviders: [
+              provider({
+                hosts: [host],
+                srcPatterns: [String.raw`^https://[0-9a-f.:\[\]]+/x$`],
+              }),
+            ],
+          }),
+        host,
+      ).toThrow(TypeError);
+  });
+
+  it('host IDN entra em punycode e o iframe aceita a URL', () => {
+    const s = getHtmlSchema({
+      embedProviders: [
+        provider({
+          hosts: ['пример.рф'],
+          srcPatterns: [String.raw`^https://xn--e1afmkfd\.xn--p1ai/v/\d+$`],
+        }),
+      ],
+    });
+    const src = s.elements['iframe']?.attributes['src']?.rule as RteUrlRule;
+    expect(src.hosts).toEqual(['xn--e1afmkfd.xn--p1ai']);
+    expect(isAllowedUrl(src, 'https://пример.рф/v/1')).toBe(
+      'https://xn--e1afmkfd.xn--p1ai/v/1',
+    );
+  });
+
+  it('id inválido lança', () => {
+    expect(() =>
+      getHtmlSchema({ embedProviders: [provider({ id: 'x" a="' })] }),
+    ).toThrow(TypeError);
+  });
+
+  it('padrão frouxo de um provedor não aceita o host de outro (A + B)', () => {
+    const a = provider({
+      id: 'a',
+      hosts: ['a.example.com'],
+      srcPatterns: [String.raw`^https://[a-z.]+/embed/[0-9]+$`],
+    });
+    const b = provider({
+      id: 'b',
+      hosts: ['b.example.com'],
+      srcPatterns: [String.raw`^https://b\.example\.com/v/[0-9]+$`],
+    });
+    expect(() => getHtmlSchema({ embedProviders: [a, b] })).toThrow(TypeError);
+  });
+
+  it('padrões padrão continuam válidos', () => {
+    expect(() =>
+      getHtmlSchema({ embedProviders: [...DEFAULT_EMBED_PROVIDERS] }),
+    ).not.toThrow();
+  });
+});
+
+describe('hosts de configuração: caracteres de URL', () => {
+  it('recusa / : @ ? # \\ % e espaço antes de interpretar (inclusive não ASCII)', () => {
+    for (const host of [
+      'ü@evil.com',
+      'evil.com/ü',
+      'ü.com:80',
+      'ü.com?x',
+      'ü.com#x',
+      'ü.com\\x',
+      'ü%41.com',
+      'ü .com',
+      'a.com/x',
+    ]) {
+      expect(() => getHtmlSchema({ mediaHosts: [host] }), host).toThrow(
+        TypeError,
+      );
+      expect(
+        () => getHtmlSchema({ linkPolicy: { blockedDomains: [host] } }),
+        host,
+      ).toThrow(TypeError);
+    }
+  });
+
+  it('IDN legítimo continua aceito', () => {
+    const s = getHtmlSchema({ mediaHosts: ['пример.рф'] });
+    const src = s.elements['img']?.attributes['src']?.rule as RteUrlRule;
+    expect(src.hosts).toEqual(['xn--e1afmkfd.xn--p1ai']);
+  });
+});

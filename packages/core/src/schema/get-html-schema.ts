@@ -1,7 +1,5 @@
-import {
-  DEFAULT_EMBED_PROVIDERS,
-  assertEmbedProvider,
-} from '../embeds/providers';
+import { DEFAULT_EMBED_PROVIDERS } from '../embeds/providers';
+import { validateEmbedProvider } from '../embeds/validate-provider';
 import {
   type FeatureContext,
   baseFeature,
@@ -126,21 +124,17 @@ export function mergeElements(a: Elements, b: Elements): Elements {
   return out;
 }
 
-const PROVIDER_ID = /^[a-z][a-z0-9-]{0,31}$/;
-
-function checkProviders(providers: readonly RteEmbedProvider[]): void {
+/** Valida os provedores (mesmo validador do `toEmbed`) e devolve a união dos hosts normalizados. */
+function checkProviders(providers: readonly RteEmbedProvider[]): string[] {
   const ids = new Set<string>();
+  const hosts = new Set<string>();
   for (const p of providers) {
-    assertEmbedProvider(p);
-    if (typeof p.id !== 'string' || !PROVIDER_ID.test(p.id)) {
-      throw new TypeError(
-        `Provedor de embed "${String(p.id)}": id precisa casar ^[a-z][a-z0-9-]{0,31}$ (vira classe rt-embed--<id>).`,
-      );
-    }
+    for (const h of validateEmbedProvider(p)) hosts.add(h);
     if (ids.has(p.id))
       throw new TypeError(`Provedor de embed "${p.id}" repetido.`);
     ids.add(p.id);
   }
+  return [...hosts];
 }
 
 function deepFreeze<T>(v: T): T {
@@ -170,7 +164,7 @@ function buildContext(options: RteHtmlSchemaOptions): FeatureContext {
   const idPrefix = options.idPrefix ?? DEFAULT_ID_PREFIX;
   assertIdPrefix(idPrefix);
   const providers = options.embedProviders ?? DEFAULT_EMBED_PROVIDERS;
-  checkProviders(providers);
+  const providerHosts = checkProviders(providers);
 
   return {
     idPrefix,
@@ -186,10 +180,7 @@ function buildContext(options: RteHtmlSchemaOptions): FeatureContext {
       options.linkPolicy?.forceRel,
     ),
     providers,
-    providerHosts: normalizeHosts(
-      'embedProviders.hosts',
-      providers.flatMap((p) => p.hosts),
-    ),
+    providerHosts,
     textColors: RTE_TEXT_COLORS,
     highlightColors: RTE_HIGHLIGHT_COLORS,
   };
