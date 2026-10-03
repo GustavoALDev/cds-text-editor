@@ -61,28 +61,8 @@ export default [
           // importa: cada tarefa retira daqui os que passar a importar; a lista
           // some quando a fábrica (createEditorExtensions) usar todos.
           ignoredDependencies: [
-            '@tiptap/core',
-            '@tiptap/extension-blockquote',
-            '@tiptap/extension-bold',
-            '@tiptap/extension-code',
             '@tiptap/extension-code-block',
-            '@tiptap/extension-document',
-            '@tiptap/extension-hard-break',
-            '@tiptap/extension-heading',
-            '@tiptap/extension-horizontal-rule',
-            '@tiptap/extension-italic',
-            '@tiptap/extension-link',
-            '@tiptap/extension-list',
-            '@tiptap/extension-paragraph',
-            '@tiptap/extension-strike',
-            '@tiptap/extension-subscript',
-            '@tiptap/extension-superscript',
             '@tiptap/extension-table',
-            '@tiptap/extension-text',
-            '@tiptap/extension-text-align',
-            '@tiptap/extension-underline',
-            '@tiptap/extensions',
-            'highlight.js',
             'lowlight',
           ],
           ignoredFiles: [

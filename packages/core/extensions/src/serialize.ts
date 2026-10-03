@@ -1,3 +1,4 @@
+import type { Editor } from '@tiptap/core';
 import { DOMSerializer } from '@tiptap/pm/model';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { createHeadingIds } from '../../src/headings';
@@ -57,6 +58,27 @@ export function serializeRteHtml(
   return writeHtml(fragment);
 }
 
+/**
+ * Saída oficial do editor (spec 03b, §5): `serializeRteHtml` com o prefixo e
+ * os rótulos guardados pela fábrica em `editor.storage.rtContent`. Lança
+ * `TypeError` se o editor não foi criado com `createEditorExtensions`.
+ */
+export function getRteHtml(editor: Editor): string {
+  const storage = editor.storage as Partial<Editor['storage']>;
+  const content = Object.hasOwn(storage, 'rtContent')
+    ? storage.rtContent
+    : undefined;
+  if (!content) {
+    throw new TypeError(
+      'getRteHtml: o editor não foi criado com createEditorExtensions (falta a extensão rtContent).',
+    );
+  }
+  return serializeRteHtml(editor.state.doc, {
+    idPrefix: content.idPrefix,
+    labels: content.labels,
+  });
+}
+
 /** Títulos do documento em ordem, com os mesmos ids de `serializeRteHtml`. */
 export function getRteHeadings(
   doc: ProseMirrorNode,
@@ -80,7 +102,8 @@ export function getRteHeadings(
   return headings;
 }
 
-function clampLevel(level: unknown): 2 | 3 | 4 {
+/** Nível do título limitado a 2–4 (JSON pode trazer qualquer valor). */
+export function clampLevel(level: unknown): 2 | 3 | 4 {
   const n = Math.trunc(Number(level));
   if (!(n > 2)) return 2;
   return n >= 4 ? 4 : (n as 3);

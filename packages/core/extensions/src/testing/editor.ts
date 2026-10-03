@@ -1,5 +1,9 @@
 // Ajudante de testes do editor (fora do build). Ao importar, supre no jsdom só
 // o que falta para o prosemirror-view e o NodeView de imagem (spec 03b, §7.1).
+import { Editor } from '@tiptap/core';
+import type { Content, EditorOptions } from '@tiptap/core';
+import { createEditorExtensions } from '../factory';
+import type { RteEditorOptions } from '../types';
 
 type RectLike = Omit<DOMRect, 'toJSON'> & { toJSON(): unknown };
 
@@ -53,4 +57,33 @@ if (typeof document !== 'undefined') {
   }
 }
 
-export {};
+const created: Editor[] = [];
+
+/**
+ * Editor da fábrica montado num `div` novo em `document.body`. Destrua com
+ * `destroyTestEditors()` no `afterEach`.
+ */
+export function createTestEditor(
+  options?: RteEditorOptions,
+  content?: Content,
+  editor?: Partial<EditorOptions>,
+): Editor {
+  const element = document.body.appendChild(document.createElement('div'));
+  const instance = new Editor({
+    element,
+    extensions: createEditorExtensions(options),
+    ...(content === undefined ? {} : { content }),
+    ...editor,
+  });
+  created.push(instance);
+  return instance;
+}
+
+/** Destrói os editores de `createTestEditor` e remove os seus `div`. */
+export function destroyTestEditors(): void {
+  for (const instance of created.splice(0)) {
+    const element = instance.options.element;
+    instance.destroy();
+    if (element instanceof Element) element.remove();
+  }
+}
