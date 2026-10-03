@@ -21,7 +21,9 @@ describe('SSR (R5): importar não toca em globais do navegador', () => {
     }
   });
 
-  it('importa os três entries sem lançar', async () => {
+  // Import frio dos três entries depois de resetModules: com a suíte toda em
+  // paralelo (propriedades do fast-check) passa dos 5 s padrão.
+  it('importa os três entries sem lançar', { timeout: 30_000 }, async () => {
     await expect(import('./index')).resolves.toBeDefined();
     await expect(import('../embeds/src/index')).resolves.toBeDefined();
     await expect(import('../html/src/index')).resolves.toBeDefined();
