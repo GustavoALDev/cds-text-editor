@@ -13,6 +13,7 @@ import { createLinkExtension } from './link';
 import { createMediaExtensions } from './media';
 import { createNewsBlockExtensions } from './news-blocks';
 import { createPlaceholderExtension } from './placeholder';
+import { createSearchExtension } from './search';
 import { createTableExtensions } from './tables';
 import { createTaskExtensions } from './tasks';
 import type { RteEditorOptions } from './types';
@@ -55,6 +56,7 @@ export function createEditorExtensions(
       : []),
     createPlaceholderExtension(ctx, options.placeholder),
     createCharLimitExtension(ctx, options.charLimit),
+    ...(options.features?.search !== false ? [createSearchExtension(ctx)] : []),
     ...(options.extensions ?? []),
   ];
   assertUniqueNames(list);

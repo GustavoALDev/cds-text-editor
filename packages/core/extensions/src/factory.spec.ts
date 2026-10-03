@@ -78,7 +78,12 @@ function snapshot(value: unknown): unknown {
 describe('createEditorExtensions: lista e ordem', () => {
   it('recursos desligados: só a base, na ordem da spec §6', () => {
     const names = createEditorExtensions({ features: OFF }).map((e) => e.name);
-    expect(names).toEqual([...BASE_NAMES, 'rtPlaceholder', 'rtCharLimit']);
+    expect(names).toEqual([
+      ...BASE_NAMES,
+      'rtPlaceholder',
+      'rtCharLimit',
+      'rtSearch',
+    ]);
   });
 
   it('recursos ligados entram depois da base, na ordem da spec §6', () => {
@@ -118,6 +123,7 @@ describe('createEditorExtensions: lista e ordem', () => {
       'rtLang',
       'rtPlaceholder',
       'rtCharLimit',
+      'rtSearch',
     ]);
   });
 
@@ -128,16 +134,22 @@ describe('createEditorExtensions: lista e ordem', () => {
       ...BASE_NAMES,
       'rtPlaceholder',
       'rtCharLimit',
+      'rtSearch',
       'extra',
     ]);
     expect(list[list.length - 1]).toBe(extra);
   });
 
-  it('search e slashCommands são aceitos e ignorados', () => {
+  it('search registra rtSearch; slashCommands é aceito e ignorado', () => {
     const names = createEditorExtensions({
       features: { ...OFF, search: true, slashCommands: true },
     }).map((e) => e.name);
-    expect(names).toEqual([...BASE_NAMES, 'rtPlaceholder', 'rtCharLimit']);
+    expect(names).toEqual([
+      ...BASE_NAMES,
+      'rtPlaceholder',
+      'rtCharLimit',
+      'rtSearch',
+    ]);
   });
 });
 
