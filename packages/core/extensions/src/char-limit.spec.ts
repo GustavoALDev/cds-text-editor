@@ -19,7 +19,6 @@ import type { RteEditorOptions } from './types';
 
 const SEED = Number(process.env['FC_SEED'] ?? 20261003);
 const RUNS = Number(process.env['FC_RUNS'] ?? 200);
-vi.setConfig({ testTimeout: 300_000 });
 
 const NBSP = ' ';
 
@@ -165,6 +164,16 @@ describe('colagem', () => {
     expect(chars(editor).rejected).toBe(1);
   });
 
+  it('documento já acima do limite: colagem toda recusada', () => {
+    const editor = make(5);
+    editor.commands.setContent('<p>abcdefg</p>');
+    editor.commands.setTextSelection(endOf(editor));
+    const doc = editor.state.doc;
+    editor.view.pasteText('x', paste());
+    expect(editor.state.doc.eq(doc)).toBe(true);
+    expect(chars(editor)).toMatchObject({ overLimit: true, rejected: 1 });
+  });
+
   it('abaixo do limite não muda rejected', () => {
     const editor = make(10, '<p>abc</p>');
     editor.view.pasteText('def', paste());
@@ -174,13 +183,11 @@ describe('colagem', () => {
 });
 
 describe('soltar', () => {
-  function drop(editor: Editor, moved: boolean): boolean {
+  const bigSlice = (editor: Editor) =>
+    new Slice(Fragment.from(editor.schema.text('xxxxxxxxxx')), 0, 0);
+
+  function drop(editor: Editor, moved: boolean, big = bigSlice(editor)) {
     const { view } = editor;
-    const big = new Slice(
-      Fragment.from(editor.schema.text('xxxxxxxxxx')),
-      0,
-      0,
-    );
     vi.spyOn(view, 'posAtCoords').mockReturnValue({
       pos: endOf(editor),
       inside: -1,
@@ -197,6 +204,19 @@ describe('soltar', () => {
     expect(drop(editor, false)).toBe(true);
     expect(text(editor)).toBe('abc');
     expect(chars(editor).rejected).toBe(1);
+  });
+
+  it('arrasto interno com modificador de cópia (moved: false) não é barrado', () => {
+    const editor = make(5, '<p>abc</p>');
+    const slice = bigSlice(editor);
+    // Como o `prosemirror-view` no `dragstart` de um recorte deste editor.
+    editor.view.dragging = { slice, move: false };
+    try {
+      expect(drop(editor, false, slice)).toBe(false);
+    } finally {
+      editor.view.dragging = null;
+    }
+    expect(chars(editor).rejected).toBe(0);
   });
 
   it('arrasto interno não é tratado', () => {
@@ -291,37 +311,42 @@ describe('getCharLimitState', () => {
 });
 
 describe('propriedade: colagem nunca passa do limite', () => {
-  it('characters ≤ max(limite, antes) e documento válido', () => {
-    let limit = 0;
-    const editor = createTestEditor({ charLimit: () => limit });
-    const unit = fc.constantFrom('a', ' ', NBSP, '😀', 'é');
-    fc.assert(
-      fc.property(
-        fc.integer({ min: 0, max: 40 }),
-        fc.string({ unit, maxLength: 30 }),
-        fc.string({ unit, minLength: 1, maxLength: 40 }),
-        (l, initial, pasted) => {
-          limit = l;
-          editor.commands.setContent({
-            type: 'doc',
-            content: [
-              {
-                type: 'paragraph',
-                content:
-                  initial === '' ? [] : [{ type: 'text', text: initial }],
-              },
-            ],
-          });
-          editor.commands.setTextSelection(endOf(editor));
-          const before = chars(editor).characters;
-          editor.view.pasteText(pasted, paste());
-          expect(chars(editor).characters).toBeLessThanOrEqual(
-            Math.max(l, before),
-          );
-          editor.state.doc.check();
-        },
-      ),
-      { seed: SEED, numRuns: RUNS },
-    );
-  });
+  // Tempo por teste: FC_RUNS alto em execuções locais.
+  it(
+    'characters ≤ max(limite, antes) e documento válido',
+    { timeout: 300_000 },
+    () => {
+      let limit = 0;
+      const editor = createTestEditor({ charLimit: () => limit });
+      const unit = fc.constantFrom('a', ' ', NBSP, '😀', 'é');
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 0, max: 40 }),
+          fc.string({ unit, maxLength: 30 }),
+          fc.string({ unit, minLength: 1, maxLength: 40 }),
+          (l, initial, pasted) => {
+            limit = l;
+            editor.commands.setContent({
+              type: 'doc',
+              content: [
+                {
+                  type: 'paragraph',
+                  content:
+                    initial === '' ? [] : [{ type: 'text', text: initial }],
+                },
+              ],
+            });
+            editor.commands.setTextSelection(endOf(editor));
+            const before = chars(editor).characters;
+            editor.view.pasteText(pasted, paste());
+            expect(chars(editor).characters).toBeLessThanOrEqual(
+              Math.max(l, before),
+            );
+            editor.state.doc.check();
+          },
+        ),
+        { seed: SEED, numRuns: RUNS },
+      );
+    },
+  );
 });

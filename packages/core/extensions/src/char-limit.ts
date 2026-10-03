@@ -193,6 +193,9 @@ export function createCharLimitExtension(
               const fits = (tr: Transaction) =>
                 accepts(before, count(tr.doc), limit);
               if (fits(pasteTransaction(state, slice))) return false;
+              // A colagem cortada é despachada aqui: os tratadores de colagem
+              // das outras extensões (link na colagem, VS Code em `codeBlock`)
+              // não rodam sobre o corte.
               // Maior prefixo que cabe: busca binária sobre o resultado real.
               // `best` só recebe candidatos conferidos; `null` = nada cabe.
               let lo = 0;
@@ -223,7 +226,12 @@ export function createCharLimitExtension(
             },
             handleDrop(view, event, slice, moved) {
               const limit = limitOf();
-              if (moved || view.composing || limit === null) return false;
+              // `view.dragging` só existe quando o recorte saiu deste editor:
+              // arrasto interno (mover ou copiar com modificador) nunca é
+              // barrado (C6); só o soltar externo passa pelo limite.
+              if (moved || view.dragging || view.composing || limit === null) {
+                return false;
+              }
               const coords = view.posAtCoords({
                 left: event.clientX,
                 top: event.clientY,
