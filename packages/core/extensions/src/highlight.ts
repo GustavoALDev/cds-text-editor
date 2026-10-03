@@ -158,9 +158,9 @@ export function createHighlightPlugin(ctx: RteExtensionContext): Plugin {
     let set = old.map(tr.mapping, doc);
     const size = doc.content.size;
     const seen = new Set<number>();
-    for (const [a, b] of changedRanges(tr)) {
-      const from = Math.max(0, Math.min(a, b) - 1);
-      const to = Math.min(size, Math.max(a, b) + 1);
+    for (const [a, b] of changedRanges([tr], doc)) {
+      const from = Math.max(0, a - 1);
+      const to = Math.min(size, b + 1);
       // Tudo o que estava no trecho sai, seja qual for o tipo do nó agora
       // (um bloco que virou parágrafo ou título não guarda realce).
       set = set.remove(set.find(from, to));

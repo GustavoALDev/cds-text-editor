@@ -218,25 +218,15 @@ export function createCodeBlockExtension(ctx: RteExtensionContext) {
           // a segunda rodada não acha nada e devolve null (sem laço).
           appendTransaction(transactions, _old, state) {
             const doc = state.doc;
-            const size = doc.content.size;
             const fixes = new Map<number, string | null>();
-            for (const tr of transactions) {
-              if (!tr.docChanged) continue;
-              for (const [a, b] of changedRanges(tr)) {
-                // Intervalos de transações anteriores do lote podem ter
-                // sido deslocados; o clamp e a nova checagem bastam.
-                doc.nodesBetween(
-                  Math.max(0, Math.min(a, b, size)),
-                  Math.min(size, Math.max(a, b)),
-                  (node, pos) => {
-                    if (node.type !== type) return true;
-                    const current: unknown = node.attrs['language'];
-                    const canon = resolve(current);
-                    if (canon !== current) fixes.set(pos, canon);
-                    return false;
-                  },
-                );
-              }
+            for (const [a, b] of changedRanges(transactions, doc)) {
+              doc.nodesBetween(a, b, (node, pos) => {
+                if (node.type !== type) return true;
+                const current: unknown = node.attrs['language'];
+                const canon = resolve(current);
+                if (canon !== current) fixes.set(pos, canon);
+                return false;
+              });
             }
             if (fixes.size === 0) return null;
             const tr = state.tr;

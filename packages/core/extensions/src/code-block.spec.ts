@@ -11,6 +11,7 @@ import { resolveCodeLanguage } from './code-block';
 import { createEditorExtensions } from './factory';
 import { getRteHtml } from './serialize';
 import { createTestEditor, destroyTestEditors } from './testing/editor';
+import { SHIFT_META, ShiftBatch } from './testing/shift-batch';
 
 const ONLY_CODE = {
   colors: false,
@@ -299,6 +300,25 @@ describe('codeBlock: colagem do VS Code e linguagem canônica', () => {
       .content?.filter((n) => n.type === 'codeBlock')
       .map((n) => n.attrs?.['language']);
     expect(langs).toEqual(['typescript', null]);
+  });
+
+  it('lote com transação que desloca posições: o bloco tocado é corrigido', () => {
+    const editor = createTestEditor(
+      {
+        features: ONLY_CODE,
+        codeLanguages: RTE_CODE_LANGUAGES,
+        extensions: [ShiftBatch],
+      },
+      '<p>a</p><pre><code class="language-js">x</code></pre>',
+    );
+    const pos = editor.state.doc.firstChild!.nodeSize;
+    editor.view.dispatch(
+      editor.state.tr
+        .setNodeAttribute(pos, 'language', 'TS')
+        .setMeta(SHIFT_META, true),
+    );
+    const block = editor.getJSON().content?.find((n) => n.type === 'codeBlock');
+    expect(block?.attrs?.['language']).toBe('typescript');
   });
 
   it('documento já canônico não ganha transação extra', () => {

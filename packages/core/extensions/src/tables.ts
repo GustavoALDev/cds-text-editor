@@ -5,7 +5,7 @@ import {
   TableHeader,
   TableRow,
 } from '@tiptap/extension-table';
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import type { Node as ProseMirrorNode, Schema } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { changedRanges } from './changed-ranges';
 import type { RteExtensionContext } from './context';
@@ -33,10 +33,15 @@ function width(value: unknown): number {
   return n < 1 ? 0 : Math.min(n, WIDTH_MAX);
 }
 
-/** `colwidth` canônico: lista com 0 onde não há largura; `null` se nenhuma. */
-function canonicalColwidth(value: unknown): number[] | null {
+/**
+ * `colwidth` canônico: uma largura por coluna coberta (`colspan`), 0 onde não
+ * há largura; `null` se nenhuma. É ponto fixo da votação de larguras do
+ * `fixTables` do prosemirror-tables, que só escreve valores já presentes.
+ */
+function canonicalColwidth(value: unknown, colspan = 1): number[] | null {
   if (!Array.isArray(value)) return null;
-  const list = value.map(width);
+  const list: number[] = [];
+  for (let i = 0; i < colspan; i += 1) list.push(width(value[i]));
   return list.some((n) => n > 0) ? list : null;
 }
 
@@ -84,8 +89,7 @@ function parseColwidth(element: HTMLElement): number[] | null {
       .split(',')
       .slice(0, colspan)
       .map((part) => (/^\s*\d+\s*$/.test(part) ? width(Number(part)) : 0));
-    while (list.length < colspan) list.push(0);
-    return canonicalColwidth(list);
+    return canonicalColwidth(list, colspan);
   }
   const row = element.parentElement;
   const table = element.closest('table');
@@ -105,7 +109,7 @@ function parseColwidth(element: HTMLElement): number[] | null {
     const col = cols[index + i];
     list.push(col ? widthOfCol(col) : 0);
   }
-  return canonicalColwidth(list);
+  return canonicalColwidth(list, colspan);
 }
 
 function cellAttributes(header: boolean): Attributes {
@@ -154,7 +158,7 @@ function renderColgroup(node: ProseMirrorNode) {
   let any = false;
   row.forEach((cell) => {
     const colspan = span(cell.attrs['colspan']);
-    const widths = canonicalColwidth(cell.attrs['colwidth']);
+    const widths = canonicalColwidth(cell.attrs['colwidth'], colspan);
     for (let i = 0; i < colspan; i += 1) {
       const w = widths?.[i] ?? 0;
       if (w > 0) any = true;
@@ -164,35 +168,46 @@ function renderColgroup(node: ProseMirrorNode) {
   return any ? (['colgroup', {}, ...cols] as const) : null;
 }
 
+const isCell = (node: ProseMirrorNode) => {
+  const role = node.type.spec['tableRole'] as unknown;
+  return role === 'cell' || role === 'header_cell';
+};
+
 /**
- * Corrige `colwidth` fora de 1–9999 nas células tocadas pela transação (o
- * redimensionamento do prosemirror-tables não tem teto).
+ * Corrige `colwidth` fora do canônico (1–9999 inteiro; o redimensionamento do
+ * prosemirror-tables não tem teto). Basta uma célula tocada para canonizar
+ * **todas** as células da tabela: o `fixTables` vota uma largura por coluna
+ * entre todas as células dela e reescreve as divergentes; com só as tocadas
+ * corrigidas, ele voltaria a escrever o valor da maioria fora do canônico e
+ * os dois se alternariam sem fim. Com a tabela inteira canônica, a votação só
+ * escolhe valores canônicos e a segunda rodada não acha nada (sem laço).
  */
 function clampWidthsPlugin(): Plugin {
   return new Plugin({
     key: new PluginKey('rtTableColwidth'),
     appendTransaction(transactions, _old, state) {
       const doc = state.doc;
-      const size = doc.content.size;
+      const tables = new Set<number>();
+      for (const [a, b] of changedRanges(transactions, doc)) {
+        // nodesBetween visita também os ancestrais do trecho: a tabela de
+        // uma célula tocada entra aqui.
+        doc.nodesBetween(a, b, (node, pos) => {
+          if (node.type.spec['tableRole'] === 'table') tables.add(pos);
+          return !node.isTextblock;
+        });
+      }
       const fixes = new Map<number, number[] | null>();
-      for (const tr of transactions) {
-        if (!tr.docChanged) continue;
-        for (const [a, b] of changedRanges(tr)) {
-          doc.nodesBetween(
-            Math.max(0, Math.min(a, b, size)),
-            Math.min(size, Math.max(a, b)),
-            (node, pos) => {
-              const role = node.type.spec['tableRole'] as unknown;
-              if (role !== 'cell' && role !== 'header_cell') return true;
-              const current: unknown = node.attrs['colwidth'];
-              const canon = canonicalColwidth(current);
-              if (JSON.stringify(canon) !== JSON.stringify(current)) {
-                fixes.set(pos, canon);
-              }
-              return false;
-            },
-          );
-        }
+      for (const tablePos of tables) {
+        const table = doc.nodeAt(tablePos);
+        table?.descendants((node, offset) => {
+          if (!isCell(node)) return true;
+          const current: unknown = node.attrs['colwidth'];
+          const canon = canonicalColwidth(current, span(node.attrs['colspan']));
+          if (JSON.stringify(canon) !== JSON.stringify(current)) {
+            fixes.set(tablePos + 1 + offset, canon);
+          }
+          return true;
+        });
       }
       if (fixes.size === 0) return null;
       const tr = state.tr;
@@ -201,6 +216,58 @@ function clampWidthsPlugin(): Plugin {
       }
       return tr;
     },
+  });
+}
+
+/** Atributos de célula de um nó JSON normalizados (cópia; senão o próprio). */
+function normalizeCellJson(json: unknown, cellTypes: ReadonlySet<string>) {
+  if (typeof json !== 'object' || json === null) return json;
+  const { type, attrs } = json as { type?: unknown; attrs?: unknown };
+  if (typeof type !== 'string' || !cellTypes.has(type)) return json;
+  if (typeof attrs !== 'object' || attrs === null) return json;
+  const raw = attrs as Record<string, unknown>;
+  const colspan = span(raw['colspan']);
+  return {
+    ...json,
+    attrs: {
+      ...raw,
+      colspan,
+      rowspan: span(raw['rowspan']),
+      colwidth: canonicalColwidth(raw['colwidth'], colspan),
+    },
+  };
+}
+
+const NORMALIZES_CELLS = Symbol('rtNormalizesCells');
+
+/**
+ * Normaliza `colspan`/`rowspan` (1–100, senão 1) e `colwidth` (canônico) de
+ * toda célula lida de JSON (B9: JSON é entrada não confiável), antes de o nó
+ * existir. `TableMap` e `TableView` iteram sobre os atributos crus (colspan
+ * 1e6 travava a carga) e o conteúdo inicial não passa por transação nenhuma.
+ *
+ * O atributo `validate` do ProseMirror só lança, não corrige; por isso o
+ * ponto de entrada é `schema.nodeFromJSON`, por onde passam `createDocument`
+ * (conteúdo inicial e `setContent`), `insertContent` e `Node.fromJSON`
+ * (cada filho, via `Fragment.fromJSON`). O JSON recebido não é alterado.
+ */
+function installCellJsonNormalizer(schema: Schema): void {
+  const current = schema.nodeFromJSON as Schema['nodeFromJSON'] & {
+    [NORMALIZES_CELLS]?: true;
+  };
+  if (current[NORMALIZES_CELLS]) return;
+  const cellTypes = new Set(
+    Object.values(schema.nodes)
+      .filter((type) => {
+        const role = type.spec['tableRole'] as unknown;
+        return role === 'cell' || role === 'header_cell';
+      })
+      .map((type) => type.name),
+  );
+  const normalized = (json: unknown) =>
+    current(normalizeCellJson(json, cellTypes));
+  schema.nodeFromJSON = Object.assign(normalized, {
+    [NORMALIZES_CELLS]: true as const,
   });
 }
 
@@ -223,6 +290,21 @@ export function createTableExtensions(
       return colgroup
         ? ['table', {}, colgroup, ['tbody', 0]]
         : ['table', {}, ['tbody', 0]];
+    },
+    addKeyboardShortcuts() {
+      return {
+        ...this.parent?.(),
+        // Sem armadilha de teclado (spec 03b, §6; WCAG 2.1.2): na última
+        // célula o oficial cria uma linha e o Tab nunca sai da tabela. Aqui
+        // devolve false e o navegador leva o foco adiante. O `Shift-Tab`
+        // oficial já devolve false na primeira célula.
+        Tab: () => this.editor.commands.goToNextCell(),
+      };
+    },
+    onBeforeCreate(event) {
+      this.parent?.(event);
+      // antes do conteúdo inicial (como o parser de HTML em `rtContent`)
+      installCellJsonNormalizer(this.editor.schema);
     },
     addProseMirrorPlugins() {
       return [...(this.parent?.() ?? []), clampWidthsPlugin()];

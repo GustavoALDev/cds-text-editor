@@ -31,6 +31,16 @@ export default [
           ],
         },
       ],
+      // `import()` dinâmico escapa do no-restricted-imports: mesma regra (B1).
+      // O esquery não aceita `/` dentro do regex do seletor: `\x2F` é a barra.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: String.raw`ImportExpression[source.value=/^(@tiptap\x2F|lowlight$|highlight\.js(\x2F|$))/]`,
+          message:
+            'Tiptap/realce só em extensions/src e code-languages/src (spec 03b, B1), nem por import().',
+        },
+      ],
     },
   },
   {

@@ -79,8 +79,12 @@ class RteDOMParser extends DOMParser {
 
 /**
  * Instala o parser em `schema.cached.domParser`, o cache de
- * `DOMParser.fromSchema` (API pública do ProseMirror): `setContent`,
- * `insertContent` e a colagem passam por ele.
+ * `DOMParser.fromSchema` (API pública do ProseMirror): o conteúdo inicial,
+ * `setContent`, `insertContent` e a colagem passam por ele. O corte de
+ * `trimFragment` só roda sem `preserveWhitespace`: vale para o conteúdo
+ * inicial, `setContent` e a colagem, mas **não** para `insertContent`, que o
+ * Tiptap chama com `preserveWhitespace: 'full'` (o espaço inicial do HTML
+ * inserido fica como veio).
  */
 export function installDomParser(schema: Schema): void {
   const current = DOMParser.fromSchema(schema);

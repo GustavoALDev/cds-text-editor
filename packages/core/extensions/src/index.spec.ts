@@ -10,6 +10,8 @@ import type {
   RteEditorOptions,
   RteImageAlign,
   RteImageAttrs,
+  RtePullquoteAttrs,
+  RteTextDirection,
   RteVideoAttrs,
   RteVideoTrack,
 } from './index';
@@ -62,9 +64,20 @@ describe('API pública do /extensions (spec 03b, §6)', () => {
     const video = { src: 'https://a.test/v.mp4' } as RteVideoAttrs;
     const labels = ext.RTE_CONTENT_LABELS.en satisfies RteContentLabels;
     const options: RteEditorOptions = { image: { minWidth: 48 } };
-    expect([variant, align, track, image, video, labels, options]).toHaveLength(
-      7,
-    );
+    // Usados nas assinaturas de setPullquote/updatePullquote e setLang.
+    const quote: RtePullquoteAttrs = { author: 'A', role: 'Editora' };
+    const dir: RteTextDirection = 'rtl';
+    expect([
+      variant,
+      align,
+      track,
+      image,
+      video,
+      labels,
+      options,
+      quote,
+      dir,
+    ]).toHaveLength(9);
   });
 });
 

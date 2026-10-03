@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
+import { Extension } from '@tiptap/core';
 import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
+import { EditorState, Plugin } from '@tiptap/pm/state';
 import { afterEach, describe, expect, it } from 'vitest';
 import { validateHtml } from '../../html/src/validate-html';
 import { createEditorExtensions } from './factory';
 import { getRteHtml } from './serialize';
 import { createTestEditor, destroyTestEditors } from './testing/editor';
+import { pressKey } from './testing/press-key';
+import { SHIFT_META, ShiftBatch } from './testing/shift-batch';
 
 const ONLY_TABLES = {
   colors: false,
@@ -209,6 +213,146 @@ describe('tabelas: larguras dentro de 1–9999 (resizable)', () => {
       editor.state.tr.setNodeAttribute(pos, 'colwidth', [70000]),
     );
     expect(editor.state.doc.nodeAt(pos)?.attrs['colwidth']).toEqual([9999]);
+  });
+});
+
+/**
+ * Cão de guarda do laço de `appendTransaction`: lança depois de 200 rodadas
+ * ou 5 s num mesmo `dispatch` (um laço infinito síncrono não seria
+ * interrompido pelo timeout do Vitest).
+ */
+function watchdog() {
+  const guard = { rounds: 0, start: 0 };
+  const extension = Extension.create({
+    name: 'testWatchdog',
+    addProseMirrorPlugins: () => [
+      new Plugin({
+        appendTransaction() {
+          guard.rounds += 1;
+          if (guard.rounds > 200 || Date.now() - guard.start > 5000) {
+            throw new Error('laço de appendTransaction sem fim');
+          }
+          return null;
+        },
+      }),
+    ],
+  });
+  const arm = () => {
+    guard.rounds = 0;
+    guard.start = Date.now();
+  };
+  return { extension, arm };
+}
+
+describe('tabelas: canonização sem laço com o fixTables', () => {
+  it.each([
+    [20000, 9999],
+    [10000, 9999],
+    [123.5, 124],
+  ])(
+    'duas células com largura %s e a 3ª com 100: editar a 3ª converge',
+    (raw, canon) => {
+      const { extension, arm } = watchdog();
+      const editor = createTestEditor(
+        { features: ONLY_TABLES, extensions: [extension] },
+        '<p></p>',
+      );
+      // Nós criados direto pelo esquema: o estado nasce com as larguras fora
+      // do canônico, sem passar pela leitura do JSON (que já as corrigiria).
+      const { schema } = editor;
+      const row = (colwidth: number, text: string) =>
+        schema.node('tableRow', null, [
+          schema.node('tableCell', { colwidth: [colwidth] }, [
+            schema.node('paragraph', null, [schema.text(text)]),
+          ]),
+        ]);
+      const doc = schema.node('doc', null, [
+        schema.node('table', null, [
+          row(raw, 'a'),
+          row(raw, 'b'),
+          row(100, 'c'),
+        ]),
+      ]);
+      editor.view.updateState(
+        EditorState.create({ doc, plugins: editor.state.plugins }),
+      );
+      let target = -1;
+      editor.state.doc.descendants((node, pos) => {
+        if (node.isText && node.text === 'c') target = pos + 1;
+      });
+      arm();
+      editor.chain().setTextSelection(target).insertContent('x').run();
+      const widths: unknown[] = [];
+      editor.state.doc.descendants((node) => {
+        if (node.type.name === 'tableCell') widths.push(node.attrs['colwidth']);
+      });
+      expect(widths).toEqual([[canon], [canon], [canon]]);
+      expect(getRteHtml(editor)).toBe(
+        `<table><colgroup><col style="width: ${canon}px"></colgroup><tbody><tr><td><p>a</p></td></tr><tr><td><p>b</p></td></tr><tr><td><p>cx</p></td></tr></tbody></table>`,
+      );
+    },
+    5000,
+  );
+});
+
+describe('tabelas: intervalos do lote mapeados ao documento final', () => {
+  it('largura fora do limite corrigida mesmo com posição deslocada no lote', () => {
+    const editor = createTestEditor(
+      { features: ONLY_TABLES, extensions: [ShiftBatch] },
+      '<p>a</p><p>b</p><table><tbody><tr><td><p>c</p></td></tr></tbody></table>',
+    );
+    let pos = -1;
+    editor.state.doc.descendants((node, p) => {
+      if (node.type.name === 'tableCell') pos = p;
+    });
+    editor.view.dispatch(
+      editor.state.tr
+        .setNodeAttribute(pos, 'colwidth', [70000])
+        .setMeta(SHIFT_META, true),
+    );
+    const widths: unknown[] = [];
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === 'tableCell') widths.push(node.attrs['colwidth']);
+    });
+    expect(widths).toEqual([[9999]]);
+  });
+});
+
+describe('tabelas: Tab sem armadilha de teclado (§6, WCAG 2.1.2)', () => {
+  const TABLE =
+    '<table><tbody><tr><td><p>a</p></td><td><p>b</p></td></tr><tr><td><p>c</p></td><td><p>d</p></td></tr></tbody></table>';
+
+  function caretIn(editor: ReturnType<typeof editorWith>, text: string) {
+    let target = -1;
+    editor.state.doc.descendants((node, pos) => {
+      if (node.isText && node.text === text) target = pos + 1;
+    });
+    editor.commands.setTextSelection(target);
+  }
+
+  const cellText = (editor: ReturnType<typeof editorWith>) =>
+    editor.state.selection.$from.parent.textContent;
+
+  it('Tab vai à próxima célula; na última devolve false e não cria linha', () => {
+    const editor = editorWith(TABLE);
+    caretIn(editor, 'a');
+    expect(pressKey(editor, 'Tab')).toBe(true);
+    expect(cellText(editor)).toBe('b');
+    caretIn(editor, 'd');
+    const before = editor.state.doc;
+    expect(pressKey(editor, 'Tab')).toBe(false);
+    expect(editor.state.doc.eq(before)).toBe(true);
+    expect(getRteHtml(editor)).toBe(TABLE);
+  });
+
+  it('Shift-Tab volta uma célula; na primeira devolve false', () => {
+    const editor = editorWith(TABLE);
+    caretIn(editor, 'd');
+    expect(pressKey(editor, 'Tab', true)).toBe(true);
+    expect(cellText(editor)).toBe('c');
+    caretIn(editor, 'a');
+    expect(pressKey(editor, 'Tab', true)).toBe(false);
+    expect(getRteHtml(editor)).toBe(TABLE);
   });
 });
 

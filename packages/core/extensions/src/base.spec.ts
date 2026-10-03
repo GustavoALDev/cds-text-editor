@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { validateHtml } from '../../html/src/validate-html';
 import { getRteHtml } from './serialize';
 import { createTestEditor, destroyTestEditors } from './testing/editor';
+import { pressKey } from './testing/press-key';
 
 const OFF = {
   colors: false,
@@ -128,5 +129,33 @@ describe('base: marcas e blocos', () => {
   it('lista com marcadores', () => {
     const html = '<ul><li><p>a</p></li></ul>';
     expect(roundTrip(html)).toBe(html);
+  });
+});
+
+describe('base: Tab nas listas (§6, WCAG 2.1.2)', () => {
+  it('Tab aninha o item quando pode; no 1º item devolve false', () => {
+    const editor = createTestEditor(
+      { features: OFF },
+      '<ul><li><p>a</p></li><li><p>b</p></li></ul>',
+    );
+    editor.commands.setTextSelection(4);
+    const before = editor.state.doc;
+    expect(pressKey(editor, 'Tab')).toBe(false);
+    expect(editor.state.doc.eq(before)).toBe(true);
+    editor.commands.setTextSelection(9);
+    expect(editor.state.selection.$from.parent.textContent).toBe('b');
+    expect(pressKey(editor, 'Tab')).toBe(true);
+    expect(getRteHtml(editor)).toBe(
+      '<ul><li><p>a</p><ul><li><p>b</p></li></ul></li></ul>',
+    );
+    // Já aninhado sob o único irmão anterior: não aninha mais.
+    expect(pressKey(editor, 'Tab')).toBe(false);
+  });
+
+  it('fora de lista e de tabela, Tab não é tratado', () => {
+    const editor = createTestEditor({ features: OFF }, '<p>a</p>');
+    editor.commands.setTextSelection(2);
+    expect(pressKey(editor, 'Tab')).toBe(false);
+    expect(pressKey(editor, 'Tab', true)).toBe(false);
   });
 });
