@@ -1,6 +1,6 @@
 # Spec 04 — Sanitizador (`@cds/rte-sanitizer`)
 
-> Depende da spec 03. Referência: plano seções 2.2, 4.2, 8 (Fase 2) e 13. Modelo (MyPresentation): `apps/back-end/src/common/sanitize/` (`sanitize-rich-text.ts`, `reading-time.ts`, specs, `fixtures/editor-output.html`).
+> Depende da spec 03a (esquema). **Atualização (2026-10-03):** opções e regras ajustadas ao esquema declarativo da 03a; o modelo foi perdido e os testes são escritos de novo. Referência: plano seções 2.2, 4.2, 8 (Fase 2) e 13. Modelo (MyPresentation): `apps/back-end/src/common/sanitize/` (`sanitize-rich-text.ts`, `reading-time.ts`, specs, `fixtures/editor-output.html`).
 
 ## 1. Objetivo
 
@@ -31,27 +31,26 @@ Medido em 2026-10-02 (esbuild para navegador; Node sobre doc de ~400 kB do fixtu
 
 ```ts
 sanitizeRichText(html: string, options?: {
-  schema?: RteHtmlSchema;            // padrão: getHtmlSchema()
-  embedProviders?: RteEmbedProvider[];
-  extraMediaHosts?: string[];
-  extraStyles?: Record<string, RegExp>;
+  schema?: RteHtmlSchema;            // padrão: getHtmlSchema(); provedores de embed, hosts de mídia,
+                                     // política de links etc. entram pelas opções do getHtmlSchema (spec 03a)
   maxInputLength?: number;           // padrão: definido na implementação
   maxDepth?: number;
 }): string
-htmlToText(html: string): string
-countWords(html: string): number
-calculateReadingTime(html: string): number
+// Reexportados do core (spec 03a), uma só implementação:
+htmlToText(html: string): string     // @cds/rte-core/html
+countWords(text: string): number
+readingTime(text: string, options?): number
 ```
 
 ## 5. Requisitos
 
 - **R1.** A allowlist (tags, atributos, classes, estilos, esquemas de URL, hosts de iframe) vem **só do esquema**; nenhuma lista própria.
-- **R2.** Comportamento do modelo preservado: `rel`/`lang`/`id` validados, remoção de `iframe`/`video`/`img` que ficou sem `src` válido, `a` sem `target` não vira `_blank`, estilos limitados a `color`, `background-color`, `text-align` com valores validados.
+- **R2.** Comportamento definido pelo esquema da spec 03a: `rel`/`lang`/`id` validados, remoção de `iframe`/`video`/`img` que ficou sem `src` válido, `a` sem `target` não vira `_blank`, estilos limitados aos **declarados no esquema** (`color`/`background-color` regenerados pelo nome da paleta, `text-align`, `width` de `col`, `aspect-ratio` de `iframe`), interpretados pelas funções do core (`isAllowedUrl`, `sanitizeStyle`, `serializeTokens`, `matchesRule`). Sem `hljs-*` (spec 03a, 4.4).
 - **R3.** **Idempotência:** `sanitize(sanitize(x)) === sanitize(x)`.
 - **R4.** Limites: entrada acima de `maxInputLength` ou profundidade acima de `maxDepth` → erro tipado ou truncamento documentado (decidir e testar), nunca travar.
 - **R5.** Isomórfico: mesmo resultado em Node e em Chromium/Firefox/WebKit para o fixture do contrato.
 - **R6.** Sem acesso a `window`/`document` no topo do módulo.
-- **R7.** `htmlToText`, `countWords` e `calculateReadingTime` consistentes com as funções do core (uma só implementação reexportada, não duas).
+- **R7.** `htmlToText`, `countWords` e `readingTime` são os do core, reexportados (uma só implementação).
 
 ## 6. Testes
 
