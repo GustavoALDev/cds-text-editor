@@ -10,3 +10,5 @@ export interface RteCodeLanguage {
   /** Gramática do `highlight.js`, por `import()`. */
   load(): Promise<LanguageFn>;
 }
+
+export { defineCodeLanguage, RTE_CODE_LANGUAGES } from './catalog';
