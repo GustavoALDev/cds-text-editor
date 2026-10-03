@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     'embeds/index': 'embeds/src/index.ts',
+    'html/index': 'html/src/index.ts',
     'code-languages/index': 'code-languages/src/index.ts',
   },
   format: ['esm'],

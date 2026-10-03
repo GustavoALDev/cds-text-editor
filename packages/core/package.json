@@ -19,6 +19,10 @@
       "types": "./dist/embeds/index.d.ts",
       "default": "./dist/embeds/index.js"
     },
+    "./html": {
+      "types": "./dist/html/index.d.ts",
+      "default": "./dist/html/index.js"
+    },
     "./code-languages": {
       "types": "./dist/code-languages/index.d.ts",
       "default": "./dist/code-languages/index.js"
@@ -40,5 +44,8 @@
     "tiptap",
     "prosemirror",
     "angular"
-  ]
+  ],
+  "dependencies": {
+    "htmlparser2": "^12.0.0"
+  }
 }
