@@ -40,6 +40,7 @@ import { bindRteBridge, createRteBridge } from './bridge';
 import { isEmptyValue, readValue } from './empty';
 import { RTE_EDITOR_HOOK } from './hook';
 import { buildEditorOptions, mergeEditorConfig } from './options';
+import { readonlySelectionKeydown } from './readonly-selection';
 
 const OPTIONS_IGNORED =
   '[rte-editor] options só é lido na criação; a mudança foi ignorada.';
@@ -316,7 +317,10 @@ export class RteEditor implements FormValueControl<string> {
               content,
               editable,
               injectCSS: false,
-              editorProps: { attributes },
+              editorProps: {
+                attributes,
+                handleDOMEvents: { keydown: readonlySelectionKeydown },
+              },
             }),
         );
       });

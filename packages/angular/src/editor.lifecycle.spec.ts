@@ -104,9 +104,15 @@ describe('RteEditor: ciclo de vida (D2, R2)', () => {
     expect(document.querySelector('style[data-tiptap-style]')).toBeNull();
     expect(names(editor as Editor)).not.toContain('rtSearch');
     expect(names(editor as Editor)).not.toContain('rtSlashCommand');
+    // Nenhum `clipboardParser`/`domParser` (R2); só os atributos e a seleção
+    // pelo teclado em `readonly` (D10).
     expect(Object.keys(editor?.options.editorProps ?? {})).toEqual([
       'attributes',
+      'handleDOMEvents',
     ]);
+    expect(
+      Object.keys(editor?.options.editorProps.handleDOMEvents ?? {}),
+    ).toEqual(['keydown']);
     expect(fixture.componentInstance.ready).toEqual([editor]);
   });
 
