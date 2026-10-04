@@ -68,6 +68,29 @@ describe('base: alinhamento', () => {
     const html = '<p style="text-align: justify">a</p>';
     expect(roundTrip(html)).toBe(html);
   });
+
+  it('lê o atributo style, não o CSSOM (Chromium com CSP style-src sem inline)', () => {
+    // Com `style-src` sem `'unsafe-inline'`, o Chromium mantém o atributo
+    // `style` no documento do `DOMParser` mas deixa a declaração vazia
+    // (`element.style.textAlign === ''`). Simula isso no jsdom.
+    const proto = CSSStyleDeclaration.prototype;
+    const own = Object.getOwnPropertyDescriptor(proto, 'textAlign');
+    Object.defineProperty(proto, 'textAlign', {
+      configurable: true,
+      get: () => '',
+      set: () => undefined,
+    });
+    try {
+      const html =
+        '<h3 id="rt-a" style="text-align: center">A</h3><p style="color: red; TEXT-ALIGN : Right ;">b</p><p style="text-align: start">c</p>';
+      expect(roundTrip(html)).toBe(
+        '<h3 id="rt-a" style="text-align: center">A</h3><p style="text-align: right">b</p><p>c</p>',
+      );
+    } finally {
+      if (own) Object.defineProperty(proto, 'textAlign', own);
+      else Reflect.deleteProperty(proto, 'textAlign');
+    }
+  });
 });
 
 describe('base: lista ordenada', () => {

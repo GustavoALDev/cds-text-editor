@@ -16,6 +16,8 @@ declare global {
     /** Ponte do app de teste (`e2e/angular/app/src/app/e2e-bridge.ts`). */
     rteE2e: {
       getRteEditor(host: Element): import('@tiptap/core').Editor | null;
+      /** `getRteHtml` do editor vivo em `host` (o documento, não o modelo da página). */
+      rteHtml(host: Element): string | null;
       value(id: RteE2eId): string;
       setValue(id: RteE2eId, html: string): void;
       state(id: RteE2eId): RteE2eState;

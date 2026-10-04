@@ -18,9 +18,12 @@ import {
 // valor; o Tiptap usa `DOMParser`) reporta `style-src-attr` `inline` por
 // atributo, embora o documento do parser seja inerte e nada seja aplicado (o
 // Chromium reporta em qualquer análise de HTML: `DOMParser`, `template`,
-// `createHTMLDocument`). Firefox e WebKit não reportam. O conteúdo chega
-// inteiro (o core lê `getAttribute('style')`) e o editor desenha os estilos
-// pelo CSSOM, permitido pela CSP.
+// `createHTMLDocument`). Firefox e WebKit não reportam. Nesse documento o
+// Chromium deixa `element.style` vazio: o core lê o **atributo** `style`
+// (`getAttribute('style')`, inclusive o `text-align`, que o Tiptap leria do
+// CSSOM e perderia), o conteúdo chega inteiro ao documento do editor (o teste
+// compara o `getRteHtml` do editor vivo com o fixture) e o editor desenha os
+// estilos pelo CSSOM, permitido pela CSP.
 
 /**
  * Hosts dos `iframe` de terceiros do fixture: a CSP do app (só `'self'`)
@@ -102,9 +105,25 @@ for (const scheme of ['light', 'dark'] as const) {
       fixture,
     );
     await expect(editable.locator('table')).toHaveCount(1);
-    expect(await page.evaluate(() => window.rteE2e.value('content'))).toBe(
-      fixture,
-    );
+    // O conteúdo chega íntegro ao **documento** do editor (não ao modelo da
+    // página, que a carga externa não reescreve): o `all-features.html` é
+    // ponto fixo do `getRteHtml`, então o HTML do editor vivo é o próprio
+    // fixture, com todo atributo `style` (alinhamento, cores, larguras,
+    // proporções) intacto, inclusive no Chromium que relata a CSP.
+    const live = await host.evaluate((root) => window.rteE2e.rteHtml(root));
+    expect(live).toBe(fixture);
+    const styles = (html: string) =>
+      (html.match(/ style="[^"]*"/g) ?? []).sort();
+    expect(styles(live ?? '')).toEqual(styles(fixture));
+    expect(styles(fixture).length).toBeGreaterThan(20);
+    for (const align of ['center', 'justify', 'left', 'right'])
+      expect(live).toContain(`style="text-align: ${align}"`);
+    // E o desenho segue o atributo (CSSOM, permitido pela CSP).
+    expect(
+      await editable
+        .locator('p', { hasText: 'Parágrafo justificado.' })
+        .evaluate((p) => getComputedStyle(p).textAlign),
+    ).toBe('justify');
     const onLoad = await takeViolations(page);
     if (browserName === 'chromium') {
       const styleAttrs = (fixture.match(/ style="/g) ?? []).length;

@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { getRteEditor } from '@cds/rte-angular/testing';
+import { getRteHtml } from '@cds/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 
 /** Editores que os testes leem (`data-testid` igual ao id). */
@@ -34,6 +35,8 @@ export interface RteE2eHandle {
 /** `window.rteE2e`: só o que os testes leem (spec 05a, §6.2; sem `ng.getComponent`). */
 export interface RteE2eApi {
   getRteEditor(host: Element): Editor | null;
+  /** `getRteHtml` do editor vivo em `host` (o documento, não o modelo da página). */
+  rteHtml(host: Element): string | null;
   value(id: RteE2eId): string;
   setValue(id: RteE2eId, html: string): void;
   state(id: RteE2eId): RteE2eState;
@@ -103,6 +106,10 @@ export function installE2eBridge(): void {
     const run = <T>(fn: () => T): T => zone.run(fn);
     win.rteE2e = {
       getRteEditor,
+      rteHtml: (host) => {
+        const editor = getRteEditor(host);
+        return editor ? getRteHtml(editor) : null;
+      },
       value: (id) => run(() => bridge.handle(id).value()),
       setValue: (id, html) => run(() => bridge.handle(id).setValue(html)),
       state: (id) => run(() => bridge.handle(id).state()),

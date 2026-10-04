@@ -93,6 +93,66 @@ function createOrderedList(ctx: RteExtensionContext) {
   });
 }
 
+const ALIGNMENTS = ['left', 'center', 'right', 'justify'] as const;
+
+/** Valor (minúsculo) da última declaração `property` de um atributo `style`. */
+function styleDeclaration(
+  style: string | null,
+  property: string,
+): string | undefined {
+  let found: string | undefined;
+  for (const declaration of (style ?? '').split(';')) {
+    const colon = declaration.indexOf(':');
+    if (colon < 0) continue;
+    if (declaration.slice(0, colon).trim().toLowerCase() !== property) continue;
+    found = declaration
+      .slice(colon + 1)
+      .trim()
+      .toLowerCase();
+  }
+  return found;
+}
+
+/**
+ * `textAlign` lido do **atributo** `style`, não do CSSOM: com CSP
+ * `style-src` sem `'unsafe-inline'`, o Chromium mantém o atributo no
+ * documento do `DOMParser` mas deixa `element.style` vazio, e o alinhamento
+ * se perderia na carga (spec 05a, N5).
+ */
+function createTextAlign() {
+  return TextAlign.extend({
+    addGlobalAttributes() {
+      const alignments: readonly string[] = this.options.alignments;
+      const fallback = this.options.defaultAlignment;
+      return (this.parent?.() ?? []).map((group) => ({
+        ...group,
+        attributes: Object.fromEntries(
+          Object.entries(group.attributes).map(([name, spec]) => [
+            name,
+            name === 'textAlign'
+              ? {
+                  ...spec,
+                  parseHTML: (element: HTMLElement) => {
+                    const value = styleDeclaration(
+                      element.getAttribute('style'),
+                      'text-align',
+                    );
+                    return value !== undefined && alignments.includes(value)
+                      ? value
+                      : fallback;
+                  },
+                }
+              : spec,
+          ]),
+        ),
+      }));
+    },
+  }).configure({
+    types: ['heading', 'paragraph'],
+    alignments: [...ALIGNMENTS],
+  });
+}
+
 /**
  * Recursos base (spec 03b, §4), com instâncias novas a cada chamada, na
  * ordem da spec §6: de `doc` a `superscript`.
@@ -110,10 +170,7 @@ export function createBaseExtensions(ctx: RteExtensionContext): AnyExtension[] {
     createOrderedList(ctx),
     ListItem.configure(),
     ListKeymap.configure(),
-    TextAlign.configure({
-      types: ['heading', 'paragraph'],
-      alignments: ['left', 'center', 'right', 'justify'],
-    }),
+    createTextAlign(),
     Bold.configure(),
     Italic.configure(),
     Underline.configure(),
