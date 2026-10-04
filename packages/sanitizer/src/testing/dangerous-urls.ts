@@ -1,9 +1,9 @@
-// Gerador fast-check de URLs com esquema perigoso ofuscado. Só para specs;
-// fora do índice público. Os esquemas e o ruído vêm de
-// `fixtures/content/dangerous-urls.json`, compartilhado com o sanitizador.
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+// Gerador fast-check de URLs perigosas para as propriedades (spec 04, §6.2):
+// o mesmo algoritmo de `packages/core/src/schema/testing/dangerous-urls.ts`,
+// sobre o fixture compartilhado `fixtures/content/dangerous-urls.json`, unido
+// aos exemplos concretos dele. Fora do build.
 import * as fc from 'fast-check';
+import { readFixture } from './fixtures';
 
 interface DangerousUrlsFixture {
   schemes: string[];
@@ -12,20 +12,15 @@ interface DangerousUrlsFixture {
 }
 
 const FIXTURE = JSON.parse(
-  readFileSync(
-    resolve(__dirname, '../../../../../fixtures/content/dangerous-urls.json'),
-    'utf8',
-  ).replace(/\r\n?/g, '\n'),
+  readFixture('dangerous-urls.json'),
 ) as DangerousUrlsFixture;
-
-export const DANGEROUS_SCHEMES: readonly string[] = FIXTURE.schemes;
 
 const noise = fc.constantFrom(...FIXTURE.noise);
 
 /** Esquema perigoso em capitalização aleatória, com TAB/LF/espaço/C0 inseridos, seguido de lixo. */
-export const dangerousUrl: fc.Arbitrary<string> = fc
+const obfuscatedScheme: fc.Arbitrary<string> = fc
   .tuple(
-    fc.constantFrom(...DANGEROUS_SCHEMES),
+    fc.constantFrom(...FIXTURE.schemes),
     fc.array(fc.boolean(), { minLength: 12, maxLength: 12 }),
     fc.array(fc.tuple(fc.nat(12), noise), { maxLength: 6 }),
     fc.string(),
@@ -39,3 +34,12 @@ export const dangerousUrl: fc.Arbitrary<string> = fc
     }
     return `${lead.join('')}${chars.join('')}:${rest}`;
   });
+
+/**
+ * URL perigosa: esquema ofuscado gerado ou um dos exemplos concretos (inclusive
+ * ofuscações por entidade, que só viram esquema depois da leitura do HTML).
+ */
+export const dangerousUrl: fc.Arbitrary<string> = fc.oneof(
+  obfuscatedScheme,
+  fc.constantFrom(...FIXTURE.examples),
+);
