@@ -2,11 +2,12 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-/** Raiz `fixtures/content/` do repositório. */
-const FIXTURE_DIR = resolve(
-  import.meta.dirname,
-  '../../../../fixtures/content',
-);
+/**
+ * Raiz `fixtures/content/` do repositório. Usa `__dirname` (e não
+ * `import.meta.dirname`), como o core: o Playwright carrega este módulo como
+ * CommonJS nos E2E do sanitizador.
+ */
+const FIXTURE_DIR = resolve(__dirname, '../../../../fixtures/content');
 
 /**
  * Texto do fixture em UTF-8 com quebras normalizadas para `\n` (checkout com
