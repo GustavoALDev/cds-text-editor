@@ -10,6 +10,7 @@ import {
   type Root,
   type Rule,
 } from 'postcss';
+import { RTE_HIGHLIGHT_COLORS, RTE_TEXT_COLORS } from '@cds/rte-core';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { workspacePath } from './testing-support/workspace';
 
@@ -58,6 +59,11 @@ const COLOR_SHORTHANDS =
   /^(?:background|border(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?|outline|text-decoration)$/;
 const COLOR_VALUE =
   /^(?:var\(--rte-[a-z0-9-]+\)|transparent|currentcolor|inherit)$/i;
+/** Literal da paleta (`light-dark(#claro, #escuro)`), só nas amostras. */
+const PALETTE_VALUE = /^light-dark\(#[0-9a-f]{6}, #[0-9a-f]{6}\)$/i;
+/** Cores do sistema, só dentro de `@media (forced-colors: active)`. */
+const SYSTEM_COLOR =
+  /^(?:Canvas|CanvasText|ButtonFace|ButtonText|ButtonBorder|Highlight|HighlightText|GrayText|LinkText)$|^\d+px (?:solid|dashed|double) (?:Canvas|CanvasText|ButtonText|ButtonBorder|Highlight|GrayText)$/;
 /** Fichas aceitas num atalho de borda/contorno/fundo além da cor. */
 const NON_COLOR_TOKEN =
   /^(?:-?[\d.]+(?:px|em|rem|%)?|none|solid|dashed|dotted|double|auto|underline|wavy|calc\(.*\))$/;
@@ -245,6 +251,17 @@ describe('editor.css (R10)', () => {
   it('cores só por var(--rte-*), transparent, currentColor ou inherit', () => {
     const bad: string[] = [];
     for (const d of declarations()) {
+      // exceções da 05b1: literais da paleta só nas amostras; cores do
+      // sistema só em forced-colors
+      const rule = d.parent as Rule | undefined;
+      const swatch =
+        rule?.type === 'rule' &&
+        rule.selectors.every((s) => /\.rte-swatch\[data-rte-palette=/.test(s));
+      const forced = enclosingAtRules(d as unknown as ChildNode).some(
+        (a) => a.name === 'media' && /forced-colors:\s*active/.test(a.params),
+      );
+      if (swatch && PALETTE_VALUE.test(d.value.trim())) continue;
+      if (forced && SYSTEM_COLOR.test(d.value.trim())) continue;
       if (d.prop.startsWith('--')) {
         bad.push(`${d.prop}: ${d.value}`);
       } else if (COLOR_PROPS.test(d.prop)) {
@@ -358,5 +375,194 @@ describe('editor.css (R10)', () => {
           appearance.push(`${rule.selector} { ${decl.prop} }`);
     }
     expect(appearance).toEqual([]);
+  });
+});
+
+describe('editor.css: barra, menus e amostras (spec 05b1)', () => {
+  const SWATCH =
+    /\.rte-swatch(?:\[[^\]]*\])*\[data-rte-color=(['"])([\w-]+)\1\]/;
+
+  function rulesWith(cls: string): Rule[] {
+    return styleRules().filter((r) =>
+      r.selectors.some((s) => hasClass(s, cls)),
+    );
+  }
+
+  function declsOf(rules: Rule[]): Declaration[] {
+    return rules.flatMap((r) => declarations(r));
+  }
+
+  it.each([
+    'rte-toolbar',
+    'rte-toolbar__button',
+    'rte-toolbar__button--pressed',
+    'rte-toolbar__button--menu',
+    'rte-toolbar__separator',
+    'rte-menu',
+    'rte-menu__item',
+    'rte-menu__item--checked',
+    'rte-swatch',
+    'rte-icon',
+  ])('tem regra para %s', (cls) => {
+    expect(rulesWith(cls).length).toBeGreaterThan(0);
+  });
+
+  it('barra e menus ficam em rte.components', () => {
+    const misplaced = ['rte-toolbar', 'rte-menu', 'rte-swatch']
+      .flatMap(rulesWith)
+      .filter((r) => layerOf(r) !== 'rte.components')
+      .map((r) => r.selector);
+    expect(misplaced).toEqual([]);
+  });
+
+  it('a barra quebra linha e tem borda inferior do tema', () => {
+    const decls = declsOf(
+      styleRules().filter((r) =>
+        r.selectors.some((s) => /\.rte-toolbar$/.test(s.trim())),
+      ),
+    );
+    expect(decls).toContainEqual(
+      expect.objectContaining({ prop: 'flex-wrap', value: 'wrap' }),
+    );
+    expect(
+      decls.some(
+        (d) =>
+          /^border-(?:bottom|block-end)$/.test(d.prop) &&
+          d.value.includes('var(--rte-border)'),
+      ),
+    ).toBe(true);
+  });
+
+  it('o menu é fixo, sem inset/margem do UA e com rolagem interna', () => {
+    const decls = declsOf(
+      styleRules().filter((r) =>
+        r.selectors.some((s) => /\.rte-menu$/.test(s.trim())),
+      ),
+    );
+    for (const [prop, value] of [
+      ['position', 'fixed'],
+      ['inset', 'auto'],
+      ['margin', '0'],
+      ['overflow-y', 'auto'],
+    ])
+      expect(decls).toContainEqual(expect.objectContaining({ prop, value }));
+  });
+
+  /** Menor valor em px que a declaração garante (`max(24px, …)` ou `Npx`). */
+  function minPx(value: string): number {
+    const max = /^max\(\s*([\d.]+)px\s*,/.exec(value);
+    if (max) return Number(max[1]);
+    const px = /^([\d.]+)px$/.exec(value);
+    return px ? Number(px[1]) : 0;
+  }
+
+  it.each(['rte-toolbar__button', 'rte-menu__item'])(
+    '%s tem alvo ≥ 24 px em qualquer densidade',
+    (cls) => {
+      const decls = declsOf(
+        styleRules().filter((r) =>
+          r.selectors.some((s) => s.trim().endsWith(`.${cls}`)),
+        ),
+      );
+      for (const prop of ['min-block-size', 'min-inline-size']) {
+        const decl = decls.find((d) => d.prop === prop);
+        expect(decl, prop).toBeDefined();
+        expect(minPx(decl?.value ?? '')).toBeGreaterThanOrEqual(24);
+      }
+    },
+  );
+
+  it.each(['rte-toolbar__button', 'rte-menu__item'])(
+    '%s tem foco visível com --rte-focus-width e --rte-focus',
+    (cls) => {
+      const decls = declsOf(
+        styleRules().filter((r) =>
+          r.selectors.some((s) => s.trim().endsWith(`.${cls}:focus-visible`)),
+        ),
+      );
+      expect(decls).toContainEqual(
+        expect.objectContaining({
+          prop: 'outline',
+          value: 'var(--rte-focus-width) solid var(--rte-focus)',
+        }),
+      );
+    },
+  );
+
+  it('pressionado: fundo --rte-primary-subtle e borda --rte-primary-border', () => {
+    const decls = declsOf(rulesWith('rte-toolbar__button--pressed'));
+    expect(
+      decls.some(
+        (d) =>
+          d.prop === 'background-color' &&
+          d.value === 'var(--rte-primary-subtle)',
+      ),
+    ).toBe(true);
+    expect(
+      decls.some(
+        (d) =>
+          d.prop === 'border-color' && d.value === 'var(--rte-primary-border)',
+      ),
+    ).toBe(true);
+  });
+
+  it('inaplicável e desabilitado usam --rte-text-muted', () => {
+    const rules = styleRules().filter((r) =>
+      r.selectors.some(
+        (s) =>
+          /\[aria-disabled=['"]?true['"]?\]/.test(s) || /:disabled/.test(s),
+      ),
+    );
+    const selectors = rules.flatMap((r) => r.selectors).join(' ');
+    expect(selectors).toMatch(/rte-toolbar__button\[aria-disabled/);
+    expect(selectors).toMatch(/rte-toolbar__button:disabled/);
+    expect(selectors).toMatch(/rte-menu__item\[aria-disabled/);
+    expect(
+      declsOf(rules).some(
+        (d) => d.prop === 'color' && d.value === 'var(--rte-text-muted)',
+      ),
+    ).toBe(true);
+  });
+
+  it('amostras: literais da paleta iguais aos do core (texto em color, marca-texto em background-color)', () => {
+    const found = new Map<string, string>();
+    for (const rule of styleRules()) {
+      for (const selector of rule.selectors) {
+        const m = SWATCH.exec(selector);
+        if (!m) continue;
+        const palette = /data-rte-palette=(['"])(text|highlight)\1/.exec(
+          selector,
+        )?.[2];
+        for (const d of declarations(rule))
+          found.set(`${palette}:${m[2]}:${d.prop}`, d.value);
+      }
+    }
+    for (const c of RTE_TEXT_COLORS)
+      expect(found.get(`text:${c.name}:color`), c.name).toBe(
+        `light-dark(${c.light}, ${c.dark})`,
+      );
+    for (const c of RTE_HIGHLIGHT_COLORS)
+      expect(found.get(`highlight:${c.name}:background-color`), c.name).toBe(
+        `light-dark(${c.light}, ${c.dark})`,
+      );
+    expect(found.size).toBe(
+      RTE_TEXT_COLORS.length + RTE_HIGHLIGHT_COLORS.length,
+    );
+  });
+
+  it('forced-colors: pressionado e marcado com cores do sistema', () => {
+    const media: AtRule[] = [];
+    root.walkAtRules('media', (at) => {
+      if (/forced-colors:\s*active/.test(at.params)) media.push(at);
+    });
+    expect(media.length).toBeGreaterThan(0);
+    const rules: Rule[] = [];
+    for (const m of media) m.walkRules((r) => void rules.push(r));
+    const text = rules
+      .map((r) => `${r.selector}{${declarations(r).map((d) => d.value)}}`)
+      .join('\n');
+    expect(text).toMatch(/rte-toolbar__button--pressed[^{]*\{[^}]*Highlight/);
+    expect(text).toMatch(/rte-menu__item--checked[^{]*\{[^}]*Highlight/);
+    expect(text).toMatch(/ButtonText/);
   });
 });

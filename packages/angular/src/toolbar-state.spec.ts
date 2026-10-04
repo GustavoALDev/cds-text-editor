@@ -1,5 +1,14 @@
-import { effect, signal, type Signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  signal,
+  type Signal,
+} from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+// eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
+import { RteEditor } from '@cds/rte-angular';
+import { getRteEditor } from '@cds/rte-angular/testing';
 import type { Editor } from '@tiptap/core';
 import { DOMSerializer } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
@@ -18,6 +27,7 @@ import {
   toolbarStateProbe,
   type RteItemState,
 } from './toolbar/state';
+import { renderHost, settle } from './testing-support/render';
 import { readTableMenuState } from './toolbar/table-guard';
 
 afterEach(() => {
@@ -408,5 +418,81 @@ describe('createToolbarState (U5, R6)', () => {
       editor.state.tr.setSelection(TextSelection.create(editor.state.doc, 3)),
     );
     expect(toolbar.item('bold')()).toBe(before);
+  });
+});
+
+@Component({
+  selector: 'rte-test-observed-toolbar',
+  imports: [RteEditor],
+  template: `<rte-editor [value]="value" />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class ObservedHost {
+  readonly value = '<p><em>ab<strong>cd</strong></em></p>';
+}
+
+describe('MutationObserver na barra do componente (R6)', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  /** Digita pelo `handleTextInput` (como o navegador), com recuo para `insertText`. */
+  function type(editor: Editor, text: string): void {
+    const { view } = editor;
+    const { from, to } = view.state.selection;
+    const deflt = () => view.state.tr.insertText(text, from, to);
+    const handled = view.someProp('handleTextInput', (f) =>
+      f(view, from, to, text, deflt),
+    );
+    if (!handled) view.dispatch(deflt());
+  }
+
+  async function setupObserved() {
+    const fixture = await renderHost(ObservedHost);
+    const el = fixture.nativeElement as HTMLElement;
+    const editor = getRteEditor(
+      el.querySelector('rte-editor') as Element,
+    ) as Editor;
+    const toolbar = el.querySelector('.rte-toolbar') as HTMLElement;
+    selectText(editor, 'ab', 1);
+    type(editor, 'x'); // undo habilitado antes de observar
+    await settle(fixture);
+    const records: MutationRecord[] = [];
+    const observer = new MutationObserver((list) => records.push(...list));
+    observer.observe(toolbar, {
+      subtree: true,
+      attributes: true,
+      childList: true,
+      characterData: true,
+    });
+    const flush = async () => {
+      await settle(fixture);
+      records.push(...observer.takeRecords());
+    };
+    return { fixture, editor, toolbar, records, flush, observer };
+  }
+
+  it('20 teclas num trecho sem mudar marca nem bloco → 0 mutações', async () => {
+    const { editor, records, flush, observer } = await setupObserved();
+    for (let i = 0; i < 20; i += 1) {
+      type(editor, 'y');
+      await flush();
+    }
+    observer.disconnect();
+    expect(records).toEqual([]);
+  });
+
+  it('cursor entrando num negrito → mutações só no botão bold', async () => {
+    const { editor, toolbar, records, flush, observer } = await setupObserved();
+    selectText(editor, 'cd', 1);
+    await flush();
+    observer.disconnect();
+    expect(records.length).toBeGreaterThan(0);
+    const bold = toolbar.querySelector('[aria-label="Bold"]') as HTMLElement;
+    for (const record of records) {
+      expect(record.target).toBe(bold);
+      expect(record.type).toBe('attributes');
+    }
+    expect(new Set(records.map((r) => r.attributeName))).toEqual(
+      new Set(['aria-pressed', 'class']),
+    );
   });
 });

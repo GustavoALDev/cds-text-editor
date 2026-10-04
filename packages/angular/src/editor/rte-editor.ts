@@ -21,6 +21,12 @@ import {
 } from '@angular/core';
 import type { FormValueControl } from '@angular/forms/signals';
 import {
+  getHtmlSchema,
+  type RteHtmlSchema,
+  type RtePaletteColor,
+} from '@cds/rte-core';
+import type { RteCodeLanguage } from '@cds/rte-core/code-languages';
+import {
   createEditorExtensions,
   RTE_LABELS_META,
   type RteCharLimitState,
@@ -31,6 +37,9 @@ import { EditorState } from '@tiptap/pm/state';
 import { RTE_CONFIG, RTE_LABELS, type RteEditorConfig } from '../config';
 import { mergeLabels, readLabelsSource } from '../labels/merge';
 import type { RteLabels, RteLabelsSource } from '../labels/types';
+import { pickToolbarConfig, resolveToolbarGroups } from '../toolbar/config';
+import type { RteToolbarConfig, RteToolbarItemId } from '../toolbar/items';
+import { RteToolbar } from '../toolbar/rte-toolbar';
 import {
   editableAttributes,
   presentText,
@@ -44,6 +53,37 @@ import { readonlySelectionKeydown } from './readonly-selection';
 
 const OPTIONS_IGNORED =
   '[rte-editor] options só é lido na criação; a mudança foi ignorada.';
+
+const NO_LANGUAGES: readonly RteCodeLanguage[] = Object.freeze([]);
+
+function sameGroups(
+  a: readonly (readonly string[])[],
+  b: readonly (readonly string[])[],
+): boolean {
+  return (
+    a.length === b.length &&
+    a.every(
+      (group, i) =>
+        group.length === b[i]?.length &&
+        group.every((id, j) => id === b[i]?.[j]),
+    )
+  );
+}
+
+function samePalette(
+  a: RteHtmlSchema['palette'],
+  b: RteHtmlSchema['palette'],
+): boolean {
+  const same = (x: readonly RtePaletteColor[], y: readonly RtePaletteColor[]) =>
+    x.length === y.length &&
+    x.every(
+      (c, i) =>
+        c.name === y[i]?.name &&
+        c.light === y[i]?.light &&
+        c.dark === y[i]?.dark,
+    );
+  return same(a.text, b.text) && same(a.highlight, b.highlight);
+}
 
 /** `maxLength` inteiro `>= 0` vira o limite; o resto, sem limite (D12). */
 function toCharLimit(value: number | undefined): number | null {
@@ -61,6 +101,7 @@ function toCharLimit(value: number | undefined): number | null {
   selector: 'rte-editor',
   exportAs: 'rteEditor',
   templateUrl: './rte-editor.html',
+  imports: [RteToolbar],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   host: {
@@ -72,6 +113,7 @@ function toCharLimit(value: number | undefined): number | null {
     '[class.rte-editor--invalid]': 'invalid() && touched()',
     '(focusin)': 'onHostFocusIn($event)',
     '(focusout)': 'onHostFocusOut($event)',
+    '(keydown)': 'onHostKeydown($event)',
   },
 })
 export class RteEditor implements FormValueControl<string> {
@@ -93,6 +135,8 @@ export class RteEditor implements FormValueControl<string> {
   readonly ariaDescribedBy = input<string | undefined>(undefined);
   readonly labels = input<RteLabelsSource | undefined>(undefined);
   readonly options = input<RteEditorConfig | undefined>(undefined);
+  /** Barra: entrada > `provideRichText` > `'article'`; vale ao vivo (U8). */
+  readonly toolbar = input<RteToolbarConfig | undefined>(undefined);
 
   // Saídas
   readonly editorReady = output<Editor>();
@@ -157,13 +201,74 @@ export class RteEditor implements FormValueControl<string> {
   );
 
   private readonly mount = viewChild.required<ElementRef<HTMLElement>>('mount');
+  private readonly toolbarRef = viewChild(RteToolbar);
+
+  private readonly config = inject(RTE_CONFIG);
+  /** Configuração fixada na criação (`null` antes dela). */
+  private readonly creationConfig = signal<RteEditorConfig | null>(null);
+
+  /** Comandos da barra só com editor editável (U10). */
+  protected readonly interactive = computed(
+    () => !!this.instance() && !this.effectiveDisabled() && !this.readonly(),
+  );
+
+  /** Configuração de criação: a fixada ou, antes dela, a mesclada ao vivo. */
+  private readonly editorConfig = computed(
+    () =>
+      this.creationConfig() ??
+      mergeEditorConfig(this.config.editor, this.options()),
+  );
+
+  /**
+   * Esquema da configuração (pré-voo 7): recursos da barra e paleta iguais
+   * no SSR, na casca e depois da criação; opção inválida cai no padrão.
+   */
+  protected readonly schema: Signal<RteHtmlSchema> = computed(() => {
+    try {
+      return getHtmlSchema(this.editorConfig());
+    } catch {
+      return getHtmlSchema({});
+    }
+  });
+
+  protected readonly codeLanguages = computed(
+    () => this.editorConfig().codeLanguages ?? NO_LANGUAGES,
+  );
+
+  private readonly toolbarWarned = new Set<string>();
+  protected readonly toolbarGroups: Signal<
+    readonly (readonly RteToolbarItemId[])[]
+  > = computed(
+    () =>
+      resolveToolbarGroups(
+        pickToolbarConfig(this.toolbar(), this.config.toolbar),
+        {
+          features: this.schema().features,
+          hasCodeLanguages: this.codeLanguages().length > 0,
+          warned: this.toolbarWarned,
+        },
+      ),
+    { equal: sameGroups },
+  );
+
+  /** Paleta do esquema; igual por valor (a criação não re-renderiza os menus). */
+  protected readonly palette = computed(() => this.schema().palette, {
+    equal: samePalette,
+  });
+
+  /** Versão da ponte, para a barra (U5). */
+  protected readonly version = this.bridge.version;
+  protected readonly contentLabels = computed(
+    () => this.resolvedLabels().content,
+  );
+  private readonly slashLabels = computed(() => this.resolvedLabels().slash);
 
   constructor() {
     bindRteBridge(this, this.bridge);
 
     const host = this.host;
     const zone = inject(NgZone);
-    const config = inject(RTE_CONFIG);
+    const config = this.config;
 
     let optionsAtCreation: RteEditorConfig | undefined;
     let warned = false;
@@ -279,7 +384,8 @@ export class RteEditor implements FormValueControl<string> {
     let labelsEditor: Editor | null = null;
     effect(() => {
       this.placeholder();
-      this.resolvedLabels();
+      this.contentLabels();
+      this.slashLabels();
       const editor = this.instance();
       if (!editor || editor.isDestroyed) return;
       if (editor !== labelsEditor) {
@@ -298,16 +404,15 @@ export class RteEditor implements FormValueControl<string> {
     afterNextRender(() => {
       const editor = untracked(() => {
         optionsAtCreation = this.options();
+        const merged = mergeEditorConfig(config.editor, optionsAtCreation);
+        this.creationConfig.set(merged);
         const extensions = createEditorExtensions(
-          buildEditorOptions(
-            mergeEditorConfig(config.editor, optionsAtCreation),
-            {
-              placeholder: () => this.placeholder(),
-              charLimit: () => toCharLimit(this.maxLength()),
-              content: () => this.resolvedLabels().content,
-              slash: () => this.resolvedLabels().slash,
-            },
-          ),
+          buildEditorOptions(merged, {
+            placeholder: () => this.placeholder(),
+            charLimit: () => toCharLimit(this.maxLength()),
+            content: () => this.resolvedLabels().content,
+            slash: () => this.resolvedLabels().slash,
+          }),
         );
         const element = this.mount().nativeElement;
         const content = this.value() || '';
@@ -377,6 +482,33 @@ export class RteEditor implements FormValueControl<string> {
       typeof (target as Node).nodeType === 'number' &&
       this.host.contains(target as Node)
     );
+  }
+
+  /** `Alt+F10` no editável leva o foco à barra (U3). */
+  protected onHostKeydown(event: KeyboardEvent): void {
+    if (
+      event.key !== 'F10' ||
+      !event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.defaultPrevented
+    )
+      return;
+    const target = event.target;
+    if (
+      !(target instanceof Node) ||
+      !this.mount().nativeElement.contains(target)
+    )
+      return;
+    event.preventDefault();
+    this.focusToolbar();
+  }
+
+  /** Leva o foco ao item ativo da barra (U3); sem barra ou sem editor, nada. */
+  focusToolbar(): void {
+    if (!untracked(this.interactive)) return;
+    untracked(this.toolbarRef)?.focusActive();
   }
 
   /** Foca o editável; antes da criação, o pedido vale logo depois dela. */

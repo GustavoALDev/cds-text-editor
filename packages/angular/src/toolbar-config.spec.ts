@@ -1,7 +1,11 @@
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RTE_TOOLBAR_PRESETS } from '@cds/rte-angular';
+import { RTE_TOOLBAR_PRESETS, RteEditor } from '@cds/rte-angular';
+import type { Editor } from '@tiptap/core';
 import type { RteFeatureId } from '@cds/rte-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderHost, settle } from './testing-support/render';
 import { pickToolbarConfig, resolveToolbarGroups } from './toolbar/config';
 import {
   RTE_TOOLBAR_ITEMS,
@@ -215,5 +219,55 @@ describe('resolveToolbarGroups', () => {
     expect(warn).toHaveBeenCalledWith(
       "[rte-editor] toolbar inválido; usando 'article'.",
     );
+  });
+});
+
+@Component({
+  selector: 'rte-test-live-toolbar',
+  imports: [RteEditor],
+  template: `<rte-editor
+    [toolbar]="toolbar()"
+    (valueChange)="changes = changes + 1"
+    (editorReady)="ready.push($event)"
+  />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class LiveHost {
+  readonly toolbar = signal<RteToolbarConfig | undefined>([
+    ['bold', 'nope' as RteToolbarItemId],
+  ]);
+  readonly ready: Editor[] = [];
+  changes = 0;
+}
+
+describe('toolbar ao vivo no rte-editor (R2)', () => {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.restoreAllMocks();
+  });
+
+  it('trocar toolbar 3× não recria o editor nem emite valor; aviso de id desconhecido sai 1×', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fixture = await renderHost(LiveHost);
+    const host = fixture.componentInstance;
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.rte-toolbar__button')).toHaveLength(1);
+    for (const next of [
+      'minimal',
+      [['italic'], ['bold', 'nope' as RteToolbarItemId]],
+      'full',
+    ] as const) {
+      host.toolbar.set(next);
+      await settle(fixture);
+    }
+    expect(el.querySelectorAll('.rte-toolbar__button').length).toBeGreaterThan(
+      20,
+    );
+    expect(host.ready).toHaveLength(1);
+    expect(host.changes).toBe(0);
+    const unknown = warn.mock.calls.filter(([message]) =>
+      String(message).includes('"nope"'),
+    );
+    expect(unknown).toHaveLength(1);
   });
 });

@@ -72,6 +72,9 @@ export class RteMenu {
   constructor() {
     inject(DestroyRef).onDestroy(() => {
       const wasOpen = this.open$();
+      // destruído: o `toggle` do fechamento não devolve o foco ao gatilho
+      this.focusInside = false;
+      this.trigger = null;
       this.teardown();
       if (wasOpen) this.element.hidePopover();
     });

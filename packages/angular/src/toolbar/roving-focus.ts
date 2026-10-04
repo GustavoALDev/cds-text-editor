@@ -55,8 +55,19 @@ function canFocus(item: RteRovingItem): boolean {
 export class RteRovingFocus {
   private readonly host =
     inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
-  /** @internal */
-  readonly items = contentChildren(RteRovingItem, { descendants: true });
+  private readonly contentItems = contentChildren(RteRovingItem, {
+    descendants: true,
+  });
+  private readonly viewItems = signal<Signal<readonly RteRovingItem[]> | null>(
+    null,
+  );
+  /**
+   * @internal Itens em ordem do DOM: os de `useItems` ou, sem eles, os
+   * `[rteRovingItem]` do conteúdo.
+   */
+  readonly items: Signal<readonly RteRovingItem[]> = computed(
+    () => this.viewItems()?.() ?? this.contentItems(),
+  );
   private readonly lastFocused = signal<HTMLElement | null>(null);
 
   /**
@@ -71,6 +82,15 @@ export class RteRovingFocus {
     if (keptItem && canFocus(keptItem)) return kept;
     return items.findIndex(canFocus);
   });
+
+  /**
+   * @internal Fonte dos itens quando a diretiva é `hostDirective` de um
+   * componente: a consulta de conteúdo não enxerga a vista do componente, que
+   * passa os seus (`viewChildren(RteRovingItem)`).
+   */
+  useItems(items: Signal<readonly RteRovingItem[]>): void {
+    this.viewItems.set(items);
+  }
 
   /** Foca o item ativo; `false` se não há item focável. */
   focusActive(): boolean {

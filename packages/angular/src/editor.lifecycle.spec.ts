@@ -185,7 +185,9 @@ describe('RteEditor: ciclo de vida (D2, R2)', () => {
 
   it(
     'alternar o editor 100× não deixa editores para trás',
-    { timeout: 30_000 },
+    // a barra 'article' (05b1) dobra o custo de criar o editor no jsdom; com
+    // a suíte em paralelo, 100 ciclos passam de 30 s
+    { timeout: 90_000 },
     async () => {
       const destroy = vi.spyOn(Editor.prototype, 'destroy');
       const fixture = await renderHost(ToggleHost);
