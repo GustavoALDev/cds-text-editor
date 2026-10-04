@@ -49,7 +49,7 @@ A 05a entregou o `rte-editor` sem interface. A 05b1 dá a ele a barra de ferrame
 9. **`ngDevMode` × `isDevMode()`.** `ngDevMode` só no `warnIfPoorTheme`; os avisos da barra seguem `isDevMode()`.
 10. **`data-rte-mode` em dois lugares** (ligação de host e `applyRteTheme`), com o mesmo valor.
 11. **Direção.** `rtl` = `closest('[dir]')` com `dir="rtl"`; direção só por CSS, sem `dir`, não é detectada.
-12. **Alinhamento sem atributo:** nenhum `menuitemradio` marcado e ícone `alignLeft`.
+12. **Alinhamento sem atributo:** nenhum `menuitemradio` marcado e ícone do início da linha (`alignLeft`, ou `alignRight` com o host em `rtl`; a direção é relida ao focar a barra — ajuste da revisão final).
 13. **Guarda no Angular** (`src/toolbar/table-guard.ts`), com propriedade comparando com o comando do Tiptap numa segunda instância; spans > 100 pré-existentes também bloqueiam.
 14. **Ícones:** Lucide fixado, baixado com `npm pack` em diretório temporário; elementos não-`path` convertidos em `d`.
 15. **Avisos de terceiros:** `generate-notices` ganha a seção "Código incorporado" a partir de `tools/third-party-embedded.json`.
@@ -59,12 +59,12 @@ A 05a entregou o `rte-editor` sem interface. A 05b1 dá a ele a barra de ferrame
 **Desta execução**
 
 18. Execução em `feat/spec-05b` no checkout principal, sem worktree. Implementadores Opus nas tarefas 4–9 e Sonnet nas demais; a revisão das Tarefas 8–9 correu em paralelo com a 10.
-19. **Ctrl+Shift+B do blockquote.** O `Bold` do Tiptap também liga `Mod-B`, que no _keymap_ equivale a `Mod-Shift-b`: o atalho alterna negrito. Correção no core na onda final (remover o `Mod-B` maiúsculo do Bold), com teste; até lá o atalho fica fora da tabela.
-20. **`rtTaskList` sem `Mod-Shift-9`.** Registrar na onda final e devolver à tabela de atalhos.
-21. **`setCallout` não se desfaz.** Usa `ReplaceAroundStep(structure: true)` com título com texto; o passo inverso falha e o `undo()` consome a entrada do histórico sem remover a caixa. Marcado com `it.fails`; correção na onda final.
-22. **Indentar/recuar em lista de tarefas.** `can().sinkListItem('rtTaskItem')` diz sim e lança `TransformError` (`rtTaskItem` é `inline*`); a barra ensaia em `try/catch` e desabilita. Pendência do core.
+19. **Ctrl+Shift+B do blockquote — corrigido.** O `Bold` do Tiptap também liga `Mod-B`, que no _keymap_ casa com Ctrl+Shift+B (tecla de caractere com Shift é buscada de novo sem o Shift): o atalho alternava negrito. O core registra só `Mod-b` e trata o Caps Lock (`B` sem Shift) num `handleKeyDown` próprio; `blockquote: 'Mod-Shift-b'` voltou à tabela, com teste no core, no `shortcuts.spec.ts` e no navegador (N11).
+20. **`rtTaskList` sem `Mod-Shift-9` — corrigido.** A extensão da lista registra `Mod-Shift-9` → `toggleTaskList` (o mesmo do `TaskList` do Tiptap); de volta à tabela, com teste no core e no navegador.
+21. **`setCallout` não se desfazia — corrigido.** Usava `ReplaceAroundStep(structure: true)` com título com texto; o passo inverso falhava e o `undo()` consumia a entrada do histórico sem remover a caixa. Agora `structure: false` (o passo direto é o mesmo: o intervalo `from..gapFrom` é vazio); teste de undo/redo no core, `it.fails` e a marca `core-gap` removidos, e o N11 desfaz a caixa com `Mod+Z`.
+22. **Indentar/recuar em lista de tarefas.** `can().sinkListItem('rtTaskItem')` diz sim e lança `TransformError` (`rtTaskItem` é `inline*`); a barra ensaia em `try/catch` e desabilita. Continua pendência do core (não bloqueia: a barra se protege; quem chama a API direto recebe a exceção). Saída prevista: `rtTaskItem` recusar o aninhamento com um comando que devolve `false`.
 23. **Foco itinerante.** `openAtPointerDown` vale só para clique de ponteiro (`event.detail > 0`) e é zerado em todo `click`/`pointercancel`; `disabled` do item é um _signal_ (todos nascem `disabled` pela U10, senão a barra ficava sem parada de `Tab`).
-24. **Teste de alternar o editor 100×** sobe de 30 s para 90 s (com a barra, ~85 ms por ciclo no jsdom) em vez de `toolbar: false`: mantém a cobertura de vazamento.
+24. **Teste de alternar o editor** (revisto na revisão final): 100 ciclos com a barra `minimal` (vazamento do editor) e 20 com a `full` (vazamento da barra e dos menus), de volta ao teto de 30 s. O estouro vinha da disputa de CPU entre os ambientes jsdom (ruling 34), não do custo do ciclo (~25–80 ms isolado).
 25. **Aviso `[rte-theme]` só para valores inválidos** (`'banana'`, terciária `'12px'`). O exemplo `#ffff00` do plano estava errado: a derivação do tema garante contraste para qualquer semente, então não avisa.
 26. **Blur em `readonly`,** só quando o foco está dentro da `.rte-toolbar`, e fecha os menus (a área editável mantém o foco).
 27. **Forced-colors.** Marcado/pressionado passa a usar `Canvas` sobre `CanvasText` com borda `Highlight` (o axe acusava 3,77:1 e 2,94:1 no Firefox e no WebKit). Mudança visual aceita.
@@ -73,11 +73,20 @@ A 05a entregou o `rte-editor` sem interface. A 05b1 dá a ele a barra de ferrame
 30. **`[(value)]` revertido antes da detecção** nunca chega ao editor (comportamento do `model()` do Angular); anotado no README.
 31. **Core:** a regra do `check-pack` para `styles/*.css` vale para todos os pacotes tsup (exceção ampla; deferido).
 
+**Revisão final do branch**
+
+32. **D11, saída adiada.** O `focusout` sem destino decide na fase _read_ do próximo render: só não há saída quando `document.hasFocus()` e o `activeElement` (que não é o `body`) está no host — sem exigir que o alvo tenha saído do DOM. Antes, `blur()` + `focus()` no mesmo turno (ou o foco devolvido por terceiros) emitia `editorBlur`/`touch` com o foco dentro e deixava `hostFocused` em `false` (a próxima saída real não emitia). Troca de janela continua saindo (`hasFocus()` falso). A barra usa o mesmo critério para `focusInside`. No zone.js o fim da tarefa do `focusout` já roda a detecção antes do `focus()` síncrono: há uma saída e uma nova entrada, com estado coerente (teste nos dois modos).
+33. **Nome acessível do `blockType` (ajuste da U11).** `aria-label` = texto visível + propósito ("Heading 2, Text style"; "Título 2, Estilo do texto"; "Título 2, Estilo de texto"); sem bloco único, o texto visível já é o rótulo. WCAG 2.5.3 (o nome contém o rótulo visível) e o bloco atual é anunciado sem abrir o menu; o nome muda com o cursor só nesse botão (R6 vale para os demais). Teste unitário e `toHaveAccessibleName` no N14.
+34. **Testes sob carga (I3).** `parallelism: false` nos alvos `test`/`test-zone` do `nx.json` (e no padrão do executor `@nx/angular:unit-test`, que vence o padrão por nome de alvo); `vitest-base.config.mts` limita a 4 workers (núcleos − 1 no CI): com o padrão, os ambientes jsdom disputavam a CPU (cada isolate com o seu coletor de lixo) e um ciclo leve ficava até 10× mais lento, sem ganho no total (70 s → 41 s locais). A propriedade da guarda passou a usar `readTableOpState` por operação, dois editores reaproveitados, normalização só no estado e o comando real do Tiptap com a transação capturada (~47 s → ~18 s em 100 execuções; `numRuns` e `MIN_PER_SIDE` iguais).
+35. **Cor em seleção mista.** `textColor`/`highlight` devolvem o sentinela `RTE_MIXED` (`'\0mixed'`) quando a seleção mistura cores (ou texto com e sem cor): nenhum item marcado e o botão ativo; "Cor padrão" só quando nenhuma parte tem a marca.
+36. **Minors corrigidos na revisão final:** descrição segura de ids exóticos na configuração da barra (sem `String()` que lança) e aviso para grupo que não é array; `GrayText` do inaplicável não vale para pressionado/marcado em `forced-colors`; `border-inline-start` em citação, destaque, caixa e "leia também"; `HOST_STYLE` pega `[style.width.px]`; o N14 exige `forced-colors: active` no Chromium; `scroll`/`resize` e o quadro do menu fora da zona; a sonda `toolbarStateProbe` só conta em `ngDevMode`.
+37. **Tamanho da barra (veredito).** Aceito pela U19: com `toolbar: false` o código da barra continua no _bundle_ (importação estática e `viewChild(RteToolbar)`), +12,1 kB gzip (~8 % do _chunk_ do Tiptap), medidos e orçados. Não tornar a barra _lazy_ agora: um `@defer` quebraria R7/U10 (barra desabilitada no SSR e na casca, sem salto na hidratação) e espalharia o contrato de foco D11 entre _chunks_. Se um consumidor relevante usar só `toolbar: false`, a saída é um entry separado (`RteEditorCore` sem barra) ou uma `provideRichTextToolbar()` que registre o componente por token — decidir na 05d, com a API final.
+
 ### (c) Mudanças na spec
 
 - **§7:** critérios marcados com a evidência; o do CI do PR fica aberto.
 - **Linha do tema na `05-editor-angular.md`:** deixa de ser "peer só de CSS" (agora é importado).
-- **Atalhos:** `blockquote` e `taskList` ficam fora da tabela até a correção do core (rulings 19 e 20).
+- **Atalhos:** `blockquote` e `taskList` ficaram fora da tabela até a correção do core (rulings 19 e 20); voltaram na revisão final.
 - **Plano:** exemplo `#ffff00` corrigido (ruling 25).
 
 ### (d) Números (2026-10-04)
@@ -91,7 +100,7 @@ Tamanho (`min+gzip`, Angular, Tiptap, `@cds/*`, `lowlight` e `highlight.js` exte
 | `i18n`       | 387         | 1544      | 448             | 1792            |
 | `validators` | 1156        | 1156      | 1344            | 1344 (igual)    |
 
-O acréscimo vem da barra, dos ícones, do modelo de itens e dos rótulos da seção `toolbar` nos três idiomas. O custo do `applyRteTheme` é o cenário `apply` do tema: 9810 B min, 4400 B gzip (orçamento 5120); no cenário do Angular o `@cds/*` é externo e não entra na conta. Core e tema dentro do orçamento (`whole` do core 8391 B, `extensions` 34716 B).
+O acréscimo vem da barra, dos ícones, do modelo de itens e dos rótulos da seção `toolbar` nos três idiomas. O custo do `applyRteTheme` é o cenário `apply` do tema: 9810 B min, 4400 B gzip (orçamento 5120); no cenário do Angular o `@cds/*` é externo e não entra na conta. Core e tema dentro do orçamento (`whole` do core 8391 B, `extensions` 34716 B). Depois da revisão final: `editor` 17635 B, `whole` 17676 B (orçamento igual), `extensions` do core 34874 B.
 
 `content.css`: 9266 B brutos, 2481 B gzip. `editor.css`: 17287 B brutos, 4197 B gzip (inclui barra e menus).
 
@@ -113,15 +122,17 @@ N9–N15 em `e2e/angular/editor-toolbar-*.spec.ts`, `editor-theme.spec.ts` e `ed
 
 ## Pendências conhecidas
 
-- **Core (onda final):** rulings 19–22; filtro de violações do N13 sem restringir diretiva e `style-src-attr` filtrado em todos os motores; `border-left` físico com `padding-inline-start` em blockquote/pullquote (RTL); regra de _embed_ redundante; propriedade da guarda leva 45–55 s em 100 execuções (timeout 120 s), risco em CI sob carga.
-- **Configuração e rótulos:** `String(id)` lança `TypeError` para id objeto sem protótipo (`config.ts`); grupo não-array descartado sem aviso; `colorNames` fora da paleta ignorados em silêncio; entradas de `third-party-embedded.json` sem validação; cabeçalho de `icons.ts` sem `minus` na lista do Feather.
+- **Core:** ruling 22 (indentar em lista de tarefas lança na API direta); filtro de violações do N13 sem restringir diretiva e `style-src-attr` filtrado em todos os motores (o portão da R16 é o `editor-csp.spec.ts`); regra de _embed_ youtube/vimeo "redundante" fica (o teste de cobertura exige um seletor por classe do esquema).
+- **Configuração e rótulos:** `colorNames` fora da paleta ignorados em silêncio; entradas de `third-party-embedded.json` sem validação; cabeçalho de `icons.ts` sem `minus` na lista do Feather.
 - **Estado e guarda:** `editor.can()` refeito por item a cada transação e `can(insertTable)` monta uma tabela 3 × 3 (só se o N15 acusar custo); helpers `can` duplicados; `opts.features` substitui em vez de mesclar nos ajudantes de teste.
-- **Foco e menus:** vínculo gatilho → menu por campo público mutável; tipo `'backward'` de `tabOut` nunca emitido; "cor padrão" marcada em seleção mista (WCAG 4.1.2, baixo dano); `catch {}` engole erro do `getHtmlSchema`; regex `HOST_STYLE` não pega `[style.width.px]`; SVG repetido 5× no template.
+- **Foco e menus:** vínculo gatilho → menu por campo público mutável; tipo `'backward'` de `tabOut` nunca emitido; `catch {}` engole erro do `getHtmlSchema` (sugestão: `console.warn` em dev); SVG repetido 5× no template; `activeIndex` com `disabled` por caminho alheio; `runToolbarCommand` no `click` agenda o `focus()` do Tiptap dentro da zona (um ciclo extra por comando, aceitável); `aria-keyshortcuts` com `Shift+8`/`Shift+7` a conferir com NVDA/VoiceOver na 05b2.
 - **Tema:** `closeMenus()` a cada execução do efeito mesmo sem menu aberto; `warnedThemes` por instância.
 - **Chamadas diretas de tabela** fora da guarda continuam como no ADR 0004 (saem com 1 no HTML).
 - **Direção só por CSS,** sem atributo `dir`, não é detectada.
 - **Plano B do tema sob demanda** é opção futura para quem não usa tema por instância (o `apply` pesa ~4,4 kB gzip).
 - **`Alt+F10`** pode ser capturado por alguma plataforma; `focusToolbar()` e `Shift+Tab` do editável cobrem.
+- **Testes:** `sleep` fixo antes de "nada mudou" (`editor-toolbar-commands.spec.ts`, `editor-toolbar-perf.spec.ts`) — trocar por `frames(page)` quando mexer nesses arquivos; flake do N5 escuro no Firefox (vigiar no CI); exceção do `check-pack` para `styles/*.css` em todos os pacotes tsup.
+- **Tamanho:** barra sempre no _bundle_ (ruling 37); entry separado ou `provideRichTextToolbar()` a decidir na 05d.
 - **Spec 08:** regressão visual editor × página por captura de tela.
 
 ## Consequências
