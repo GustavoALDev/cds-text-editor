@@ -18,6 +18,9 @@ export default defineConfig(() => ({
     coverage: {
       reportsDirectory: '../../coverage/packages/sanitizer',
       provider: 'v8' as const,
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.spec.ts', 'src/testing/**'],
+      thresholds: { lines: 95, branches: 95 },
     },
   },
 }));
