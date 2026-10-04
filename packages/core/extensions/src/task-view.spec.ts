@@ -215,6 +215,19 @@ describe('TaskItemView: troca de rótulos (RTE_LABELS_META)', () => {
     expect(label()).toBe('Tarefa: X');
   });
 
+  it('setEditable sem update + RTE_LABELS_META ressincroniza o checkbox', () => {
+    const editor = editorWith(X);
+    const input = checkbox(items(editor)[0] as Element);
+    expect(input.disabled).toBe(false);
+    editor.setEditable(false, false);
+    expect(input.disabled).toBe(false);
+    editor.view.dispatch(editor.state.tr.setMeta(RTE_LABELS_META, true));
+    expect(input.disabled).toBe(true);
+    editor.setEditable(true, false);
+    editor.view.dispatch(editor.state.tr.setMeta(RTE_LABELS_META, true));
+    expect(input.disabled).toBe(false);
+  });
+
   it('destroy remove o ouvinte de transação', () => {
     let cur: RteContentLabels = RTE_CONTENT_LABELS.en;
     const editor = editorWith(X, () => cur);

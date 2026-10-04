@@ -5,10 +5,11 @@ import type {
 } from './types';
 
 /**
- * Meta de transação que avisa a troca de rótulos (spec 05a, D15): as vistas
- * que leem `labels()` só fora de `update(node)` (o nome das tarefas) se
- * re-renderizam ao vê-la com `true`. Decorações e atributos já são relidos a
- * cada transação.
+ * Meta de transação que pede às vistas de nó que se re-renderizem (spec 05a,
+ * D15): troca de rótulos (o nome das tarefas, lido só fora de `update(node)`)
+ * ou de `editable` feita sem evento `update` (o checkbox das tarefas). As
+ * vistas se re-renderizam ao vê-la com `true`; decorações e atributos já são
+ * relidos a cada transação.
  */
 export const RTE_LABELS_META = 'rtLabels';
 

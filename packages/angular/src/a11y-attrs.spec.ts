@@ -219,7 +219,7 @@ describe('RteEditor: atributos do editável (D10, D13)', () => {
     expect(dom.getAttribute('contenteditable')).toBe('true');
     expect(dom.hasAttribute('aria-disabled')).toBe(false);
     expect(host.classList.contains('rte-editor--disabled')).toBe(false);
-    expect(probe.transactions).toBe(0);
+    expect(probe.values).toBe(0);
   });
 
   it('readonly: tabindex="0", aria-readonly, não editável e placeholder visível', async () => {
@@ -233,6 +233,33 @@ describe('RteEditor: atributos do editável (D10, D13)', () => {
     expect(editor.isEditable).toBe(false);
     expect(host.classList.contains('rte-editor--readonly')).toBe(true);
     expect(dom.querySelector('.rte-placeholder')).not.toBeNull();
+  });
+
+  it('disabled/readonly desabilitam os checkboxes das tarefas, sem emitir valor', async () => {
+    const { fixture, dom, probe } = await setup((f) =>
+      f.componentRef.setInput(
+        'value',
+        '<ul class="rt-tasks"><li class="rt-task"><label><input type="checkbox" disabled="">A</label></li>' +
+          '<li class="rt-task"><label><input type="checkbox" disabled="" checked="">B</label></li></ul>',
+      ),
+    );
+    const boxes = () =>
+      Array.from(dom.querySelectorAll<HTMLInputElement>('li.rt-task input'));
+    const disabledStates = () => boxes().map((b) => b.disabled);
+    expect(boxes()).toHaveLength(2);
+    expect(disabledStates()).toEqual([false, false]);
+
+    await set(fixture, 'disabled', true);
+    expect(disabledStates()).toEqual([true, true]);
+    expect(boxes().every((b) => b.matches(':disabled'))).toBe(true);
+    await set(fixture, 'disabled', false);
+    expect(disabledStates()).toEqual([false, false]);
+
+    await set(fixture, 'readonly', true);
+    expect(disabledStates()).toEqual([true, true]);
+    await set(fixture, 'readonly', false);
+    expect(disabledStates()).toEqual([false, false]);
+    expect(probe.values).toBe(0);
   });
 
   it('hidden: atributo hidden no host', async () => {

@@ -243,7 +243,16 @@ export class RteEditor implements FormValueControl<string> {
       const editor = this.instance();
       if (!editor || editor.isDestroyed) return;
       if (editor.options.editable === editable) return;
-      zone.runOutsideAngular(() => editor.setEditable(editable, false));
+      // Sem evento `update` (D10); a vista de tarefa só ressincroniza o
+      // checkbox ao re-renderizar, então segue uma transação só de meta.
+      zone.runOutsideAngular(() => {
+        editor.setEditable(editable, false);
+        editor.view.dispatch(
+          editor.state.tr
+            .setMeta(RTE_LABELS_META, true)
+            .setMeta('addToHistory', false),
+        );
+      });
     });
 
     // `disabled`/`hidden` com o foco dentro do host: o foco sai (sem
