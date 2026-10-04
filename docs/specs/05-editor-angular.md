@@ -1,130 +1,91 @@
 # Spec 05 — Editor Angular (`@cds/rte-angular`)
 
-> Depende das specs 02 e 03. Referência: plano seções 3.2, 3.3, 3.6, 5, 6 e 8 (Fase 3). Modelo (MyPresentation): `rich-text-editor.component.*`, `toolbar/`, `bubble-menu/`, `image-menu/`, `slash-menu/`, `search-bar/`, `modals/`, `services/editor-media.service.ts`.
-> **Esta é a maior spec.** Na fase de plano, dividir em marcos (ver seção 9); cada marco com seu próprio aceite.
+> Depende das specs 02 e 03 (concluídas). **Não** depende da spec 04: o editor não importa `@cds/rte-sanitizer` (o valor é o HTML canônico do core; quem sanitiza é o servidor e o `rte-render`). Referência: plano seções 3.2, 3.3, 3.6, 5, 6 e 8 (Fase 3).
+
+> **Atualização (2026-10-04).** Esta spec foi escrita antes do core existir e era grande demais para um ciclo só. Foi revista contra o que o core (03a–03c, ADRs 0003–0005) e o tema (02, ADR 0002) entregam de fato e contra o Angular 22.2.1 instalado, e **dividida em quatro ciclos** (spec → plano → implementação → verificação), nesta ordem:
+> - **05a** — [componente, formulários e base](05a-componente-e-formularios.md) (decisões D1–D26; escrita);
+> - **05b** — barra de ferramentas, menus flutuantes, diálogos e tema por instância;
+> - **05c** — mídia, upload e rascunho;
+> - **05d** — menu `/`, busca, contadores e fechamento da API.
+>
+> As partes 05b–05d são escritas quando chegar a vez delas, no formato da 05a, a partir do escopo da seção 5. Onde esta spec e uma parte divergem, vale a parte. O "mapa dos 134 testes do modelo" deixa de valer (o modelo foi perdido); o `size-limit` é substituído pelo orçamento por cenário do repositório (`tools/check-size.mjs`).
 
 ## 1. Objetivo
 
-O componente `rte-editor`: nativo do **Angular 22** (Signal Forms, signals, zoneless/OnPush, Aria, `@defer`), sem Tailwind e sem design system, com toolbar configurável, i18n, acessibilidade, adaptador de upload e foco em **desempenho medido**.
+O componente `rte-editor`, nativo do **Angular 22** (Signal Forms, signals, zoneless/OnPush, `@defer`), sem Tailwind e sem design system, com toolbar configurável, i18n, acessibilidade (WCAG 2.2 AA), adaptador de upload e **desempenho medido**, montado sobre `@cds/rte-core/extensions` e os tokens de `@cds/rte-theme`.
 
 ## 2. Fora de escopo
 
-Esquema/extensões/sanitização (specs 03 e 04); tema (spec 02, consumido aqui); exibição do conteúdo publicado (spec 06); demo (spec 07).
+Esquema, extensões e serialização (spec 03, consumidas como estão); sanitização (spec 04); tokens do tema (spec 02, consumidos); exibição do conteúdo publicado (spec 06); demo e servidor de exemplo (spec 07); matriz de versões, regressão visual e teclado virtual (spec 08).
 
-## 3. Decisões já tomadas
+## 3. Decisões já tomadas (valem para todas as partes)
 
-Signal Forms é o caminho principal (`FormValueControl` + `[formField]`); `ControlValueAccessor` só como compatibilidade; API 100% signals; OnPush explícito; zoneless **e** zone.js; só APIs `@publicApi` estáveis no caminho crítico; CSS próprio `--rte-*` em camadas; `ViewEncapsulation.None` com classes `rte-*` estáveis (BEM) como API pública.
+**De 2026-10-02 (README das specs):** `Editor` do Tiptap **direto** com wrapper próprio, sem `ngx-tiptap`; **ícones SVG internos** (sem `lucide-angular`); **`<dialog>` e popover nativos**, sem `@angular/cdk`.
 
-## 4. Decisões e spikes (primeiro marco)
+**Desta revisão (registradas na parte indicada):**
 
-**Decididas (2026-10-02):** `Editor` do Tiptap **direto**, com wrapper fino próprio (`afterNextRender` cria, `DestroyRef` destrói), **sem `ngx-tiptap`**; **ícones SVG internos** (~45, sem `lucide-angular`); **`<dialog>` e popover nativos**, **sem `@angular/cdk`**. Os spikes abaixo **confirmam** essas escolhas; se um deles as invalidar, registrar em ADR e voltar a este ponto.
-
-| # | Pergunta | Aceite do spike |
+| Decisão | Parte | Motivo |
 |---|---|---|
-| S1 | Um componente é `FormValueControl` **e** `ControlValueAccessor`? `[formField]` + schema (`required`, `maxLength`, `disabled`) funcionam com o Tiptap? | Demo com 3 modos (Signal Forms, Reactive Forms, `[(value)]`) passando testes. Plano B: dois componentes finos sobre o mesmo núcleo |
-| S2 | O Angular Aria cobre toolbar (`aria-pressed`, `radiogroup`), menu `/` (combobox + listbox) e bubble menu? O `<dialog>` nativo cobre os modais? | Teclado completo; axe sem violações sérias; menos código que o modelo |
-| S3 | A ponte Tiptap → signals mantém **0** re-renders desnecessários? Ganho do `updateOn: 'debounce'`? | Medidas em documento de 20 mil palavras contra o baseline do modelo |
-| S4 | A suíte passa zoneless e com zone.js? | Mesma suíte verde nos dois modos |
+| `RteEditor` é `FormValueControl<string>` **sem** `NG_VALUE_ACCESSOR`; a compatibilidade com Reactive/Template Forms é uma diretiva separada (`rte-editor[formControlName]`, `[formControl]`, `[ngModel]`) | 05a (D5) | No `FormField` 22.2.1 um CVA no elemento vence o controle customizado; os dois contratos no mesmo componente fariam `[formField]` perder `required`/`maxLength`/`readonly`. Responde o antigo spike S1 |
+| Valor = `getRteHtml(editor)`; documento vazio = `''`; só HTML (sem `format: 'json'`) | 05a (D6, D7) | HTML canônico igual em todo motor e no servidor; um formato só |
+| Nenhum CSS injetado em tempo de execução: `injectCSS: false`, componentes sem `styles`, CSS em arquivos do pacote incluídos pelo consumidor | 05a (D16) | CSP `style-src 'self'` sem *nonce* (ADR 0004) |
+| Strings em `RTE_LABELS` (`Signal<RteLabels>`), compondo `RTE_CONTENT_LABELS`/`RTE_SLASH_LABELS` do core; pacotes pt-BR/en/es em `/i18n`; texto fixo em template barrado por teste | 05a (D15, D25) | Uma fonte por string; troca de idioma em tempo de execução |
+| Zoneless primeiro, zone.js suportado; mesma suíte nos dois modos | 05a (D21) | Antigo spike S4 |
+| Testes de componente pelo *builder* `unit-test` do Angular (Vitest + jsdom); navegador real num app de teste Angular com *prerender*, hidratação e CSP estrita | 05a (D22) | Regra principal do repositório; lição 12 |
+| Sem dependência de `@cds/rte-sanitizer` nem de `@cds/rte-render`; o tema é peer só de CSS (nenhum import TypeScript, grafo do lint inalterado) | 05a (D24) | Grafo do `CLAUDE.md` (`angular` só de `core`) |
+| Peers Angular `>=22.2.0 <23` até a spec 08 provar o 22.0 | 05a (D24) | Testar só o que se suporta |
 
-Resultados em ADRs. **Nenhum marco seguinte começa sem o S1 e o S2 resolvidos.**
+**Spikes da versão anterior:** S1 (CVA × `FormValueControl`) foi respondido lendo o código do `@angular/forms` 22.2.1 e vira teste da 05a (R5/R6); S4 (zoneless × zone.js) é requisito da 05a (R14); S3 (custo da ponte e do `updateOn`) é medido no N8 da 05a e decidido na 05d; S2 (Angular Aria × roving tabindex próprio; `<dialog>` nativo) é a primeira decisão da 05b.
 
-## 5. API pública
+## 4. Consequências do core e do tema que a spec 05 cumpre
 
-### 5.1 Configuração e uso
-```ts
-provideRichText({ locale: 'pt-BR', theme: { primary: '#0ea5e9' }, upload: httpUploadAdapter({ endpoint: '/api/media/upload' }) })
-```
-```html
-<rte-editor [formField]="form.body" ariaLabel="Texto da matéria" />   <!-- Signal Forms -->
-<rte-editor formControlName="content" />                              <!-- Reactive Forms (compat) -->
-<rte-editor [(value)]="html" />                                       <!-- sem formulário -->
-```
+Entradas vinculantes dos ADRs 0002, 0004 e 0005 e da 03c §8, com a parte responsável:
 
-### 5.2 Entradas e saídas (signals)
-- **Contrato de controle:** `value` (`model`), `touched`/`touch`, `disabled`, `readonly`, `hidden`, `invalid`, `errors`, `pending`, `required`, `maxLength`, `name`.
-- **Configuração:** `placeholder`, `minHeight`/`maxHeight`, `showWordCount`/`showCharCount`, `toolbar` (preset `minimal|article|full` ou configuração por grupos/itens/ordem), `features`, `draftKey`, `format` (`html|json`), `updateOn` (`change|debounce|blur`), `extensions`, `labels`, `ariaLabel`, `theme`.
-- **Saídas:** `contentChange`, `editorReady`, `editorFocus`, `editorBlur`, `uploadError`, `mediaChange` (URLs adicionadas/removidas na sessão).
-- **Estado exposto (somente leitura):** `isEmpty`, `wordCount`, `charCount`, `readingTime`, `isDirty`, `editor`. Métodos: `markSaved()`, `focus()`, `getValue()` (força *flush*).
+| Consequência | Parte |
+|---|---|
+| `injectCSS: false`; CSS das alças (`touch-action: none`), das tarefas, `hljs-*`, `rte-placeholder`, `rte-search-match(--active)`, `rte-slash-query` | 05a |
+| Não definir `clipboardParser`/`domParser` próprios (o `RteDOMParser` faz o corte de espaços, decisão 27 do ADR 0004) | 05a |
+| `Tab` sai da tabela e do editor (decisão 34); nota do `Tab` do Firefox nas tarefas (decisão 33) | 05a (teclado), 05b (toolbar) |
+| `maxLength` do schema → `charLimit` por função; `maxLength` nativo não mede a string HTML; contagem pela regra do C5 | 05a |
+| `placeholder` por função e transação só de *meta* na troca de idioma | 05a |
+| Guarda de `colspan`/`rowspan` > 100 nas operações de tabela; "criar linha" pela toolbar (o `Tab` não cria) | 05b |
+| Aparência dos blocos `rt-*` num CSS de conteúdo único para editor e página (spec 06, R3) | 05b |
+| `onUiItem` abre os diálogos de imagem, vídeo e embed (o *callback* do core é síncrono e engolido se lançar: o diálogo é aberto de forma assíncrona pela UI) | 05c (diálogos), 05d (ligação) |
+| Combobox no editável a partir de `getSlashMenuState`, listbox em `view.coordsAtPos(range.from)`; `bulletList`/`orderedList` não alternam | 05d |
+| Barra de busca dona de `Mod-F`, `Enter`/`Shift+Enter`, `F3`, `Escape`; comandos de busca chamados em sequência (ruling 16 do ADR 0005); `aria-live` de `lastReplaced` | 05d |
+| `aria-live` do limite a partir de `rejected`/`remaining`; `readingTime = Math.ceil(words / 200)` | 05d |
+| Histórico: o que se digita até 500 ms (`newGroupDelay`) depois de um comando `/` ou de uma substituição entra no mesmo passo de desfazer (documentar na UI) | 05d |
+| Contraste do tema respeitado em todo componente; foco com `outline` de `--rte-focus-width`; `forced-colors` e `prefers-contrast` | todas |
 
-### 5.3 Regras de integração com formulários
-1. O formulário manda: `disabled`, `readonly`, `hidden`, `required`, `maxLength`, `errors` chegam do schema; o editor reflete (`aria-invalid`, `aria-describedby`, `role="alert"`). `maxLength` vira o limite do `CharLimit`.
-2. Vincular `[disabled]`, `[readonly]`, `[maxLength]` etc. junto de `[formField]` gera NG8022: a documentação mostra o jeito certo (regras no schema).
-3. `touch.emit()` só em *blur* do **conteúdo** (não ao focar a toolbar nem ao abrir modal do editor).
-4. Comparar versões antes de escrever em `value` (sem laço `value → editor → value`).
-5. `updateOn`: estado `isDirty`/`touched` é imediato; só a **serialização** é adiada, com *flush* em `blur`, `submit`, `getValue()` e `destroy`.
+## 5. Partes
 
-### 5.4 Validadores (Signal Forms e `Validators`)
-`rteRequired` (texto ou mídia de verdade, não `<p></p>`), `rteMaxChars`/`rteMaxWords` (medidos no texto), `rteImagesHaveAlt` (ou decorativa), `rteSafeLinks`, `rteNoEmptyHeadings`, `rteUploadsFinished`. Erros tipados com chave de i18n.
+### 05a — Componente, formulários e base · depende de 03c, 02
+Escrita: [05a-componente-e-formularios.md](05a-componente-e-formularios.md). Componente `rte-editor` sem toolbar, ponte de signals, Signal Forms + diretiva CVA + `[(value)]`, valor canônico, estados do formulário, `maxLength` → limite, rótulos e `/i18n`, validadores de texto (`/validators`), `editor.css` funcional, casca de SSR, `/testing`, app de teste com CSP nos 3 motores, orçamento de tamanho e medidas de desempenho (ADR 0007).
 
-### 5.5 Upload
-```ts
-interface RteUploadAdapter {
-  uploadImage(file: File, ctx: { signal: AbortSignal; onProgress(p: number): void }): Promise<RteUploadedImage>;
-  uploadVideo?(file: File, ctx: …): Promise<RteUploadedVideo>;
-  registerExternal?(url: string, type: 'image' | 'video'): Promise<{ url: string }>;
-  onMediaRemoved?(url: string): void;
-}
-```
-`httpUploadAdapter({ endpoint, fieldName, headers, withCredentials, mapResponse })` pronto. **Cancelamento real** (`AbortSignal`). A lib **não** depende de interceptors do host (lição 3). Ciclo de vida da mídia: `mediaChange` entrega URLs adicionadas e removidas na sessão (órfãs no servidor são tratadas pelo exemplo da spec 07).
+### 05b — Barra de ferramentas, menus flutuantes, diálogos e tema · depende de 05a
+Toolbar `role="toolbar"` com *roving tabindex* (decidir no início: `@angular/aria` 22.2.x, estável no npm, contra implementação própria atrás de abstração interna), presets `minimal | article | full` e configuração por grupos/itens/ordem, com `features` desligando o item junto com a extensão; ícones SVG internos; menus flutuantes de texto e de imagem começando ocultos (lição 13); diálogos em `<dialog>` nativo com *focus trap* e formulários internos em Signal Forms (link com política do core, idioma, autor da citação, variante da caixa, cores da paleta, detalhes de tabela); operações de tabela com a guarda > 100; desfazer/refazer; contadores de re-render da toolbar (0 botões re-renderizados quando o estado ativo não muda); tema por instância (`[theme]`, `provideRichText({ theme })`, `data-rte-mode`) compatível com a CSP da 05a; CSS de conteúdo `rt-*` compartilhado com a spec 06; `@defer` para os diálogos; axe e teclado completo nos 3 motores.
 
-### 5.6 i18n
-Token `RTE_LABELS` com objeto tipado de **todas** as strings (toolbar, modais, menu `/`, erros, `aria-label`). Pacotes `pt-BR`, `en`, `es` no entry point `/i18n`; fallback `en`; teste de completude; **texto fixo em template é proibido** (lint ou teste).
+### 05c — Mídia, upload e rascunho · depende de 05b
+`RteUploadAdapter` (`uploadImage`, `uploadVideo?`, `registerExternal?`, `onMediaRemoved?`) e `httpUploadAdapter({ endpoint, fieldName, headers, withCredentials, mapResponse })` com progresso e **cancelamento real** (`AbortSignal`), sem depender de interceptors do host (lição 3); diálogos de imagem, vídeo (faixas de legenda) e embed (provedores do core), detalhes da imagem (`alt` obrigatório ou "decorativa", legenda, crédito, tamanho sem arrasto por `setImageSize`, WCAG 2.5.7); colar e soltar arquivos; localizar a mídia inserida pelo `src` (lição 14); `mediaChange` (URLs adicionadas/removidas na sessão) e `uploadError`; validadores `rteImagesHaveAlt` e `rteUploadsFinished`; rascunho (`draftKey`, `DraftStorage` do core, aviso em `beforeunload`), `isDirty`/`markSaved()`.
 
-### 5.7 Entry points
-`/` (componente, `provideRichText`, validadores), `/styles` (CSS), `/i18n`, `/testing` (harness e gancho de teste estável para o `Editor`, em substituição ao `ng.getComponent` do modelo).
+### 05d — Menu `/`, busca, contadores e fechamento · depende de 05c
+Libera `search` e `slashCommands` (fim do D1 da 05a). Menu `/` como combobox + listbox no editável, posicionado por `coordsAtPos`, com `onUiItem` abrindo os diálogos da 05c; barra de busca e substituição com atalhos, `aria-live` e o teto de 1000 resultados (C10); contadores (`showWordCount`/`showCharCount`, tempo de leitura) e anúncios do limite; validadores `rteSafeLinks` e `rteNoEmptyHeadings`; `updateOn`/adiamento da serialização se o N8 da 05a mostrar a necessidade; orçamentos finais de desempenho (digitação p95 em 20 mil palavras, INP, criação, vazamento) com os números da 05a; `api-extractor` em todos os entries e README completo.
 
-## 6. Requisitos
+## 6. Critérios de aceite da spec 05 (soma das partes)
 
-### 6.1 Estado e desempenho
-- **R1.** Serviço **por instância** liga o Tiptap a signals: um único listener de `transaction`/`selectionUpdate` incrementa um signal de versão; tudo que a UI consome é `computed` **com função de igualdade**. A instância do `Editor` fica em referência estável, fora de signals profundos.
-- **R2.** **Zero** `ChangeDetectorRef.detectChanges()`, `requestAnimationFrame`/`setTimeout` para forçar detecção, `@Input`/`@Output` decorators, `ngOnChanges`, `@HostListener`, `Subject + takeUntil` (usar `takeUntilDestroyed`, `host: {}`).
-- **R3.** Criação do `Editor` em `afterNextRender` (só navegador); destruição por `DestroyRef`.
-- **R4.** Orçamentos (metas iniciais, ajustadas após o S3): digitação p95 < 16 ms em 20 mil palavras; INP < 100 ms; 0 botões da toolbar re-renderizados quando o estado ativo não muda; criação < 100 ms; sem vazamento em criar/destruir 100×; bundle por entry point com `size-limit` (meta: menor que os ≈ 186 kB transferidos do modelo).
-- **R5.** `@defer` para modais, busca, menu `/`, detalhes da imagem, HTML bruto; `import()` das extensões pesadas e das linguagens de código.
-
-### 6.2 UI sem Tailwind/design system
-- **R6.** Toda a UI (toolbar, bubble menus de texto e de imagem, modais de link/mídia/detalhes da imagem/idioma/autor, menu `/`, busca e substituição, redimensionamento) reescrita em CSS `--rte-*`, em `@layer`, com classes `rte-*` estáveis. Controles internos (botão, campo, checkbox, radio, select) **acessíveis**.
-- **R7.** Formulários internos dos modais com **Signal Forms** (URL segura, `alt` obrigatório ou "decorativa", largura mínima, código de idioma).
-- **R8.** Bubble menus começam **ocultos** (`visibility:hidden; opacity:0`) (lição 13).
-- **R9.** Menus e modais funcionam em telas estreitas e com toque (pointer events); teclado virtual validado na spec 08.
-
-### 6.3 Acessibilidade (WCAG 2.2 AA)
-- **R10.** Toolbar `role="toolbar"` com *roving tabindex*; menu `/` como combobox + listbox; foco visível; *focus trap* nos modais; `aria-live` para busca e limites; `contenteditable` com `role="textbox"` e `aria-multiline`; atalhos documentados; `prefers-reduced-motion`; preferir `@angular/aria`, com abstração interna para poder trocar.
-
-### 6.4 SSR
-- **R11.** Nada de `document`/`window` em caminhos de servidor; no SSR renderiza o conteúdo/placeholder e cria o `Editor` só no navegador.
-
-### 6.5 Configurabilidade
-- **R12.** Toolbar configurável + presets; `features` desligam o recurso **na toolbar, no menu `/` e nas extensões** de uma vez; provedores de embed e adaptador de upload plugáveis; extensões extras e `editorReady`.
-- **R13.** Rascunho (`draftKey`) com restauração e aviso ao sair (`beforeunload`), via `DraftStorage` injetável.
-- **R14.** Tema: `provideRichText({ theme })` e `[theme]` por instância aplicam variáveis via `style.setProperty` em *host binding* (presentes no HTML do SSR, compatível com CSP); prioridade instância > CSS ancestral > provider > padrão.
-
-### 6.6 API pública
-- **R15.** `index.ts` explícito por entry point; **api-extractor** barra quebras acidentais.
-
-## 7. Testes
-
-Unitários (Vitest + TestBed) de componentes, modais, toolbar, i18n, adaptador de upload; **formulários** (schema com `required`/`maxLength`/`disabled`, validadores, `touched`, os 3 modos); suíte **zoneless e com zone.js**; harnesses do Aria para teclado; contadores de render para R4; teste de vazamento. Mapa dos testes do modelo (134) é o piso a portar. E2E em navegador real é a spec 08.
-
-## 8. Critérios de aceite
-
-- [ ] S1 a S4 resolvidos e registrados em ADR; decisões `Editor` direto, ícones SVG internos e `<dialog>`/popover nativos confirmadas (ou revistas) em ADR.
-- [ ] Os 3 modos de uso funcionam: `[formField]`, `formControlName`, `[(value)]`.
-- [ ] Demo mínima **sem Tailwind** com todos os recursos do plano 2.1.
-- [ ] Suíte verde zoneless e com zone.js; contrato editor ↔ esquema ↔ sanitizador verde.
-- [ ] Orçamentos do R4 atendidos (ou ajustados com dados em ADR); axe sem violações sérias.
+- [ ] 05a, 05b, 05c e 05d concluídas, cada uma com seu ADR e seus critérios.
+- [ ] Os 3 modos de uso funcionam em navegador real: `[formField]`, `formControlName`/`ngModel` e `[(value)]`.
+- [ ] Todos os recursos do plano 2.1 acessíveis pela UI, sem Tailwind, com o CSS do pacote e a CSP estrita.
+- [ ] Suíte verde zoneless e com zone.js; E2E verde em Chromium, Firefox e WebKit.
+- [ ] Orçamentos de desempenho e de tamanho atendidos (ou ajustados com dados em ADR); axe sem violações sérias.
 - [ ] Nenhuma string fixa fora de `RTE_LABELS`; pt-BR, en e es completos.
 - [ ] `api-extractor` sem diferenças; `attw`/`publint` verdes.
 
-## 9. Marcos sugeridos para o plano de implementação
-
-1. Spikes S1/S2 + ADRs · 2. Casca do componente + ponte de signals + 3 modos de formulário · 3. Toolbar configurável + Aria + estilos/tema · 4. Modais, bubble menus, menu `/`, busca (Signal Forms internos, `@defer`) · 5. Upload, mídia, redimensionamento, rascunho · 6. i18n + validadores · 7. SSR, desempenho e fechamento da API.
-
-## 10. Riscos
+## 7. Riscos
 
 | Risco | Mitigação |
 |---|---|
-| `FormValueControl` e CVA não coexistirem | Plano B do S1: dois componentes finos sobre o mesmo núcleo |
-| Nomes/contratos de Signal Forms/Aria diferem do esboço | Reconfirmar na documentação; só `@publicApi`; ADR |
-| `@angular/aria` ainda em *preview* | Abstração interna para trocar |
-| Metas de desempenho eram hipóteses | S3 mede antes de congelar |
+| Contratos de Signal Forms mudarem num *minor* do 22 | Só `@publicApi` estável; piso dos peers = versão testada; matriz da spec 08 |
+| `@angular/aria` não cobrir toolbar/combobox como esperado | Decisão no início da 05b, atrás de abstração interna |
+| Custo de serializar por tecla em documento grande | Medido na 05a (N8), decidido na 05d |
+| Parte posterior exigir mudança no contrato da 05a | Contrato do componente pensado para a UI dentro do host (D11) e rótulos extensíveis por seção; mudança vira ADR |

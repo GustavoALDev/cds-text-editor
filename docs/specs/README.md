@@ -21,7 +21,11 @@ Esta pasta é **autocontida**: pode ser movida para a raiz do projeto novo. Nada
 | 03b | [Extensões de conteúdo, fábrica e teste de contrato](03b-extensoes-de-conteudo.md) (concluída; falta o CI do PR) | Extensões Tiptap que geram HTML, `createEditorExtensions`, fixture e teste de contrato | 03a |
 | 03c | [Extensões de produtividade](03c-extensoes-de-produtividade.md) (concluída; falta o CI do PR) | `SearchReplace`, `SlashCommand` (lógica), `CharLimit`, placeholder | 03b |
 | 04 | [Sanitizador](04-sanitizador.md) | `@cds/rte-sanitizer`: allowlist derivada do esquema | 03 |
-| 05 | [Editor Angular](05-editor-angular.md) | `@cds/rte-angular`: componente, Signal Forms, UI, i18n, a11y, upload | 02, 03 |
+| 05 | [Editor Angular](05-editor-angular.md) | `@cds/rte-angular`, dividida em 4 partes: | 02, 03 |
+| 05a | [Componente, formulários e base](05a-componente-e-formularios.md) | `rte-editor` sem toolbar, ponte de signals, Signal Forms + CVA + `[(value)]`, rótulos e `/i18n`, validadores de texto, CSS funcional sem injeção (CSP), casca de SSR, app de teste nos 3 motores | 03c, 02 |
+| 05b | Barra de ferramentas, menus e diálogos (a escrever) | Toolbar configurável e acessível, menus flutuantes, diálogos nativos, tema por instância, CSS de conteúdo compartilhado | 05a |
+| 05c | Mídia, upload e rascunho (a escrever) | Adaptador de upload, diálogos de mídia, colar/soltar arquivos, `mediaChange`, rascunho | 05b |
+| 05d | Menu `/`, busca, contadores e fechamento (a escrever) | UI do menu `/` e da busca, contadores e `aria-live`, orçamentos de desempenho, `api-extractor` | 05c |
 | 06 | [Renderização](06-renderizacao.md) | `@cds/rte-render`: pipe, sumário, CSS de leitura | 02, 04 |
 | 07 | [Demo, docs e servidor de exemplo](07-demo-docs-exemplos.md) | App demo/playground, site de docs, `examples/server-node` | 05, 06 |
 | 08 | [Qualidade](08-qualidade.md) | E2E em 3 engines, a11y, desempenho, visual, pacote | 05 |
@@ -38,6 +42,7 @@ Esta pasta é **autocontida**: pode ser movida para a raiz do projeto novo. Nada
 | Integração Tiptap × Angular | 05 | **`Editor` direto** com wrapper próprio, sem `ngx-tiptap` |
 | Nome e escopo npm | 01 | **`@cds/rte-*`** (produto `cds-text-editor`); falta o autor confirmar a organização npm `cds` |
 | Ícones e overlay | 05 | **SVG internos** e **`<dialog>`/popover nativos**, sem lucide e sem CDK (spikes confirmam) |
+| Formulários no Angular | 05a | **`FormValueControl` no componente e CVA numa diretiva separada** (no Angular 22.2.1 um CVA no elemento vence o controle customizado do `[formField]`) |
 
 **Ainda em aberto:**
 
