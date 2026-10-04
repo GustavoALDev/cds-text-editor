@@ -2,6 +2,7 @@
   <rte-editor
     data-testid="signal"
     ariaLabel="Signal Forms"
+    placeholder="Write here"
     [formField]="f.body"
     (editorReady)="bridge.ready('signal')"
     (editorBlur)="onBlur()"
@@ -12,6 +13,7 @@
     <rte-editor
       data-testid="reactive"
       ariaLabel="Reactive Forms"
+      placeholder="Write here"
       formControlName="body"
       (editorReady)="bridge.ready('reactive')"
       (editorBlur)="onBlur()"
@@ -22,6 +24,7 @@
   <rte-editor
     data-testid="plain"
     ariaLabel="Plain value"
+    placeholder="Write here"
     [(value)]="plain"
     (editorReady)="bridge.ready('plain')"
     (editorBlur)="onBlur()"
