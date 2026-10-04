@@ -197,3 +197,38 @@ describe('S7: id repetido', () => {
     ],
   ])('%s → %s', check);
 });
+
+describe('N7 e a profundidade (S8 e R3)', () => {
+  const run = (html: string, maxDepth: number): string =>
+    sanitizeWithSchema(html, schema, maxDepth);
+  const maxDepthError = expect.objectContaining({
+    name: 'RteSanitizeError',
+    code: 'max-depth',
+  });
+
+  it('o tbody implícito conta na leitura: a saída nunca passa de maxDepth', () => {
+    expect(() => run('<table><tr><td>x</td></tr></table>', 3)).toThrow(
+      maxDepthError,
+    );
+    const out = run('<table><tr><td>x</td></tr></table>', 4);
+    expect(run(out, 4)).toBe(out);
+  });
+
+  it('85 tabelas aninhadas com tr direto estouram já na primeira passada', () => {
+    expect(() => run('<table><tr><td>'.repeat(85) + 'x', 256)).toThrow(
+      maxDepthError,
+    );
+  });
+
+  it('64 tabelas aninhadas com tr direto (256 com os tbody) passam e são idempotentes', () => {
+    const out = run('<table><tr><td>'.repeat(64) + 'x', 256);
+    expect(run(out, 256)).toBe(out);
+  });
+
+  it('caption com table dentro aninha igual na releitura', () => {
+    check(
+      '<table><caption><table><tr><td>1</td></tr></table></caption></table>',
+      '<table><caption><table><tbody><tr><td>1</td></tr></tbody></table></caption></table>',
+    );
+  });
+});

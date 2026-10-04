@@ -20,15 +20,19 @@ function appendText(list: HtmlNode[], text: string): void {
  * *doctype*, PI e CDATA não têm callback e somem. O conteúdo de
  * `DISCARD_CONTENT_TAGS` e os filhos de `iframe` não são montados, mas contam
  * para a profundidade. Lança `RteSanitizeError('max-depth')` quando um
- * elemento abriria acima de `maxDepth`. Um fechamento que não é o do elemento
+ * elemento abriria acima de `maxDepth`; um `tr` direto em `table` conta 2,
+ * pelo `tbody` que a N7 põe na saída (assim a saída nunca é mais funda que
+ * `maxDepth` e relê sem erro, R3). Um fechamento que não é o do elemento
  * aberto mais interno é ignorado (tag inacabada no fim da entrada).
  */
 export function parseHtml(html: string, maxDepth: number): HtmlNode[] {
   const root: HtmlNode[] = [];
   /** Elementos montados ainda abertos. */
   const open: HtmlElement[] = [];
-  /** Tags abertas (montadas ou não); o tamanho é a profundidade de S8. */
+  /** Tags abertas (montadas ou não). */
   const names: string[] = [];
+  /** Profundidade de S8 depois de abrir cada tag de `names`. */
+  const depths: number[] = [];
   /**
    * Tag cujo nome já veio (`onopentagname`) e a abertura (`onopentag`) ainda
    * não: só fica pendente quando a entrada acaba no meio da tag.
@@ -53,10 +57,15 @@ export function parseHtml(html: string, maxDepth: number): HtmlNode[] {
       },
       onopentag(tag) {
         pending = null;
-        if (names.length + 1 > maxDepth) {
+        const parent = names[names.length - 1];
+        const depth =
+          (depths[depths.length - 1] ?? 0) +
+          (tag === 'tr' && parent === 'table' ? 2 : 1);
+        if (depth > maxDepth) {
           throw new RteSanitizeError('max-depth', maxDepth);
         }
         names.push(tag);
+        depths.push(depth);
         const attrs = attributes;
         // Um `<form>` aninhado não emite abertura, mas emite os atributos:
         // eles não podem cair num elemento já montado.
@@ -87,6 +96,7 @@ export function parseHtml(html: string, maxDepth: number): HtmlNode[] {
         }
         if (names[names.length - 1] !== tag) return;
         names.pop();
+        depths.pop();
         if (discarded > 0) discarded--;
         else open.pop();
       },
