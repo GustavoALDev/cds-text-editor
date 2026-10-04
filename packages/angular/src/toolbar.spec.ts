@@ -161,6 +161,11 @@ function blurOnRemove(): () => void {
   };
 }
 
+/** Texto visível do botão `blockType` (sem os medidores de largura). */
+function blockText(block: HTMLElement): string | undefined {
+  return block.querySelector('.rte-toolbar__text')?.textContent?.trim();
+}
+
 function toolbarOf(el: HTMLElement): HTMLElement | null {
   return el.querySelector<HTMLElement>('.rte-toolbar');
 }
@@ -446,7 +451,31 @@ describe('comandos (U4)', () => {
   it('blockType mostra "Heading 2" num <h2>', async () => {
     const { el } = await setup((h) => h.value.set('<h2>ab</h2>'));
     const block = button(el, 'Text style');
-    expect(block.textContent?.trim()).toBe('Heading 2');
+    expect(blockText(block)).toBe('Heading 2');
+  });
+
+  // Navegador real (N14, R7): em pt-BR o rótulo da casca ("Estilo do texto")
+  // é mais largo que "Parágrafo" e, em certas larguras, a barra quebrava
+  // linha diferente na troca casca → editor (e ao mover o cursor).
+  it('blockType reserva a largura do texto mais longo (sem salto de leiaute)', async () => {
+    const { el } = await setup((h) =>
+      h.labels.set({ toolbar: RTE_LABELS_PT_BR.toolbar }),
+    );
+    const block = button(el, 'Estilo do texto');
+    const sizers = [
+      ...block.querySelectorAll<HTMLElement>('.rte-toolbar__sizer'),
+    ];
+    expect(sizers.map((s) => s.textContent?.trim())).toEqual([
+      'Estilo do texto',
+      'Parágrafo',
+      'Título 2',
+      'Título 3',
+      'Título 4',
+    ]);
+    for (const sizer of sizers) {
+      expect(sizer.getAttribute('aria-hidden')).toBe('true');
+    }
+    expect(blockText(block)).toBe('Parágrafo');
   });
 
   it('Tab num menu fecha e leva o foco ao editável', async () => {
@@ -493,7 +522,7 @@ describe('rótulos ao vivo (U11)', () => {
     expect(button(el, 'Negrito').getAttribute('title')).toBe(
       'Negrito (Ctrl+B)',
     );
-    expect(button(el, 'Estilo do texto').textContent?.trim()).toBe('Parágrafo');
+    expect(blockText(button(el, 'Estilo do texto'))).toBe('Parágrafo');
     expect(spy).not.toHaveBeenCalled();
   });
 });

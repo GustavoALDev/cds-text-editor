@@ -5,11 +5,14 @@ import {
   signal,
 } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
-import { RteEditor } from '@cds/rte-angular';
+import { RteEditor, type RteToolbarConfig } from '@cds/rte-angular';
 import { rteMaxChars } from '@cds/rte-angular/validators';
 import { E2eBridge } from '../e2e-bridge';
 
-/** N8 (informativo): documento grande num `[formField]` com `rteMaxChars`. */
+/**
+ * N8 e N15 (informativos): documento grande num `[formField]` com
+ * `rteMaxChars`; a barra (`full` por padrão) troca ao vivo pela ponte.
+ */
 @Component({
   selector: 'app-perf',
   imports: [RteEditor, FormField],
@@ -19,6 +22,7 @@ import { E2eBridge } from '../e2e-bridge';
 export class PerfPage {
   protected readonly bridge = inject(E2eBridge);
   protected readonly model = signal({ body: '' });
+  protected readonly toolbar = signal<RteToolbarConfig>('full');
   protected readonly f = form(this.model, (p) => {
     rteMaxChars(p.body, 1_000_000);
   });
@@ -37,6 +41,7 @@ export class PerfPage {
         };
       },
       reset: () => this.f().reset({ body: '' }),
+      setToolbar: (config) => this.toolbar.set(config),
     });
   }
 }

@@ -7,6 +7,7 @@ import {
   modelValue,
   waitForEditor,
 } from './helpers/app';
+import { expectToolbarFocused } from './helpers/toolbar';
 
 // N6 (spec 05a, R13, D13): axe sem violações `serious`/`critical` na página
 // com os três editores, em claro e escuro; papel, `aria-multiline` e nome
@@ -14,6 +15,9 @@ import {
 // um parágrafo, da última/primeira célula da tabela e passam pelo checkbox da
 // tarefa; `Mod+B`, `Mod+I` e `Mod+Z` funcionam. O editor do meio (`reactive`)
 // tem vizinhos focáveis dos dois lados (`signal` antes, `plain` depois).
+// Spec 05b1 (pré-voo 6): a barra é a primeira parada de cada editor, então o
+// `Tab` para fora chega à barra do `plain` e o `Shift+Tab` do editável para
+// na barra do próprio editor; um segundo `Shift+Tab` sai dele.
 
 const TABLE =
   '<table><tbody><tr><td><p>a</p></td><td><p>b</p></td></tr><tr><td><p>c</p></td><td><p>d</p></td></tr></tbody></table>';
@@ -72,9 +76,11 @@ test('N6: Tab e Shift+Tab saem do editor a partir de um parágrafo', async ({
   await page.evaluate(() => window.rteE2e.setValue('reactive', '<p>abc</p>'));
   await caretAfter(page, 'reactive', 'abc');
   await page.keyboard.press('Tab');
-  await expect(editableOf(page, 'plain')).toBeFocused();
+  await expectToolbarFocused(page, 'plain');
 
   await caretAfter(page, 'reactive', 'abc');
+  await page.keyboard.press('Shift+Tab');
+  await expectToolbarFocused(page, 'reactive');
   await page.keyboard.press('Shift+Tab');
   await expect(editableOf(page, 'signal')).toBeFocused();
   expect(await modelValue(page, 'reactive')).toBe('<p>abc</p>');
@@ -86,9 +92,11 @@ test('N6: Tab na última célula e Shift+Tab na primeira saem da tabela', async 
   await page.evaluate((v) => window.rteE2e.setValue('reactive', v), TABLE);
   await caretAfter(page, 'reactive', 'd');
   await page.keyboard.press('Tab');
-  await expect(editableOf(page, 'plain')).toBeFocused();
+  await expectToolbarFocused(page, 'plain');
 
   await caretAfter(page, 'reactive', 'a');
+  await page.keyboard.press('Shift+Tab');
+  await expectToolbarFocused(page, 'reactive');
   await page.keyboard.press('Shift+Tab');
   await expect(editableOf(page, 'signal')).toBeFocused();
   // Nenhuma linha criada: o valor é a carga (sem eco nem edição).
@@ -116,7 +124,7 @@ test('N6: Tab passa pelo checkbox da tarefa e sai do editor', async ({
     await expect(box).toBeFocused();
     await page.keyboard.press('Tab');
   }
-  await expect(editableOf(page, 'plain')).toBeFocused();
+  await expectToolbarFocused(page, 'plain');
   expect(await modelValue(page, 'reactive')).toBe(TASKS);
 });
 

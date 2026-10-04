@@ -273,6 +273,16 @@ export class RteToolbar {
     return this.labels()[id] as string;
   }
 
+  /**
+   * Todos os textos possíveis do botão `blockType`, empilhados invisíveis na
+   * mesma célula: a largura é a do mais longo, então trocar o texto (casca →
+   * editor, mover o cursor) não muda o leiaute da barra (R7).
+   */
+  protected readonly blockTexts = computed(() => {
+    const l = this.labels();
+    return [l.blockType, l.paragraph, l.heading(2), l.heading(3), l.heading(4)];
+  });
+
   /** Texto do botão `blockType`: bloco atual ou o nome do item (U11). */
   protected blockText(value: string | null): string {
     const l = this.labels();

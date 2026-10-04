@@ -128,10 +128,22 @@
     padding-inline-end: calc(0.25rem * var(--rte-density));
   }
 
-  .rte-editor .rte-toolbar__text {
+  /* Texto do `blockType`: o atual e, invisíveis na mesma célula, todos os possíveis; a largura é
+   * a do mais longo, então trocar o texto não muda o leiaute (R7). */
+  .rte-editor .rte-toolbar__label {
+    display: inline-grid;
     min-inline-size: 6em;
+  }
+
+  .rte-editor .rte-toolbar__text,
+  .rte-editor .rte-toolbar__sizer {
+    grid-area: 1 / 1;
     text-align: start;
     white-space: nowrap;
+  }
+
+  .rte-editor .rte-toolbar__sizer {
+    visibility: hidden;
   }
 
   .rte-editor .rte-toolbar__separator {
@@ -296,11 +308,14 @@
   }
 
   @media (forced-colors: active) {
+    /* Par principal invertido (o contraste é o do tema do sistema; o par
+     * Highlight/HighlightText de motores emulados fica abaixo de 4,5:1) e o
+     * Highlight na borda. */
     .rte-editor .rte-toolbar__button--pressed,
     .rte-editor .rte-menu__item--checked {
-      color: HighlightText;
-      background-color: Highlight;
-      border-color: ButtonText;
+      color: Canvas;
+      background-color: CanvasText;
+      border-color: Highlight;
     }
 
     .rte-editor .rte-toolbar__button[aria-disabled='true'],

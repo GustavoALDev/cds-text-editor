@@ -13,7 +13,12 @@ track id) { @let s = state.item(id)(); @let kind = kindOf(id); @if (kind ===
   (mousedown)="$event.preventDefault()"
 >
   @if (id === 'blockType') {
-  <span class="rte-toolbar__text">{{ blockText(s.value) }}</span>
+  <span class="rte-toolbar__label">
+    <span class="rte-toolbar__text">{{ blockText(s.value) }}</span>
+    @for (text of blockTexts(); track $index) {
+    <span class="rte-toolbar__sizer" aria-hidden="true">{{ text }}</span>
+    }
+  </span>
   } @else {
   <svg
     class="rte-icon"

@@ -11,7 +11,9 @@ import {
 // editável falso com nome acessível e placeholder), sem `.ProseMirror` nem o
 // HTML do valor; no navegador a hidratação reaproveita o DOM do servidor, sem
 // mensagens `NG05xx`, e a casca troca pelo editor sem mudar a altura da
-// moldura do editor vazio. Nos builds zoneless e `zone`.
+// moldura do editor vazio. Nos builds zoneless e `zone`. Spec 05b1 (R7, U10):
+// a barra `article` sai na casca com todos os botões `disabled` nativos e a
+// moldura com a barra não muda de altura na troca casca → editor.
 
 /** Altura da moldura do editor `plain` (`''`). */
 function frameHeight(page: Page): Promise<number> {
@@ -33,6 +35,13 @@ for (const zone of [false, true]) {
     expect(forms).toContain('aria-label="Plain value"');
     expect(forms).toContain('data-placeholder="Write here"');
     expect(forms).not.toContain('ProseMirror');
+    // A barra na casca: uma por editor, todos os botões `disabled`.
+    expect(forms.match(/<rte-toolbar[^>]*role="toolbar"/g)).toHaveLength(3);
+    const buttons = forms.match(/<button[^>]*rte-toolbar__button[^>]*>/g) ?? [];
+    expect(buttons.length).toBeGreaterThan(3 * 15);
+    expect(buttons.filter((b) => !/\sdisabled(?:=""|\s|>)/.test(b))).toEqual(
+      [],
+    );
 
     // `/labels` tem valor inicial (tarefa e caixa): o servidor não o renderiza.
     const labels = await (
@@ -58,6 +67,11 @@ for (const zone of [false, true]) {
       editorHost(staticPage, 'plain').locator('.rte-editor__shell'),
     ).toBeVisible();
     await expect(staticPage.locator('.ProseMirror')).toHaveCount(0);
+    const toolbar = editorHost(staticPage, 'plain').locator('.rte-toolbar');
+    await expect(toolbar).toBeVisible();
+    expect(
+      await toolbar.locator('.rte-toolbar__button:not(:disabled)').count(),
+    ).toBe(0);
     const shellHeight = await frameHeight(staticPage);
     await noJs.close();
     expect(shellHeight).toBeGreaterThan(0);

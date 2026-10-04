@@ -1,5 +1,6 @@
 import {
   afterNextRender,
+  ApplicationRef,
   DestroyRef,
   DOCUMENT,
   inject,
@@ -62,6 +63,8 @@ export interface RteE2eApi {
   setTheme(id: RteE2eId, theme: RteTheme | undefined): void;
   /** `applyRteTheme` num elemento qualquer (referência do N12). */
   applyTheme(element: HTMLElement, theme: RteTheme): void;
+  /** Detecção de mudanças síncrona (`ApplicationRef.tick`), para medir o render (N15). */
+  tick(): void;
   /** Passa a contar as mutações de DOM na barra do editor `id` (N15, R6). */
   watchToolbar(id: RteE2eId): void;
   /** Mutações na barra desde o `watchToolbar(id)`. */
@@ -133,6 +136,7 @@ export function installE2eBridge(): void {
   const bridge = inject(E2eBridge);
   const zone = inject(NgZone);
   const doc = inject(DOCUMENT);
+  const appRef = inject(ApplicationRef);
   afterNextRender(() => {
     const win = doc.defaultView as (Window & { rteE2e?: RteE2eApi }) | null;
     if (!win) return;
@@ -157,6 +161,7 @@ export function installE2eBridge(): void {
       setLang: (lang) => run(() => bridge.lang.set(lang)),
       setToolbar: (id, config) => run(() => bridge.setToolbar(id, config)),
       setTheme: (id, theme) => run(() => bridge.setTheme(id, theme)),
+      tick: () => run(() => appRef.tick()),
       applyTheme: (element, theme) => {
         applyRteTheme(element, theme);
       },

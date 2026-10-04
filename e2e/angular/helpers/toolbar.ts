@@ -88,7 +88,11 @@ export async function rteHtml(page: Page, id: RteE2eId): Promise<string> {
 
 /**
  * Carrega `html` no editor `id` pela ponte e espera o documento chegar
- * (`getRteHtml` igual a `expected`, por padrão o próprio `html`).
+ * (`getRteHtml` igual a `expected`, por padrão o próprio `html`). Espera
+ * antes um render: com `[(value)]`, a ligação compara com o último valor
+ * ligado, e voltar o modelo ao valor anterior antes da detecção de mudanças
+ * que segue uma emissão do editor (o comando anterior) não chegaria a ele
+ * (semântica do `model()` do Angular).
  */
 export async function loadDoc(
   page: Page,
@@ -96,6 +100,7 @@ export async function loadDoc(
   html: string,
   expected = html,
 ): Promise<void> {
+  await frames(page);
   await page.evaluate(({ id, html }) => window.rteE2e.setValue(id, html), {
     id,
     html,
@@ -224,4 +229,14 @@ export async function expectSelection(
       }),
     )
     .toEqual(expected);
+}
+
+/** O foco está no item ativo (a parada de Tab) da barra do editor `id`. */
+export async function expectToolbarFocused(
+  page: Page,
+  id: RteE2eId,
+): Promise<void> {
+  await expect(
+    editorHost(page, id).locator('.rte-toolbar > [tabindex="0"]'),
+  ).toBeFocused();
 }

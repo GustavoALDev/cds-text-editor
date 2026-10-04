@@ -563,6 +563,30 @@ describe('editor.css: barra, menus e amostras (spec 05b1)', () => {
       .join('\n');
     expect(text).toMatch(/rte-toolbar__button--pressed[^{]*\{[^}]*Highlight/);
     expect(text).toMatch(/rte-menu__item--checked[^{]*\{[^}]*Highlight/);
-    expect(text).toMatch(/ButtonText/);
+    expect(text).toMatch(/GrayText/);
+  });
+
+  // Navegador real (N14): o par Highlight/HighlightText do Firefox e do
+  // WebKit emulados fica abaixo de 4,5:1 (axe `color-contrast`); o
+  // pressionado/marcado usa o par principal invertido, cujo contraste é o do
+  // próprio tema do sistema, e o Highlight só na borda.
+  it('forced-colors: pressionado e marcado com o par principal invertido', () => {
+    const rules: Rule[] = [];
+    root.walkAtRules('media', (at) => {
+      if (/forced-colors:\s*active/.test(at.params))
+        at.walkRules((r) => void rules.push(r));
+    });
+    const rule = rules.find((r) =>
+      r.selector.includes('rte-toolbar__button--pressed'),
+    );
+    expect(rule?.selector).toContain('rte-menu__item--checked');
+    const decls = Object.fromEntries(
+      declarations(rule as Rule).map((d) => [d.prop, d.value]),
+    );
+    expect(decls).toEqual({
+      color: 'Canvas',
+      'background-color': 'CanvasText',
+      'border-color': 'Highlight',
+    });
   });
 });

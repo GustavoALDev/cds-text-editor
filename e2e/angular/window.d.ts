@@ -47,6 +47,8 @@ declare global {
         element: HTMLElement,
         theme: import('@cds/rte-theme').RteTheme,
       ): void;
+      /** Detecção de mudanças síncrona (`ApplicationRef.tick`). */
+      tick(): void;
       /** Passa a contar as mutações de DOM na barra do editor `id` (N15). */
       watchToolbar(id: RteE2eId): void;
       toolbarMutations(id: RteE2eId): number;
