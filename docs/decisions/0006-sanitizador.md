@@ -1,6 +1,6 @@
 # ADR 0006: Sanitizador (`@cds/rte-sanitizer`)
 
-- Status: aceita (2026-10-03)
+- Status: aceita (2026-10-04; spec revisada em 2026-10-03)
 - Spec de origem: `docs/specs/04-sanitizador.md`
 
 ## Contexto
@@ -46,6 +46,11 @@ Cada uma com o custo se estiver errada.
 10. **`escape*` iguais ao `getRteHtml`.** O `interpret.spec.ts` confere os literais; a equivalência com o serializador fica no `string-dom.spec.ts`, que continua verde depois de o `string-dom.ts` importá-los. Custo: nenhum.
 11. **Cobertura e tamanho fora do alvo `test`.** Cobertura ≥ 95% como `thresholds` no `vitest.config.mts`, conferida com `--coverage`; `npm run check:size` só confere o tema, então o sanitizador tem o alvo `size` (`npx nx run sanitizer:size`, que o CI roda por `nx affected -t size`). Custo: quem confia só em `check:size` não vê o sanitizador nem o core.
 
+Dois itens do pré-voo do plano ficam fora da numeração acima (os números 1–11 não são os do plano: o item 4 daqui é desta execução e o 11 junta os itens 11 e 12 do plano):
+
+- **Pré-voo 10 do plano: R10 com o fixture repetido.** Repetir o fixture repete os `id`s, e S7 remove as repetições; por isso o número de R10 é só tempo, sem comparar a saída. Custo: nenhum (R10 é informativo).
+- **Pré-voo 13 do plano: bytes de referência de R6.** Os bytes do Node em R6 são calculados no próprio processo do Playwright, importando `packages/sanitizer/src/index.ts` (o mesmo código do bundle do navegador). Custo: o E2E testa o código-fonte, não o `dist` (o `dist` é coberto por `verify-package`).
+
 **Desta execução**
 
 12. **`maxDepth` aceito só até 512.** O Chromium limita a profundidade do DOM do parser a 512; acima disso I1 quebra. `maxDepth` fora de 1–512 lança `RangeError`. Custo: o integrador não consegue mais de 512 níveis.
@@ -59,6 +64,8 @@ Cada uma com o custo se estiver errada.
 20. **Contrato dos `tolerant-cases`.** Só se confere que `expected` é ponto fixo, não entrada → `expected`: o sanitizador é filtro, não conversor (S11); a conversão é do leitor do editor. Custo: nenhum.
 21. **Gerador hostil com atributos por elemento do esquema.** Atributos tirados do esquema (3:1), pesos de tags e um token `fragment` com trechos canônicos; sem isso 10 000 saídas tinham 0 `a`/`img`/`iframe`, e agora têm 808/400/281. Custo: nenhum (cobertura maior).
 22. **`fixtures.ts` do sanitizador usa `__dirname`** em vez de `import.meta.dirname` (o Playwright carrega como CommonJS), como o `dangerous-urls.ts` do core. Custo: nenhum.
+23. **R8 pela melhor de até 3 tentativas, medida pelo menor entre parede e CPU** (correção da revisão final). O teto de 2 s de R8 continua, mas `timed` (`src/testing/timed.ts`) repete só quando uma tentativa estoura e afirma sobre a melhor. Cada tentativa vale o menor entre o tempo de parede e o tempo de CPU do processo (`process.cpuUsage()`; o Vitest roda cada arquivo num processo, `pool: 'forks'`): o `'<'` repetido leva ~200 ms isolado, mas com `nx run-many -p core,sanitizer` (dois Vitest com ~15 _workers_ cada em 16 núcleos) a parede chegou a 2,5–5 s mesmo na melhor de 3, e a versão anterior (uma tentativa) falhou igual no mesmo momento; a CPU usada não infla com a disputa. Uma regressão quadrática leva dezenas de segundos de parede **e** de CPU, então estoura nas 3. Cada tentativa grava o resultado ou o erro, sem afirmar dentro de `finally`; a falha do teto cita o erro original, e o erro original nunca é escondido. Junto, uma guarda de escala independente da velocidade da máquina: custo(1 documento de 16n) / custo(16 documentos de n) < 8 (linear ≈ 1, quadrático ≈ 16; medido 1,4 para `'<'` e 0,9 para `<li>`), com a mesma quantidade de entrada nos dois lados porque o relógio de CPU do Windows anda em passos de ~16 ms; um mutante quadrático puro deu 13,5 e falhou. Custo: um caso lento de verdade, mas abaixo de 2 s de CPU em 1 de 3 tentativas, passa (aceitável: R8 mira explosão de custo, não ruído); o tempo de CPU inclui o GC paralelo, por isso vale o menor dos dois.
+24. **`options` `null` equivale a ausente** em `createSanitizer` e `sanitizeRichText` (correção da revisão final): usa os padrões em vez de lançar `TypeError` cru ao ler `null.maxInputLength`. Custo: nenhum.
 
 ### (c) Normalizações estruturais (N1–N7)
 
@@ -83,7 +90,7 @@ Nenhuma N8 foi necessária: a bateria de 120 mil sopas de tags e as propriedades
 - **Minúsculas Unicode.** O `htmlparser2` põe nomes de tag em minúsculas com a regra Unicode: `<marK>` (K de Kelvin) vira `mark`, enquanto o navegador o vê como elemento desconhecido. Não é XSS (a saída é a tag do esquema, serializada por nós); o caso está no gerador hostil e no corpus.
 - **Aparo de tokens só por espaço ASCII** em `serializeTokens` e no `validateHtml` (ruling 15).
 
-### (d) Números medidos (2026-10-03)
+### (d) Números medidos (2026-10-04)
 
 Tamanho (`node tools/check-size.mjs --config <orçamento>` depois de `nx build`; sobre `min+gzip`):
 
@@ -125,7 +132,8 @@ Testes: 478 no pacote (cobertura de linhas 100% e de ramos 98,56%, limiar 95%); 
 `e2e/sanitizer/` em Chromium, Firefox e WebKit:
 
 - **S1 (R2/R6, `sanitizer-contract.spec.ts`):** o fixture, o `editor-corpus` (300) e o corpus de XSS (290) sanitizados no navegador dão os mesmos bytes que no Node, nos 3 motores.
-- **S2 (R7/I1, `sanitizer-reparse.spec.ts`):** o corpus de XSS e 2000 casos do gerador hostil por motor (10 000 em execução manual com `FC_RUNS`) relidos por `div.innerHTML`. **Nenhuma divergência em nenhum motor.** O controle negativo manual (saída não sanitizada) deu 332 falhas de I1, provando que o oráculo enxerga. Nada executou: `__xss` sempre 0 e nenhuma violação `script-src`.
+- **S2 (R7/I1, `sanitizer-reparse.spec.ts`):** o corpus de XSS e 2000 casos do gerador hostil por motor (10 000 em execução manual com `FC_RUNS`) relidos por `div.innerHTML`. **Nenhuma divergência em nenhum motor.** O controle negativo manual (saída não sanitizada) deu 332 falhas de I1, provando que o oráculo enxerga.
+- **Nenhum _handler_ inline (S2 e S3):** o CSP da página não tem `unsafe-inline`, então um _handler_ que vazasse seria **bloqueado**, não executado; `__xss` ficar em 0 não prova nada sozinho. O sinal é a violação de `script-src*` gravada pelo ouvinte de `securitypolicyviolation`. Um teste de controle em cada spec insere HTML **não sanitizado** (`<img src="x" onerror="alert(1)">` e um `<a onclick="alert(1)">` clicado) na mesma página e espera, com `expect.poll`, ao menos uma violação: os 3 motores gravam `script-src-attr` para os dois _handlers_, e com o ouvinte desligado o controle falha. O teste principal espera cada `img` de `#root` carregar ou falhar (é quando um `onerror` dispararia; imagens `loading="lazy"` fora da tela não carregam sem rolagem, não disparam `onerror` e ficam fora da espera, que tem teto de 5 s), mais uma tarefa, um quadro e 100 ms, e só então confere que não há violação de `script-src*`. O que fica provado: nenhuma saída sanitizada tentou rodar um _handler_ inline disparado por carga de imagem ou pelo próprio parse; _handlers_ que exigem interação (clique, foco) são cobertos pela checagem estrutural (nenhum `on*` no DOM), não pelo ouvinte.
 - **S3 (`sanitizer-render.spec.ts`):** o fixture sanitizado e inserido mostra os embeds com `sandbox`, sem `on*` no DOM, e as cores do `computedStyle` batem com a paleta.
 - **Jsdom:** 120 mil sopas de tags aleatórias relidas, 0 divergências; 100 000 mutações do corpus de ataques conferidas por `findUnsafe`, DOM, releitura e idempotência, sem bypass.
 
@@ -133,13 +141,15 @@ Testes: 478 no pacote (cobertura de linhas 100% e de ramos 98,56%, limiar 95%); 
 
 Itens `minor` adiados nas revisões; não são decisões. Agrupados por área.
 
-- **Profundidade e limites:** `maxDepth` > 512 quebraria I1 no Chromium (limite de profundidade do DOM do parser), por isso é recusado; a contagem é conservadora (um `tr` sob `table` removido depois, ou conteúdo descartado, pode recusar entrada cuja saída caberia); o teste de 513 não confere a mensagem 1..512 e o caso `maxDepth` 3 compara com o sanitizador padrão, não com literal; `sanitizeRichText(x, null)` lança `TypeError` cru; o `perf.spec` usa `console.log` (mandado).
-- **Engine (`parse.ts`, `sanitize-tree.ts`):** `onclosetag` supõe abertura correspondente — no fim da entrada no meio de uma tag o `htmlparser2` fecha tag nunca aberta (pop errado, profundidade negativa), sem guarda nem comentário; sem teste de regressão da guarda de `<form>` aninhado; closure `unwrap` por nó; `sanitized.action !== 'keep'` redundante salvo para narrowing; N6 tira todos os LF iniciais (ver (c)).
+- **Profundidade e limites:** `maxDepth` > 512 quebraria I1 no Chromium (limite de profundidade do DOM do parser), por isso é recusado; a contagem é conservadora (um `tr` sob `table` removido depois, ou conteúdo descartado, pode recusar entrada cuja saída caberia); o teste de 513 não confere a mensagem 1..512 e o caso `maxDepth` 3 compara com o sanitizador padrão, não com literal; o `perf.spec` usa `console.log` (mandado); o `index.spec` depende da ordem dos testes para a memoização do sanitizador padrão.
+- **Engine (`parse.ts`, `sanitize-tree.ts`, `serialize.spec.ts`):** closure `unwrap` por nó; `import()` dinâmico em linha no `serialize.spec.ts`; `HEADING_TAGS` sem JSDoc; `sanitized.action !== 'keep'` redundante salvo para narrowing; N6 tira todos os LF iniciais (ver (c)).
 - **Core (`interpret.ts`, `srcset.ts`):** `srcset.ts` separa por `/\s+/` Unicode (não explorável, é reserializado); `ASCII_WS` definido 4× (interpret, rules, validate-html, style); teste dos `escape*` compara com literal e não com `getRteHtml`; `requireChild: []` → `false` sem teste nem documentação.
 - **Corpus e contrato (`contract.spec.ts`, `xss-corpus.ts`):** a lista de tags exclusivas por recurso pode ser vazia (colors) e o teste passa vazio; domínio bloqueado só com `https://example.com/`; 1 duplicata no corpus; corpus do editor gerado dentro do `describe` (lento).
 - **Oráculo e gerador (`find-unsafe`, `html-arbitraries.ts`):** `findUnsafe` não marca `target=_blank` sem `noopener` (R5 não exige); o gerador sempre fecha a tag com `>` (sem tag truncada nem `<a/href=…>`), o texto vai só de U+0000 a U+00FF (sem astrais, substitutos soltos, U+0130), `on*` só por `anyAttribute` (peso 1/4), sem guarda de cobertura; o diferencial só roda na configuração padrão; a semente é fixa no CI; `dangerous-urls` duplica o algoritmo do core (mandado).
-- **E2E (`sanitizer-reparse.spec.ts` e helpers):** sem controle que prove que a violação `script-src` de um _handler_ inline é registrada (acrescentar `<img src=x onerror=alert(1)>` não sanitizado), e `waitForLoadState('load')` é inócuo; o ouvinte de CSP só vê o documento do topo (o `srcdoc` é coberto pela checagem estrutural); navegação `javascript:` não exercitada; valor de `style` não conferido (brief); `readFixture` duplicado no E2E; avisos `no-non-null-assertion`.
+- **E2E (`sanitizer-reparse.spec.ts` e helpers):** o ouvinte de CSP só vê o documento do topo (o `srcdoc` é coberto pela checagem estrutural); navegação `javascript:` não exercitada; valor de `style` não conferido (brief); `readFixture` duplicado no E2E; avisos `no-non-null-assertion`.
 - **Anteriores a esta spec (já registradas):** `fixTables` não é idempotente em tabelas com `rowspan`/`colspan` sobrepostos (ADR 0005; o sanitizador valida a forma 1–100, não a grade); relatório do que foi removido fica como evolução (fora de escopo); testes de `Tab` do E2E instáveis sob carga (`editor-keyboard`, `editor-tasks` E4, sobretudo WebKit) e teardown do E2 de colagem no Firefox.
+- **Instabilidades vistas nesta spec:** o `'<'` repetido de `limits.spec.ts` levou 2 145 ms contra o teto de 2 000 ms com `nx --parallel=3` (mitigado pelo ruling 23: melhor de 3 tentativas pelo menor entre parede e CPU, e guarda de escala); na primeira rodada completa do Playwright, dois testes do Firefox falharam e passaram ao repetir (`editor-paste` E2 e `behavior-planb` do tema), fora do sanitizador; o carregamento da página do sanitizador no Firefox às vezes passa de 15 s sob `--workers=4` (início a frio).
+- **Resolvidas na revisão final:** a guarda de `onclosetag` sem abertura correspondente (`parse.ts`, com comentário) e os testes de `<form>` aninhado (`parse.spec.ts`); `timed` afirmando dentro de `finally` (ruling 23); `sanitizeRichText(x, null)` com `TypeError` cru (ruling 24); o controle do ouvinte de CSP e o `waitForLoadState('load')` inócuo no E2E (seção (e)).
 
 ## Consequências
 

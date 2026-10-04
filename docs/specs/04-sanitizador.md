@@ -166,7 +166,8 @@ O harness `e2e/sanitizer/helpers/sanitizer-bundle.ts` gera um IIFE (`window.RteS
 - [x] Unitários de 6.1 verdes, com o corpus de XSS ≥ 150 casos e cobertura do pacote ≥ 95% de linhas e ramos (`@vitest/coverage-v8`). (478 testes do pacote; corpus de XSS com 290 casos; cobertura 100% de linhas e 98,56% de ramos)
 - [x] Propriedades de 6.2 verdes com ≥ 10 000 casos cada (R3, R4 e R5) e a diferencial verde. (R3, R4 e R5 com 10 000 casos cada, semente 20261003, e diferencial de 2000)
 - [x] Contrato R2 byte a byte verde: fixture, `tolerant-cases` (`expected`) e `editor-corpus.json` (gerado e sem drift). (fixture, `tolerant-cases` e `editor-corpus.json` de 300 documentos; `UPDATE_FIXTURES=1` sem drift)
-- [x] S1–S3 de 6.3 verdes em Chromium, Firefox e WebKit e no CI. (`npx playwright test -c e2e --workers=4`: 349 passaram e 27 foram pulados; o CI do PR ainda falta)
+- [x] S1–S3 de 6.3 verdes em Chromium, Firefox e WebKit. (`npx playwright test -c e2e --workers=4`: 349 passaram e 27 foram pulados)
+  - [ ] e no CI (o CI do PR ainda falta).
 - [x] R8 verde; números de R10 e tamanhos (S12) registrados no ADR 0006, ao lado dos números de 2026-10-02 do `sanitize-html` e do `DOMPurify` como referência. (R8 em `limits.spec.ts`; R10: Node ~35 ms e Chromium 23,8–25,2 ms; `whole` 31 940 B e `sanitize` 31 892 B; ADR 0006 (d))
 - [x] Core: interpretadores de S4 exportados e testados; orçamentos `whole`/`schema` e o novo `packages/sanitizer/size-budget.json` verdes. (`getElementSpec`, `sanitizeClass`, `sanitizeAttributes`, `hasRequiredChild`, `escape*`; orçamentos do core recalculados e `packages/sanitizer/size-budget.json` verde)
 - [x] `docs/security.md` com o **modelo de ameaças**: (`docs/security.md`)
