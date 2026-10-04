@@ -223,6 +223,18 @@ async function press(
   return event;
 }
 
+function pointerClick(): MouseEvent {
+  return new MouseEvent('click', {
+    bubbles: true,
+    cancelable: true,
+    detail: 1,
+  });
+}
+
+function nextFrame(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
 async function openWith(
   fixture: ComponentFixture<Host>,
   key: string,
@@ -296,9 +308,36 @@ describe('RteMenu e RteMenuTrigger (U6, U7)', () => {
     await settle(fixture);
     t1.dispatchEvent(new Event('pointerdown', { bubbles: true }));
     menuEl(fixture, 1).hidePopover(); // light dismiss antes do click
-    t1.click();
+    t1.dispatchEvent(pointerClick());
     await settle(fixture);
     expect(fixture.componentInstance.m1().isOpen()).toBe(false);
+  });
+
+  it('pointercancel descarta o estado do pointerdown', async () => {
+    const fixture = await renderHost(Host);
+    const t1 = q(fixture, '.t1');
+    t1.click();
+    await settle(fixture);
+    t1.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    t1.dispatchEvent(new Event('pointercancel', { bubbles: true }));
+    menuEl(fixture, 1).hidePopover();
+    t1.dispatchEvent(pointerClick());
+    await settle(fixture);
+    expect(fixture.componentInstance.m1().isOpen()).toBe(true);
+  });
+
+  it('clique sem ponteiro (detail 0) depois de um pointerdown sem click usa o estado atual', async () => {
+    const fixture = await renderHost(Host);
+    const t1 = q(fixture, '.t1');
+    t1.click();
+    await settle(fixture);
+    // ponteiro solto fora do gatilho: o click nunca chega
+    t1.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    menuEl(fixture, 1).hidePopover();
+    await settle(fixture);
+    t1.click(); // ativação programática/tecnologia assistiva
+    await settle(fixture);
+    expect(fixture.componentInstance.m1().isOpen()).toBe(true);
   });
 
   it('nada abre com o gatilho disabled ou aria-disabled', async () => {
@@ -461,16 +500,42 @@ describe('RteMenu e RteMenuTrigger (U6, U7)', () => {
     expect(remove.mock.calls.find(([t]) => t === 'scroll')?.[1]).toBe(listener);
   });
 
-  it('reposiciona em scroll e resize enquanto aberto', async () => {
+  it('reposiciona em scroll e resize enquanto aberto, uma vez por quadro', async () => {
+    const fixture = await renderHost(Host);
+    await openWith(fixture, 'ArrowDown');
+    const spy = vi.spyOn(CSSStyleDeclaration.prototype, 'setProperty');
+    const tops = () => spy.mock.calls.filter((c) => c[0] === 'top').length;
+    window.dispatchEvent(new Event('resize'));
+    document.dispatchEvent(new Event('scroll'));
+    expect(tops()).toBe(0);
+    await nextFrame();
+    expect(tops()).toBe(1);
+    window.dispatchEvent(new Event('resize'));
+    await nextFrame();
+    expect(tops()).toBe(2);
+    // rolagem interna do próprio menu não reposiciona
+    menuEl(fixture, 1).dispatchEvent(new Event('scroll'));
+    await nextFrame();
+    expect(tops()).toBe(2);
+  });
+
+  it('fechar cancela o quadro de reposicionamento pendente', async () => {
     const fixture = await renderHost(Host);
     await openWith(fixture, 'ArrowDown');
     const spy = vi.spyOn(CSSStyleDeclaration.prototype, 'setProperty');
     window.dispatchEvent(new Event('resize'));
-    document.dispatchEvent(new Event('scroll'));
-    expect(spy.mock.calls.filter((c) => c[0] === 'top')).toHaveLength(2);
-    // rolagem interna do próprio menu não reposiciona
-    menuEl(fixture, 1).dispatchEvent(new Event('scroll'));
-    expect(spy.mock.calls.filter((c) => c[0] === 'top')).toHaveLength(2);
+    await press(fixture, 'Escape');
+    await nextFrame();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('↑ sem item focado vai ao último', async () => {
+    const fixture = await renderHost(Host);
+    await openWith(fixture, 'ArrowDown');
+    await press(fixture, 'ArrowUp', {}, menuEl(fixture, 1));
+    expect(focusedLabel()).toBe('Phi');
+    await press(fixture, 'ArrowDown', {}, menuEl(fixture, 1));
+    expect(focusedLabel()).toBe('Alpha');
   });
 
   it('destruir com o menu aberto tira os ouvintes e esconde', async () => {

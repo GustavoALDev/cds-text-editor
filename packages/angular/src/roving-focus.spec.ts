@@ -43,7 +43,7 @@ afterEach(() => {
 class Host {
   readonly ids = signal(['a', 'b', 'c', 'd', 'e']);
   readonly disabled = signal(['c', 'e']);
-  readonly dir = signal<'ltr' | 'rtl' | null>(null);
+  readonly dir = signal<'ltr' | 'rtl' | 'auto' | null>(null);
   readonly roving = viewChild.required(RteRovingFocus);
 }
 
@@ -216,5 +216,48 @@ describe('RteRovingFocus (U3)', () => {
     expect(tabStops(fixture)).toEqual([]);
     expect(fixture.componentInstance.roving().activeIndex()).toBe(-1);
     expect(fixture.componentInstance.roving().focusActive()).toBe(false);
+  });
+
+  it('todos disabled no início (U10) e depois habilitados → primeiro vira a parada de Tab', async () => {
+    const fixture = await renderHost(Host, []);
+    fixture.componentInstance.disabled.set(['a', 'b', 'c', 'd', 'e']);
+    await settle(fixture);
+    expect(tabStops(fixture)).toEqual([]);
+    expect(fixture.componentInstance.roving().focusActive()).toBe(false);
+    fixture.componentInstance.disabled.set([]);
+    await settle(fixture);
+    expect(tabStops(fixture)).toEqual(['a']);
+    expect(fixture.componentInstance.roving().focusActive()).toBe(true);
+    expect(focusedId()).toBe('a');
+  });
+
+  it('item ativo fica disabled sozinho → a parada de Tab vai ao primeiro focável', async () => {
+    const fixture = await renderHost(Host);
+    item(fixture, 'd').focus();
+    await settle(fixture);
+    expect(tabStops(fixture)).toEqual(['d']);
+    fixture.componentInstance.disabled.set(['c', 'd', 'e']);
+    await settle(fixture);
+    expect(tabStops(fixture)).toEqual(['a']);
+    fixture.componentInstance.disabled.set(['c', 'e']);
+    await settle(fixture);
+    // d volta a ser focável e continua sendo o último focado
+    expect(tabStops(fixture)).toEqual(['d']);
+  });
+
+  it('dir="auto" usa a direção computada', async () => {
+    const fixture = await renderHost(Host);
+    fixture.componentInstance.dir.set('auto');
+    await settle(fixture);
+    const real = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((el, pseudo) => {
+      const style = real(el, pseudo);
+      return Object.assign(Object.create(style) as CSSStyleDeclaration, {
+        direction: 'rtl',
+      });
+    });
+    item(fixture, 'a').focus();
+    await press(fixture, 'ArrowRight');
+    expect(focusedId()).toBe('d');
   });
 });

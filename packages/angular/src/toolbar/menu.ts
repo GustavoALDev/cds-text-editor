@@ -58,8 +58,16 @@ export class RteMenu {
     const target = event.target;
     // rolagem interna do próprio menu (max-height) não move o menu
     if (target instanceof Node && this.element.contains(target)) return;
-    this.place();
+    const view = this.document.defaultView;
+    if (!view || this.frame !== null) return;
+    // uma medição por quadro (scroll/resize disparam várias vezes por quadro);
+    // não serve à detecção de mudanças: só grava a posição por CSSOM
+    this.frame = view.requestAnimationFrame(() => {
+      this.frame = null;
+      this.place();
+    });
   };
+  private frame: number | null = null;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
@@ -109,6 +117,8 @@ export class RteMenu {
   private teardown(): void {
     this.open$.set(false);
     const view = this.document.defaultView;
+    if (view && this.frame !== null) view.cancelAnimationFrame(this.frame);
+    this.frame = null;
     if (!view || !this.listening) return;
     view.removeEventListener('scroll', this.reposition, true);
     view.removeEventListener('resize', this.reposition);
@@ -176,7 +186,8 @@ export class RteMenu {
         next = n ? (current + 1) % n : -1;
         break;
       case 'ArrowUp':
-        next = n ? (current - 1 + n) % n : -1;
+        // sem item focado (current -1) vai ao último
+        next = n ? (current <= 0 ? n - 1 : current - 1) : -1;
         break;
       case 'Home':
         next = 0;
@@ -236,7 +247,11 @@ function matchFirstLetter(
  * item, `↑` no último; o clique alterna. Gatilho `disabled` ou
  * `aria-disabled="true"` não abre. O estado aberto é lido no `pointerdown`:
  * o *light dismiss* do navegador fecha o menu no `pointerup`, antes do
- * `click`, e sem isso o clique no próprio gatilho reabriria o menu.
+ * `click`, e sem isso o clique no próprio gatilho reabriria o menu. O valor
+ * só vale para o `click` de ponteiro seguinte (`detail > 0`); `pointercancel`
+ * e qualquer `click` o descartam, então um `click` sem ponteiro (programático,
+ * tecnologia assistiva) depois de um `pointerdown` sem `click` usa o estado
+ * atual. Zerar no `pointerup` não serve: o `click` vem depois dele.
  */
 @Directive({
   selector: '[rteMenuTrigger]',
@@ -246,7 +261,8 @@ function matchFirstLetter(
     '[attr.aria-controls]': 'menu().id',
     '(keydown)': 'onKeydown($event)',
     '(pointerdown)': 'onPointerdown()',
-    '(click)': 'onClick()',
+    '(pointercancel)': 'onPointercancel()',
+    '(click)': 'onClick($event)',
   },
 })
 export class RteMenuTrigger {
@@ -295,9 +311,14 @@ export class RteMenuTrigger {
     this.openAtPointerDown = this.menu().isOpen();
   }
 
-  protected onClick(): void {
-    const wasOpen = this.openAtPointerDown ?? this.menu().isOpen();
+  protected onPointercancel(): void {
     this.openAtPointerDown = null;
+  }
+
+  protected onClick(event: MouseEvent): void {
+    const atPointerDown = event.detail > 0 ? this.openAtPointerDown : null;
+    this.openAtPointerDown = null;
+    const wasOpen = atPointerDown ?? this.menu().isOpen();
     if (wasOpen) {
       this.menu().close('trigger');
       return;
