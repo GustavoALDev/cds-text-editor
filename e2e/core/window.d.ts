@@ -9,6 +9,11 @@ declare global {
       Editor: typeof import('@tiptap/core').Editor;
       createEditorExtensions: typeof import('../../packages/core/extensions/src/index').createEditorExtensions;
       getRteHtml: typeof import('../../packages/core/extensions/src/index').getRteHtml;
+      getRteTextStats: typeof import('../../packages/core/extensions/src/index').getRteTextStats;
+      getCharLimitState: typeof import('../../packages/core/extensions/src/index').getCharLimitState;
+      getSearchState: typeof import('../../packages/core/extensions/src/index').getSearchState;
+      getSlashMenuState: typeof import('../../packages/core/extensions/src/index').getSlashMenuState;
+      htmlToText: typeof import('../../packages/core/html/src/index').htmlToText;
       RTE_CODE_LANGUAGES: typeof import('../../packages/core/code-languages/src/index').RTE_CODE_LANGUAGES;
       validateHtml: typeof import('../../packages/core/html/src/index').validateHtml;
       getHtmlSchema: typeof import('../../packages/core/src/index').getHtmlSchema;

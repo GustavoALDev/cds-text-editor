@@ -7,7 +7,8 @@ let cached: string | undefined;
 
 /**
  * Bundle IIFE (`window.RteEditorLab`) com o editor da fábrica, o serializador,
- * o esquema, o validador, o catálogo de linguagens e a normalização de
+ * os getters da 03c (contagem, limite, busca e menu `/`), o esquema, o
+ * validador, o `htmlToText`, o catálogo de linguagens e a normalização de
  * comparação; gerado uma vez por worker. Sem `splitting`, o esbuild embute as
  * gramáticas do `import()` no bundle, mas a carga continua assíncrona por
  * `load()` (é o que o E5 observa).
@@ -17,9 +18,16 @@ export function editorBundle(): string {
     stdin: {
       contents: [
         `export { Editor } from '@tiptap/core';`,
-        `export { createEditorExtensions, getRteHtml } from './extensions/src/index';`,
+        `export {`,
+        `  createEditorExtensions,`,
+        `  getRteHtml,`,
+        `  getRteTextStats,`,
+        `  getCharLimitState,`,
+        `  getSearchState,`,
+        `  getSlashMenuState,`,
+        `} from './extensions/src/index';`,
         `export { RTE_CODE_LANGUAGES } from './code-languages/src/index';`,
-        `export { validateHtml } from './html/src/index';`,
+        `export { htmlToText, validateHtml } from './html/src/index';`,
         `export { getHtmlSchema } from './src/index';`,
         `export { normalizeForCompare } from './extensions/src/testing/compare';`,
       ].join('\n'),
