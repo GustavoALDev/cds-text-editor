@@ -48,6 +48,7 @@ describe('templates do pacote (R15)', () => {
         /(^|\/)src\//.test(packagePath(f)) &&
         !packagePath(f).includes('/testing-support/'),
     );
+    expect(templates.length).toBeGreaterThanOrEqual(1);
     const found = templates.flatMap((f) =>
       findLiteralText(readFileSync(f, 'utf8'), packagePath(f)),
     );

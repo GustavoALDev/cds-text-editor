@@ -28,8 +28,9 @@ export default [
             // ajudantes de teste, fora do build (usam @angular/compiler e node:*)
             '{projectRoot}/src/testing-support/**',
           ],
-          // Peers exigidos por D24 sem import direto no pacote: o Tiptap, o
-          // lowlight e o highlight.js chegam pelo `@cds/rte-core/extensions`
+          // Peers exigidos por D24 sem import direto no pacote: as extensões
+          // do Tiptap, o lowlight e o highlight.js chegam pelo
+          // `@cds/rte-core/extensions`
           // (uma cópia só do ProseMirror); o `@cds/rte-theme` é dependência
           // só de CSS (o tema nunca é importado em TypeScript).
           ignoredDependencies: [
@@ -37,10 +38,8 @@ export default [
             // 05a, Tarefa 1): sair desta lista quando o componente, os
             // rótulos e os formulários chegarem (Tarefas 2–7).
             '@angular/common',
-            '@angular/forms',
             // Permanentes:
             '@cds/rte-theme',
-            '@tiptap/core',
             '@tiptap/extension-blockquote',
             '@tiptap/extension-bold',
             '@tiptap/extension-code',
@@ -61,7 +60,6 @@ export default [
             '@tiptap/extension-text-align',
             '@tiptap/extension-underline',
             '@tiptap/extensions',
-            '@tiptap/pm',
             'highlight.js',
             'lowlight',
           ],

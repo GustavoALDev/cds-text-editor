@@ -1,6 +1,7 @@
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import * as api from '@cds/rte-angular';
 import * as i18n from '@cds/rte-angular/i18n';
+import * as testing from '@cds/rte-angular/testing';
 import { describe, expect, it } from 'vitest';
 
 describe('@cds/rte-angular', () => {
@@ -8,6 +9,7 @@ describe('@cds/rte-angular', () => {
     expect(Object.keys(api).sort()).toEqual([
       'RTE_LABELS',
       'RTE_LABELS_EN',
+      'RteEditor',
       'provideRichText',
     ]);
   });
@@ -18,5 +20,9 @@ describe('@cds/rte-angular', () => {
       'RTE_LABELS_ES',
       'RTE_LABELS_PT_BR',
     ]);
+  });
+
+  it('o /testing exporta só getRteEditor', () => {
+    expect(Object.keys(testing).sort()).toEqual(['getRteEditor']);
   });
 });

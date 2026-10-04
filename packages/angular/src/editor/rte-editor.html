@@ -1,0 +1,21 @@
+<div class="rte-editor__frame">
+  @if (!editor()) {
+  <div
+    class="rte-content rte-editor__shell"
+    role="textbox"
+    aria-multiline="true"
+    aria-readonly="true"
+    aria-busy="true"
+    [attr.aria-label]="shellLabel()"
+    [attr.aria-labelledby]="ariaLabelledBy() || null"
+  >
+    @if (showShellPlaceholder()) {
+    <p
+      class="rte-placeholder rte-placeholder--doc"
+      [attr.data-placeholder]="placeholder()"
+    ></p>
+    }
+  </div>
+  }
+  <div #mount class="rte-editor__mount"></div>
+</div>
