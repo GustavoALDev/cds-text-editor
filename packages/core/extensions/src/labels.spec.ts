@@ -77,6 +77,31 @@ describe('resolveContentLabels', () => {
     expect(labels.readAlsoTitle).toBe('Read also');
   });
 
+  it('ignora readAlsoTitle e taskCheckbox herdados', () => {
+    const source = Object.create({
+      readAlsoTitle: 'herdado',
+      taskCheckbox: (t: string) => `herdado: ${t}`,
+    }) as Record<string, unknown>;
+    const labels = resolveContentLabels(source as never);
+    expect(labels.readAlsoTitle).toBe('Read also');
+    expect(labels.taskCheckbox('a')).toBe('Task: a');
+  });
+
+  it('taskCheckbox que lança ou não devolve texto cai no rótulo en', () => {
+    const throwing = resolveContentLabels({
+      taskCheckbox: () => {
+        throw new Error('x');
+      },
+    });
+    expect(throwing.taskCheckbox('a')).toBe('Task: a');
+    const wrong = resolveContentLabels({
+      taskCheckbox: (() => null) as never,
+    });
+    expect(wrong.taskCheckbox('a')).toBe('Task: a');
+    const ok = resolveContentLabels({ taskCheckbox: (t) => `T: ${t}` });
+    expect(ok.taskCheckbox('a')).toBe('T: a');
+  });
+
   it('fonte por função é chamada a cada resolução', () => {
     let title = 'A';
     const source = vi.fn(() => ({ readAlsoTitle: title }));

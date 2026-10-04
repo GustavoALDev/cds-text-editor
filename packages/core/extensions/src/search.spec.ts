@@ -11,7 +11,7 @@ import type { Transaction } from '@tiptap/pm/state';
 import { TextSelection } from '@tiptap/pm/state';
 import { TableMap } from '@tiptap/pm/tables';
 import * as fc from 'fast-check';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { validateHtml } from '../../html/src/validate-html';
 import { createEditorExtensions } from './factory';
 import { foldCase, searchProbe } from './search-index';
@@ -195,6 +195,7 @@ describe('ativo e navegação (C12)', () => {
   it('next/previous circulares, selecionam e rolam sem focar', () => {
     const editor = createTestEditor({}, html);
     const input = document.body.appendChild(document.createElement('input'));
+    onTestFinished(() => input.remove());
     input.focus();
     editor.commands.setTextSelection(1);
     q(editor, 'a');
@@ -232,13 +233,17 @@ describe('ativo e navegação (C12)', () => {
     // Navegador real (E10): sem foco, a seleção do DOM não é do editor e o
     // `scrollIntoView` da transação não rola; o plugin rola o ativo.
     const scrolled: Element[] = [];
-    const original = Element.prototype.scrollIntoView;
+    const original = Object.getOwnPropertyDescriptor(
+      Element.prototype,
+      'scrollIntoView',
+    );
     Element.prototype.scrollIntoView = function (this: Element) {
       scrolled.push(this);
     };
     try {
       const editor = createTestEditor({}, '<p>a a</p><p>a</p>');
       const input = document.body.appendChild(document.createElement('input'));
+      onTestFinished(() => input.remove());
       input.focus();
       editor.commands.setTextSelection(1);
       q(editor, 'a');
@@ -262,7 +267,13 @@ describe('ativo e navegação (C12)', () => {
       editor.commands.insertContentAt(editor.state.doc.content.size - 1, 'b');
       expect(scrolled).toHaveLength(0);
     } finally {
-      Element.prototype.scrollIntoView = original;
+      // No jsdom não há `scrollIntoView`: restaurar apagando, não atribuindo
+      // `undefined`.
+      if (original) {
+        Object.defineProperty(Element.prototype, 'scrollIntoView', original);
+      } else {
+        delete (Element.prototype as Partial<Element>).scrollIntoView;
+      }
     }
   });
 

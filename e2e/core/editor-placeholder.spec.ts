@@ -25,8 +25,13 @@ test('E8: placeholder do documento vazio some ao digitar e volta ao apagar tudo'
 
   expect(await before(page, paragraph)).toBe('"Escreva aqui"');
   await expect(editable).toHaveAttribute('aria-placeholder', 'Escreva aqui');
+  // Uma regex por classe (`\b` aceitaria `rte-placeholder` dentro de
+  // `rte-placeholder--doc`).
   await expect(page.locator(paragraph)).toHaveClass(
-    'rte-placeholder rte-placeholder--doc',
+    /(^|\s)rte-placeholder(\s|$)/,
+  );
+  await expect(page.locator(paragraph)).toHaveClass(
+    /(^|\s)rte-placeholder--doc(\s|$)/,
   );
 
   await editable.click();

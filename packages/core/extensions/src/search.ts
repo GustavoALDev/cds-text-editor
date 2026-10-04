@@ -491,7 +491,9 @@ export function createSearchExtension(_ctx: RteExtensionContext): AnyExtension {
                 return result;
               }
               // Navegação: objeto novo mesmo com o ativo igual (um resultado
-              // só), para a vista rolar de novo.
+              // só), para a vista rolar de novo. A marca depende de só o
+              // `navigate` combinar `activate` com `scrollIntoView`; outro
+              // comando que faça o mesmo passa a rolar também.
               const navigatedTo = result === value ? { ...result } : result;
               navigated.add(navigatedTo);
               return navigatedTo;

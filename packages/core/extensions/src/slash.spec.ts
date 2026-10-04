@@ -688,6 +688,26 @@ describe('teclado (C16)', () => {
     expect(editor.state.doc.firstChild?.type.name).toBe('heading');
   });
 
+  it('com itens: Enter é consumido mesmo se o comando do item falhar ao executar', () => {
+    // `can()` passa (sem `dispatch`), a execução real falha.
+    const editor = make('<p></p>', {
+      slash: {
+        items: (defaults) => [
+          ...defaults,
+          {
+            id: 'fails',
+            title: 'Fails',
+            command: (c) => c.command(({ dispatch }) => dispatch === undefined),
+          },
+        ],
+      },
+    });
+    typeText(editor, '/fails');
+    expect(ids(editor)).toEqual(['fails']);
+    expect(pressKey(editor, 'Enter')).toBe(true);
+    expect(editor.state.doc.childCount).toBe(1);
+  });
+
   it('Escape fecha; Tab nunca é capturado; menu fechado: teclas livres', () => {
     const editor = make();
     typeText(editor, '/ta');

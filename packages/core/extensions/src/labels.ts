@@ -77,6 +77,26 @@ function readSource(
 }
 
 /**
+ * `taskCheckbox` do consumidor roda a cada renderização da tarefa (inclusive
+ * durante a digitação): se lançar ou não devolver texto, vale o rótulo `en`
+ * (lição 4).
+ */
+function guardTaskCheckbox(
+  fn: unknown,
+  fallback: RteContentLabels['taskCheckbox'],
+): RteContentLabels['taskCheckbox'] {
+  const consumer = fn as (text: string) => unknown;
+  return (text) => {
+    try {
+      const result = consumer(text);
+      return typeof result === 'string' ? result : fallback(text);
+    } catch {
+      return fallback(text);
+    }
+  };
+}
+
+/**
  * Resolve a fonte de rótulos sobre `en`. Uma fonte por função é chamada a
  * cada resolução; `calloutTitles` é mesclado variante a variante. Só chaves
  * próprias com valor do tipo esperado são aceitas.
@@ -95,15 +115,21 @@ export function resolveContentLabels(
       if (typeof value === 'string') titles[variant] = value;
     }
   }
-  const readAlsoTitle: unknown = partial?.readAlsoTitle;
-  const taskCheckbox: unknown = partial?.taskCheckbox;
+  const readAlsoTitle: unknown =
+    partial && Object.hasOwn(partial, 'readAlsoTitle')
+      ? partial.readAlsoTitle
+      : undefined;
+  const taskCheckbox: unknown =
+    partial && Object.hasOwn(partial, 'taskCheckbox')
+      ? partial.taskCheckbox
+      : undefined;
   return {
     calloutTitles: titles,
     readAlsoTitle:
       typeof readAlsoTitle === 'string' ? readAlsoTitle : base.readAlsoTitle,
     taskCheckbox:
       typeof taskCheckbox === 'function'
-        ? (taskCheckbox as RteContentLabels['taskCheckbox'])
+        ? guardTaskCheckbox(taskCheckbox, base.taskCheckbox)
         : base.taskCheckbox,
   };
 }

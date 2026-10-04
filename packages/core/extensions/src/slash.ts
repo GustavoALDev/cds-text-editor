@@ -393,7 +393,12 @@ export function createSlashCommandExtension(
         ArrowUp: move(-1),
         Enter: ({ editor }) => {
           const { open, items: visible } = getSlashMenuState(editor);
-          return open && visible.length > 0 && editor.commands.runSlashItem();
+          if (!open || visible.length === 0) return false;
+          // Consome a tecla mesmo se o comando do item falhar ao executar: o
+          // Tiptap despacha a cadeia parcial (consulta já apagada), e dividir
+          // o parágrafo depois disso fere C16.
+          editor.commands.runSlashItem();
+          return true;
         },
         Escape: ({ editor }) =>
           getSlashMenuState(editor).open && editor.commands.closeSlashMenu(),

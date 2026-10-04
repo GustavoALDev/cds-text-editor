@@ -47,6 +47,10 @@ export interface RteSlashOptions {
     | ((defaults: readonly RteSlashItem[]) => readonly RteSlashItem[]);
   /** Lido a cada uso (lição 4). */
   labels?: Partial<RteSlashLabels> | (() => Partial<RteSlashLabels>);
+  /**
+   * Chamado de forma síncrona dentro da atualização da vista (plugin view):
+   * adie qualquer despacho no editor (por exemplo, `queueMicrotask`).
+   */
   onUiItem?: (id: string, editor: Editor) => void;
 }
 

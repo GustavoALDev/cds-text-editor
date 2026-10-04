@@ -56,11 +56,11 @@ test('E11: "/" abre no início e depois de espaço, não depois de letra', async
 });
 
 test('E11: "/" depois de U+00A0 abre', async ({ page }) => {
-  await start(page, '<p>a </p>');
+  await start(page, '<p>a\u00a0</p>');
   await page.keyboard.type('/');
   expect(await isOpen(page)).toBe(true);
   expect(await page.evaluate(() => window.editor.state.doc.textContent)).toBe(
-    'a /',
+    'a\u00a0/',
   );
 });
 
