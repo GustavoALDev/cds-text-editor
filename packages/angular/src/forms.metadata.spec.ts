@@ -93,21 +93,36 @@ describe('Signal Forms: metadados de validador próprio chegam às entradas do c
     expect(host.stub().maxLength()).toBeUndefined();
   });
 
-  it('com maxLength() nativo junto, vale o menor (redutor min)', async () => {
+  it('com maxLength() nativo junto, vale o menor dos dois (redutor min)', async () => {
     const fixture = await render((max) => (p) => {
       custom(max)(p);
       maxLength(p.body, 5);
     });
+    const host = fixture.componentInstance;
 
-    expect(fixture.componentInstance.stub().maxLength()).toBe(5);
+    // 10 (próprio) × 5 (nativo) → 5
+    expect(host.stub().maxLength()).toBe(5);
+
+    // 3 (próprio) × 5 (nativo) → 3: o metadado próprio decide
+    host.max.set(3);
+    await fixture.whenStable();
+    expect(host.stub().maxLength()).toBe(3);
   });
 
-  it('com required() nativo junto, REQUIRED false não desliga (redutor or)', async () => {
+  it('com required() nativo junto, basta um dos dois (redutor or)', async () => {
+    const off = signal(false);
     const fixture = await render(() => (p) => {
-      metadata(p.body, REQUIRED, () => false);
-      required(p.body);
+      metadata(p.body, REQUIRED, () => off());
+      required(p.body, { when: () => !off() });
     });
+    const stub = fixture.componentInstance.stub();
 
-    expect(fixture.componentInstance.stub().required()).toBe(true);
+    // próprio false + nativo true → true
+    expect(stub.required()).toBe(true);
+
+    // próprio true + nativo desligado (when: false) → true: o próprio decide
+    off.set(true);
+    await fixture.whenStable();
+    expect(stub.required()).toBe(true);
   });
 });

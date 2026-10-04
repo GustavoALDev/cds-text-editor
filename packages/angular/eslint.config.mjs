@@ -145,21 +145,36 @@ export default [
           message:
             'Use inject(DOCUMENT).defaultView dentro de afterNextRender (spec 05a, D25).',
         },
+        {
+          name: 'self',
+          message:
+            'Use inject(DOCUMENT).defaultView dentro de afterNextRender (spec 05a, D25).',
+        },
+      ],
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'globalThis',
+          property: 'document',
+          message:
+            'Use inject(DOCUMENT) ou o DOM dentro de afterNextRender (spec 05a, D25).',
+        },
+        {
+          object: 'globalThis',
+          property: 'window',
+          message:
+            'Use inject(DOCUMENT).defaultView dentro de afterNextRender (spec 05a, D25).',
+        },
       ],
       'no-restricted-imports': ['error', { patterns: [ZONE_IMPORT] }],
     },
   },
   {
-    // R1: só o entry /validators mede texto com `@cds/rte-core/html`; o `.`
-    // não o importa. No flat config a última ocorrência da regra substitui a
+    // R1: só o entry /validators mede texto com `@cds/rte-core/html`; o `.`,
+    // o /i18n e o /testing não o importam. No flat config a última ocorrência da regra substitui a
     // anterior: o grupo do zone.js é repetido aqui.
     files: ['**/*.ts'],
-    ignores: [
-      ...NOT_PUBLISHED,
-      '**/i18n/src/**',
-      '**/validators/src/**',
-      '**/testing/src/**',
-    ],
+    ignores: [...NOT_PUBLISHED, '**/validators/src/**'],
     rules: {
       'no-restricted-imports': [
         'error',

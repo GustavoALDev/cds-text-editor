@@ -87,6 +87,17 @@ const forbidden: ReadonlyArray<[string, string, string]> = [
     'no-restricted-globals',
   ],
   ['window.x', 'export const x = window.name;\n', 'no-restricted-globals'],
+  ['self.x', 'export const x = self.name;\n', 'no-restricted-globals'],
+  [
+    'globalThis.document',
+    'export const b = globalThis.document.body;\n',
+    'no-restricted-properties',
+  ],
+  [
+    'globalThis.window',
+    'export const x = globalThis.window.name;\n',
+    'no-restricted-properties',
+  ],
   ["import 'zone.js'", "import 'zone.js';\n", 'no-restricted-imports'],
   [
     "import 'zone.js/testing'",
@@ -138,6 +149,15 @@ describe('guardas por lint (spec 05a, D25)', () => {
     expect(await ruleIds("import 'zone.js';\n", VALIDATORS_FILE)).toContain(
       'no-restricted-imports',
     );
+  });
+
+  it.each([
+    'packages/angular/i18n/src/__guard__.ts',
+    'packages/angular/testing/src/__guard__.ts',
+  ])("%s não pode importar '@cds/rte-core/html' (R1)", async (file) => {
+    const html =
+      "import { htmlToText } from '@cds/rte-core/html';\nexport const t = htmlToText('');\n";
+    expect(await ruleIds(html, file)).toContain('no-restricted-imports');
   });
 
   it('specs ficam fora das guardas (document.body permitido)', async () => {
