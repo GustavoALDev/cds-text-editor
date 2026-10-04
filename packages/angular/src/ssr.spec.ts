@@ -16,7 +16,7 @@ import {
 } from '@angular/platform-server';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import { RteEditor } from '@cds/rte-angular';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // R12 (D19): no servidor só a casca; nenhum Editor e nenhum HTML do valor.
 
@@ -47,16 +47,20 @@ async function withServerDomAdapter<T>(render: () => Promise<T>): Promise<T> {
   const dom = getDOM() as DomAdapter & { supportsDOMEvents: boolean };
   const proto: object | null = Object.getPrototypeOf(dom);
   const supportsDOMEvents = dom.supportsDOMEvents;
-  Object.setPrototypeOf(dom, DominoAdapter.prototype);
-  dom.supportsDOMEvents = false;
-  dom.getDefaultDocument();
   try {
+    Object.setPrototypeOf(dom, DominoAdapter.prototype);
+    dom.supportsDOMEvents = false;
+    dom.getDefaultDocument();
     return await render();
   } finally {
     Object.setPrototypeOf(dom, proto);
     dom.supportsDOMEvents = supportsDOMEvents;
   }
 }
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('RteEditor no servidor (R12)', () => {
   it('não há DOM global no ambiente', () => {
@@ -68,6 +72,7 @@ describe('RteEditor no servidor (R12)', () => {
     'renderApplication entrega a casca acessível sem o valor',
     { timeout: 30_000 },
     async () => {
+      const error = vi.spyOn(console, 'error');
       const html = await withServerDomAdapter(() =>
         renderApplication(
           (context) =>
@@ -99,6 +104,7 @@ describe('RteEditor no servidor (R12)', () => {
       expect(html).toContain('rte-editor__mount');
       expect(html).not.toContain('ProseMirror');
       expect(html).not.toContain('segredo');
+      expect(error).not.toHaveBeenCalled();
     },
   );
 });

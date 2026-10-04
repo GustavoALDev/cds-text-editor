@@ -17,3 +17,15 @@ export function isEmptyDoc(doc: ProseMirrorNode): boolean {
 export function readValue(editor: Editor): string {
   return isEmptyDoc(editor.state.doc) ? '' : getRteHtml(editor);
 }
+
+const EMPTY_HTML = /^\s*(?:<p>\s*<\/p>)?\s*$/i;
+
+/**
+ * Vazio antes da criação (D6, D19): reconhece, sem analisar o HTML, as formas
+ * que o editor lê como o documento vazio — `''`, só espaços e um `<p></p>`
+ * (com espaços, sem diferenciar caixa). `<p><br></p>` não é vazio: o `<br>`
+ * vira um `hardBreak`. Qualquer outra forma conta como conteúdo até a criação.
+ */
+export function isEmptyValue(html: string | null | undefined): boolean {
+  return EMPTY_HTML.test(html ?? '');
+}

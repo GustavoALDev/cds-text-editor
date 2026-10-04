@@ -25,11 +25,13 @@ import {
   type RteCharLimitState,
 } from '@cds/rte-core/extensions';
 import { Editor } from '@tiptap/core';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { RTE_CONFIG, RTE_LABELS, type RteEditorConfig } from '../config';
 import { mergeLabels, readLabelsSource } from '../labels/merge';
 import type { RteLabels, RteLabelsSource } from '../labels/types';
 import { editableAttributes, type RteEditableState } from './attributes';
 import { bindRteBridge, createRteBridge } from './bridge';
+import { isEmptyValue, readValue } from './empty';
 import { RTE_EDITOR_HOOK } from './hook';
 import { buildEditorOptions, mergeEditorConfig } from './options';
 
@@ -88,10 +90,16 @@ export class RteEditor implements FormValueControl<string> {
   readonly editorBlur = output<void>();
 
   private readonly instance = signal<Editor | null>(null);
-  private readonly bridge = createRteBridge(
-    this.instance,
-    () => (this.value() ?? '') === '',
+  private readonly bridge = createRteBridge(this.instance, () =>
+    isEmptyValue(this.value()),
   );
+
+  // Valor (D8, D9): último HTML emitido ou aplicado (canônico), o documento
+  // em que foi lido e se uma carga externa está em curso.
+  private lastValue = '';
+  private lastDoc: ProseMirrorNode | null = null;
+  private loading = false;
+  private pendingFocus: FocusOptions | null = null;
 
   // Estado (somente leitura)
   readonly editor: Signal<Editor | null> = this.instance.asReadonly();
@@ -119,7 +127,7 @@ export class RteEditor implements FormValueControl<string> {
   );
 
   protected readonly showShellPlaceholder = computed(
-    () => (this.value() ?? '') === '' && this.placeholder() !== '',
+    () => isEmptyValue(this.value()) && this.placeholder() !== '',
   );
 
   private readonly mount = viewChild.required<ElementRef<HTMLElement>>('mount');
@@ -144,6 +152,42 @@ export class RteEditor implements FormValueControl<string> {
         warned = true;
         console.warn(OPTIONS_IGNORED);
       }
+    });
+
+    // Emissão síncrona (D8): só transações que mudam o documento fora de uma
+    // carga externa; as anexadas por `appendTransaction` vêm no mesmo evento.
+    const onTransaction = ({ editor }: { editor: Editor }) => {
+      if (this.loading || editor.state.doc === this.lastDoc) return;
+      this.lastDoc = editor.state.doc;
+      const html = readValue(editor);
+      if (html === this.lastValue) return;
+      this.lastValue = html;
+      zone.run(() => this.value.set(html));
+    };
+
+    // Valor externo (D9): fora do histórico, sem emitir, sem focar e sem
+    // escrever o canônico de volta no modelo.
+    effect(() => {
+      const value = this.value() ?? '';
+      untracked(() => {
+        const editor = this.instance();
+        if (!editor || editor.isDestroyed || value === this.lastValue) return;
+        this.loading = true;
+        try {
+          editor
+            .chain()
+            .command(({ tr }) => {
+              tr.setMeta('addToHistory', false);
+              return true;
+            })
+            .setContent(value, { emitUpdate: false })
+            .run();
+        } finally {
+          this.loading = false;
+        }
+        this.lastDoc = editor.state.doc;
+        this.lastValue = readValue(editor);
+      });
     });
 
     afterNextRender(() => {
@@ -180,24 +224,36 @@ export class RteEditor implements FormValueControl<string> {
         value: editor,
         configurable: true,
       });
+      this.lastDoc = editor.state.doc;
+      this.lastValue = readValue(editor);
+      editor.on('transaction', onTransaction);
       this.instance.set(editor);
       this.bridge.connect(editor);
       zone.run(() => this.editorReady.emit(editor));
+      const focus = this.pendingFocus;
+      this.pendingFocus = null;
+      if (focus) this.focus(focus);
     });
 
     inject(DestroyRef).onDestroy(() => {
       const editor = untracked(this.instance);
       if (!editor) return;
       this.bridge.disconnect();
+      editor.off('transaction', onTransaction);
       delete (host as unknown as Record<symbol, unknown>)[RTE_EDITOR_HOOK];
       editor.destroy();
       this.instance.set(null);
     });
   }
 
-  /** Foca o editável (o pedido antes da criação chega com a Tarefa 4). */
+  /** Foca o editável; antes da criação, o pedido vale logo depois dela. */
   focus(options?: FocusOptions): void {
-    untracked(this.instance)?.commands.focus(null, {
+    const editor = untracked(this.instance);
+    if (!editor) {
+      this.pendingFocus = options ?? {};
+      return;
+    }
+    editor.commands.focus(null, {
       scrollIntoView: options?.preventScroll !== true,
     });
   }
