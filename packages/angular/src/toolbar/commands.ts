@@ -4,7 +4,7 @@ import type { RteToolbarItemId } from './items';
 import {
   RTE_INSERT_TABLE,
   RTE_TABLE_OPS,
-  readTableMenuState,
+  readTableOpState,
   type RteTableOp,
 } from './table-guard';
 
@@ -110,7 +110,7 @@ export function calloutVariantAt(editor: Editor): string | null {
 
 /** Executa a operação de tabela se o menu a habilita (U14). */
 export function runTableOp(editor: Editor, op: RteTableOp): boolean {
-  if (!readTableMenuState(editor)[op].enabled) return false;
+  if (!readTableOpState(editor, op).enabled) return false;
   return op === 'insertTable'
     ? run(editor, op, RTE_INSERT_TABLE)
     : run(editor, op);

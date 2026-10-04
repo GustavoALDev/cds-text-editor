@@ -153,27 +153,33 @@ const LIMITED: RteTableOpState = Object.freeze({
 });
 
 /**
- * Estado das operações do menu de tabela: `insertTable` só fora de tabela;
- * as demais só dentro, com `can()` e, nas que crescem, a guarda (U14).
+ * Estado de uma operação de tabela: `insertTable` só fora de tabela; as
+ * demais só dentro, com `can()` e, nas que crescem, a guarda (U14). Ensaia
+ * só a operação pedida.
+ */
+export function readTableOpState(
+  editor: Editor,
+  op: RteTableOp,
+): RteTableOpState {
+  const { state } = editor;
+  const inTable = isInTable(state);
+  if (op === 'insertTable') return !inTable && can(editor, op) ? ON : OFF;
+  if (!inTable) return OFF;
+  if (isGrowing(op)) {
+    const tr = rehearse(state, op);
+    return tr === null ? OFF : tableHasSpanOverLimit(tr) ? LIMITED : ON;
+  }
+  return can(editor, op) ? ON : OFF;
+}
+
+/**
+ * Estado de todas as operações do menu de tabela ({@link readTableOpState}).
  * Ensaia as operações que crescem: chame só com o menu aberto.
  */
 export function readTableMenuState(
   editor: Editor,
 ): Readonly<Record<RteTableOp, RteTableOpState>> {
-  const { state } = editor;
-  const inTable = isInTable(state);
   const out = {} as Record<RteTableOp, RteTableOpState>;
-  for (const op of RTE_TABLE_OPS) {
-    if (op === 'insertTable') {
-      out[op] = !inTable && can(editor, op) ? ON : OFF;
-    } else if (!inTable) {
-      out[op] = OFF;
-    } else if (isGrowing(op)) {
-      const tr = rehearse(state, op);
-      out[op] = tr === null ? OFF : tableHasSpanOverLimit(tr) ? LIMITED : ON;
-    } else {
-      out[op] = can(editor, op) ? ON : OFF;
-    }
-  }
+  for (const op of RTE_TABLE_OPS) out[op] = readTableOpState(editor, op);
   return Object.freeze(out);
 }

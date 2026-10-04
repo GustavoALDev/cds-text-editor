@@ -153,67 +153,179 @@ describe('guarda de colspan > 100 (U14, R8)', () => {
   }
 });
 
-describe('guarda de rowspan > 100 (U14, R8)', () => {
-  // Coluna 0: Y com rowspan 100; coluna 1: `rNr` por linha; a linha 100 fica
-  // fora de Y.
-  const html = table([
-    tr([td('Y', ' rowspan="100"'), td('r0r')]),
-    ...range(99).map((i) => tr([td(`r${i + 1}r`)])),
-    tr([td('fora'), td('r100r')]),
-  ]);
-
-  it('linha dentro da faixa de Y: addRowBefore/After bloqueados', () => {
-    const editor = createTestEditor(html);
-    selectText(editor, 'r50r', 1);
-    const menu = readTableMenuState(editor);
-    expect(menu.addRowBefore).toEqual({ enabled: false, spanLimited: true });
-    expect(menu.addRowAfter).toEqual({ enabled: false, spanLimited: true });
+/**
+ * Coluna 0: célula `rowspan="100"` (Y) começando na linha 0 (`first`), 1
+ * (`middle`, com uma linha acima e uma abaixo) ou 2 (`last`); coluna 1:
+ * `rNr` em cada uma das 102 linhas.
+ */
+function rowspanTable(at: 'first' | 'middle' | 'last'): {
+  html: string;
+  /** Linhas cobertas por Y: [início, fim). */
+  span: [number, number];
+} {
+  const start = at === 'first' ? 0 : at === 'middle' ? 1 : 2;
+  const end = start + 100;
+  const rows = range(102).map((i) => {
+    const first =
+      i === start
+        ? [td('Y', ' rowspan="100"')]
+        : i < start || i >= end
+          ? [td(`o${i}o`)]
+          : [];
+    return tr([...first, td(`r${i}r`)]);
   });
+  return { html: table(rows), span: [start, end] };
+}
 
-  it('linha fora da faixa de Y: livres', () => {
-    const editor = createTestEditor(html);
-    selectText(editor, 'r100r', 1);
-    const menu = readTableMenuState(editor);
-    expect(menu.addRowBefore).toEqual({ enabled: true, spanLimited: false });
-    expect(menu.addRowAfter).toEqual({ enabled: true, spanLimited: false });
+describe('guarda de rowspan > 100 (U14, R8)', () => {
+  for (const at of ['first', 'middle', 'last'] as const) {
+    describe(`Y começando na linha ${at}`, () => {
+      const { html, span } = rowspanTable(at);
+      const [start, end] = span;
+      const outside = at === 'last' ? 0 : 101;
+
+      it('linha dentro da faixa de Y: addRowBefore/After bloqueados', () => {
+        const editor = createTestEditor(html);
+        selectText(editor, `r${start + 50}r`, 1);
+        const menu = readTableMenuState(editor);
+        expect(menu.addRowBefore).toEqual({
+          enabled: false,
+          spanLimited: true,
+        });
+        expect(menu.addRowAfter).toEqual({ enabled: false, spanLimited: true });
+        expect(exceedsSpanLimit(editor.state, 'addRowAfter')).toBe(true);
+      });
+
+      it('linha fora da faixa de Y: livres', () => {
+        const editor = createTestEditor(html);
+        selectText(editor, `r${outside}r`, 1);
+        const menu = readTableMenuState(editor);
+        expect(menu.addRowBefore).toEqual({
+          enabled: true,
+          spanLimited: false,
+        });
+        expect(menu.addRowAfter).toEqual({ enabled: true, spanLimited: false });
+      });
+
+      it('nas bordas da faixa só cresce o lado de dentro', () => {
+        const editor = createTestEditor(html);
+        selectText(editor, `r${start}r`, 1);
+        expect(readTableMenuState(editor).addRowBefore.spanLimited).toBe(false);
+        expect(readTableMenuState(editor).addRowAfter.spanLimited).toBe(true);
+        selectText(editor, `r${end - 1}r`, 1);
+        expect(readTableMenuState(editor).addRowBefore.spanLimited).toBe(true);
+        expect(readTableMenuState(editor).addRowAfter.spanLimited).toBe(false);
+      });
+
+      it('cursor em Y: a linha entra na borda de Y, livre', () => {
+        const editor = createTestEditor(html);
+        selectText(editor, 'Y', 1);
+        const menu = readTableMenuState(editor);
+        expect(menu.addRowBefore.spanLimited).toBe(false);
+        expect(menu.addRowAfter.spanLimited).toBe(false);
+      });
+    });
+  }
+});
+
+describe('runTableOp bloqueado não muda o HTML (U14)', () => {
+  it.each([
+    ['addColumnBefore', 'col'],
+    ['addColumnAfter', 'col'],
+    ['addRowBefore', 'row'],
+    ['addRowAfter', 'row'],
+  ] as const)('%s', (op, axis) => {
+    const editor = createTestEditor(
+      axis === 'col'
+        ? colspanTable('middle').html
+        : rowspanTable('middle').html,
+    );
+    selectText(editor, axis === 'col' ? 'k51k' : 'r51r', 1);
+    const before = getRteHtml(editor);
+    expect(runTableOp(editor, op)).toBe(false);
+    expect(getRteHtml(editor)).toBe(before);
   });
 });
 
+/** `CellSelection` da primeira à segunda célula do documento. */
+function selectFirstTwoCells(editor: Editor): void {
+  const [a, b] = cellPositions(editor.state.doc);
+  editor.view.dispatch(
+    editor.state.tr.setSelection(
+      CellSelection.create(editor.state.doc, a ?? 0, b ?? 0),
+    ),
+  );
+}
+
 describe('guarda de mergeCells (U14, R8)', () => {
-  function mergeState(second: number) {
+  /** Horizontal: `colspan` 99 + `second` numa linha. */
+  function horizontal(second: number) {
     const editor = createTestEditor(
       table([tr([td('a', ' colspan="99"'), td('b', ` colspan="${second}"`)])]),
     );
-    const [a, b] = cellPositions(editor.state.doc);
-    editor.view.dispatch(
-      editor.state.tr.setSelection(
-        CellSelection.create(editor.state.doc, a ?? 0, b ?? 0),
-      ),
-    );
+    selectFirstTwoCells(editor);
     return editor;
   }
 
-  it('99 + 2 → bloqueado', () => {
-    const editor = mergeState(2);
-    expect(readTableMenuState(editor).mergeCells).toEqual({
+  /** Vertical: `rowspan` 99 + `second` numa coluna. */
+  function vertical(second: number) {
+    const editor = createTestEditor(
+      table([
+        tr([td('a', ' rowspan="99"')]),
+        ...range(98).map(() => tr([])),
+        tr([td('b', second > 1 ? ` rowspan="${second}"` : '')]),
+        ...range(second - 1).map(() => tr([])),
+      ]),
+    );
+    selectFirstTwoCells(editor);
+    return editor;
+  }
+
+  it.each([
+    ['horizontal', horizontal],
+    ['vertical', vertical],
+  ] as const)('%s: 99 + 2 → bloqueado, 99 + 1 → livre', (_axis, make) => {
+    expect(readTableMenuState(make(2)).mergeCells).toEqual({
       enabled: false,
       spanLimited: true,
     });
-  });
-
-  it('99 + 1 → livre', () => {
-    const editor = mergeState(1);
-    expect(readTableMenuState(editor).mergeCells).toEqual({
+    expect(readTableMenuState(make(1)).mergeCells).toEqual({
       enabled: true,
       spanLimited: false,
     });
   });
 
   it('runTableOp bloqueado não muda o HTML', () => {
-    const editor = mergeState(2);
-    const before = getRteHtml(editor);
-    expect(runTableOp(editor, 'mergeCells')).toBe(false);
-    expect(getRteHtml(editor)).toBe(before);
+    for (const make of [horizontal, vertical]) {
+      const editor = make(2);
+      const before = getRteHtml(editor);
+      expect(runTableOp(editor, 'mergeCells')).toBe(false);
+      expect(getRteHtml(editor)).toBe(before);
+    }
+  });
+});
+
+describe('span já acima de 100 (pré-voo 13)', () => {
+  it('célula com colspan 101 vinda da API bloqueia as operações que crescem', () => {
+    const editor = createTestEditor(table([tr([td('a'), td('b')])]));
+    const [a] = cellPositions(editor.state.doc);
+    // API direta (ADR 0004): sai com 1 no HTML, mas o documento guarda 101.
+    editor.view.dispatch(
+      editor.state.tr.setNodeAttribute(a ?? 0, 'colspan', 101),
+    );
+    expect(hasSpanOverLimit(editor.state.doc)).toBe(true);
+    selectText(editor, 'b', 1);
+    const menu = readTableMenuState(editor);
+    for (const op of [
+      'addRowBefore',
+      'addRowAfter',
+      'addColumnBefore',
+      'addColumnAfter',
+    ] as const) {
+      expect(menu[op]).toEqual({ enabled: false, spanLimited: true });
+    }
+    // operações que não crescem continuam livres
+    expect(menu.deleteRow.enabled).toBe(true);
   });
 });
 
@@ -242,12 +354,18 @@ describe('ensaio (pré-voo 13)', () => {
 });
 
 /** Tabela gerada: linhas de células `[colspan, rowspan]`. */
+type Rows = (readonly [number, number])[][];
+
 const span = fc.oneof(
   { weight: 3, arbitrary: fc.integer({ min: 1, max: 3 }) },
-  { weight: 2, arbitrary: fc.integer({ min: 95, max: 100 }) },
+  // 100 cresce para 101 com uma linha/coluna; 95–99 somam > 100 no merge
+  { weight: 2, arbitrary: fc.constant(100) },
+  { weight: 2, arbitrary: fc.integer({ min: 95, max: 99 }) },
   { weight: 1, arbitrary: fc.integer({ min: 1, max: 100 }) },
 );
-const tableArb = fc.array(
+
+/** Larga: 1–4 linhas de 1–3 células com colspan/rowspan 1–100. */
+const wideArb: fc.Arbitrary<Rows> = fc.array(
   fc.array(fc.tuple(span, fc.oneof(fc.constant(1), span)), {
     minLength: 1,
     maxLength: 3,
@@ -255,7 +373,35 @@ const tableArb = fc.array(
   { minLength: 1, maxLength: 4 },
 );
 
-function tableHtml(rows: readonly (readonly [number, number])[][]): string {
+/**
+ * Alta: 1–3 colunas, cada uma com 1–2 trechos verticais (rowspan 1–100,
+ * colspan 1); as colunas mais curtas são completadas com células simples até
+ * a altura da mais alta, para o `rowspan` longo caber de verdade.
+ */
+const tallArb: fc.Arbitrary<Rows> = fc
+  .array(fc.array(span, { minLength: 1, maxLength: 2 }), {
+    minLength: 1,
+    maxLength: 3,
+  })
+  .map((columns) => {
+    const height = Math.max(
+      ...columns.map((c) => c.reduce((sum, h) => sum + h, 0)),
+    );
+    const rows: Rows = range(height).map(() => []);
+    for (const segments of columns) {
+      let row = 0;
+      for (const h of segments) {
+        rows[row]?.push([1, h]);
+        row += h;
+      }
+      for (; row < height; row += 1) rows[row]?.push([1, 1]);
+    }
+    return rows;
+  });
+
+const tableArb = fc.oneof(wideArb, tallArb);
+
+function tableHtml(rows: Rows): string {
   let n = 0;
   return table(
     rows.map((row) =>
@@ -274,6 +420,8 @@ function tableHtml(rows: readonly (readonly [number, number])[][]): string {
 
 /** Teto de células depois da normalização (custo do jsdom). */
 const MAX_CELLS = 600;
+/** Mínimo de casos de cada lado (bloqueada/livre) por operação. */
+const MIN_PER_SIDE = 5;
 
 /**
  * Carrega e normaliza a tabela pelo `fixTables` (a carga não passa por ele).
@@ -316,11 +464,15 @@ function select(editor: Editor, index: number, merge: boolean): boolean {
   const map = TableMap.get(found.node);
   const start = found.start;
   const rel = cell - start;
-  const next =
-    map.nextCell(rel, 'horiz', 1) ??
-    map.nextCell(rel, 'horiz', -1) ??
-    map.nextCell(rel, 'vert', 1) ??
-    map.nextCell(rel, 'vert', -1);
+  // Índice par: vizinha horizontal primeiro; ímpar: vertical primeiro.
+  const axes =
+    index % 2 === 0
+      ? (['horiz', 'vert'] as const)
+      : (['vert', 'horiz'] as const);
+  let next: number | null = null;
+  for (const axis of axes) {
+    next ??= map.nextCell(rel, axis, 1) ?? map.nextCell(rel, axis, -1);
+  }
   if (next === null) return false;
   editor.view.dispatch(
     editor.state.tr.setSelection(CellSelection.create(doc, cell, start + next)),
@@ -330,7 +482,9 @@ function select(editor: Editor, index: number, merge: boolean): boolean {
 
 describe('propriedade: guarda ⇔ comando do Tiptap (R8)', () => {
   it('spanLimited ⇔ o comando real deixa célula > 100', () => {
-    const seen = { limited: 0, free: 0 };
+    const seen = Object.fromEntries(
+      GROWING.map((op) => [op, { limited: 0, free: 0 }]),
+    ) as Record<RteGrowingTableOp, { limited: number; free: number }>;
     fc.assert(
       fc.property(tableArb, fc.nat(), (rows, index) => {
         destroyTestEditors();
@@ -346,7 +500,7 @@ describe('propriedade: guarda ⇔ comando do Tiptap (R8)', () => {
           if (!select(guarded, index, merge)) continue;
           select(real, index, merge);
           const limited = readTableMenuState(guarded)[op].spanLimited;
-          seen[limited ? 'limited' : 'free'] += 1;
+          seen[op][limited ? 'limited' : 'free'] += 1;
           const snapshot = real.state;
           real.commands[op]();
           expect(limited).toBe(hasSpanOverLimit(real.state.doc));
@@ -355,10 +509,17 @@ describe('propriedade: guarda ⇔ comando do Tiptap (R8)', () => {
       }),
       { numRuns: RUNS, ...(SEED ? { seed: Number(SEED) } : {}) },
     );
-    // Os dois lados da equivalência aparecem (com execuções suficientes).
+    // Os dois lados da equivalência aparecem em cada operação (com
+    // execuções suficientes).
     if (RUNS >= 100) {
-      expect(seen.limited).toBeGreaterThan(0);
-      expect(seen.free).toBeGreaterThan(0);
+      for (const op of GROWING) {
+        expect(seen[op].limited, `${op} bloqueada`).toBeGreaterThanOrEqual(
+          MIN_PER_SIDE,
+        );
+        expect(seen[op].free, `${op} livre`).toBeGreaterThanOrEqual(
+          MIN_PER_SIDE,
+        );
+      }
     }
   }, 120_000);
 });
