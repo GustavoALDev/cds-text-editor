@@ -32,8 +32,7 @@ export default [
           // Peers exigidos por D24 sem import direto no pacote: as extensões
           // do Tiptap, o lowlight e o highlight.js chegam pelo
           // `@cds/rte-core/extensions`
-          // (uma cópia só do ProseMirror); o `@cds/rte-theme` é dependência
-          // só de CSS (o tema nunca é importado em TypeScript).
+          // (uma cópia só do ProseMirror).
           ignoredDependencies: [
             // Permanentes:
             // `@angular/common` é peer por D24 sem import no pacote: o
@@ -41,7 +40,6 @@ export default [
             // consumidor sempre o tem e o peer fixa a mesma faixa de versão
             // do `@angular/core` e do `@angular/forms`.
             '@angular/common',
-            '@cds/rte-theme',
             '@tiptap/extension-blockquote',
             '@tiptap/extension-bold',
             '@tiptap/extension-code',

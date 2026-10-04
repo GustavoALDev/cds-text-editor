@@ -53,12 +53,12 @@ Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp`
 - Comandos: `npx nx test angular` (zoneless) e `npx nx test-zone angular` (a mesma suíte com `zone.js`); um arquivo: `npx nx test angular --include=<arquivo>.spec.ts` (relativo a `packages/angular/src`); `npx nx run angular:size` (orçamento em `packages/angular/size-budget.json`); app de teste: `npx nx run angular-e2e-app:serve-static` (build + servidor com CSP estrita; `e2e/angular/serve.mjs`). O `vitest-base.config.mts` do pacote (`runnerConfig`) dá 30 s de `testTimeout`/`hookTimeout`.
 - Todos os testes unitários ficam em `packages/angular/src/**/*.spec.ts` (inclusive os de `/i18n`, `/validators` e `/testing`, importando pelo alias público); ajudantes em `src/testing-support/` (fora do build). Arquivo que precisa de Node puro começa com `// @vitest-environment node`. O builder roda com `isolate: false`: estado de módulo é compartilhado, então testes zeram as sondas que leem.
 - Navegador real: `e2e/angular/editor-*.spec.ts` contra o app de teste em `e2e/angular/app`. O `webServer` do Playwright compila os dois apps (zoneless e zone.js) a cada rodada: a frio leva até ~10 min; use `--workers=4`.
-- Grafo inalterado: `angular` depende só de `core` (tag `scope:angular`); `render` de `core` e `sanitizer`. Guardas por lint (D25): sem `@Input`/`@Output`/`@HostListener`/`@HostBinding`, `ngOnChanges`, `zone.js`, globais de DOM, texto literal em template; componentes OnPush, `ViewEncapsulation.None`, `templateUrl`, sem `styles`.
+- Grafo: `angular` depende de `core` e `theme` (tag `scope:angular`; `applyRteTheme`/`warnIfPoorTheme` no tema por instância, spec 05b1 U15); `render` de `core` e `sanitizer`. Guardas por lint (D25): sem `@Input`/`@Output`/`@HostListener`/`@HostBinding`, `ngOnChanges`, `zone.js`, globais de DOM, texto literal em template; componentes OnPush, `ViewEncapsulation.None`, `templateUrl`, sem `styles`.
 - Decisões: ADR 0007 (`docs/decisions/0007-componente-e-formularios.md`).
 
 ## Convenções
 
-- Grafo de dependências: `theme` e `core` não dependem de nenhum pacote do workspace; `sanitizer` depende só de `core`; `angular` só de `core`; `render` de `core` e `sanitizer`. Os limites são impostos por lint (tags `scope:*` em `eslint.config.mjs`).
+- Grafo de dependências: `theme` e `core` não dependem de nenhum pacote do workspace; `sanitizer` depende só de `core`; `angular` de `core` e `theme`; `render` de `core` e `sanitizer`. Os limites são impostos por lint (tags `scope:*` em `eslint.config.mjs`).
 - Proibido importar `@angular/*` em `core`, `sanitizer` e `theme`.
 - Dependência entre pacotes só via alias de `tsconfig.base.json` (`@cds/rte-*`).
 - `tsconfig.spec.json` de cada pacote usa `composite: false`.

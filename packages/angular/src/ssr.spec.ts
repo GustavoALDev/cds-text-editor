@@ -15,7 +15,7 @@ import {
   renderApplication,
 } from '@angular/platform-server';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteEditor } from '@cds/rte-angular';
+import { provideRichText, RteEditor } from '@cds/rte-angular';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // R12 (D19): no servidor só a casca; nenhum Editor e nenhum HTML do valor.
@@ -126,6 +126,42 @@ describe('RteEditor no servidor (R12)', () => {
       const hosts = [...html.matchAll(/<rte-editor\b[^>]*>/g)].map(([m]) => m);
       expect(hosts).toHaveLength(2);
       for (const host of hosts) expect(host).not.toMatch(/\sstyle=/);
+    },
+  );
+  it(
+    'tema do provider: data-rte-mode no HTML e nenhum style no host (U15, R10)',
+    { timeout: 30_000 },
+    async () => {
+      const html = await withServerDomAdapter(() =>
+        renderApplication(
+          (context) =>
+            bootstrapApplication(
+              SsrHost,
+              {
+                providers: [
+                  provideZonelessChangeDetection(),
+                  provideServerRendering(),
+                  provideRichText({
+                    theme: { mode: 'dark', primary: '#0b57d0' },
+                  }),
+                ],
+              },
+              context,
+            ),
+          {
+            document:
+              '<!doctype html><html><head></head><body><rte-ssr-host></rte-ssr-host></body></html>',
+            url: '/',
+          },
+        ),
+      );
+      const hosts = [...html.matchAll(/<rte-editor\b[^>]*>/g)].map(([m]) => m);
+      expect(hosts).toHaveLength(2);
+      for (const host of hosts) {
+        expect(host).toContain('data-rte-mode="dark"');
+        expect(host).not.toMatch(/\sstyle=/);
+      }
+      expect(html).not.toContain('--rte-');
     },
   );
 });

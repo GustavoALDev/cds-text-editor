@@ -1,5 +1,6 @@
 import {
   afterNextRender,
+  afterRenderEffect,
   booleanAttribute,
   ChangeDetectionStrategy,
   Component,
@@ -31,6 +32,7 @@ import {
   RTE_LABELS_META,
   type RteCharLimitState,
 } from '@cds/rte-core/extensions';
+import { applyRteTheme, warnIfPoorTheme, type RteTheme } from '@cds/rte-theme';
 import { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
@@ -40,6 +42,7 @@ import type { RteLabels, RteLabelsSource } from '../labels/types';
 import { pickToolbarConfig, resolveToolbarGroups } from '../toolbar/config';
 import type { RteToolbarConfig, RteToolbarItemId } from '../toolbar/items';
 import { RteToolbar } from '../toolbar/rte-toolbar';
+import { mergeTheme, sameTheme, themeKey } from '../theme/instance-theme';
 import {
   editableAttributes,
   presentText,
@@ -111,6 +114,8 @@ function toCharLimit(value: number | undefined): number | null {
     '[class.rte-editor--readonly]': 'readonly()',
     '[class.rte-editor--focused]': 'hostFocused()',
     '[class.rte-editor--invalid]': 'invalid() && touched()',
+    // Atributo (sai no SSR), não estilo; o `applyRteTheme` grava o mesmo valor.
+    '[attr.data-rte-mode]': 'effectiveTheme()?.mode ?? null',
     '(focusin)': 'onHostFocusIn($event)',
     '(focusout)': 'onHostFocusOut($event)',
     '(keydown)': 'onHostKeydown($event)',
@@ -137,6 +142,8 @@ export class RteEditor implements FormValueControl<string> {
   readonly options = input<RteEditorConfig | undefined>(undefined);
   /** Barra: entrada > `provideRichText` > `'article'`; vale ao vivo (U8). */
   readonly toolbar = input<RteToolbarConfig | undefined>(undefined);
+  /** Tema: mesclado por chave sobre o de `provideRichText`; ao vivo (U15). */
+  readonly theme = input<RteTheme | undefined>(undefined);
 
   // Saídas
   readonly editorReady = output<Editor>();
@@ -256,6 +263,12 @@ export class RteEditor implements FormValueControl<string> {
     equal: samePalette,
   });
 
+  /** Tema efetivo (U15): instância > provider por chave; igual por valor. */
+  protected readonly effectiveTheme = computed(
+    () => mergeTheme(this.config.theme, this.theme()),
+    { equal: sameTheme },
+  );
+
   /** Versão da ponte, para a barra (U5). */
   protected readonly version = this.bridge.version;
   protected readonly contentLabels = computed(
@@ -365,17 +378,42 @@ export class RteEditor implements FormValueControl<string> {
       });
     });
 
-    // `disabled`/`hidden` com o foco dentro do host: o foco sai (sem
+    // `disabled`/`hidden` com o foco dentro do host (ou `readonly` com o foco
+    // na barra, cujos botões ficam `disabled`): o foco sai (sem
     // `relatedTarget`) e o `focusout` emite `editorBlur`/`touch` uma vez
-    // (Review Focus 4). Navegadores que já tiraram o foco não duplicam:
-    // `hostFocused` guarda o estado.
-    effect(() => {
-      if (!this.effectiveDisabled() && !this.hidden()) return;
-      untracked(() => {
-        const active = host.ownerDocument?.activeElement as
-          (Element & { blur?: () => void }) | null | undefined;
-        if (active && active !== host && host.contains(active)) active.blur?.();
-      });
+    // (Review Focus 4). Na fase de escrita do render, depois da detecção de
+    // mudanças (U18): emitir durante ela daria `NG0100`. Navegadores que já
+    // tiraram o foco não duplicam: `hostFocused` guarda o estado.
+    afterRenderEffect({
+      write: () => {
+        const off = this.effectiveDisabled() || this.hidden();
+        if (!off && !this.readonly()) return;
+        untracked(() => {
+          this.toolbarRef()?.closeMenus();
+          const active = host.ownerDocument?.activeElement as
+            (HTMLElement & { blur?: () => void }) | null | undefined;
+          if (!active || active === host || !host.contains(active)) return;
+          const scope = off ? host : host.querySelector('.rte-toolbar');
+          if (scope?.contains(active)) active.blur?.();
+        });
+      },
+    });
+
+    // Tema (U15): só no navegador; a limpeza anterior roda a cada mudança e
+    // no destroy. `warnIfPoorTheme` uma vez por tema diferente, só em
+    // desenvolvimento (`ngDevMode` some no build de produção).
+    const warnedThemes = new Set<string>();
+    afterRenderEffect((onCleanup) => {
+      const theme = this.effectiveTheme();
+      if (!theme) return;
+      onCleanup(applyRteTheme(host, theme));
+      if (typeof ngDevMode !== 'undefined' && ngDevMode) {
+        const key = themeKey(theme);
+        if (!warnedThemes.has(key)) {
+          warnedThemes.add(key);
+          warnIfPoorTheme(theme);
+        }
+      }
     });
 
     // Rótulos e placeholder ao vivo (D15): uma transação só de meta relê as
