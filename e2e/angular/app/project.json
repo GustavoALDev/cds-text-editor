@@ -1,0 +1,93 @@
+{
+  "name": "angular-e2e-app",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "app",
+  "sourceRoot": "e2e/angular/app/src",
+  "tags": ["scope:e2e"],
+  "targets": {
+    "build": {
+      "executor": "@nx/angular:application",
+      "cache": true,
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/packages/theme/src/theme.css",
+        "{workspaceRoot}/packages/angular/styles/editor.css"
+      ],
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/e2e/angular/app",
+        "browser": "e2e/angular/app/src/main.ts",
+        "server": "e2e/angular/app/src/main.server.ts",
+        "outputMode": "static",
+        "index": "e2e/angular/app/src/index.html",
+        "tsConfig": "e2e/angular/app/tsconfig.app.json",
+        "polyfills": [],
+        "assets": [{ "glob": "**/*", "input": "e2e/angular/app/public" }],
+        "styles": [
+          "packages/theme/src/theme.css",
+          "packages/angular/styles/editor.css",
+          "e2e/angular/app/src/styles.css"
+        ],
+        "optimization": {
+          "scripts": true,
+          "styles": { "minify": true, "inlineCritical": false },
+          "fonts": false
+        },
+        "outputHashing": "all",
+        "sourceMap": false,
+        "extractLicenses": false
+      }
+    },
+    "build-zone": {
+      "executor": "@nx/angular:application",
+      "cache": true,
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/packages/theme/src/theme.css",
+        "{workspaceRoot}/packages/angular/styles/editor.css"
+      ],
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/e2e/angular/app-zone",
+        "browser": "e2e/angular/app/src/main.ts",
+        "server": "e2e/angular/app/src/main.server.ts",
+        "outputMode": "static",
+        "index": "e2e/angular/app/src/index.html",
+        "tsConfig": "e2e/angular/app/tsconfig.app.json",
+        "polyfills": ["zone.js"],
+        "baseHref": "/zone/",
+        "fileReplacements": [
+          {
+            "replace": "e2e/angular/app/src/app/change-detection.ts",
+            "with": "e2e/angular/app/src/app/change-detection.zone.ts"
+          }
+        ],
+        "assets": [{ "glob": "**/*", "input": "e2e/angular/app/public" }],
+        "styles": [
+          "packages/theme/src/theme.css",
+          "packages/angular/styles/editor.css",
+          "e2e/angular/app/src/styles.css"
+        ],
+        "optimization": {
+          "scripts": true,
+          "styles": { "minify": true, "inlineCritical": false },
+          "fonts": false
+        },
+        "outputHashing": "all",
+        "sourceMap": false,
+        "extractLicenses": false
+      }
+    },
+    "serve-static": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build", "build-zone"],
+      "options": {
+        "command": "node e2e/angular/serve.mjs",
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+/* App de teste: só o layout da página; o editor vem do tema e do editor.css. */
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
+
+main {
+  max-width: 720px;
+  margin: 16px auto;
+  padding: 0 16px;
+}
+
+nav {
+  display: flex;
+  gap: 12px;
+  padding: 8px 16px;
+}
+
+section {
+  margin-block: 16px;
+}

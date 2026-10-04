@@ -1,0 +1,30 @@
+<section>
+  <rte-editor
+    data-testid="signal"
+    ariaLabel="Signal Forms"
+    [formField]="f.body"
+    (editorReady)="bridge.ready('signal')"
+    (editorBlur)="onBlur()"
+  />
+</section>
+<section>
+  <form [formGroup]="group">
+    <rte-editor
+      data-testid="reactive"
+      ariaLabel="Reactive Forms"
+      formControlName="body"
+      (editorReady)="bridge.ready('reactive')"
+      (editorBlur)="onBlur()"
+    />
+  </form>
+</section>
+<section>
+  <rte-editor
+    data-testid="plain"
+    ariaLabel="Plain value"
+    [(value)]="plain"
+    (editorReady)="bridge.ready('plain')"
+    (editorBlur)="onBlur()"
+  />
+</section>
+<output id="blur-count">{{ blurCount }}</output>

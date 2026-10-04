@@ -15,6 +15,8 @@ const NG_OUTPUT = [
   /^[^/]+\/package\.json$/,
   /^[^/]+\/types\//,
   /^[^/]+\.d\.ts$/,
+  // CSS exportado como arquivo (`assets` do ng-package.json; spec 05a, D16).
+  /^styles\/[^/]+\.css$/,
 ];
 const FORBIDDEN = [/\.spec\./, /\.tsbuildinfo$/];
 

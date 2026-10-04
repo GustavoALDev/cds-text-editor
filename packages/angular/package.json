@@ -3,13 +3,16 @@
   "version": "0.0.0",
   "description": "Componente Angular do editor de texto rico cds-text-editor.",
   "license": "MIT",
+  "exports": {
+    "./styles/editor.css": "./styles/editor.css"
+  },
   "sideEffects": [
     "*.css"
   ],
   "peerDependencies": {
-    "@angular/core": ">=22.2.0 <23",
-    "@angular/common": ">=22.2.0 <23",
-    "@angular/forms": ">=22.2.0 <23",
+    "@angular/core": ">=22.2.1 <23",
+    "@angular/common": ">=22.2.1 <23",
+    "@angular/forms": ">=22.2.1 <23",
     "@cds/rte-core": "0.0.0",
     "@cds/rte-theme": "0.0.0",
     "@tiptap/core": "^3.31.4",

@@ -1,0 +1,8 @@
+<rte-editor
+  data-testid="content"
+  ariaLabel="Content"
+  placeholder="Write here"
+  [options]="options"
+  [(value)]="value"
+  (editorReady)="bridge.ready('content')"
+/>
