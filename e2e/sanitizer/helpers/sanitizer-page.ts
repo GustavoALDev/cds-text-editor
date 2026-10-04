@@ -68,3 +68,54 @@ export async function loadSanitizerPage(page: Page): Promise<void> {
   await page.goto(`${ORIGIN}/`);
   await page.waitForFunction(() => typeof window.RteSanitizerLab === 'object');
 }
+
+/** Violações de `script-src*` gravadas até agora na página. */
+export function scriptViolations(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
+    window.__violations.filter((v) => v.startsWith('script-src')),
+  );
+}
+
+/**
+ * Espera os recursos de `#root` assentarem: cada `img` termina de carregar ou
+ * falha (é aí que um `onerror` dispararia), depois uma tarefa, um quadro e
+ * 100 ms para os `securitypolicyviolation` assíncronos chegarem. Imagens
+ * `loading="lazy"` fora da tela nunca carregam sem rolagem (e nunca disparam
+ * `onerror`), então não entram na espera; um teto de 5 s evita travar o teste.
+ */
+export async function settleRoot(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const imgs = [
+      ...document.querySelectorAll<HTMLImageElement>('#root img'),
+    ].filter((img) => !img.complete && img.loading !== 'lazy');
+    const settled = Promise.all(
+      imgs.map(
+        (img) =>
+          new Promise((res) => {
+            img.addEventListener('load', res, { once: true });
+            img.addEventListener('error', res, { once: true });
+          }),
+      ),
+    );
+    await Promise.race([settled, new Promise((res) => setTimeout(res, 5000))]);
+    await new Promise((res) => setTimeout(res, 0));
+    await new Promise((res) => requestAnimationFrame(() => res(0)));
+    await new Promise((res) => setTimeout(res, 100));
+  });
+}
+
+/**
+ * Controle positivo do ouvinte de CSP: insere HTML **não sanitizado** com
+ * handlers inline (`<img onerror>` e `<a onclick>`, que é clicado). O CSP
+ * (sem `unsafe-inline`) bloqueia os handlers, então `__xss` nunca roda; o
+ * sinal é a violação de `script-src*` gravada pelo ouvinte. Sem este controle,
+ * "nenhuma violação de `script-src`" nos testes não provaria nada.
+ */
+export async function insertUnsanitizedHandlers(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const root = document.getElementById('root')!;
+    root.innerHTML =
+      '<img src="x" onerror="alert(1)"><a id="control" href="#" onclick="alert(1)">x</a>';
+  });
+  await page.click('#control');
+}

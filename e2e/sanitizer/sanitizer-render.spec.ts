@@ -4,7 +4,11 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { loadSanitizerPage } from './helpers/sanitizer-page';
+import {
+  insertUnsanitizedHandlers,
+  loadSanitizerPage,
+  scriptViolations,
+} from './helpers/sanitizer-page';
 
 const fixture = readFileSync(
   resolve(__dirname, '../../fixtures/content/all-features.html'),
@@ -60,4 +64,15 @@ test('S3: o fixture sanitizado renderiza com sandbox, sem on* e com as cores da 
   // Controle: o CSP está ativo e o ouvinte registra (imagens externas bloqueadas);
   // sem isto o `toEqual([])` acima não provaria nada.
   expect(r.violations.some((v) => v.startsWith('img-src'))).toBe(true);
+});
+
+test('controle: o ouvinte grava a violação de script-src de handlers inline não sanitizados', async ({
+  page,
+}) => {
+  await loadSanitizerPage(page);
+  await insertUnsanitizedHandlers(page);
+  await expect
+    .poll(async () => (await scriptViolations(page)).length)
+    .toBeGreaterThanOrEqual(1);
+  expect(await page.evaluate(() => window.__xssCalls)).toBe(0);
 });

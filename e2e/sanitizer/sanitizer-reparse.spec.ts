@@ -7,7 +7,12 @@ import * as fc from 'fast-check';
 import type { RteSanitizeOptions } from '../../packages/sanitizer/src/index';
 import { hostileHtml } from '../../packages/sanitizer/src/testing/html-arbitraries';
 import { XSS_CORPUS } from '../../packages/sanitizer/src/testing/xss-corpus';
-import { loadSanitizerPage } from './helpers/sanitizer-page';
+import {
+  insertUnsanitizedHandlers,
+  loadSanitizerPage,
+  scriptViolations,
+  settleRoot,
+} from './helpers/sanitizer-page';
 
 interface Case {
   input: string;
@@ -149,17 +154,23 @@ test(`R7: corpus de XSS e ${RUNS} casos hostis relidos pelo parser do navegador`
 
   expect(failures.slice(0, 10), `${failures.length} falhas de I1`).toEqual([]);
 
-  // Handlers e recursos atrasados: espera o `load` e mais 100 ms.
-  await page.waitForLoadState('load');
-  const { calls, scriptViolations } = await page.evaluate(async () => {
-    await new Promise((r) => setTimeout(r, 100));
-    return {
-      calls: window.__xssCalls,
-      scriptViolations: window.__violations.filter((v) =>
-        v.startsWith('script-src'),
-      ),
-    };
-  });
-  expect(calls).toBe(0);
-  expect(scriptViolations).toEqual([]);
+  // Handlers e recursos atrasados: espera cada `img` carregar ou falhar e os
+  // eventos assíncronos de CSP chegarem. O CSP bloqueia handlers inline, então
+  // o sinal de um handler que passou é a violação de `script-src*` (o controle
+  // abaixo prova que o ouvinte a grava neste motor); `__xssCalls` só pegaria
+  // código que escapasse do CSP.
+  await settleRoot(page);
+  expect(await scriptViolations(page)).toEqual([]);
+  expect(await page.evaluate(() => window.__xssCalls)).toBe(0);
+});
+
+test('controle: handlers inline não sanitizados geram violação de script-src', async ({
+  page,
+}) => {
+  await loadSanitizerPage(page);
+  await insertUnsanitizedHandlers(page);
+  await expect
+    .poll(async () => (await scriptViolations(page)).length)
+    .toBeGreaterThanOrEqual(1);
+  expect(await page.evaluate(() => window.__xssCalls)).toBe(0);
 });
