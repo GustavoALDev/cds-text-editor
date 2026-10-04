@@ -101,3 +101,45 @@ test('output is sorted and deterministic regardless of lockfile order', () => {
 test('invalid lockfile fails closed', () => {
   assert.throws(() => generateNotices({}, noText), /lockfile inválido/);
 });
+
+const lucide = {
+  name: 'lucide',
+  version: '1.52.0',
+  license: 'ISC',
+  source: 'https://lucide.dev',
+  files: ['packages/angular/src/toolbar/icons.ts'],
+  licenseText:
+    'ISC License\r\n\r\nCopyright (c) Lucide Icons and Contributors\r\n',
+};
+
+test('embedded code gets its own section after the dependencies', () => {
+  const out = generateNotices(
+    lockOf({
+      'packages/core': { dependencies: { a: '*' } },
+      'node_modules/a': { version: '1.0.0', license: 'MIT' },
+    }),
+    noText,
+    [lucide],
+  );
+  assert.match(out, /## a@1\.0\.0/);
+  assert.match(
+    out,
+    /## Código incorporado\n\n### lucide@1\.52\.0\n\nLicença: ISC/,
+  );
+  assert.match(out, /Origem: https:\/\/lucide\.dev/);
+  assert.match(out, /Arquivos: `packages\/angular\/src\/toolbar\/icons\.ts`/);
+  assert.match(out, /```text\nISC License\n\nCopyright/);
+  assert.ok(out.indexOf('## a@') < out.indexOf('## Código incorporado'));
+});
+
+test('embedded code without production dependencies does not use the empty text', () => {
+  const out = generateNotices(
+    lockOf({ 'packages/core': { dependencies: {} } }),
+    noText,
+    [lucide],
+  );
+  assert.doesNotMatch(out, /Nenhuma dependência de produção/);
+  assert.match(out, /^# Avisos de terceiros\n\n## Código incorporado/);
+  assert.match(out, /### lucide@1\.52\.0/);
+  assert.match(out, /ISC/);
+});

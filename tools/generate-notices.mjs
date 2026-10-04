@@ -71,12 +71,40 @@ export function readLicenseText(key, root = '.') {
   return file ? readFileSync(join(dir, file), 'utf8') : undefined;
 }
 
+/**
+ * Código de terceiros copiado para o repositório (não é dependência).
+ * @typedef {{ name: string, version: string, license: string, source: string, files: string[], licenseText: string }} EmbeddedNotice
+ */
+
+const byNameVersion = (a, b) =>
+  (a.name < b.name ? -1 : a.name > b.name ? 1 : 0) ||
+  (a.version < b.version ? -1 : a.version > b.version ? 1 : 0);
+
+/** @param {EmbeddedNotice[]} embedded */
+function embeddedSection(embedded) {
+  const fence = '```';
+  const parts = [...embedded]
+    .sort(byNameVersion)
+    .map(({ name, version, license, source, files, licenseText }) => {
+      const list = files.map((f) => `\`${f}\``).join(', ');
+      const text = licenseText.replace(/\r\n/g, '\n').trim();
+      return `### ${name}@${version}\n\nLicença: ${license}\n\nOrigem: ${source}\n\nArquivos: ${list}\n\n${fence}text\n${text}\n${fence}\n`;
+    });
+  return `## Código incorporado\n\n${parts.join('\n')}`;
+}
+
 // `licenseText(key)` é injetável para testes; o documento é determinístico (ordenado por nome/versão).
-export function generateNotices(lock, licenseText = readLicenseText) {
+// `embedded` lista o código copiado para o repositório (seção "Código incorporado").
+/** @param {EmbeddedNotice[]} [embedded] */
+export function generateNotices(
+  lock,
+  licenseText = readLicenseText,
+  embedded = [],
+) {
   const invalid = lockfileError(lock);
   if (invalid) throw new Error(invalid);
   const entries = productionEntries(lock);
-  if (entries.length === 0) return EMPTY;
+  if (entries.length === 0 && embedded.length === 0) return EMPTY;
   const sections = entries.map(({ key, name, version, license }) => {
     const text = licenseText(key)?.replace(/\r\n/g, '\n').trim();
     const body = text
@@ -84,11 +112,15 @@ export function generateNotices(lock, licenseText = readLicenseText) {
       : '\n(texto da licença não encontrado no pacote)\n';
     return `## ${name}@${version}\n\nLicença: ${license}\n${body}`;
   });
+  if (embedded.length > 0) sections.push(embeddedSection(embedded));
   return `# Avisos de terceiros\n\n${sections.join('\n')}`;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
-  writeFileSync(OUT, generateNotices(lock));
+  const embedded = JSON.parse(
+    readFileSync('tools/third-party-embedded.json', 'utf8'),
+  );
+  writeFileSync(OUT, generateNotices(lock, readLicenseText, embedded));
   console.log(`${OUT} gerado`);
 }
