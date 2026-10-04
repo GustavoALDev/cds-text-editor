@@ -20,6 +20,7 @@
     "paths": {
       "@cds/rte-core": ["./packages/core/src/index.ts"],
       "@cds/rte-core/embeds": ["./packages/core/embeds/src/index.ts"],
+      "@cds/rte-core/html": ["./packages/core/html/src/index.ts"],
       "@cds/rte-core/extensions": ["./packages/core/extensions/src/index.ts"],
       "@cds/rte-core/code-languages": [
         "./packages/core/code-languages/src/index.ts"
@@ -27,9 +28,11 @@
       "@cds/rte-sanitizer": ["./packages/sanitizer/src/index.ts"],
       "@cds/rte-theme": ["./packages/theme/src/index.ts"],
       "@cds/rte-angular": ["./packages/angular/src/index.ts"],
-      "@cds/rte-angular/styles": ["./packages/angular/styles/src/index.ts"],
       "@cds/rte-angular/i18n": ["./packages/angular/i18n/src/index.ts"],
       "@cds/rte-angular/testing": ["./packages/angular/testing/src/index.ts"],
+      "@cds/rte-angular/validators": [
+        "./packages/angular/validators/src/index.ts"
+      ],
       "@cds/rte-render": ["./packages/render/src/index.ts"]
     }
   }

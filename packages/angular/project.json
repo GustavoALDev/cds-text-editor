@@ -22,10 +22,35 @@
       },
       "dependsOn": ["copy-license", "^build"]
     },
+    "unit-test-build": {
+      "executor": "@nx/angular:application",
+      "options": {
+        "outputPath": "dist/out-tsc/angular-unit-test",
+        "tsConfig": "packages/angular/tsconfig.spec.json"
+      },
+      "configurations": {
+        "zoneless": {
+          "polyfills": []
+        },
+        "zone": {
+          "polyfills": ["zone.js"]
+        }
+      }
+    },
     "test": {
       "executor": "@nx/angular:unit-test",
       "options": {
-        "watch": false
+        "watch": false,
+        "buildTarget": "angular:unit-test-build:zoneless",
+        "providersFile": "packages/angular/src/testing-support/providers.zoneless.ts"
+      }
+    },
+    "test-zone": {
+      "executor": "@nx/angular:unit-test",
+      "options": {
+        "watch": false,
+        "buildTarget": "angular:unit-test-build:zone",
+        "providersFile": "packages/angular/src/testing-support/providers.zone.ts"
       }
     },
     "copy-license": {
