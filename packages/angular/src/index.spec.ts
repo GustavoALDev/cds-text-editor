@@ -2,6 +2,8 @@
 import * as api from '@cds/rte-angular';
 import * as i18n from '@cds/rte-angular/i18n';
 import * as testing from '@cds/rte-angular/testing';
+// eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
+import * as validators from '@cds/rte-angular/validators';
 import { describe, expect, it } from 'vitest';
 
 describe('@cds/rte-angular', () => {
@@ -24,5 +26,16 @@ describe('@cds/rte-angular', () => {
 
   it('o /testing exporta só getRteEditor', () => {
     expect(Object.keys(testing).sort()).toEqual(['getRteEditor']);
+  });
+
+  it('o /validators exporta só validadores, tipos de erro e formatRteError', () => {
+    expect(Object.keys(validators).sort()).toEqual([
+      'RteValidators',
+      'formatRteError',
+      'isRteValidationError',
+      'rteMaxChars',
+      'rteMaxWords',
+      'rteRequired',
+    ]);
   });
 });
