@@ -111,6 +111,25 @@ describe('RteRovingFocus (U3)', () => {
     expect(tabStops(fixture)).toEqual(['a']);
   });
 
+  // Navegador real (N9): um `Tab` logo depois da seta, antes do render, usa o
+  // `tabindex` do DOM; a parada de Tab acompanha o foco já no `keydown`.
+  it('a parada de Tab muda já na seta, antes do render', async () => {
+    const fixture = await renderHost(Host);
+    item(fixture, 'a').focus();
+    (document.activeElement as HTMLElement).dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    expect(focusedId()).toBe('b');
+    expect(tabStops(fixture)).toEqual(['b']);
+    await settle(fixture);
+    expect(tabStops(fixture)).toEqual(['b']);
+    expect(item(fixture, 'a').getAttribute('tabindex')).toBe('-1');
+  });
+
   it('← do primeiro vai ao último focável', async () => {
     const fixture = await renderHost(Host);
     item(fixture, 'a').focus();

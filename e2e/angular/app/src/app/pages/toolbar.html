@@ -1,0 +1,60 @@
+<button id="before-toolbar" type="button">before</button>
+<div class="e2e-spacer"></div>
+<section>
+  <rte-editor
+    data-testid="toolbar"
+    ariaLabel="Toolbar editor"
+    [toolbar]="toolbars.toolbar()"
+    [options]="allFeatures"
+    [labels]="labels"
+    [disabled]="bridge.disabled()"
+    [readonly]="bridge.readonly()"
+    [theme]="themes.toolbar()"
+    [(value)]="values.toolbar"
+    (touch)="touched.toolbar.set(true)"
+    (editorReady)="bridge.ready('toolbar')"
+  />
+</section>
+<button id="after-toolbar" type="button">after</button>
+<section>
+  <rte-editor
+    data-testid="toolbar-alt"
+    ariaLabel="Second editor"
+    [toolbar]="toolbars['toolbar-alt']()"
+    [options]="allFeatures"
+    [labels]="labels"
+    [theme]="themes['toolbar-alt']()"
+    [(value)]="values['toolbar-alt']"
+    (touch)="touched['toolbar-alt'].set(true)"
+    (editorReady)="bridge.ready('toolbar-alt')"
+  />
+</section>
+<section>
+  <rte-editor
+    data-testid="toolbar-nofeat"
+    ariaLabel="Editor without features"
+    [toolbar]="toolbars['toolbar-nofeat']()"
+    [options]="noFeatures"
+    [labels]="labels"
+    [theme]="themes['toolbar-nofeat']()"
+    [(value)]="values['toolbar-nofeat']"
+    (touch)="touched['toolbar-nofeat'].set(true)"
+    (editorReady)="bridge.ready('toolbar-nofeat')"
+  />
+</section>
+<div id="scroller" class="e2e-scroller">
+  <div class="e2e-scroller__spacer"></div>
+  <rte-editor
+    data-testid="toolbar-scroll"
+    ariaLabel="Scrolled editor"
+    [toolbar]="toolbars['toolbar-scroll']()"
+    [options]="allFeatures"
+    [labels]="labels"
+    [theme]="themes['toolbar-scroll']()"
+    [(value)]="values['toolbar-scroll']"
+    (touch)="touched['toolbar-scroll'].set(true)"
+    (editorReady)="bridge.ready('toolbar-scroll')"
+  />
+  <div class="e2e-scroller__spacer"></div>
+</div>
+<div class="e2e-spacer"></div>

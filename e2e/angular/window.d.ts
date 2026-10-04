@@ -2,7 +2,20 @@ export {};
 
 /** Editores do app de teste (`data-testid` igual ao id). */
 export type RteE2eId =
-  'signal' | 'reactive' | 'plain' | 'labels' | 'content' | 'perf';
+  | 'signal'
+  | 'reactive'
+  | 'plain'
+  | 'labels'
+  | 'content'
+  | 'perf'
+  | 'toolbar'
+  | 'toolbar-alt'
+  | 'toolbar-scroll'
+  | 'toolbar-nofeat';
+
+/** `RteToolbarConfig` do `@cds/rte-angular` (sem importar o pacote Angular aqui). */
+export type RteE2eToolbarConfig =
+  'minimal' | 'article' | 'full' | readonly (readonly string[])[] | false;
 
 export interface RteE2eState {
   valid: boolean;
@@ -24,6 +37,19 @@ declare global {
       reset(id: RteE2eId): void;
       toggle(name: 'disabled' | 'readonly' | 'hidden' | 'show'): void;
       setLang(lang: 'en' | 'pt-BR' | 'es'): void;
+      setToolbar(id: RteE2eId, config: RteE2eToolbarConfig): void;
+      setTheme(
+        id: RteE2eId,
+        theme: import('@cds/rte-theme').RteTheme | undefined,
+      ): void;
+      /** `applyRteTheme` num elemento qualquer (referência do N12). */
+      applyTheme(
+        element: HTMLElement,
+        theme: import('@cds/rte-theme').RteTheme,
+      ): void;
+      /** Passa a contar as mutações de DOM na barra do editor `id` (N15). */
+      watchToolbar(id: RteE2eId): void;
+      toolbarMutations(id: RteE2eId): number;
       readyAt: Partial<Record<RteE2eId, number>>;
       toggledAt: number | null;
     };

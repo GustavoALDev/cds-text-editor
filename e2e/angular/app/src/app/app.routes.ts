@@ -24,4 +24,8 @@ export const routes: Routes = [
     path: 'perf',
     loadComponent: () => import('./pages/perf').then((m) => m.PerfPage),
   },
+  {
+    path: 'toolbar',
+    loadComponent: () => import('./pages/toolbar').then((m) => m.ToolbarPage),
+  },
 ];

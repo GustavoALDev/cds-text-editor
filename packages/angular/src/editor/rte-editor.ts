@@ -9,6 +9,7 @@ import {
   effect,
   ElementRef,
   inject,
+  Injector,
   input,
   isDevMode,
   model,
@@ -153,6 +154,8 @@ export class RteEditor implements FormValueControl<string> {
   private readonly instance = signal<Editor | null>(null);
   private readonly host =
     inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly injector = inject(Injector);
+  private readonly ngZone = inject(NgZone);
 
   /** O foco está em algum ponto do host (D11). */
   protected readonly hostFocused = signal(false);
@@ -509,6 +512,40 @@ export class RteEditor implements FormValueControl<string> {
   /** `focusout` para fora do host (ou sem destino): `editorBlur` e `touch` (D11). */
   protected onHostFocusOut(event: FocusEvent): void {
     if (!this.hostFocused() || this.isInsideHost(event.relatedTarget)) return;
+    const target = event.target;
+    if (event.relatedTarget === null && target instanceof Node) {
+      // Sem destino: o Chromium também dispara `focusout` ao remover do DOM o
+      // elemento focado (um item da barra que saiu, ainda conectado durante o
+      // evento), e a barra devolve o foco ao item ativo depois do render. A
+      // decisão fica para a fase `read` do próximo render (depois desse
+      // `afterRenderEffect`; microtarefa não serve: no zone.js o ouvinte
+      // disparado durante a detecção as esvazia com o item ainda no DOM): se
+      // o elemento saiu do DOM e o foco voltou ao host, não houve saída (D11).
+      afterNextRender(
+        {
+          read: () => {
+            if (this.destroyed || !this.hostFocused()) return;
+            const doc = this.host.ownerDocument;
+            const active = doc.activeElement;
+            if (
+              !target.isConnected &&
+              active !== null &&
+              active !== doc.body &&
+              this.host.contains(active)
+            )
+              return;
+            // os ganchos de render rodam fora da zona: as saídas, dentro
+            this.ngZone.run(() => this.leaveHost());
+          },
+        },
+        { injector: this.injector },
+      );
+      return;
+    }
+    this.leaveHost();
+  }
+
+  private leaveHost(): void {
     this.hostFocused.set(false);
     this.editorBlur.emit();
     this.touch.emit();

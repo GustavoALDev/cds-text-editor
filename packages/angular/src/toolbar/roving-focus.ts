@@ -138,6 +138,15 @@ export class RteRovingFocus {
     if (!target) return;
     target.focus();
     this.lastFocused.set(target);
+    // A parada de Tab acompanha o foco já no `keydown`: um `Tab` antes do
+    // render usaria o `tabindex` antigo (N9). A ligação de host grava os
+    // mesmos valores no render seguinte.
+    for (const item of items) {
+      item.element.setAttribute(
+        'tabindex',
+        item.element === target ? '0' : '-1',
+      );
+    }
   }
 }
 

@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  NgZone,
   signal,
   viewChild,
   viewChildren,
@@ -125,6 +126,39 @@ function editorOf(el: HTMLElement): Editor {
   const editor = getRteEditor(host as Element);
   if (!editor) throw new Error('editor ausente');
   return editor;
+}
+
+/**
+ * Simula o Chromium, que dispara `blur`/`focusout` (sem `relatedTarget`) ao
+ * remover do DOM o elemento focado; o jsdom, como Firefox e WebKit, não
+ * dispara. Devolve a função que desfaz o remendo.
+ */
+function blurOnRemove(): () => void {
+  const remove = Element.prototype.remove;
+  const removeChild = Node.prototype.removeChild;
+  const fire = (node: Node) => {
+    const active = document.activeElement;
+    if (active && active !== document.body && node.contains(active)) {
+      active.dispatchEvent(
+        new FocusEvent('focusout', { bubbles: true, relatedTarget: null }),
+      );
+    }
+  };
+  Element.prototype.remove = function (this: Element) {
+    fire(this);
+    remove.call(this);
+  };
+  Node.prototype.removeChild = function <T extends Node>(
+    this: Node,
+    child: T,
+  ): T {
+    fire(child);
+    return removeChild.call(this, child) as T;
+  };
+  return () => {
+    Element.prototype.remove = remove;
+    Node.prototype.removeChild = removeChild;
+  };
 }
 
 function toolbarOf(el: HTMLElement): HTMLElement | null {
@@ -307,6 +341,34 @@ describe('teclado (U2, U3)', () => {
 });
 
 describe('comandos (U4)', () => {
+  // Navegador real (N11): o clique pode chegar antes do render que segue a
+  // transação (ou a abertura do menu); o habilitado vale o estado atual, não
+  // o da última renderização.
+  it('clique logo depois de uma transação, antes do render, usa o estado atual', async () => {
+    const { el, fixture } = await setup();
+    const editor = editorOf(el);
+    selectText(editor, 'ab', 2);
+    await settle(fixture);
+    editor.commands.insertContent('c');
+    expect(button(el, 'Undo').getAttribute('aria-disabled')).toBe('true');
+    button(el, 'Undo').click();
+    await settle(fixture);
+    expect(getRteHtml(editor)).toBe('<p>ab</p>');
+  });
+
+  it('item de menu ativado logo depois de abrir, antes do render, usa o estado atual', async () => {
+    const { el, fixture } = await setup();
+    const editor = editorOf(el);
+    selectText(editor, 'ab', 2);
+    await settle(fixture);
+    const menu = openMenu(button(el, 'Table'));
+    const insert = menu.querySelector<HTMLElement>('.rte-menu__item');
+    expect(insert?.getAttribute('aria-disabled')).toBe('true');
+    insert?.click();
+    await settle(fixture);
+    expect(getRteHtml(editor)).toContain('<table>');
+  });
+
   it('clique em bold com texto selecionado: mousedown cancelado, marca aplicada, foco no editável', async () => {
     const { el, fixture } = await setup();
     const editor = editorOf(el);
@@ -558,6 +620,41 @@ describe('Review Focus', () => {
     expect(document.activeElement).toBe(active);
     expect(host.blurs).toBe(0);
     expect(host.touches).toBe(0);
+  });
+
+  it('2b: focusout na remoção do item focado (Chromium) não emite editorBlur nem touch', async () => {
+    const { el, fixture, host } = await setup();
+    button(el, 'Clear formatting').focus();
+    await settle(fixture);
+    const restore = blurOnRemove();
+    try {
+      // Como a ponte do app de teste: a mudança e a detecção dentro de
+      // `NgZone.run`, fora de uma tarefa da zona. No modo zone.js, o ouvinte
+      // do `focusout` disparado durante a detecção esvazia as microtarefas
+      // ao terminar, com o item ainda no DOM.
+      TestBed.inject(NgZone).run(() => {
+        host.toolbar.set('minimal');
+        fixture.detectChanges();
+      });
+      await settle(fixture);
+    } finally {
+      restore();
+    }
+    const active = toolbarOf(el)?.querySelector('[tabindex="0"]');
+    expect(document.activeElement).toBe(active);
+    expect(host.blurs).toBe(0);
+    expect(host.touches).toBe(0);
+  });
+
+  it('2c: focusout sem destino com o elemento ainda no DOM continua saindo do host', async () => {
+    const { el, fixture, host } = await setup();
+    const bold = button(el, 'Bold');
+    bold.focus();
+    await settle(fixture);
+    bold.blur();
+    await settle(fixture);
+    expect(host.blurs).toBe(1);
+    expect(host.touches).toBe(1);
   });
 
   it('4: duas instâncias — aria-controls distintos, Alt+F10 local, um menu aberto', async () => {

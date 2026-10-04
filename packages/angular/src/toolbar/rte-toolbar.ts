@@ -8,6 +8,7 @@ import {
   effect,
   ElementRef,
   inject,
+  Injector,
   input,
   output,
   signal,
@@ -150,6 +151,7 @@ export class RteToolbar {
   private readonly host =
     inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
   private readonly roving = inject(RteRovingFocus, { self: true });
   private readonly rovingItems = viewChildren(RteRovingItem);
   private readonly menus = viewChildren(RteMenu);
@@ -357,20 +359,22 @@ export class RteToolbar {
       : null;
   }
 
-  protected run(id: RteToolbarItemId, enabled: boolean): void {
+  /**
+   * O habilitado é lido do estado atual, não do render: o clique (ou o
+   * `Enter`) pode chegar antes da renderização que segue uma transação ou a
+   * abertura do menu (N11).
+   */
+  protected run(id: RteToolbarItemId): void {
     const editor = this.canRun();
-    if (!editor || !enabled) return;
+    if (!editor || !this.state.item(id)().enabled) return;
     runToolbarCommand(editor, id, null);
   }
 
-  protected choose(
-    menu: RteMenu,
-    id: RteToolbarItemId,
-    e: RteMenuEntry,
-    enabled: boolean,
-  ): void {
+  protected choose(menu: RteMenu, id: RteToolbarItemId, e: RteMenuEntry): void {
     const editor = this.canRun();
-    if (!editor || !enabled) return;
+    if (!editor) return;
+    const table = id === 'table' ? this.tableState(menu) : null;
+    if (!this.entryEnabled(id, e, this.state.item(id)(), table)) return;
     menu.close('none');
     runToolbarCommand(editor, id, e.value);
   }
@@ -393,10 +397,21 @@ export class RteToolbar {
       this.focusInside = this.host.contains(next);
       return;
     }
-    // sem destino: saiu de verdade, a não ser que o item tenha saído do DOM
+    // sem destino: saiu de verdade, a não ser que o item tenha saído do DOM.
+    // Decidido na fase `read` do próximo render, depois do `afterRenderEffect`
+    // que devolve o foco (no zone.js uma microtarefa rodaria ainda durante a
+    // detecção, com o item no DOM: o Chromium dispara `focusout` na remoção).
     const target = event.target as Node | null;
-    queueMicrotask(() => {
-      if (target?.isConnected) this.focusInside = false;
-    });
+    afterNextRender(
+      {
+        read: () => {
+          if (!target?.isConnected) return;
+          if (!this.host.contains(this.document.activeElement)) {
+            this.focusInside = false;
+          }
+        },
+      },
+      { injector: this.injector },
+    );
   }
 }

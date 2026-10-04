@@ -7,13 +7,24 @@ import {
   NgZone,
   signal,
 } from '@angular/core';
+import type { RteToolbarConfig } from '@cds/rte-angular';
 import { getRteEditor } from '@cds/rte-angular/testing';
 import { getRteHtml } from '@cds/rte-core/extensions';
+import { applyRteTheme, type RteTheme } from '@cds/rte-theme';
 import type { Editor } from '@tiptap/core';
 
 /** Editores que os testes leem (`data-testid` igual ao id). */
 export type RteE2eId =
-  'signal' | 'reactive' | 'plain' | 'labels' | 'content' | 'perf';
+  | 'signal'
+  | 'reactive'
+  | 'plain'
+  | 'labels'
+  | 'content'
+  | 'perf'
+  | 'toolbar'
+  | 'toolbar-alt'
+  | 'toolbar-scroll'
+  | 'toolbar-nofeat';
 export type RteE2eToggle = 'disabled' | 'readonly' | 'hidden' | 'show';
 export type RteE2eLang = 'en' | 'pt-BR' | 'es';
 
@@ -30,6 +41,10 @@ export interface RteE2eHandle {
   setValue(html: string): void;
   state(): RteE2eState;
   reset(): void;
+  /** `[toolbar]` ao vivo (páginas `toolbar` e `perf`). */
+  setToolbar?(config: RteToolbarConfig): void;
+  /** `[theme]` ao vivo (página `toolbar`). */
+  setTheme?(theme: RteTheme | undefined): void;
 }
 
 /** `window.rteE2e`: só o que os testes leem (spec 05a, §6.2; sem `ng.getComponent`). */
@@ -43,6 +58,14 @@ export interface RteE2eApi {
   reset(id: RteE2eId): void;
   toggle(name: RteE2eToggle): void;
   setLang(lang: RteE2eLang): void;
+  setToolbar(id: RteE2eId, config: RteToolbarConfig): void;
+  setTheme(id: RteE2eId, theme: RteTheme | undefined): void;
+  /** `applyRteTheme` num elemento qualquer (referência do N12). */
+  applyTheme(element: HTMLElement, theme: RteTheme): void;
+  /** Passa a contar as mutações de DOM na barra do editor `id` (N15, R6). */
+  watchToolbar(id: RteE2eId): void;
+  /** Mutações na barra desde o `watchToolbar(id)`. */
+  toolbarMutations(id: RteE2eId): number;
   readonly readyAt: Partial<Record<RteE2eId, number>>;
   readonly toggledAt: number | null;
 }
@@ -87,6 +110,18 @@ export class E2eBridge {
     return handle;
   }
 
+  setToolbar(id: RteE2eId, config: RteToolbarConfig): void {
+    const set = this.handle(id).setToolbar;
+    if (!set) throw new Error(`rteE2e: editor '${id}' sem [toolbar] ao vivo.`);
+    set(config);
+  }
+
+  setTheme(id: RteE2eId, theme: RteTheme | undefined): void {
+    const set = this.handle(id).setTheme;
+    if (!set) throw new Error(`rteE2e: editor '${id}' sem [theme] ao vivo.`);
+    set(theme);
+  }
+
   toggle(name: RteE2eToggle): void {
     this.toggledAt = performance.now();
     this[name].update((v) => !v);
@@ -104,6 +139,10 @@ export function installE2eBridge(): void {
     // Chamadas do Playwright chegam fora da zona: `zone.run` mantém o build
     // `zone` igual ao zoneless (no zoneless o `NgZone` é um no-op).
     const run = <T>(fn: () => T): T => zone.run(fn);
+    const watched = new Map<
+      RteE2eId,
+      { observer: MutationObserver; count: number }
+    >();
     win.rteE2e = {
       getRteEditor,
       rteHtml: (host) => {
@@ -116,6 +155,38 @@ export function installE2eBridge(): void {
       reset: (id) => run(() => bridge.handle(id).reset()),
       toggle: (name) => run(() => bridge.toggle(name)),
       setLang: (lang) => run(() => bridge.lang.set(lang)),
+      setToolbar: (id, config) => run(() => bridge.setToolbar(id, config)),
+      setTheme: (id, theme) => run(() => bridge.setTheme(id, theme)),
+      applyTheme: (element, theme) => {
+        applyRteTheme(element, theme);
+      },
+      watchToolbar: (id) => {
+        const toolbar = doc.querySelector(
+          `rte-editor[data-testid="${id}"] .rte-toolbar`,
+        );
+        if (!toolbar) throw new Error(`rteE2e: editor '${id}' sem barra.`);
+        watched.get(id)?.observer.disconnect();
+        const entry = {
+          observer: new MutationObserver((records) => {
+            entry.count += records.length;
+          }),
+          count: 0,
+        };
+        entry.observer.observe(toolbar, {
+          subtree: true,
+          attributes: true,
+          childList: true,
+          characterData: true,
+        });
+        watched.set(id, entry);
+      },
+      toolbarMutations: (id) => {
+        const entry = watched.get(id);
+        if (!entry) throw new Error(`rteE2e: barra '${id}' sem watchToolbar.`);
+        // registros ainda na fila do observador também contam
+        entry.count += entry.observer.takeRecords().length;
+        return entry.count;
+      },
       readyAt: bridge.readyAt,
       get toggledAt() {
         return bridge.toggledAt;
