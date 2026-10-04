@@ -76,13 +76,21 @@ Cada uma com o custo se estiver errada.
 25. **Carga externa zera o histórico** (estado novo + `updateState`) em vez de `setContent` com `addToHistory: false`: o plano mandava o segundo mecanismo, mas R4 garante que `undo` não volta conteúdo anterior à carga (o revisor reproduziu `old1|NEW`). Custo: `undo` não atravessa uma carga externa (esperado).
 26. **Troca de idioma e `getRteHtml`.** Muda só o título vazio de caixa (B12 da 03c escreve o rótulo atual), sem `valueChange` (ruling 17). Custo: valor salvo com título vazio no idioma anterior.
 27. **Checkboxes de tarefa desabilitados ao desabilitar/readonly depois da criação.** Bug de a11y achado na Tarefa 5: `setEditable(…, false)` não dispara `update`. Corrigido com `setEditable(v, false)` e uma transação só de _meta_ `RTE_LABELS_META` (fora do histórico); `setEditable(v, true)` é evitado porque dispara `update` (D10). Custo: nenhum.
-28. **R11 com desvio no Chromium.** O `DOMParser` do Tiptap faz o Chromium relatar uma violação `style-src-attr` "inline" por atributo `style` ao carregar conteúdo, mesmo sem aplicá-lo (o conteúdo chega íntegro; Firefox e WebKit 0; as demais fases 0). O N5 mede por fase e aceita só esse caso; vale para o valor inicial, a carga externa e provavelmente a colagem. Alternativa futura: leitura sem DOM no core. Custo: ruído em relatórios de CSP (`report-uri`) no Chromium; documentado no README.
+28. **R11 com desvio no Chromium.** O `DOMParser` do Tiptap faz o Chromium relatar uma violação `style-src-attr` "inline" por atributo `style` ao carregar conteúdo, mesmo sem aplicá-lo (Firefox e WebKit 0; as demais fases 0). O N5 mede por fase e aceita só esse caso; vale para o valor inicial, a carga externa e provavelmente a colagem. Alternativa futura: leitura sem DOM no core. Custo: ruído em relatórios de CSP (`report-uri`) no Chromium; documentado no README. **Correção da revisão final:** o N5 comparava o modelo da página com o próprio fixture; comparando o `getRteHtml` do editor vivo, o Chromium **perdia o `text-align`** (o Tiptap o lê de `element.style`, que o Chromium deixa vazio nesse documento). O core passou a ler o alinhamento do atributo `style` (changeset `patch` do core; teste em `base.spec.ts` que simula o CSSOM vazio) e o N5 agora exige `getRteHtml` = `all-features.html` nos 3 motores; os demais atributos derivados de `style` (cores, larguras de coluna, proporções) já vinham do atributo ou de outros atributos.
 29. **`readonly` seleciona pelo teclado (Tarefa 9, D10).** Achado no navegador: com `contenteditable=false`, `Shift+setas` não estendia a seleção no Chromium e no WebKit. Corrigido com `Selection.modify` em `handleDOMEvents.keydown` (commit `3bd10d5`, com teste unitário). Custo: dependência de API não padrão (presente nos 3 motores); atalhos de macOS (`Option`/`Cmd` + `Shift` + seta) não mapeados e sem guarda de composição de IME.
 30. **`touched` fica `false` ao desabilitar com o foco dentro.** O Signal Forms ignora `markAsTouched` em campo não interativo: comportamento do Angular, documentado no teste. Custo: o teste fixa um detalhe interno do Signal Forms.
 31. **Teste de SSR e o adaptador de DOM.** O setup do _builder_ inicia o TestBed de navegador em todo arquivo e `setRootDomAdapter` usa `??=`; `isolate` não resolve. O teste de SSR troca o protótipo do adaptador para `ɵDominoAdapter` durante o `renderApplication`. Custo: depende de um símbolo interno do Angular.
 32. **Flake do core.** `editor-keyboard.spec` (`Tab` logo após `focus`; o Tiptap refoca no próximo frame) passou a esperar 2 frames. Custo: nenhum.
 33. **Tempo limite dos testes.** O pacote usava 5 s e `lint-guards.spec.ts` (primeira chamada do ESLint, ~20 s sob carga) estourava em paralelo. `packages/angular/vitest-base.config.mts` (`runnerConfig` dos alvos `test` e `test-zone`) fixa `testTimeout`/`hookTimeout` em 30 s, como no core e no tema. Custo: um teste travado demora mais a falhar.
 34. **Orçamento de tamanho sem a diretiva.** O cenário `editor` mede `["RteEditor", "provideRichText"]` (o plano citava a diretiva removida). Custo: nenhum.
+
+**Revisão final (correções antes do merge)**
+
+35. **Rótulos do consumidor nunca lançam.** Getter ou armadilha de Proxy que lança em `labels`/`provideRichText({ labels })` vale como ausente (`own()` com `try/catch`), e qualquer exceção restante numa seção devolve a seção da base; antes escapava do `computed` e quebrava o template. Custo: um rótulo malformado cai em silêncio no da base (sem aviso).
+36. **`formatRteError` aceita as três formas de erro.** Signal Forms (`{ kind, max, actual }`), `ReactiveValidationError` (`{ kind, context }`) e `control.errors` (`{ rteMaxChars: { max, actual } }`); rótulo ausente, de tipo errado ou que lança cai no `RTE_LABELS_EN`; erro desconhecido ou malformado devolve `''`, nunca `undefined` nem exceção. Tipos públicos novos `RteFormattableError` e `RteReactiveValidationError`. Custo: o orçamento do `/validators` sobe de 1024 para 1344 B (medido 1156 B).
+37. **`@angular/common` fica em `ignoredDependencies` como permanente.** É peer por D24 sem import (o template usa só o fluxo de controle embutido); o peer fixa a faixa junto de `core`/`forms`. Custo: a regra não acusa se o peer sobrar de fato.
+38. **Tempo das varreduras exaustivas do tema.** As duas varreduras de 2^24 cores de `derive.spec.ts` têm 120 s por teste (o global continua 30 s): estouravam sob a carga de 6 projetos em paralelo. Custo: um travamento real ali demora 2 min a falhar.
+39. **Seleção em `readonly` e chaves do protótipo.** `KEYS[event.key]` passou a `Object.hasOwn`: um `keydown` sintético com `key: 'constructor'` lançava `TypeError` no _handler_. Custo: nenhum.
 
 ### (c) Mudanças na spec durante a execução
 
@@ -98,16 +106,24 @@ Tamanho (`node tools/check-size.mjs --config packages/angular/size-budget.json`,
 
 | Cenário      | min (B) | min+gzip (B) | Orçamento (B) |
 | ------------ | ------- | ------------ | ------------- |
-| `editor`     | 16402   | 5189         | 6016          |
-| `whole`      | 16437   | 5201         | 6016          |
+| `editor`     | 16563   | 5230         | 6016          |
+| `whole`      | 16598   | 5242         | 6016          |
 | `i18n`       | 884     | 387          | 448           |
-| `validators` | 2075    | 860          | 1024          |
+| `validators` | 2770    | 1156         | 1344          |
 
 Orçamento = `Math.ceil(gzip × 1,15 / 64) × 64`. O `validators` não inclui o `htmlparser2` (externo via `@cds/*`; ≈ 31 kB gzip no core `/html`).
 
 App de teste (`npx nx run angular-e2e-app:build`, informativo): _bundle_ inicial 300,94 kB bruto / 79,80 kB transferido (**sem** o editor: a rota inicial não o importa); o _chunk_ lazy que traz o editor (Tiptap, ProseMirror, núcleo, `lowlight`) tem 564,08 kB bruto / 155,17 kB transferido; as gramáticas do `highlight.js` são _chunks_ lazy menores.
 
-Desempenho (N8, documento de 20 mil palavras, em navegador real, informativo — o orçamento é da spec 05): criação 69–127 ms; tecla com mediana de 10–17 ms e p95 de 14–23 ms, nos 3 motores. A 05d decide `updateOn`/adiamento com esses números.
+Desempenho (N8, `e2e/angular/editor-perf.spec.ts`, informativo — o orçamento é da spec 05): documento de 20 mil palavras (2000 parágrafos × 10), `[formField]` com `rteMaxChars(1_000_000)`; criação = `editorReady` − ligar o `@if` (inclui o render); tecla = `handleTextInput`/`dispatch` + `getRteHtml` + escrita no modelo + leitura de `valid`, 50 teclas. Windows, Playwright com 4 _workers_. Um valor por execução: os quatro primeiros da Tarefa 9 (o Firefox registrou três) e os dois últimos da verificação final (suíte inteira e `e2e/angular`). Firefox e WebKit arredondam o `performance.now()` a 1 ms.
+
+| Motor    | Criação (ms)                     | Mediana por tecla (ms)                       | p95 por tecla (ms)                            |
+| -------- | -------------------------------- | -------------------------------------------- | --------------------------------------------- |
+| Chromium | 69 / 81 / 82 / 92 / 90 / 79      | 9,95 / 11,40 / 11,90 / 13,10 / 10,40 / 12,25 | 13,80 / 17,90 / 18,00 / 20,60 / 13,90 / 17,00 |
+| Firefox  | 77 / 80 / 107 / 80 / 102         | 11 / 13 / 17 / 13 / 13                       | 15 / 17 / 23 / 18 / 18                        |
+| WebKit   | 97 / 114 / 115 / 127 / 105 / 110 | 10 / 13 / 13 / 13,5 / 17 / 17                | 14 / 19 / 21 / 22 / 28 / 25                   |
+
+Resumo por motor (faixa entre execuções): Chromium — criação 69–92 ms, mediana 10–13 ms, p95 14–21 ms; Firefox — criação 77–107 ms, mediana 11–17 ms, p95 15–23 ms; WebKit — criação 97–127 ms, mediana 10–17 ms, p95 14–28 ms. A 05d decide `updateOn`/adiamento com esses números (o WebKit é o pior p95).
 
 Vazamento (N7): heap de 4,12 → 4,96 MB em 100 alternâncias de criar/destruir, com crescimento decrescente (cache, não vazamento).
 
@@ -115,7 +131,14 @@ Vazamento (N7): heap de 4,12 → 4,96 MB em 100 alternâncias de criar/destruir,
 
 App de teste Angular em `e2e/angular/app` (_prerender_, hidratação, dois _builds_ — zoneless e zone.js), servido por `e2e/angular/serve.mjs` com `Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'`. Specs `e2e/angular/editor-*.spec.ts` nos 3 motores (N1–N8): formulários, estados, rótulos, SSR e hidratação, acessibilidade (axe-core), CSP, ciclo de vida (inclusive zone.js), desempenho e vazamento. Achados reais do navegador: o bug de seleção em `readonly` (ruling 29) e o desvio de CSP do Chromium (ruling 28).
 
-Verificação final da Tarefa 10: ver o relatório da tarefa (`check:rules`, `test:tools`, `nx run-many`, `check:licenses`, `notices`, `typecheck:e2e` e Playwright completo).
+Verificação final (2026-10-04, depois das correções da revisão final, Windows):
+
+- `npx nx run-many -t lint,test,test-zone,build,verify-package,size -p angular`, duas vezes, em paralelo (`test` e `test-zone` simultâneos): verde nas duas; 255/255 testes em cada modo (18 arquivos); `lint` com 0 erros (5 avisos antigos de `eslint-disable` não usado nos specs); `verify-package` (publint + attw) ok; tamanhos da tabela acima.
+- `npx nx run-many -t lint,typecheck,test -p core` verde (o core mudou: alinhamento lido do atributo) e `npx nx run core:size` dentro do orçamento.
+- `npx nx run-many -t test,typecheck,lint -p theme`: 416/416.
+- `npm run check:rules` e `npm run typecheck:e2e`: limpos.
+- `npx playwright test -c e2e e2e/angular --workers=4`: **96 passed**, 0 skipped, 0 failed (1,2 min).
+- `npx playwright test -c e2e --workers=4` (suíte inteira): **437 passed, 25 skipped**, 0 failed (3,7 min). Os 25 _skips_ são condicionais, anteriores à 05a e nenhum em `e2e/angular`: 3 no Chromium (os embeds sem `E2E_NETWORK`), 11 no Firefox e 11 no WebKit (os 3 embeds; a composição IME no limite de caracteres, que só roda no Chromium; e 7 testes do tema que só rodam no Chromium: SSR do tema, `runChecks` e ΔE).
 
 ## Pendências conhecidas
 
@@ -123,22 +146,22 @@ Itens `minor` adiados nas revisões; não são decisões. Agrupados por área.
 
 - **Spec 08 / 05d:** hidratação incremental e matriz Angular 22.0 × último; `updateOn` (05d, com os números do N8); carga externa durante composição IME sem tratamento; `<p class/dir></p>` conservador antes da criação.
 - **`value` e rótulos:** título de caixa no idioma anterior até a próxima edição (ruling 17); a aproximação de `hasMedia` para HTML não canônico (ruling 11).
-- **Opções e rótulos (`merge.ts`, `options.ts`):** `mergeContent` reconstrói `content` com 3 chaves fixas (usar spread de `base`); override `''` é aceito (`ariaLabel: ''` gera nome acessível vazio e `aria-label=""`); getter que lança em objeto do consumidor escapa de `own()`; `undefined` explícito aninhado sobrescreve o provider; faltam testes de `slash`/`image` dos dois lados e de chaves herdadas; `eslint-disable` duplicado em `labels.spec.ts`.
-- **Validadores (`errors.ts`, `signal-validators.ts`, `measure.ts`):** `formatRteError` lança com rótulos malformados e devolve `undefined` para `kind` desconhecido (rótulos do consumidor nunca deveriam lançar); sem guarda de não-string no caminho Signal; a regex de mídia casa em comentários/CDATA; lacunas de teste (vídeo/iframe só mídia, `LogicFn`/`max` inválido em `rteMaxWords`, `required` nativo + `rteRequired`, nativo 20 + `rte` 10, `null` em `form()`); cache de 1 entrada guarda a última string.
-- **Componente (`rte-editor.ts`):** `active.blur()` dentro de `effect` emite `editorBlur`/`touch` durante a detecção de mudanças; `relatedTarget` `null` em troca de janela marca `touched`; overlays fora do host contam como blur (importa na 05b); `setOptions` redundante após a criação; `effectiveDisabled` com comentário obsoleto; `emptyBeforeCreate` compara com `''`; `Symbol.for` repetido em `testing/src/index.ts` e `editor/hook.ts` (falta teste de igualdade); doc de `RTE_LABELS_META` diz "vistas de nó".
+- **Opções e rótulos (`merge.ts`, `options.ts`):** `mergeContent` reconstrói `content` com 3 chaves fixas (usar spread de `base`); override `''` é aceito (`ariaLabel: ''` gera nome acessível vazio e `aria-label=""`); `undefined` explícito aninhado sobrescreve o provider; faltam testes de `slash`/`image` dos dois lados e de chaves herdadas; `eslint-disable` duplicado em `labels.spec.ts`.
+- **Validadores (`errors.ts`, `signal-validators.ts`, `measure.ts`):** sem guarda de não-string no caminho Signal; a regex de mídia casa em comentários/CDATA; lacunas de teste (vídeo/iframe só mídia, `LogicFn`/`max` inválido em `rteMaxWords`, `required` nativo + `rteRequired`, nativo 20 + `rte` 10, `null` em `form()`); cache de 1 entrada guarda a última string.
+- **Componente (`rte-editor.ts`):** `active.blur()` dentro de `effect` emite `editorBlur`/`touch` durante a detecção de mudanças; `relatedTarget` `null` em troca de janela marca `touched`; overlays fora do host contam como blur (importa na 05b); `setOptions` redundante após a criação; `emptyBeforeCreate` compara com `''`; `Symbol.for` repetido em `testing/src/index.ts` e `editor/hook.ts` (falta teste de igualdade); doc de `RTE_LABELS_META` diz "vistas de nó".
 - **Formulários:** `ngModel` sem teste do modelo do host → editor; `?? ''` esconde `null` após `setValue(null)`; o `maxLength`/`readonly`/`hidden` não chegam em Reactive/Template Forms (ligar no elemento; README); `touched` `false` ao desabilitar com foco (ruling 30); o gancho `ɵngControlCreate` é interno (ruling 19).
-- **`readonly`:** `!view.editable` cobre também `disabled` (comentar); atalhos só Windows/Linux e sem guarda `isComposing`; `KEYS[event.key]` resolve chaves do protótipo (usar `Object.hasOwn`/`Map`); teste unitário trivial com `modify` mockado.
+- **`readonly`:** `!view.editable` cobre também `disabled` (comentar); atalhos só Windows/Linux e sem guarda `isComposing`; teste unitário trivial com `modify` mockado.
 - **CSS (`editor.css`):** regra `.rte-content pre` duplicada; imagem selecionada com dois contornos; bordas de célula e `pre` são aparência (sobrepõe a 05b); contorno de busca de 2 px fixo em vez de `var(--rte-focus-width)`; a checagem de cor ignora `accent-color`.
 - **Testes de navegador (`e2e/angular`):** a tolerância da fase de carga no Chromium (`editor-csp.spec.ts`) poderia absorver um `style` real; filtro de _embed_ por substring (usar `URL.hostname`); `newContext` sem _viewport_ em `editor-ssr.spec.ts`; o ramo Firefox do a11y nunca é exercitado; `editor-tasks.spec` do core com o padrão `toBeFocused` → tecla; a checagem `NG05xx` pode ser vazia em _build_ de produção (diagnósticos de hidratação só em dev) — falta afirmar o atributo `ngh` no host do servidor; `setTimeout(20)` fixo no teste de OnPush; falta espiar `update` num toggle de `readonly` (D10).
-- **Guardas (`lint-guards.spec.ts`, `templates.spec.ts`):** import `ON_PUSH` não usado no caso `@Input()`; a regex de template casa comentários e strings; `ignoredDependencies` (ruling 5).
+- **Guardas (`lint-guards.spec.ts`, `templates.spec.ts`):** import `ON_PUSH` não usado no caso `@Input()`; a regex de template casa comentários e strings; `ignoredDependencies` (rulings 5 e 37).
 - **Ambiente:** o `webServer` do Playwright compila os dois apps a cada rodada (até ~10 min a frio; registrado no `CLAUDE.md`); o teste de SSR depende de `ɵDominoAdapter` (ruling 31).
 
 ## Consequências
 
 - **Spec 05b:** a toolbar e os diálogos ficam dentro do host (D11); consome `editor()`, `rteEditorVersion` (interno, ruling 10) e `RTE_LABELS` (acrescenta `toolbar`/`dialogs`; o teste de completude cobre as chaves novas); `RTE_LABELS_META` serve a qualquer vista que precise reler rótulos; `[theme]` precisa funcionar com a CSP (CSSOM, não atributo `style`), lembrando o desvio do Chromium (ruling 28); overlays fora do host contam como blur (pendência); o CSS de aparência dos blocos `rt-*` nasce como arquivo compartilhado com a spec 06.
 - **Spec 05c:** diálogos de mídia por API própria; `mediaChange`/`uploadError` seguem D3; validadores novos no `/validators`.
-- **Spec 05d:** libera `search` e `slashCommands` (fim do D1), escreve a UI sobre `getSearchState`/`getSlashMenuState`, decide `updateOn` com os números do N8 e fecha a API (`api-extractor`).
+- **Spec 05d:** libera `search` e `slashCommands` (fim do D1), escreve a UI sobre `getSearchState`/`getSlashMenuState`, decide `updateOn` com os números do N8 e fecha a API (`api-extractor`). **Risco residual:** todo valor diferente do último canônico emitido é carga externa (ruling 25); um consumidor que devolve ao modelo um valor **equivalente mas não canônico** (assinante de `valueChanges` que normaliza, ida e volta assíncrona a um _store_ concorrendo com a digitação) recarrega o documento e perde o cursor e o histórico. A 05d documenta "devolva o que recebeu, ou o valor canônico" junto de `updateOn`.
 - **Spec 06:** renderiza o valor da 05a (HTML canônico; `''` = sem conteúdo); a exibição sem JS é do `rte-render`, não da casca.
 - **Spec 08:** matriz Angular 22.0 × último (o piso do peer é 22.2.1) e Tiptap 3.31.4 × último; hidratação incremental; teclado virtual e IME fora do Chromium.
-- **Core:** `RTE_LABELS_META` é API nova do `/extensions`; uma alternativa de leitura sem DOM resolveria o desvio de CSP do Chromium.
-- O orçamento de tamanho do `@cds/rte-angular` é por cenário (`editor` 6016 B, `i18n` 448 B, `validators` 1024 B, `whole` 6016 B); mudar o componente exige reconferir `npx nx run angular:size`.
+- **Core:** `RTE_LABELS_META` é API nova do `/extensions`; o alinhamento é lido do atributo `style` (ruling 28); uma alternativa de leitura sem DOM resolveria o desvio de CSP do Chromium.
+- O orçamento de tamanho do `@cds/rte-angular` é por cenário (`editor` 6016 B, `i18n` 448 B, `validators` 1344 B, `whole` 6016 B); mudar o componente exige reconferir `npx nx run angular:size`.
