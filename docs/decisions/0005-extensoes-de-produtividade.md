@@ -1,0 +1,131 @@
+# ADR 0005: Extensões de produtividade (busca, comandos `/`, limite e placeholder)
+
+- Status: aceita (2026-10-03)
+- Spec de origem: `docs/specs/03c-extensoes-de-produtividade.md` (parte 3 de 3 da spec 03)
+
+## Contexto
+
+A spec 03b (ADR 0004) entregou as extensões de conteúdo, a fábrica `createEditorExtensions` e o serializador canônico. Faltava a **lógica sem UI** de quatro recursos de produtividade que a spec 05 (editor Angular) consome: busca e substituição, comandos `/`, limite e contagem de caracteres e placeholder. O ADR 0004 deixou pendente o placeholder do título vazio de caixa (decisão 29). Tudo vive no entry `/extensions` do core, sem dependência nova, e nada chega ao HTML. Este ADR registra as decisões C1–C20 da spec, as decisões tomadas durante a execução (rulings, incluindo o pré-voo do plano), as mudanças na spec, os números medidos e as pendências.
+
+## Decisão
+
+### (a) Decisões da spec (C1–C20)
+
+| #   | Decisão                                                                                                                                                                                                                                                  | Motivo                                                                                                                                                         |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1  | Tudo no entry `/extensions`, sem dependência nova: nada de `@tiptap/suggestion`, nem `Placeholder`/`CharacterCount` de `@tiptap/extensions`.                                                                                                             | Licenças e peers inalterados; os oficiais não atendem C2, C4 e C13.                                                                                            |
+| C2  | Placeholder próprio (`rtPlaceholder`): decoração de nó `rte-placeholder` com `data-placeholder`, só no documento vazio e nos títulos vazios de `rtCallout`/`rtReadAlso`; `aria-placeholder` no elemento editável. Calculado a cada atualização da vista. | O oficial guarda o texto na decoração (idioma velho), usa classes `is-*` fora de `rte-*` e não dá nome acessível; fecha a pendência da decisão 29 do ADR 0004. |
+| C3  | Placeholder também com o editor somente leitura; texto vazio = sem decoração.                                                                                                                                                                            | Mesmo comportamento de `input`/`textarea`; o título de caixa mostra o que será publicado.                                                                      |
+| C4  | Limite próprio (`rtCharLimit`), lido por função a cada verificação.                                                                                                                                                                                      | O `CharacterCount` oficial lê `limit` fixo, o `autoTrim` apaga o início do documento e o `filterTransaction` recusa entrada de IME.                            |
+| C5  | Regra de contagem única: caracteres = `countCharacters(htmlToText(getRteHtml))` (pontos de código, sem quebras de linha); palavras = `countWords` do mesmo texto; o editor calcula sem serializar.                                                       | Editor, validador da spec 05 e servidor dão o mesmo número; ponto de código não varia por motor.                                                               |
+| C6  | Só a entrada direta é barrada acima do limite (digitação fora de composição, colagem cortada, soltar externo). Conteúdo inicial, `setContent`, comandos, IME, autocorreção e arrasto interno nunca; apagar sempre.                                       | Igual ao `maxlength` nativo; nunca perde conteúdo nem quebra IME; o formulário invalida em vez de truncar em silêncio.                                         |
+| C7  | Estatísticas incrementais por bloco de topo (`WeakMap` por nó).                                                                                                                                                                                          | Contagem por tecla sem varrer 20 mil palavras; as linhas do `htmlToText` nunca cruzam blocos de topo.                                                          |
+| C8  | Busca literal (sem regex), `caseSensitive` e `wholeWord`; dobra de caixa por ponto de código com `toLowerCase()` só quando o comprimento se mantém.                                                                                                      | ReDoS impossível; posições exatas (`'İ'`); igual em todos os motores.                                                                                          |
+| C9  | Percorre o texto de cada bloco de texto, atravessando marcas; não cruza blocos nem `hardBreak`; atributos fora da v1.                                                                                                                                    | Casa "**no**tícia" com marcas diferentes; substituir em atributo exige outro caminho de edição.                                                                |
+| C10 | No máximo 1000 resultados indexados e decorados; `replaceAllSearchMatches` sem teto e numa transação.                                                                                                                                                    | Custo de decorações limitado; substituir tudo continua completo.                                                                                               |
+| C11 | Substituição literal, herda marcas do início do trecho; CR/LF/CRLF viram espaço (em `codeBlock`, `\n`); NUL vira U+FFFD; vazio apaga; sem efeito com o editor não editável.                                                                              | Nunca gera conteúdo fora do esquema; previsível.                                                                                                               |
+| C12 | O core não registra atalhos de busca; `next`/`previous` são circulares, selecionam e rolam sem focar o editor.                                                                                                                                           | O foco fica no campo da barra (spec 05), dona de `Mod-F`, `Enter`, `F3` e `Escape`.                                                                            |
+| C13 | O menu `/` abre só quando um `/` é digitado, no início do bloco ou depois de espaço, em `paragraph` e fora da marca `code`; fecha por espaço, mais de 30 caracteres, cursor fora, faixa apagada, `Escape`, item executado ou editor não editável.        | Evita falso positivo em `e/ou`, URLs, código, títulos e tarefas; reabrir ao clicar num texto antigo seria intrusivo.                                           |
+| C14 | Registro de itens com recurso: item some com o recurso desligado, sem o nó ou quando `editor.can()` diz que não roda; filtro sem caixa e sem diacríticos por prefixo de palavra; ordem do registro.                                                      | `features` desliga também o menu; ordem estável é previsível para leitor de tela.                                                                              |
+| C15 | Execução numa cadeia só (apaga `/consulta` e roda o comando); itens sem comando chamam `onUiItem`.                                                                                                                                                       | Desfazer volta exatamente ao texto digitado; o core não tem UI.                                                                                                |
+| C16 | Teclado com o menu aberto: setas circulares, `Enter`, `Escape`; `Tab` não é capturado; `priority: 1000`.                                                                                                                                                 | Padrão combobox + listbox com o foco no texto; `Enter` não divide o parágrafo; WCAG 2.1.2.                                                                     |
+| C17 | `RTE_SLASH_LABELS` (pt-BR, en, es) no core.                                                                                                                                                                                                              | O filtro depende do título traduzido; uma fonte só, testável sem Angular.                                                                                      |
+| C18 | Estado por getters puros, memoizados por `EditorState` e congelados.                                                                                                                                                                                     | Combina com a ponte de signals da spec 05; o core não inventa ids de DOM.                                                                                      |
+| C19 | Nada chega ao HTML.                                                                                                                                                                                                                                      | O serializador lê o documento; vira teste explícito (R7).                                                                                                      |
+| C20 | `features.search` e `features.slashCommands` registram `rtSearch` e `rtSlashCommand`; `rtPlaceholder` e `rtCharLimit` são sempre registrados.                                                                                                            | Placeholder dos títulos e contadores servem a todo editor; o esquema não muda.                                                                                 |
+
+### (b) Decisões tomadas durante a execução (rulings)
+
+Cada uma com o custo se estiver errada.
+
+**Pré-voo do plano** (conflitos entre a spec e o código, decididos pela spec)
+
+1. **`factory.spec.ts` mudou de contrato.** O teste "search e slashCommands são aceitos e ignorados" contrariava C20: cada tarefa acrescentou o nome da extensão a `BASE_NAMES` e a última o trocou por "`search: false`/`slashCommands: false` não registram". Custo: nenhum.
+2. **Geradores de documento compartilhados.** A §6.2 pede "os mesmos geradores de `properties.spec.ts`", que eram privados: movidos sem mudança para `extensions/src/testing/doc-arbitraries.ts`. Custo: nenhum.
+3. **Contagem sem serializar e igual ao `htmlToText`.** O percurso usa a árvore do ProseMirror; blocos de texto são genéricos; os demais nós usam `node.type.spec.toDOM(node)` (array, sem string HTML nem `htmlparser2`), para legenda, crédito, autor e cargo contarem como na saída. O conjunto de tags de bloco e o colapso de espaços saíram de `html-to-text.ts` para `src/text-lines.ts`, usado pelos dois lados. Custo: dois caminhos de leitura da mesma regra, amarrados pela propriedade R2.
+4. **"Digitado" exige duas coisas.** O menu abre quando `handleTextInput` registrou `'/'` **e** a transação seguinte é exatamente esse `ReplaceStep`. `tr.insertText('/')` despachado direto e `insertContent('/')` não abrem. Custo: um consumidor que programa a abertura precisa de outro caminho.
+5. **Tabela dentro de tabela no `/`.** O `insertTable` do Tiptap 3.31.4 sempre devolve `true` e a célula é `block+`: o comando do item `table` é `chain.command(notInsideTable).insertTable(…)`, o que torna o `can()` falso dentro de célula. O `insertTable` global não muda. Custo: tabela aninhada continua possível por colagem e pela toolbar (ver pendências).
+6. **Propriedade de `replaceAll` corrigida.** "`replaceAll(r)` com `r` sem a consulta deixa 0 resultados" é falsa em geral (consulta `ab`, documento `abb`, `r = 'a'` → `ab`): a propriedade usa `r` sem nenhum ponto de código da consulta dobrada e `wholeWord: false`. Custo: nenhum.
+7. **`check:size` só confere o tema.** O script `npm run check:size` roda `theme:size`; os orçamentos do core são conferidos por `npx nx run core:size` (o CI roda `nx affected -t size`). O script não muda. Custo: quem confia só no script não vê o core.
+8. **Colagem cortada.** O incremento de `rejected` vai como _meta_ na própria transação da colagem (um passo de desfazer); recusas (digitação, colagem sem espaço, soltar) são transações só de _meta_. Custo: nenhum.
+9. **Título de caixa só com `hardBreak`.** A serialização troca o conteúdo pelo rótulo (o `textContent` do `p` é vazio), então contagem e placeholder o tratam como vazio. Custo: nenhum.
+10. **`/` depois de `hardBreak` não abre** (C13 literal: início do bloco ou depois de espaço/U+00A0). Custo: nenhum.
+11. **Exports públicos só na Tarefa 9.** O `index.spec.ts` confere a lista exata; as tarefas 1–8 testaram pelos módulos. Custo: nenhum.
+
+**Desta execução**
+
+12. **Branch sem worktree.** Execução em `feat/spec-03c` no checkout principal, mesmo arranjo da 03a e 03b; `main` intocado. Custo: nenhum.
+13. **Teste de `Backspace` da tarefa do limite.** Com seleção vazia o keymap do ProseMirror devolve `false` e deixa a tecla ao navegador; o teste unitário seleciona o último caractere antes e ainda prova "apagar nunca é barrado". O E9 cobre `Backspace` real. Custo: nenhum.
+14. **Autocorreção no limite exato.** Uma autocorreção que chega por `handleTextInput` é indistinguível de digitação; no limite exato, uma correção que aumenta a palavra é recusada (como o `maxlength` nativo), ao contrário do que C6 diz ("autocorreção nunca barrada"). Preferido a detectar `inputType`. Custo: no limite exato uma autocorreção maior é recusada; nada se perde.
+15. **Arrasto interno com modificador de cópia nunca é barrado.** Recusá-lo (`moved: false`) contrariava C6; o limite usa `view.dragging` para reconhecer o arrasto interno. Colagem com o documento já acima do limite também foi coberta. Custo: nenhum.
+16. **Comandos de busca em cadeia.** `chain().setSearchQuery().nextSearchMatch()` devolve `false` quando a transação já tem meta de busca ou `docChanged`, em vez de reconstruir um estado intermediário (evita estado defasado e `RangeError`). Custo: o consumidor chama os comandos em sequência; a consulta é aplicada mesmo quando o segundo comando devolve `false`.
+17. **Minors da busca na Tarefa 5.** Cadeia, `setSearchOptions(null)` e propriedade incremental entraram na mesma tarefa, pelo risco de `RangeError` no mesmo arquivo. Custo: uma tarefa um pouco maior.
+18. **Item `paragraph` nunca aparece.** Fica no registro e na API (`RteSlashItemId`), mas o menu só abre em `paragraph` (C13) e `setParagraph()` falha no `can()` (C14). Custo: um item morto no registro.
+19. **`bulletList`/`orderedList` significam "transformar em lista".** Os itens somem dentro de lista do mesmo tipo: `liftOutOfList` quebra depois do `deleteRange` na mesma transação e o `can()` mentia. Custo: o `/` não tira o texto da lista (a toolbar faz).
+20. **`onUiItem` que lança é engolido**, pela regra de que função do consumidor nunca lança durante a entrada. Custo: erro do consumidor fica silencioso.
+21. **`getSearchState` num editor headless.** Com `rtSearch` registrado e `element: null` o editor não tem plugins: o getter devolve o estado ocioso congelado; `null` só com `search: false` (spec §4). Custo: nenhum.
+22. **`labels` em forma de função que lança conta como ausente.** `resolveContentLabels` chamava a função sem proteção e derrubava placeholder e contagem a cada atualização (lição 4). A correção vale também para o `getRteHtml` da 03b. Custo: erro do consumidor fica silencioso.
+23. **Navegação da busca com o foco fora do editor.** O E10 achou um bug real: `next/previousSearchMatch` não rolava até o resultado quando o foco estava no campo da barra de busca (C12). Corrigido em `a4308ab`, com teste unitário. Ver (e).
+
+### (c) Mudanças na spec durante a execução
+
+A spec 03c foi ajustada onde a execução divergiu:
+
+- **C6:** autocorreção que chega por `handleTextInput` e **aumenta** uma palavra no limite exato é recusada (ruling 14); o arrasto interno com modificador de cópia nunca é barrado (ruling 15).
+- **§4 e C14:** `bulletList` e `orderedList` são "transformar em lista" e somem dentro de lista do mesmo tipo (em vez de alternar, ruling 19); o item `paragraph` nunca aparece (ruling 18).
+- **§4 (comandos):** comandos de busca em cadeia devolvem `false` quando a transação já tem busca ou mudou o documento (ruling 16).
+- **§4 (`getSearchState`):** estado ocioso congelado para editor headless com `rtSearch` registrado; `null` só com `search: false` (ruling 21).
+- **Lição 4 (§4):** função `labels` que lança ou não devolve objeto vale como ausente, também no `getRteHtml` da 03b (ruling 22).
+- **§6.2:** propriedade de `replaceAll` com `r` sem nenhum ponto de código da consulta dobrada e `wholeWord: false` (ruling 6, já corrigida em `25c58eb`).
+- **§7:** critérios marcados com a evidência da verificação final; `check:size` do core é `nx run core:size` (ruling 7).
+
+### (d) Números medidos (2026-10-03)
+
+Tamanho (`node tools/check-size.mjs --config packages/core/size-budget.json`, após `nx build core`; o orçamento é sobre `min+gzip`):
+
+| Cenário                 | min (B) | min+gzip (B) | Orçamento anterior (B) | Orçamento novo (B) |
+| ----------------------- | ------- | ------------ | ---------------------- | ------------------ |
+| `whole`                 | 22734   | 8391         | 9280                   | 9280 (dentro)      |
+| `schema`                | 13931   | 5206         | 5824                   | 5824               |
+| `links`                 | 6829    | 2723         | 3136                   | 3136               |
+| `draft`                 | 1288    | 671          | 896                    | 896                |
+| `embeds`                | 7340    | 2912         | 3392                   | 3392               |
+| `html`                  | 74086   | 31070        | 35712                  | 35712              |
+| `extensions` (externos) | 102107  | 34454        | 30080                  | 39680              |
+| `code-languages`        | 109093  | 34511        | 39744                  | 39744              |
+
+O cenário `extensions` estourou o orçamento (34454 B > 30080 B, excesso de 4374 B). O novo orçamento segue a regra do ADR 0003: `Math.ceil(34454 × 1,15 / 64) × 64 = 39680 B` (folga de 5226 B). `whole` (só o entry `.`, que ganhou `countCharacters` e `text-lines`) ficou dentro do orçamento e não mudou. `html` subiu 28 B min (as constantes de linha agora vêm de `text-lines.ts`) e continua dentro.
+
+Desempenho (R8): tempo de `dispatch` de uma tecla com busca ativa e limite ligado (`charLimit` 1e6), documento de 2000 parágrafos de 10 palavras (20 mil palavras), E10 em navegador real, informativo (o orçamento é da spec 05 R4):
+
+| Motor    | Mediana (ms) | p95 (ms)    |
+| -------- | ------------ | ----------- |
+| Chromium | 1,30 a 1,70  | 2,60 a 3,00 |
+| Firefox  | 1,00         | 2,00        |
+| WebKit   | 2,00         | 4,00        |
+
+### (e) Verificação em navegador real
+
+E8 (placeholder), E9 (limite, com IME no Chromium por CDP), E10 (busca) e E11 (comandos `/`), mais o caso R7 do E1, em Chromium, Firefox e WebKit (`e2e/core/editor-placeholder.spec.ts`, `editor-char-limit.spec.ts`, `editor-search.spec.ts`, `editor-slash.spec.ts`). Execução final (`npx playwright test -c e2e --workers=4`): 340 testes passaram, 25 foram pulados (entre eles o IME fora do Chromium, com o motivo registrado no teste) e 1 falhou: o `editor-tasks` E4 (`Tab` até o checkbox) em WebKit, instável sob carga; o mesmo arquivo repetido passou 18/18.
+
+O E10 achou um bug real que os unitários em jsdom não pegavam: `nextSearchMatch`/`previousSearchMatch` selecionavam o resultado, mas não rolavam até ele quando o foco estava fora do editor (o caso da barra de busca, C12). Corrigido em `a4308ab` (`fix(core): navegação da busca rola até o ativo com o foco fora do editor`), com teste unitário.
+
+## Pendências conhecidas
+
+Itens `minor` adiados nas revisões; não são decisões. Agrupados por área.
+
+- **Evolução da v1:** busca em atributos (legenda, crédito, `alt`, autor), busca por expressão regular e busca sem diacríticos; itens `/` que abrem diálogo por conta própria. IME fora do Chromium fica com a spec 08 (teclado virtual). `npm run check:size` só confere o tema (o core é `nx run core:size`). Tabela aninhada ainda é possível por colagem e pela toolbar.
+- **Contagem (`text-stats.ts`, `titles.ts`):** `titles.ts` repete a lista de variantes e o lookup de `news-blocks.ts`; o teste de cache não confere por `textStatsProbe` o recálculo de título vazio quando os rótulos mudam; tag com namespace (`"ns tag"`) não é tratada (nenhum nó usa).
+- **Placeholder (`placeholder.ts`):** sem teste do ramo de rótulo `''` nem de placeholder inválido no caminho do título; `isEmptyDoc` é calculado 2× por atualização; `code-block.spec` e `tables.spec` dependem de `rtPlaceholder` ser o último (slice) e quebram a cada extensão nova; o rótulo `taskCheckbox` em função (`task-view.ts`) precisa da mesma proteção de `labels` que lança.
+- **Limite (`char-limit.ts`):** `pasteTransaction` usa `replaceSelectionWith(single, false)` em vez do `preferPlain` do `doPaste` (a herança de marcas difere só em colagem cortada); colagem cortada pula handlers de colagem de outras extensões (link-on-paste, VS Code); o memo de `getCharLimitState` não invalida com troca de `labels` sem transação; o teste de `RangeError` da fábrica está duplicado (`char-limit.spec` e `factory.spec`).
+- **Busca (`search.ts`):** `tr.mapping.slice(1)` supõe 1 passo na 1ª substituição; sem teste de trecho que cruza fronteira de marca (`<strong>ga</strong>to` → `cão` todo em negrito); a propriedade de substituição usa `fc.string()` (só ASCII imprimível; usar `binary`/CR/LF/NUL/substituto solto); taxa de rejeição do `fc.pre` (`tablesSettled`) não medida; `chain().setSearchQuery().nextSearchMatch()` devolve `false` mas aplica a consulta e `replaceSearchMatch` não move a seleção ao novo ativo (spec 05); ramo `null` (sem `rtSearch`) e identidade do estado ocioso sem teste; `extensions.some(...)` a cada chamada headless de `getSearchState`; timeout de 300 s no arquivo inteiro (`search.spec.ts:334`); custo por tecla (`collectMatches` percorre todos os blocos e recongela até 1000 resultados) medido no R8, não otimizado.
+- **Comandos `/` (`slash-items.ts`, `slash.ts`):** `resolveSlashItems` devolve o array do consumidor sem cópia nem congelamento; `title: ''` é aceito e vira linha vazia; comando de item do consumidor que passa no `can()` e falha de verdade ainda despacha (consulta apagada, passos parciais; documentar em `RteSlashItem.command`); disponibilidade ainda via `editor.can()` (estado do editor, não da cadeia; só a seleção pode divergir); atalhos `Enter`/`Escape` repetem checagens dos comandos; janela estreita em que um handler de prioridade maior consome a entrada sem despachar e um `insertText('/')` programático na mesma posição abre o menu; a propriedade não tem `fc.statistics` nem contagem mínima de execuções efetivas (`slash.spec.ts:426`).
+- **API e contrato (`index`, `contract.spec.ts`):** o teste de tipos do `index.spec` só confere nomes (casts); o contrato do placeholder não confere a decoração no editor completo (o E8 cobre no navegador); `factory.spec` ("recursos desligados: só a base") foi reescrito pela Tarefa 9.
+- **Testes de navegador:** input no `document.body` nunca removido (`search.spec.ts:242`); restauração de `scrollIntoView` deixa a propriedade própria `undefined` (usar `delete`, `search.spec.ts:236,265`); U+00A0 literal em `e2e/core/editor-slash.spec.ts:58,63` (usar `' '`); `toHaveClass` com string inteira em `editor-placeholder.spec.ts:29-31` (usar regex por classe); a marca de navegação depende de só `navigate` combinar `activate` e `scrollIntoView` (comentar, `search.ts:490-497`).
+- **Anteriores à 03c (não são defeitos desta spec):** `fixTables` não é idempotente em algumas tabelas geradas (TableMap com problemas após `setContent`): refaz a correção a cada edição e o `undo` não restaura o HTML nessas tabelas (a propriedade da busca usa `fc.pre` para isolá-lo); timeouts de 5–10 s sob carga em `nx run-many` paralelo (`dom-parser`, `embed`, `links`, `url`, `style`, `rules` e `headings` specs); testes de `Tab` instáveis sob carga no E2E (`editor-keyboard.spec`, `editor-tasks.spec` E4; 3/72 sem as mudanças da 03c).
+
+## Consequências
+
+- **Spec 05:** `charCount`/`wordCount` = `getCharLimitState(editor)`; `readingTime` = `Math.ceil(words / 200)`; `rteMaxChars`/`rteMaxWords` medem `countCharacters`/`countWords` de `htmlToText(value)` (C5); o `maxLength` do schema vira `charLimit` por função, e o `maxLength` nativo do Signal Forms **não** deve medir a string HTML. `placeholder` por função lendo o signal, com uma transação só de _meta_ na troca de idioma. Combobox no elemento editável a partir de `getSlashMenuState`, listbox posicionada por `view.coordsAtPos(range.from)` e `onUiItem` abrindo os diálogos de imagem, vídeo e embed; os itens `bulletList`/`orderedList` não alternam (ruling 19). Barra de busca dona de `Mod-F`, `Enter`/`Shift+Enter`, `F3` e `Escape`, chamando os comandos em sequência (ruling 16) e usando `lastReplaced` e `rejected` para o `aria-live`. CSS de `rte-placeholder`, `rte-search-match(--active)` e `rte-slash-query` respeitando o contraste do tema (spec 02).
+- **Spec 08:** valida IME e teclado virtual fora do Chromium; matriz com Tiptap 3.31.4 e o último 3.x.
+- O orçamento do cenário `extensions` agora é 39680 B (min+gzip); mudar a lógica das quatro extensões exige reconferir `npx nx run core:size`.
