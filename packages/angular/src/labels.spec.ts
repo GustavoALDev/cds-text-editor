@@ -7,6 +7,7 @@ import {
   type Provider,
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { RTE_HIGHLIGHT_COLORS, RTE_TEXT_COLORS } from '@cds/rte-core';
 import {
   getRteHtml,
   RTE_CONTENT_LABELS,
@@ -126,6 +127,36 @@ describe('pacotes de rótulos', () => {
     expect(RTE_LABELS_ES.errors.rteMaxWords({ max: 5, actual: 7 })).toBe(
       'Usa como máximo 5 palabras (7 ahora).',
     );
+  });
+
+  it('toolbar: heading(2|3|4) e colorNames cobrem a paleta nos três pacotes', () => {
+    const names = [...RTE_TEXT_COLORS, ...RTE_HIGHLIGHT_COLORS].map(
+      (c) => c.name,
+    );
+    for (const [, pack] of packs) {
+      for (const level of [2, 3, 4] as const)
+        expect(pack.toolbar.heading(level)).toContain(String(level));
+      for (const name of new Set(names))
+        expect(pack.toolbar.colorNames[name], name).toEqual(expect.any(String));
+    }
+  });
+
+  it('toolbar: cópia fixada', () => {
+    expect(RTE_LABELS_EN.toolbar.toolbar).toBe('Formatting');
+    expect(RTE_LABELS_EN.toolbar.heading(2)).toBe('Heading 2');
+    expect(RTE_LABELS_EN.toolbar.strike).toBe('Strikethrough');
+    expect(RTE_LABELS_EN.toolbar.colorNames['teal']).toBe('Teal');
+    expect(RTE_LABELS_EN.toolbar.spanLimit).toBe(
+      'Unavailable: a cell would span more than 100 rows or columns.',
+    );
+    expect(RTE_LABELS_PT_BR.toolbar.toolbar).toBe('Formatação');
+    expect(RTE_LABELS_PT_BR.toolbar.heading(3)).toBe('Título 3');
+    expect(RTE_LABELS_PT_BR.toolbar.colorNames['teal']).toBe('Verde-azulado');
+    expect(RTE_LABELS_PT_BR.toolbar.readAlso).toBe('Caixa "Leia também"');
+    expect(RTE_LABELS_ES.toolbar.toolbar).toBe('Formato');
+    expect(RTE_LABELS_ES.toolbar.heading(4)).toBe('Título 4');
+    expect(RTE_LABELS_ES.toolbar.colorNames['teal']).toBe('Verde azulado');
+    expect(RTE_LABELS_ES.toolbar.mergeCells).toBe('Combinar celdas');
   });
 
   it('o /i18n reexporta o RTE_LABELS_EN do entry .', () => {
@@ -264,6 +295,35 @@ describe('mergeLabels', () => {
       } as unknown as RteLabelsInput;
       expect(() => mergeLabels(base, withKeywords)).not.toThrow();
     }
+  });
+
+  it('mescla toolbar por chave', () => {
+    const out = mergeLabels(base, {
+      toolbar: {
+        bold: 'B',
+        colorNames: { red: 'R' },
+        heading: () => {
+          throw 1;
+        },
+      },
+    } as unknown as RteLabelsInput);
+    expect(out.toolbar.bold).toBe('B');
+    expect(out.toolbar.colorNames['red']).toBe('R');
+    expect(out.toolbar.colorNames['blue']).toBe('Blue');
+    expect(out.toolbar.heading(2)).toBe('Heading 2');
+    expect(out.toolbar.italic).toBe('Italic');
+    const custom = mergeLabels(base, {
+      toolbar: { heading: (n) => `H${n}` },
+    });
+    expect(custom.toolbar.heading(3)).toBe('H3');
+  });
+
+  it('toolbar com valor do tipo errado é ignorado', () => {
+    const out = mergeLabels(base, {
+      toolbar: { bold: 1, colorNames: { red: 2 } },
+    } as unknown as RteLabelsInput);
+    expect(out.toolbar.bold).toBe('Bold');
+    expect(out.toolbar.colorNames['red']).toBe('Red');
   });
 
   it('usa funções válidas do consumidor', () => {

@@ -10,6 +10,8 @@ import type {
   RteEditorOptions,
   RteSlashOptions,
 } from '@cds/rte-core/extensions';
+import type { RteTheme } from '@cds/rte-theme';
+import type { RteToolbarConfig } from './toolbar/items';
 import { RTE_LABELS_EN } from './labels/en';
 import { mergeLabels, readLabelsSource } from './labels/merge';
 import type { RteLabels, RteLabelsSource } from './labels/types';
@@ -26,6 +28,10 @@ export interface RteConfig {
   labels?: RteLabelsSource;
   /** Padrões de criação para toda instância (D20). */
   editor?: RteEditorConfig;
+  /** Barra de ferramentas padrão (entrada > provider > 'article'). */
+  toolbar?: RteToolbarConfig;
+  /** Tema padrão; sem ele, o CSS em cascata. */
+  theme?: RteTheme;
 }
 
 /** Rótulos do provider já mesclados sobre `en` (sem a entrada da instância). */

@@ -11,6 +11,7 @@ describe('@cds/rte-angular', () => {
     expect(Object.keys(api).sort()).toEqual([
       'RTE_LABELS',
       'RTE_LABELS_EN',
+      'RTE_TOOLBAR_PRESETS',
       'RteEditor',
       'provideRichText',
     ]);
