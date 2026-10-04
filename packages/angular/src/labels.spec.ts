@@ -1,18 +1,36 @@
-import { RTE_CONTENT_LABELS, RTE_SLASH_LABELS } from '@cds/rte-core/extensions';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  signal,
+  viewChildren,
+  type EnvironmentProviders,
+  type Provider,
+} from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import {
+  getRteHtml,
+  RTE_CONTENT_LABELS,
+  RTE_SLASH_LABELS,
+} from '@cds/rte-core/extensions';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import {
+  provideRichText,
+  RteEditor,
   RTE_LABELS_EN as EN_FROM_ROOT,
   type RteLabels,
   type RteLabelsInput,
+  type RteLabelsSource,
 } from '@cds/rte-angular';
 import {
   RTE_LABELS_EN,
   RTE_LABELS_ES,
   RTE_LABELS_PT_BR,
 } from '@cds/rte-angular/i18n';
+import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { mergeLabels, readLabelsSource } from './labels/merge';
+import { settle } from './testing-support/render';
 
 function deepKeys(value: unknown, prefix = ''): string[] {
   if (value === null || typeof value !== 'object' || Array.isArray(value))
@@ -207,5 +225,149 @@ describe('readLabelsSource', () => {
     expect(
       readLabelsSource((() => 1) as unknown as () => RteLabelsInput),
     ).toBeUndefined();
+  });
+});
+
+const PACKS = {
+  en: RTE_LABELS_EN,
+  'pt-BR': RTE_LABELS_PT_BR,
+  es: RTE_LABELS_ES,
+} as const;
+
+const CONTENT =
+  '<ul class="rt-tasks"><li class="rt-task"><label><input type="checkbox" disabled="">X</label></li></ul>' +
+  '<aside class="rt-callout rt-callout--warning" role="note"><p class="rt-callout__title"></p><p>corpo</p></aside>';
+
+@Component({
+  selector: 'rte-test-live-labels',
+  imports: [RteEditor],
+  template: `<rte-editor
+      [value]="content"
+      [labels]="labels()"
+      (valueChange)="writes = writes + 1"
+    />
+    <rte-editor
+      [labels]="labels()"
+      [placeholder]="placeholder()"
+      (valueChange)="writes = writes + 1"
+    />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class LiveLabelsHost {
+  readonly content = CONTENT;
+  readonly lang = signal<keyof typeof PACKS>('en');
+  readonly labels = signal<RteLabelsSource | undefined>(
+    () => PACKS[this.lang()],
+  );
+  readonly placeholder = signal('A');
+  writes = 0;
+  readonly editors = viewChildren(RteEditor);
+}
+
+describe('no editor', () => {
+  async function setup(providers: (Provider | EnvironmentProviders)[] = []) {
+    TestBed.configureTestingModule({ providers });
+    const fixture = TestBed.createComponent(LiveLabelsHost);
+    fixture.autoDetectChanges();
+    await settle(fixture);
+    const host = fixture.componentInstance;
+    const [full, empty] = host.editors().map((c) => c.editor() as Editor) as [
+      Editor,
+      Editor,
+    ];
+    const read = () => ({
+      aria: full.view.dom.getAttribute('aria-label'),
+      title: full.view.dom
+        .querySelector('p.rt-callout__title')
+        ?.getAttribute('data-placeholder'),
+      task: full.view.dom
+        .querySelector('li.rt-task input')
+        ?.getAttribute('aria-label'),
+    });
+    return { fixture, host, full, empty, read };
+  }
+
+  it('trocar o idioma atualiza nome, título vazio e tarefas sem editar o texto', async () => {
+    const { fixture, host, full, read } = await setup();
+    expect(read()).toEqual({
+      aria: 'Rich text editor',
+      title: 'Warning',
+      task: 'Task: X',
+    });
+    // O documento não muda (a transação é só de meta). O `getRteHtml`
+    // escreve o rótulo atual no título vazio da caixa (B12 da 03c), então só
+    // esse texto acompanha o idioma.
+    const doc = full.state.doc;
+    const html = getRteHtml(full);
+    expect(html).toContain('<p class="rt-callout__title">Warning</p>');
+
+    host.lang.set('pt-BR');
+    await settle(fixture);
+    expect(read()).toEqual({
+      aria: 'Editor de texto rico',
+      title: 'Atenção',
+      task: 'Tarefa: X',
+    });
+    expect(host.writes).toBe(0);
+    expect(full.state.doc).toBe(doc);
+    expect(getRteHtml(full)).toBe(html.replace('Warning', 'Atenção'));
+
+    host.lang.set('es');
+    await settle(fixture);
+    expect(read()).toEqual({
+      aria: 'Editor de texto enriquecido',
+      title: 'Atención',
+      task: 'Tarea: X',
+    });
+    expect(host.writes).toBe(0);
+    expect(full.state.doc).toBe(doc);
+    expect(getRteHtml(full)).toBe(html.replace('Warning', 'Atención'));
+  });
+
+  it('o placeholder muda ao vivo no documento vazio', async () => {
+    const { fixture, host, empty } = await setup();
+    const p = () => empty.view.dom.querySelector('p.rte-placeholder--doc');
+    expect(p()?.getAttribute('data-placeholder')).toBe('A');
+    host.placeholder.set('B');
+    await settle(fixture);
+    expect(p()?.getAttribute('data-placeholder')).toBe('B');
+    expect(empty.view.dom.getAttribute('aria-placeholder')).toBe('B');
+    expect(host.writes).toBe(0);
+  });
+
+  it('fonte que lança vale en', async () => {
+    const { fixture, host, read } = await setup();
+    host.lang.set('pt-BR');
+    await settle(fixture);
+    host.labels.set(() => {
+      throw new Error('falhou');
+    });
+    await settle(fixture);
+    expect(read()).toEqual({
+      aria: 'Rich text editor',
+      title: 'Warning',
+      task: 'Task: X',
+    });
+  });
+
+  it('prioridade: entrada labels > provideRichText > en', async () => {
+    const { fixture, host, read } = await setup([
+      provideRichText({ labels: () => PACKS.es }),
+    ]);
+    expect(read().aria).toBe('Rich text editor');
+    host.labels.set(undefined);
+    await settle(fixture);
+    expect(read()).toEqual({
+      aria: 'Editor de texto enriquecido',
+      title: 'Atención',
+      task: 'Tarea: X',
+    });
+    host.labels.set({ editor: { ariaLabel: 'I' } });
+    await settle(fixture);
+    expect(read()).toEqual({
+      aria: 'I',
+      title: 'Atención',
+      task: 'Tarea: X',
+    });
   });
 });

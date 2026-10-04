@@ -1,12 +1,14 @@
 import type { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import type { Transaction } from '@tiptap/pm/state';
 import type { EditorView, NodeView, ViewMutationRecord } from '@tiptap/pm/view';
+import { RTE_LABELS_META } from './labels';
 import type { RteContentLabels } from './types';
 
 export interface TaskItemViewOptions {
   node: ProseMirrorNode;
   view: EditorView;
-  /** Só para ouvir `update` (mudança de `editable`). */
+  /** Só para ouvir `update` (mudança de `editable`) e `transaction` (rótulos). */
   editor: Editor;
   getPos: () => number | undefined;
   labels: () => RteContentLabels;
@@ -17,7 +19,8 @@ export interface TaskItemViewOptions {
  * com o checkbox fora da área editável e o texto em `span.rte-task__text`.
  * O checkbox só fica habilitado com o editor editável, tem `aria-label`
  * = `labels.taskCheckbox(texto)` e alterna `checked` por transação; o
- * `mousedown` nele não rouba a seleção. Só DOM, sem `innerHTML`.
+ * `mousedown` nele não rouba a seleção; o `aria-label` é relido numa transação
+ * com `RTE_LABELS_META` (troca de rótulos). Só DOM, sem `innerHTML`.
  */
 export class TaskItemView implements NodeView {
   readonly dom: HTMLLIElement;
@@ -28,6 +31,13 @@ export class TaskItemView implements NodeView {
   private readonly options: TaskItemViewOptions;
   private readonly syncEditable = (): void => {
     this.input.disabled = !this.isEditable();
+  };
+  private readonly onTransaction = ({
+    transaction,
+  }: {
+    transaction: Transaction;
+  }): void => {
+    if (transaction.getMeta(RTE_LABELS_META) === true) this.render();
   };
 
   constructor(options: TaskItemViewOptions) {
@@ -48,6 +58,7 @@ export class TaskItemView implements NodeView {
     this.input.addEventListener('mousedown', (event) => event.preventDefault());
     this.input.addEventListener('change', () => this.toggle());
     options.editor.on('update', this.syncEditable);
+    options.editor.on('transaction', this.onTransaction);
     this.render();
   }
 
@@ -109,5 +120,6 @@ export class TaskItemView implements NodeView {
 
   destroy(): void {
     this.options.editor.off('update', this.syncEditable);
+    this.options.editor.off('transaction', this.onTransaction);
   }
 }

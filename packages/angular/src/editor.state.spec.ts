@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   effect,
+  NgZone,
   signal,
   viewChild,
   type Signal,
@@ -154,6 +155,36 @@ describe('RteEditor: ponte de signals (D4, R3)', () => {
       cmp.textStats();
     }
     expect(fromSchema).not.toHaveBeenCalled();
+  });
+});
+
+@Component({
+  selector: 'rte-test-onpush',
+  imports: [RteEditor],
+  template: `<rte-editor #ed /><output>{{ ed.isEmpty() }}</output>`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class OnPushHost {
+  readonly cmp = viewChild.required(RteEditor);
+}
+
+describe('RteEditor: template OnPush do consumidor (D3, D4)', () => {
+  it('atualiza sozinho depois de uma transação fora da zona, sem tick explícito', async () => {
+    TestBed.configureTestingModule({});
+    const fixture = TestBed.createComponent(OnPushHost);
+    fixture.autoDetectChanges();
+    await settle(fixture);
+    const out = (fixture.nativeElement as HTMLElement).querySelector('output');
+    const editor = fixture.componentInstance.cmp().editor() as Editor;
+    expect(out?.textContent).toBe('true');
+
+    TestBed.inject(NgZone).runOutsideAngular(() =>
+      editor.view.dispatch(editor.state.tr.insertText('a', 1)),
+    );
+    expect(NgZone.isInAngularZone()).toBe(false);
+    expect(out?.textContent).toBe('true');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(out?.textContent).toBe('false');
   });
 });
 

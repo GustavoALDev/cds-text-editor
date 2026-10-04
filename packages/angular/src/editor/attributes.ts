@@ -12,6 +12,11 @@ export interface RteEditableState {
   readonly: boolean;
 }
 
+/** Texto vazio ou só com espaços vale como ausente (sem nome acessível vazio). */
+export function presentText(value: string | null | undefined): string | null {
+  return typeof value === 'string' && value.trim() !== '' ? value : null;
+}
+
 /**
  * Atributos do editável (o `.ProseMirror`). O `role="textbox"` vem do Tiptap
  * e o `aria-placeholder`, do core.
@@ -23,9 +28,11 @@ export function editableAttributes(
     class: 'rte-content',
     'aria-multiline': 'true',
   };
-  if (s.ariaLabelledBy) out['aria-labelledby'] = s.ariaLabelledBy;
-  else out['aria-label'] = s.ariaLabel ?? s.fallbackLabel;
-  if (s.ariaDescribedBy) out['aria-describedby'] = s.ariaDescribedBy;
+  const labelledBy = presentText(s.ariaLabelledBy);
+  const describedBy = presentText(s.ariaDescribedBy);
+  if (labelledBy) out['aria-labelledby'] = labelledBy;
+  else out['aria-label'] = presentText(s.ariaLabel) ?? s.fallbackLabel;
+  if (describedBy) out['aria-describedby'] = describedBy;
   if (s.required) out['aria-required'] = 'true';
   if (s.invalid && s.touched) out['aria-invalid'] = 'true';
   if (s.disabled) {

@@ -2,7 +2,9 @@
 import type { Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { afterEach, describe, expect, it } from 'vitest';
+import { RTE_CONTENT_LABELS, RTE_LABELS_META } from './labels';
 import { getRteHtml } from './serialize';
+import type { RteContentLabels, RteContentLabelsSource } from './types';
 import { createTestEditor, destroyTestEditors } from './testing/editor';
 
 const ONLY_TASKS = {
@@ -20,10 +22,7 @@ const AB =
 
 afterEach(() => destroyTestEditors());
 
-function editorWith(
-  content = AB,
-  labels?: { taskCheckbox(t: string): string },
-) {
+function editorWith(content = AB, labels?: RteContentLabelsSource) {
   return createTestEditor(
     { features: ONLY_TASKS, ...(labels ? { labels } : {}) },
     content,
@@ -196,5 +195,33 @@ describe('TaskItemView: interação', () => {
     const editor = editorWith();
     expect(getRteHtml(editor)).toBe(AB);
     expect(editor.getHTML()).toBe(AB);
+  });
+});
+
+describe('TaskItemView: troca de rótulos (RTE_LABELS_META)', () => {
+  const X =
+    '<ul class="rt-tasks"><li class="rt-task"><label><input type="checkbox" disabled="">X</label></li></ul>';
+
+  it('transação com RTE_LABELS_META re-renderiza o aria-label; outra meta não', () => {
+    let cur: RteContentLabels = RTE_CONTENT_LABELS.en;
+    const editor = editorWith(X, () => cur);
+    const label = () =>
+      checkbox(items(editor)[0] as Element).getAttribute('aria-label');
+    expect(label()).toBe('Task: X');
+    cur = RTE_CONTENT_LABELS['pt-BR'];
+    editor.view.dispatch(editor.state.tr.setMeta('outra', 1));
+    expect(label()).toBe('Task: X');
+    editor.view.dispatch(editor.state.tr.setMeta(RTE_LABELS_META, true));
+    expect(label()).toBe('Tarefa: X');
+  });
+
+  it('destroy remove o ouvinte de transação', () => {
+    let cur: RteContentLabels = RTE_CONTENT_LABELS.en;
+    const editor = editorWith(X, () => cur);
+    const input = checkbox(items(editor)[0] as Element);
+    editor.commands.setContent('<p>a</p>');
+    cur = RTE_CONTENT_LABELS.es;
+    editor.view.dispatch(editor.state.tr.setMeta(RTE_LABELS_META, true));
+    expect(input.getAttribute('aria-label')).toBe('Task: X');
   });
 });

@@ -22,6 +22,7 @@ import {
 import type { FormValueControl } from '@angular/forms/signals';
 import {
   createEditorExtensions,
+  RTE_LABELS_META,
   type RteCharLimitState,
 } from '@cds/rte-core/extensions';
 import { Editor } from '@tiptap/core';
@@ -30,7 +31,11 @@ import { EditorState } from '@tiptap/pm/state';
 import { RTE_CONFIG, RTE_LABELS, type RteEditorConfig } from '../config';
 import { mergeLabels, readLabelsSource } from '../labels/merge';
 import type { RteLabels, RteLabelsSource } from '../labels/types';
-import { editableAttributes, type RteEditableState } from './attributes';
+import {
+  editableAttributes,
+  presentText,
+  type RteEditableState,
+} from './attributes';
 import { bindRteBridge, createRteBridge } from './bridge';
 import { isEmptyValue, readValue } from './empty';
 import { RTE_EDITOR_HOOK } from './hook';
@@ -62,7 +67,10 @@ function toCharLimit(value: number | undefined): number | null {
     '[attr.hidden]': 'hidden() ? "" : null',
     '[class.rte-editor--disabled]': 'effectiveDisabled()',
     '[class.rte-editor--readonly]': 'readonly()',
+    '[class.rte-editor--focused]': 'hostFocused()',
     '[class.rte-editor--invalid]': 'invalid() && touched()',
+    '(focusin)': 'onHostFocusIn($event)',
+    '(focusout)': 'onHostFocusOut($event)',
   },
 })
 export class RteEditor implements FormValueControl<string> {
@@ -91,6 +99,11 @@ export class RteEditor implements FormValueControl<string> {
   readonly editorBlur = output<void>();
 
   private readonly instance = signal<Editor | null>(null);
+  private readonly host =
+    inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+
+  /** O foco está em algum ponto do host (D11). */
+  protected readonly hostFocused = signal(false);
   private readonly bridge = createRteBridge(this.instance, () =>
     isEmptyValue(this.value()),
   );
@@ -121,11 +134,17 @@ export class RteEditor implements FormValueControl<string> {
     this.disabled(),
   );
 
+  /** `aria-labelledby` da casca; texto vazio ou só espaços vale como ausente. */
+  protected readonly shellLabelledBy = computed(() =>
+    presentText(this.ariaLabelledBy()),
+  );
+
   /** Nome acessível da casca: `ariaLabelledBy` vence `ariaLabel`. */
   protected readonly shellLabel = computed(() =>
-    this.ariaLabelledBy()
+    this.shellLabelledBy()
       ? null
-      : (this.ariaLabel() ?? this.resolvedLabels().editor.ariaLabel),
+      : (presentText(this.ariaLabel()) ??
+        this.resolvedLabels().editor.ariaLabel),
   );
 
   protected readonly showShellPlaceholder = computed(
@@ -137,7 +156,7 @@ export class RteEditor implements FormValueControl<string> {
   constructor() {
     bindRteBridge(this, this.bridge);
 
-    const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    const host = this.host;
     const zone = inject(NgZone);
     const config = inject(RTE_CONFIG);
 
@@ -206,6 +225,62 @@ export class RteEditor implements FormValueControl<string> {
       });
     });
 
+    // Atributos (D10, D13) e editável: props da vista, sem transação. Leem só
+    // entradas, então valem também depois de uma carga externa (que troca o
+    // estado, não as props).
+    effect(() => {
+      const attributes = editableAttributes(this.editableState());
+      const editor = this.instance();
+      if (!editor || editor.isDestroyed) return;
+      zone.runOutsideAngular(() =>
+        editor.setOptions({
+          editorProps: { ...editor.options.editorProps, attributes },
+        }),
+      );
+    });
+    effect(() => {
+      const editable = !this.effectiveDisabled() && !this.readonly();
+      const editor = this.instance();
+      if (!editor || editor.isDestroyed) return;
+      if (editor.options.editable === editable) return;
+      zone.runOutsideAngular(() => editor.setEditable(editable, false));
+    });
+
+    // `disabled`/`hidden` com o foco dentro do host: o foco sai (sem
+    // `relatedTarget`) e o `focusout` emite `editorBlur`/`touch` uma vez
+    // (Review Focus 4). Navegadores que já tiraram o foco não duplicam:
+    // `hostFocused` guarda o estado.
+    effect(() => {
+      if (!this.effectiveDisabled() && !this.hidden()) return;
+      untracked(() => {
+        const active = host.ownerDocument?.activeElement as
+          (Element & { blur?: () => void }) | null | undefined;
+        if (active && active !== host && host.contains(active)) active.blur?.();
+      });
+    });
+
+    // Rótulos e placeholder ao vivo (D15): uma transação só de meta relê as
+    // decorações, o `aria-placeholder` e o nome das tarefas. Não despacha na
+    // primeira leitura de cada editor (ele nasceu com os rótulos atuais).
+    let labelsEditor: Editor | null = null;
+    effect(() => {
+      this.placeholder();
+      this.resolvedLabels();
+      const editor = this.instance();
+      if (!editor || editor.isDestroyed) return;
+      if (editor !== labelsEditor) {
+        labelsEditor = editor;
+        return;
+      }
+      zone.runOutsideAngular(() =>
+        editor.view.dispatch(
+          editor.state.tr
+            .setMeta(RTE_LABELS_META, true)
+            .setMeta('addToHistory', false),
+        ),
+      );
+    });
+
     afterNextRender(() => {
       const editor = untracked(() => {
         optionsAtCreation = this.options();
@@ -262,6 +337,29 @@ export class RteEditor implements FormValueControl<string> {
       editor.destroy();
       this.instance.set(null);
     });
+  }
+
+  /** `focusin` vindo de fora do host (ou sem origem): `editorFocus` (D11). */
+  protected onHostFocusIn(event: FocusEvent): void {
+    if (this.hostFocused() || this.isInsideHost(event.relatedTarget)) return;
+    this.hostFocused.set(true);
+    this.editorFocus.emit();
+  }
+
+  /** `focusout` para fora do host (ou sem destino): `editorBlur` e `touch` (D11). */
+  protected onHostFocusOut(event: FocusEvent): void {
+    if (!this.hostFocused() || this.isInsideHost(event.relatedTarget)) return;
+    this.hostFocused.set(false);
+    this.editorBlur.emit();
+    this.touch.emit();
+  }
+
+  private isInsideHost(target: EventTarget | null): boolean {
+    return (
+      target !== null &&
+      typeof (target as Node).nodeType === 'number' &&
+      this.host.contains(target as Node)
+    );
   }
 
   /** Foca o editável; antes da criação, o pedido vale logo depois dela. */

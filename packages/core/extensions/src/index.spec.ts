@@ -30,6 +30,7 @@ describe('API pública do /extensions (spec 03b, §6)', () => {
   it('exporta exatamente os valores previstos', () => {
     expect(Object.keys(ext).sort()).toEqual([
       'RTE_CONTENT_LABELS',
+      'RTE_LABELS_META',
       'RTE_SLASH_ITEMS',
       'RTE_SLASH_LABELS',
       'createEditorExtensions',
@@ -41,6 +42,7 @@ describe('API pública do /extensions (spec 03b, §6)', () => {
       'getSlashMenuState',
       'serializeRteHtml',
     ]);
+    expect(ext.RTE_LABELS_META).toBe('rtLabels');
     expect(typeof ext.createEditorExtensions).toBe('function');
     expect(typeof ext.getRteHtml).toBe('function');
     expect(typeof ext.serializeRteHtml).toBe('function');

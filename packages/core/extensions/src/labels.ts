@@ -4,6 +4,14 @@ import type {
   RteContentLabelsSource,
 } from './types';
 
+/**
+ * Meta de transação que avisa a troca de rótulos (spec 05a, D15): as vistas
+ * que leem `labels()` só fora de `update(node)` (o nome das tarefas) se
+ * re-renderizam ao vê-la com `true`. Decorações e atributos já são relidos a
+ * cada transação.
+ */
+export const RTE_LABELS_META = 'rtLabels';
+
 const VARIANTS: readonly RteCalloutVariant[] = [
   'info',
   'success',

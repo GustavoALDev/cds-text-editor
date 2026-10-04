@@ -7,7 +7,7 @@
     aria-readonly="true"
     aria-busy="true"
     [attr.aria-label]="shellLabel()"
-    [attr.aria-labelledby]="ariaLabelledBy() || null"
+    [attr.aria-labelledby]="shellLabelledBy()"
   >
     @if (showShellPlaceholder()) {
     <p
