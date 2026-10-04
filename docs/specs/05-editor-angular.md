@@ -32,7 +32,7 @@ Esquema, extensões e serialização (spec 03, consumidas como estão); sanitiza
 | Strings em `RTE_LABELS` (`Signal<RteLabels>`), compondo `RTE_CONTENT_LABELS`/`RTE_SLASH_LABELS` do core; pacotes pt-BR/en/es em `/i18n`; texto fixo em template barrado por teste | 05a (D15, D25) | Uma fonte por string; troca de idioma em tempo de execução |
 | Zoneless primeiro, zone.js suportado; mesma suíte nos dois modos | 05a (D21) | Antigo spike S4 |
 | Testes de componente pelo *builder* `unit-test` do Angular (Vitest + jsdom); navegador real num app de teste Angular com *prerender*, hidratação e CSP estrita | 05a (D22) | Regra principal do repositório; lição 12 |
-| Sem dependência de `@cds/rte-sanitizer` nem de `@cds/rte-render`; o tema é peer só de CSS (nenhum import TypeScript, grafo do lint inalterado) | 05a (D24) | Grafo do `CLAUDE.md` (`angular` só de `core`) |
+| Sem dependência de `@cds/rte-sanitizer` nem de `@cds/rte-render`; o tema era peer só de CSS na 05a; a 05b1 passou a importá-lo (`applyRteTheme`, `scope:angular` → `scope:theme`, U15, ADR 0008) | 05a (D24), 05b1 (U15) | Grafo do `CLAUDE.md` (`angular` de `core` e `theme`) |
 | Peers Angular `>=22.2.0 <23` até a spec 08 provar o 22.0 | 05a (D24) | Testar só o que se suporta |
 
 **Spikes da versão anterior:** S1 (CVA × `FormValueControl`) foi respondido lendo o código do `@angular/forms` 22.2.1 e vira teste da 05a (R5/R6); S4 (zoneless × zone.js) é requisito da 05a (R14); S3 (custo da ponte e do `updateOn`) é medido no N8 da 05a e decidido na 05d; S2 (Angular Aria × roving tabindex próprio; `<dialog>` nativo) foi decidido na 05b1 (U1: implementação própria atrás de diretivas internas; o `@angular/aria@22.2.1` exige `@angular/cdk` 22.2.1 exato como peer).

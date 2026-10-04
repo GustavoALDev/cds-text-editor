@@ -15,6 +15,7 @@ Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 - `@cds/rte-core/html`: `htmlToText`, `extractToc` e `validateHtml` sem DOM (usa `htmlparser2`, cerca de 22 kB gzip; fora do entry `/` de propósito).
 - `@cds/rte-core/extensions`: extensões Tiptap, `createEditorExtensions` e o serializador canônico (`getRteHtml`, `serializeRteHtml`). Exige os peers do Tiptap (ver abaixo).
 - `@cds/rte-core/code-languages`: catálogo de linguagens de código com gramáticas do `highlight.js` carregadas sob demanda.
+- `@cds/rte-core/styles/content.css`: arquivo CSS (sem JS) com a aparência do conteúdo; ver abaixo.
 
 Os entries `.`, `/embeds` e `/html` não importam Tiptap: quem só usa o esquema ou o sanitizador no servidor não precisa instalar os peers.
 
@@ -56,6 +57,20 @@ validateHtml(editor.getHTML(), getHtmlSchema(), { mode: 'accepted' }); // []
 ```
 
 `validateHtml` só lê; os interpretadores que transformam o HTML ficam com o sanitizador (`@cds/rte-sanitizer`).
+
+## CSS do conteúdo (`styles/content.css`)
+
+Arquivo único com a aparência do HTML do esquema, usado pelo editor (`@cds/rte-angular`) e pela página publicada (spec 06). Inclua depois do `theme.css`:
+
+```css
+@import '@cds/rte-theme/theme.css';
+@import '@cds/rte-core/styles/content.css';
+```
+
+- Contêiner: `<div class="rte-root"><div class="rte-content">…</div></div>`. O `.rte-root` fornece os tokens `--rte-*`; todo seletor do arquivo começa por `.rte-content`.
+- Camadas: `@layer rte.reset, rte.base, rte.theme, rte.components, rte.content`, com tudo em `rte.content`; CSS do consumidor sem camada vence.
+- Cobre tipografia, listas, `blockquote`, `code` e `pre`, tabelas, tarefas, figuras, vídeo e _embeds_ responsivos, citação em destaque, caixas, "Leia também" e as cores da paleta (claro e escuro por `light-dark()`). `!important` só em `color` de `span[data-rt-color]` e `background-color` de `mark[data-rt-color]`; sobrescreva com `--rte-content-color` e `--rte-content-highlight`.
+- CSP: o arquivo não injeta nada, mas o atributo `style` do HTML canônico (`text-align`, larguras de coluna, `aspect-ratio` dos _embeds_) é bloqueado por `style-src` sem `'unsafe-inline'`; esses valores não se aplicam à página. As cores da paleta não dependem dele.
 
 ## Extensões do editor (`/extensions`)
 

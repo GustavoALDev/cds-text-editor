@@ -2,7 +2,7 @@
 
 Componente Angular do editor de texto rico (`rte-editor`), sobre Tiptap 3: ponte de signals, Signal Forms, Reactive/Template Forms, rótulos pt-BR/en/es, validadores de texto e CSS funcional sem injeção (compatível com CSP estrita).
 
-**Status: spec 05a (componente e formulários) concluída; ainda sem versão publicada.** Esta parte entrega o editor **sem barra de ferramentas**: edição por atalhos de teclado. Toolbar, menus e diálogos (05b), mídia (05c) e busca/comandos `/` com interface (05d) vêm nas partes seguintes. `features.search` e `features.slashCommands` ficam sempre desligados nesta parte.
+**Status: specs 05a (componente e formulários) e 05b1 (barra de ferramentas e tema por instância) concluídas; ainda sem versão publicada.** Menus flutuantes e diálogos (05b2), mídia (05c) e busca/comandos `/` com interface (05d) vêm nas partes seguintes. `features.search` e `features.slashCommands` ficam sempre desligados.
 
 Nome do pacote provisório (escopo `@cds` ainda não confirmado). Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
@@ -26,16 +26,21 @@ npm i @cds/rte-angular @cds/rte-core @cds/rte-theme \
 
 ## CSS
 
-O pacote não injeta CSS em tempo de execução (nem o Tiptap). Inclua os dois arquivos, nesta ordem, em `angular.json` → `styles`:
+O pacote não injeta CSS em tempo de execução (nem o Tiptap). Inclua os três arquivos, **nesta ordem**, em `angular.json` → `styles`:
 
 ```json
 "styles": [
   "node_modules/@cds/rte-theme/theme.css",
+  "node_modules/@cds/rte-core/styles/content.css",
   "node_modules/@cds/rte-angular/styles/editor.css"
 ]
 ```
 
-O `editor.css` usa `@layer rte.reset, rte.base, rte.theme, rte.components, rte.content` (a mesma ordem do tema), sem `!important` e sem seletor global; as cores vêm dos tokens `--rte-*`. As classes `rte-*` (BEM) são API pública: host `rte-root rte-editor`, modificadores `rte-editor--disabled|--readonly|--focused|--invalid`, partes `rte-editor__frame`, `rte-editor__shell`, `rte-editor__mount`.
+- `theme.css`: tokens `--rte-*`.
+- `content.css` (do core): aparência do conteúdo (`rt-*`, tabelas, `pre`, paleta), em `@layer rte.content`, sempre sob `.rte-content`. É o mesmo arquivo que a página publicada usa (spec 06).
+- `editor.css`: só o funcional da edição, a barra e os menus.
+
+Os dois últimos usam `@layer rte.reset, rte.base, rte.theme, rte.components, rte.content` (a mesma ordem do tema); as cores vêm dos tokens `--rte-*`. **Exceção ao "sem `!important`":** no `content.css`, `color` de `span[data-rt-color]` e `background-color` de `mark[data-rt-color]` (o `style` do HTML canônico venceria qualquer regra sem `!important` e quebraria o contraste no escuro). Para personalizar, sobrescreva as variáveis `--rte-content-color` e `--rte-content-highlight`, por exemplo `.rte-content span[data-rt-color='red'] { --rte-content-color: #b00020; }`. As classes `rte-*` (BEM) são API pública: host `rte-root rte-editor`, modificadores `rte-editor--disabled|--readonly|--focused|--invalid`, partes `rte-editor__frame`, `rte-editor__shell`, `rte-editor__mount`, `rte-toolbar` (`__button`, `--pressed`, `--menu`, `__separator`), `rte-menu` (`__item`, `--checked`), `rte-swatch` e `rte-icon`.
 
 ## Uso
 
@@ -88,7 +93,7 @@ No Angular 22.2 o `NgControl` liga um controle customizado (`FormValueControl`) 
 
 `setValue(null)` vale `''`; `setValue` chega ao editor sem emitir de volta (o controle fica `pristine`); `disable()`/`enable()` ligam o editável. Limitação importante: nesses dois modos o limite do validador **não** chega ao componente (não há metadados de Signal Forms); para o limite barrar a digitação, ligue `[maxLength]="5000"` no elemento; o mesmo vale para `[readonly]` e `[hidden]` (o controle nativo entrega `disabled`, `required`, `invalid` e `touched`; `maxLength`, `readonly` e `hidden` não). `Validators.required` e o atributo `required` valem; use `RteValidators.required`, `maxChars(n)` e `maxWords(n)` para medir o **texto** e não a string HTML.
 
-Sem formulário: `<rte-editor [(value)]="html" />`.
+Sem formulário: `<rte-editor [(value)]="html" />`. Se o pai devolve `value` ao valor anterior antes da detecção de mudanças, a mudança nunca chega ao editor (comportamento do `model()` do Angular).
 
 ### `maxLength` nativo × `rteMaxChars`
 
@@ -112,9 +117,47 @@ message(): string {
 }
 ```
 
+## Barra de ferramentas
+
+A barra é o primeiro filho da moldura do `rte-editor` (`role="toolbar"`). Prioridade: entrada `[toolbar]` > `provideRichText({ toolbar })` > `'article'`; `false` não renderiza a barra. Mudar `toolbar` depois da criação vale (só a interface muda; o editor não é recriado).
+
+```html
+<rte-editor toolbar="full" />
+<rte-editor [toolbar]="[['undo', 'redo'], ['bold', 'italic']]" />
+<rte-editor [toolbar]="false" />
+```
+
+Presets (`RTE_TOOLBAR_PRESETS`, congelados; `·` separa grupos):
+
+- `minimal`: `undo redo · bold italic · bulletList orderedList`
+- `article` (padrão): `undo redo · blockType · bold italic underline strike · textColor highlight · bulletList orderedList taskList · align · blockquote codeBlock horizontalRule · table · clearFormatting`
+- `full`: o `article` mais `code superscript subscript` (marcas), `indent outdent` (listas), `codeLanguage` (blocos) e o grupo `callout pullquote readAlso` antes de `clearFormatting`
+
+Grupos próprios são listas de ids (`RteToolbarItemId`) na ordem de exibição; id desconhecido ou repetido é ignorado com aviso em modo de desenvolvimento. `features` desligado esconde o item correspondente: `colors` (`textColor`, `highlight`), `tasks` (`taskList`), `code` (`codeBlock`, `codeLanguage`, que também some sem `codeLanguages`), `tables` (`table`) e `newsBlocks` (`callout`, `pullquote`, `readAlso`); grupo vazio some.
+
+**Teclado.** A barra é uma parada de `Tab` (foco itinerante: `←`/`→` com volta circular, invertidas em `dir="rtl"`; `Home`/`End`); itens inaplicáveis ficam focáveis com `aria-disabled`. `Alt+F10` no editável, ou `focusToolbar()` no componente, leva o foco ao item ativo; `Shift+Tab` a partir do editável também chega à barra; `Escape` devolve o foco ao editável com a seleção intacta. Os menus (`blockType`, cores, `align`, `codeLanguage`, `table`, `callout`) seguem o padrão _menu button_: `Enter`/`Espaço`/`↓` abrem no primeiro item, `↑` no último; `Escape` fecha e volta ao botão; `Tab` fecha e vai ao editável. Clicar fora de um menu aberto o fecha e devolve o foco ao botão.
+
+**Atalhos** (`Ctrl`, ou `⌘` no Mac; a dica de cada botão mostra o atalho na notação da plataforma): `B`, `I`, `U`, `Shift+S` (tachado), `E` (código), `.` (sobrescrito), `,` (subscrito), `Shift+8` e `Shift+7` (listas), `Alt+C` (bloco de código), `Alt+0`, `Alt+2`, `Alt+3` e `Alt+4` (parágrafo e títulos), `Shift+L`, `Shift+E`, `Shift+R` e `Shift+J` (alinhamento), `Z` e `Shift+Z`. Citação e lista de tarefas ainda não têm atalho que funcione (bugs do core, ADR 0008).
+
+**Tabela.** Operações que passariam de 100 em `colspan`/`rowspan` ficam `aria-disabled`, com o motivo no `title`. Limitação: chamadas diretas à API do Tiptap (`editor.commands.*`) não passam pela guarda (ADR 0004).
+
+**Estados e acessibilidade.** Sem editor (SSR, antes da criação), `disabled` ou `readonly`, todos os botões ficam `disabled` nativos, no mesmo leiaute. Alvos de toque ≥ 24 × 24 px; pressionado e marcado são distinguíveis sem cor e em `forced-colors`. Os rótulos vêm da seção `toolbar` de `RteLabels` (pt-BR, en e es em `/i18n`). A direção da barra vem do atributo `dir` (`closest('[dir]')`); direção só por CSS, sem `dir`, não é detectada.
+
+## Tema por instância
+
+```ts
+provideRichText({ theme: { primary: '#0b5fff' } });
+```
+
+```html
+<rte-editor [theme]="{ primary: '#c2185b', mode: 'dark' }" />
+```
+
+O tema é mesclado por chave (instância > `provideRichText`) e aplicado ao host por `applyRteTheme` do `@cds/rte-theme` (CSSOM, compatível com CSP estrita; nenhum atributo `style` no HTML do SSR). `data-rte-mode` sai no host. Trocar `[theme]` reaplica, `undefined` limpa e o destroy limpa; duas instâncias com temas diferentes não interferem, e os menus herdam o tema da instância. Em desenvolvimento, `warnIfPoorTheme` avisa **só para valores inválidos** (por exemplo `'banana'`); sementes válidas têm contraste garantido pela derivação. Sem tema em lugar nenhum, vale o CSS em cascata.
+
 ## Rótulos e idioma
 
-`RteLabels` = `content` + `slash` + `editor` + `errors`. A fonte é um objeto parcial **ou uma função** (lida dentro de `computed`, então pode ler signals). Prioridade: entrada `[labels]` > `provideRichText({ labels })` (também aninhado em rotas/componentes) > inglês. Pacotes completos em `@cds/rte-angular/i18n`: `RTE_LABELS_PT_BR`, `RTE_LABELS_EN`, `RTE_LABELS_ES`.
+`RteLabels` = `content` + `slash` + `editor` + `errors` + `toolbar`. A fonte é um objeto parcial **ou uma função** (lida dentro de `computed`, então pode ler signals). Prioridade: entrada `[labels]` > `provideRichText({ labels })` (também aninhado em rotas/componentes) > inglês. Pacotes completos em `@cds/rte-angular/i18n`: `RTE_LABELS_PT_BR`, `RTE_LABELS_EN`, `RTE_LABELS_ES`.
 
 ```ts
 // Por instância: a entrada `labels` ligada a um signal.
@@ -157,6 +200,6 @@ Testado com `default-src 'self'; script-src 'self'; style-src 'self'` por cabeç
 
 ## O que vem depois
 
-05b: barra de ferramentas, menus flutuantes, diálogos e tema por instância. 05c: mídia. 05d: busca e comandos `/` com interface, `updateOn`/adiamento da emissão com os números de desempenho, API final. Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
+05b2: menus flutuantes e diálogos (itens `link` e `lang`). 05c: mídia. 05d: busca e comandos `/` com interface, `updateOn`/adiamento da emissão com os números de desempenho, API final. Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
 
 Repositório: cds-text-editor (monorepo). Licença MIT.
