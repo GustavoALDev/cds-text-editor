@@ -47,7 +47,14 @@
     },
     "@nx/angular:unit-test": {
       "cache": true,
-      "inputs": ["default", "^production"]
+      "inputs": ["default", "^production"],
+      "parallelism": false
+    },
+    "test": {
+      "parallelism": false
+    },
+    "test-zone": {
+      "parallelism": false
     }
   }
 }
