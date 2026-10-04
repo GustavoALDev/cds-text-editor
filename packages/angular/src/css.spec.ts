@@ -17,6 +17,7 @@ import { workspacePath } from './testing-support/workspace';
 // conferido em camadas, escopo, cobertura das classes do core e tokens.
 
 const CSS_FILE = workspacePath('packages/angular/styles/editor.css');
+const CONTENT_CSS_FILE = workspacePath('packages/core/styles/content.css');
 const CORE_EXTENSIONS = workspacePath('packages/core/extensions/src');
 const LAYER_ORDER =
   'rte.reset, rte.base, rte.theme, rte.components, rte.content';
@@ -60,6 +61,29 @@ const COLOR_VALUE =
 /** Fichas aceitas num atalho de borda/contorno/fundo além da cor. */
 const NON_COLOR_TOKEN =
   /^(?:-?[\d.]+(?:px|em|rem|%)?|none|solid|dashed|dotted|double|auto|underline|wavy|calc\(.*\))$/;
+
+/**
+ * Propriedades que o `editor.css` pode declarar em regras de `rt-*`, `table`,
+ * `td`, `th` e `pre` (R11, spec 05b1): só o funcional da edição; a aparência é
+ * do `content.css`.
+ */
+const FUNCTIONAL_PROPS = [
+  'position',
+  'white-space',
+  'table-layout',
+  'min-width',
+  'cursor',
+  'user-select',
+  'pointer-events',
+  'touch-action',
+  'z-index',
+  'box-sizing',
+  'display',
+  'align-items',
+  'gap',
+  'flex',
+  'overflow-x',
+];
 
 let root: Root;
 
@@ -301,5 +325,38 @@ describe('editor.css (R10)', () => {
       true,
     );
     expect(decls.some((d) => /^animation(?:-name)?$/.test(d.prop))).toBe(true);
+  });
+
+  it('nenhum seletor em comum com o content.css', () => {
+    const normalize = (selector: string) =>
+      selector.replace(/\s+/g, ' ').trim();
+    const content = parse(readFileSync(CONTENT_CSS_FILE, 'utf8'), {
+      from: CONTENT_CSS_FILE,
+    });
+    const contentSelectors = new Set<string>();
+    content.walkRules((rule) => {
+      if (!insideKeyframes(rule))
+        for (const selector of rule.selectors)
+          contentSelectors.add(normalize(selector));
+    });
+    expect(contentSelectors.size).toBeGreaterThan(20);
+    const shared = styleRules()
+      .flatMap((rule) => rule.selectors.map(normalize))
+      .filter((selector) => contentSelectors.has(selector));
+    expect(shared).toEqual([]);
+  });
+
+  it('regras com rt-*, table, td, th ou pre só declaram propriedades funcionais', () => {
+    const appearance: string[] = [];
+    for (const rule of styleRules()) {
+      const touches = rule.selectors.some((selector) =>
+        /\.rt-[\w-]+|(?:^|[\s>+~])(?:table|td|th|pre)(?![\w-])/.test(selector),
+      );
+      if (!touches) continue;
+      for (const decl of declarations(rule))
+        if (!FUNCTIONAL_PROPS.includes(decl.prop))
+          appearance.push(`${rule.selector} { ${decl.prop} }`);
+    }
+    expect(appearance).toEqual([]);
   });
 });

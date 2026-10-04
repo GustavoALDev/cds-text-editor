@@ -11,7 +11,10 @@
  * - `rte.components`: a moldura (`.rte-editor`, `__frame`, `__shell`, `__mount` e modificadores).
  * - `rte.content`: tudo dentro do editável `.rte-content` (o CSS base do Tiptap portado, sem
  *   `!important`, mais placeholder, tarefas, alças da imagem, tabelas em edição, `hljs-*`, busca
- *   e comandos `/`). A aparência dos blocos `rt-*` (caixas, citação, figuras) é da spec 05b.
+ *   e comandos `/`). Só o funcional da edição: a aparência do conteúdo (`rt-*`, tabelas, `pre`,
+ *   cores da paleta) é do `content.css` do `@cds/rte-core` (spec 05b1, U16). Ordem de inclusão:
+ *   `theme.css` → `content.css` → `editor.css`. Onde o seletor coincidiria com o do `content.css`,
+ *   o daqui leva `.rte-editor` na frente (mais específico, sem repetir o seletor).
  */
 
 @layer rte.components {
@@ -75,7 +78,7 @@
 
 @layer rte.content {
   /* CSS base do Tiptap (`@tiptap/core/src/style.ts`) com `.rte-content` no lugar de `.ProseMirror`. */
-  .rte-content {
+  .rte-editor .rte-content {
     position: relative;
     box-sizing: border-box;
     min-height: 6em;
@@ -102,7 +105,7 @@
     white-space: pre-wrap;
   }
 
-  .rte-content pre {
+  .rte-editor .rte-content pre {
     white-space: pre-wrap;
   }
 
@@ -175,12 +178,7 @@
   }
 
   /* Tarefas: o checkbox fica fora da área editável (`contenteditable=false`). */
-  .rte-content .rt-tasks {
-    list-style: none;
-    padding-inline-start: 0;
-  }
-
-  .rte-content .rt-task {
+  .rte-editor .rte-content .rt-task {
     display: flex;
     align-items: flex-start;
     gap: 0.5em;
@@ -210,16 +208,8 @@
   }
 
   /* Imagem: a figura acompanha o `img` para as alças ficarem nos cantos dele. */
-  .rte-content .rt-figure {
+  .rte-editor .rte-content .rt-figure {
     position: relative;
-    width: fit-content;
-    max-width: 100%;
-  }
-
-  .rte-content .rt-figure img {
-    display: block;
-    max-width: 100%;
-    height: auto;
   }
 
   .rte-content .rte-image--selected img {
@@ -278,18 +268,14 @@
     overflow-x: auto;
   }
 
-  .rte-content table {
-    border-collapse: collapse;
+  .rte-editor .rte-content table {
     table-layout: fixed;
   }
 
-  .rte-content td,
-  .rte-content th {
+  .rte-editor .rte-content td,
+  .rte-editor .rte-content th {
     position: relative;
-    box-sizing: border-box;
     min-width: 1em;
-    vertical-align: top;
-    border: 1px solid var(--rte-border);
   }
 
   .rte-content .selectedCell {
@@ -311,20 +297,7 @@
     cursor: col-resize;
   }
 
-  /* Bloco de código e realce (`hljs-*`) sobre os tokens `--rte-code-*` do tema. */
-  .rte-content pre {
-    padding: 0.75em 1em;
-    overflow-x: auto;
-    color: var(--rte-code-text);
-    background-color: var(--rte-code-bg);
-    border-radius: var(--rte-radius);
-    font-family: var(--rte-font-mono);
-  }
-
-  .rte-content pre code {
-    font-family: inherit;
-  }
-
+  /* Realce (`hljs-*`) sobre os tokens `--rte-code-*` do tema; o bloco `pre` é do `content.css`. */
   .rte-content .hljs-keyword,
   .rte-content .hljs-built_in,
   .rte-content .hljs-literal,
@@ -379,7 +352,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .rte-content,
+    .rte-editor .rte-content,
     .rte-content *,
     .rte-content *::before,
     .rte-content *::after {

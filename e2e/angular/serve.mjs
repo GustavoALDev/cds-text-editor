@@ -2,7 +2,7 @@
 // sem dependências: `/zone/…` serve o build `zone`, o resto o build zoneless;
 // diretório → `index.html` (rotas pré-renderizadas); rota inexistente → 404.
 // Toda resposta leva a CSP estrita por cabeçalho.
-import { createReadStream, statSync } from 'node:fs';
+import { createReadStream, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 
@@ -11,6 +11,35 @@ const ZONELESS = resolve(ROOT, 'dist/e2e/angular/app/browser');
 const ZONE = resolve(ROOT, 'dist/e2e/angular/app-zone/browser');
 const HOST = '127.0.0.1';
 const PORT = Number(process.env['RTE_E2E_PORT'] ?? 4317);
+
+// Arquivos de estilo servidos em `/__static/` e o fixture da página `/content-static` (N13, R12).
+const STATIC_FILES = {
+  '/__static/theme.css': resolve(ROOT, 'packages/theme/src/theme.css'),
+  '/__static/content.css': resolve(ROOT, 'packages/core/styles/content.css'),
+};
+const FIXTURE = resolve(ROOT, 'fixtures/content/all-features.html');
+
+/**
+ * Página estática com o `all-features.html` em `.rte-root > .rte-content`, só com `theme.css` e
+ * `content.css` (sem Angular, sem `editor.css`), montada em memória a cada pedido. Os atributos
+ * `style` do fixture ficam bloqueados pela CSP: é o cenário da R12.
+ */
+function contentStaticPage() {
+  const html = readFileSync(FIXTURE, 'utf8');
+  return [
+    '<!doctype html>',
+    '<html lang="pt-BR"><head><meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    '<title>content-static</title>',
+    '<link rel="stylesheet" href="/__static/theme.css">',
+    '<link rel="stylesheet" href="/__static/content.css">',
+    '</head><body>',
+    '<div class="rte-root" data-testid="content-static"><div class="rte-content">',
+    html,
+    '</div></div>',
+    '</body></html>',
+  ].join('');
+}
 
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self'";
 
@@ -68,7 +97,13 @@ const server = createServer((req, res) => {
     res.end('ok');
     return;
   }
-  const file = resolvePath(pathname);
+  if (pathname === '/content-static') {
+    res.writeHead(200, { 'Content-Type': TYPES['.html'] });
+    res.end(req.method === 'HEAD' ? undefined : contentStaticPage());
+    return;
+  }
+  const staticFile = STATIC_FILES[pathname];
+  const file = staticFile ?? resolvePath(pathname);
   if (!file) {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('not found');

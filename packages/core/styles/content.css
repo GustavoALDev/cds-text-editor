@@ -1,0 +1,390 @@
+@layer rte.reset, rte.base, rte.theme, rte.components, rte.content;
+
+/*
+ * @cds/rte-core/styles/content.css — aparência do conteúdo `rt-*` (spec 05b1, U16 e U17).
+ *
+ * Arquivo único, sem JavaScript: serve o editor (`.rte-content` do ProseMirror) e qualquer página
+ * que mostre o HTML publicado. Incluir depois de `@cds/rte-theme/theme.css` e antes do
+ * `editor.css` do `@cds/rte-angular`. O contêiner precisa de um ancestral `.rte-root` (tokens do
+ * tema) e da classe `.rte-content`:
+ *
+ *   <div class="rte-root"><div class="rte-content"> …HTML… </div></div>
+ *
+ * Tudo vive em `@layer rte.content` e todo seletor começa por `.rte-content`; o CSS do consumidor
+ * sem camada sempre vence. Cores só por tokens `--rte-*` ou pelos literais da paleta do esquema.
+ *
+ * Paleta (U17): o HTML canônico traz `style="color: <claro>"`, e um atributo `style` vence
+ * qualquer regra sem `!important`; por isso `color` de `span[data-rt-color]` e `background-color`
+ * de `mark[data-rt-color]` são as ÚNICAS declarações com `!important` (exceção ao D18 da 05a). O
+ * valor sai de `--rte-content-color`/`--rte-content-highlight`, que o consumidor pode sobrescrever
+ * (`.meu-tema .rte-content span[data-rt-color='red'] { --rte-content-color: … }`). Os literais
+ * abaixo são os de `RTE_TEXT_COLORS`/`RTE_HIGHLIGHT_COLORS` (conferidos por teste).
+ */
+
+@layer rte.content {
+  .rte-content {
+    color: var(--rte-text);
+    font-family: var(--rte-font-sans);
+    font-size: var(--rte-font-size);
+    line-height: var(--rte-line-height);
+  }
+
+  /* Blocos de texto */
+  .rte-content p {
+    margin: 0 0 1em;
+  }
+
+  .rte-content h2,
+  .rte-content h3,
+  .rte-content h4 {
+    margin: 1.4em 0 0.5em;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .rte-content h2 {
+    font-size: 1.5em;
+  }
+
+  .rte-content h3 {
+    font-size: 1.25em;
+  }
+
+  .rte-content h4 {
+    font-size: 1.1em;
+  }
+
+  .rte-content ul,
+  .rte-content ol {
+    margin: 0 0 1em;
+    padding-inline-start: 1.5em;
+  }
+
+  .rte-content li {
+    margin: 0;
+  }
+
+  .rte-content li > p {
+    margin: 0;
+  }
+
+  .rte-content blockquote {
+    margin: 0 0 1em;
+    padding-inline-start: 1em;
+    border-left: 3px solid var(--rte-border);
+    color: var(--rte-text-muted);
+  }
+
+  .rte-content hr {
+    margin: 1.5em 0;
+    border: 0;
+    border-top: 1px solid var(--rte-border);
+  }
+
+  .rte-content a {
+    color: var(--rte-primary-text);
+    text-decoration: underline;
+  }
+
+  .rte-content sup,
+  .rte-content sub {
+    font-size: 0.75em;
+    line-height: 0;
+  }
+
+  /* Código */
+  .rte-content code {
+    padding: 0.1em 0.35em;
+    background-color: var(--rte-surface-raised);
+    border-radius: var(--rte-radius);
+    font-family: var(--rte-font-mono);
+    font-size: 0.9em;
+  }
+
+  .rte-content pre {
+    margin: 0 0 1em;
+    padding: 0.75em 1em;
+    overflow-x: auto;
+    color: var(--rte-code-text);
+    background-color: var(--rte-code-bg);
+    border-radius: var(--rte-radius);
+    font-family: var(--rte-font-mono);
+  }
+
+  .rte-content pre code {
+    padding: 0;
+    color: inherit;
+    background-color: transparent;
+    border-radius: 0;
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  /* Tabelas */
+  .rte-content table {
+    margin: 0 0 1em;
+    border-collapse: collapse;
+  }
+
+  .rte-content th,
+  .rte-content td {
+    box-sizing: border-box;
+    padding: 0.4em 0.6em;
+    vertical-align: top;
+    border: 1px solid var(--rte-border);
+    text-align: start;
+  }
+
+  .rte-content th {
+    background-color: var(--rte-surface-raised);
+    font-weight: 700;
+  }
+
+  /* Tarefas (aparência; o checkbox da edição é do editor.css) */
+  .rte-content .rt-tasks {
+    list-style: none;
+    padding-inline-start: 0;
+  }
+
+  .rte-content .rt-task {
+    list-style: none;
+  }
+
+  /* Figuras, vídeo e legendas */
+  .rte-content .rt-figure {
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 0 1em;
+  }
+
+  .rte-content .rt-figure img,
+  .rte-content .rt-figure video {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  .rte-content .rt-figure--left {
+    float: left;
+    max-width: 50%;
+    margin: 0 1em 1em 0;
+  }
+
+  .rte-content .rt-figure--right {
+    float: right;
+    max-width: 50%;
+    margin: 0 0 1em 1em;
+  }
+
+  /* Figuras que ocupam a linha toda não podem ficar por baixo de uma flutuante anterior. */
+  .rte-content .rt-figure--center {
+    clear: both;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .rte-content .rt-figure--full {
+    clear: both;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .rte-content .rt-figure--video {
+    clear: both;
+    width: 100%;
+  }
+
+  .rte-content .rt-figure--video video {
+    width: 100%;
+  }
+
+  .rte-content figcaption {
+    margin-top: 0.4em;
+    color: var(--rte-text-muted);
+    font-size: 0.875em;
+    line-height: 1.4;
+  }
+
+  .rte-content .rt-credit {
+    font-size: 0.875em;
+    font-style: italic;
+  }
+
+  /* Embeds responsivos (o `aspect-ratio` do `style` vence quando o atributo é aplicado) */
+  .rte-content .rt-embed {
+    width: 100%;
+    margin: 0 0 1em;
+  }
+
+  /* Provedores com proporção 16:9 por padrão; o do Spotify é uma faixa de altura fixa. */
+  .rte-content .rt-embed--youtube iframe,
+  .rte-content .rt-embed--vimeo iframe {
+    aspect-ratio: 16 / 9;
+  }
+
+  .rte-content .rt-embed iframe {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border: 0;
+  }
+
+  .rte-content .rt-embed--spotify iframe {
+    height: 152px;
+    aspect-ratio: auto;
+  }
+
+  /* Citação em destaque */
+  .rte-content .rt-pullquote {
+    margin: 1.5em 0;
+    padding-inline-start: 1em;
+    border-left: 4px solid var(--rte-primary-border);
+    color: var(--rte-text);
+  }
+
+  .rte-content .rt-pullquote blockquote {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    color: inherit;
+    font-size: 1.25em;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .rte-content .rt-pullquote figcaption {
+    color: var(--rte-text-muted);
+  }
+
+  /* Caixas de destaque e "Leia também" */
+  .rte-content .rt-callout,
+  .rte-content .rt-read-also {
+    margin: 0 0 1em;
+    padding: 0.75em 1em;
+    color: var(--rte-text);
+    background-color: var(--rte-surface-raised);
+    border: 1px solid var(--rte-border);
+    border-left: 4px solid var(--rte-border);
+    border-radius: var(--rte-radius);
+  }
+
+  .rte-content .rt-callout > :last-child,
+  .rte-content .rt-read-also > :last-child {
+    margin-bottom: 0;
+  }
+
+  .rte-content .rt-callout--info {
+    background-color: var(--rte-primary-subtle);
+    border-color: var(--rte-primary-border);
+  }
+
+  .rte-content .rt-callout--success {
+    background-color: var(--rte-surface-raised);
+    background-color: color-mix(
+      in oklab,
+      var(--rte-success) 14%,
+      var(--rte-surface)
+    );
+    border-color: var(--rte-success);
+  }
+
+  .rte-content .rt-callout--warning {
+    background-color: var(--rte-surface-raised);
+    background-color: color-mix(
+      in oklab,
+      var(--rte-warning) 14%,
+      var(--rte-surface)
+    );
+    border-color: var(--rte-warning);
+  }
+
+  .rte-content .rt-callout--danger {
+    background-color: var(--rte-surface-raised);
+    background-color: color-mix(
+      in oklab,
+      var(--rte-danger) 14%,
+      var(--rte-surface)
+    );
+    border-color: var(--rte-danger);
+  }
+
+  .rte-content .rt-callout__title,
+  .rte-content .rt-read-also__title {
+    margin: 0 0 0.4em;
+    font-weight: 700;
+  }
+
+  .rte-content .rt-read-also ul,
+  .rte-content .rt-callout ul,
+  .rte-content .rt-callout ol {
+    margin-bottom: 0;
+  }
+
+  /* Cores da paleta (U17). */
+  .rte-content span[data-rt-color] {
+    color: var(--rte-content-color) !important;
+  }
+
+  .rte-content mark[data-rt-color] {
+    color: var(--rte-text);
+    background-color: var(--rte-content-highlight) !important;
+  }
+
+  .rte-content span[data-rt-color='gray'] {
+    --rte-content-color: light-dark(#5f6368, #bdc1c6);
+  }
+
+  .rte-content span[data-rt-color='red'] {
+    --rte-content-color: light-dark(#b3261e, #ff8f87);
+  }
+
+  .rte-content span[data-rt-color='orange'] {
+    --rte-content-color: light-dark(#9f4900, #f0b84d);
+  }
+
+  .rte-content span[data-rt-color='green'] {
+    --rte-content-color: light-dark(#197136, #5fd08a);
+  }
+
+  .rte-content span[data-rt-color='blue'] {
+    --rte-content-color: light-dark(#1d4ed8, #8ab4ff);
+  }
+
+  .rte-content span[data-rt-color='purple'] {
+    --rte-content-color: light-dark(#6b21a8, #d2a8ff);
+  }
+
+  .rte-content span[data-rt-color='pink'] {
+    --rte-content-color: light-dark(#be185d, #ff8cc6);
+  }
+
+  .rte-content span[data-rt-color='teal'] {
+    --rte-content-color: light-dark(#0e6e66, #5eead4);
+  }
+
+  .rte-content mark[data-rt-color='yellow'] {
+    --rte-content-highlight: light-dark(#fff3a3, #4d4100);
+  }
+
+  .rte-content mark[data-rt-color='green'] {
+    --rte-content-highlight: light-dark(#ccf2d1, #1d4a29);
+  }
+
+  .rte-content mark[data-rt-color='blue'] {
+    --rte-content-highlight: light-dark(#d3e8ff, #1c3a5e);
+  }
+
+  .rte-content mark[data-rt-color='pink'] {
+    --rte-content-highlight: light-dark(#ffd6e8, #5e1f3d);
+  }
+
+  .rte-content mark[data-rt-color='orange'] {
+    --rte-content-highlight: light-dark(#ffe1bf, #5c3300);
+  }
+
+  .rte-content mark[data-rt-color='purple'] {
+    --rte-content-highlight: light-dark(#eadcff, #3f2a63);
+  }
+}

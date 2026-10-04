@@ -69,7 +69,6 @@ test('ng-packagr: accepts CSS files under styles/ (spec 05a, D16)', () => {
 test('ng-packagr: rejects non-CSS files and nested paths under styles/', () => {
   assert.equal(checkPackFiles(['styles/x.js'], 'ng-packagr').length, 1);
   assert.equal(checkPackFiles(['styles/a/b.css'], 'ng-packagr').length, 1);
-  assert.equal(checkPackFiles(['styles/editor.css'], 'tsup').length, 1);
 });
 
 test('checkRequiredFiles reports missing package.json, README.md and LICENSE', () => {
@@ -92,4 +91,10 @@ test('nonCodeEntrypoints lists only exports that point to non-code files', () =>
   };
   assert.deepEqual(nonCodeEntrypoints(exportsField), ['./theme.css']);
   assert.deepEqual(nonCodeEntrypoints(undefined), []);
+});
+
+test('tsup: accepts styles/*.css at the package root (CSS exportado, spec 05b1 U16)', () => {
+  assert.deepEqual(checkPackFiles(['styles/content.css'], 'tsup'), []);
+  assert.equal(checkPackFiles(['styles/x.js'], 'tsup').length, 1);
+  assert.equal(checkPackFiles(['styles/a/b.css'], 'tsup').length, 1);
 });

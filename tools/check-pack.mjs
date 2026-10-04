@@ -6,7 +6,8 @@ import { pathToFileURL } from 'node:url';
 
 const COMMON = [/^package\.json$/, /^README\.md$/, /^LICENSE$/];
 // Pacotes tsup: saída de build em dist/.
-const TSUP_OUTPUT = [/^dist\//];
+// `styles/*.css` é CSS exportado como arquivo, versionado no próprio pacote (core, spec 05b1 U16).
+const TSUP_OUTPUT = [/^dist\//, /^styles\/[^/]+\.css$/];
 // Pacotes ng-packagr: a raiz do tarball é a pasta dist, então a saída fica na raiz
 // (fesm2022/, types/ e package.json de cada entry point secundário).
 const NG_OUTPUT = [

@@ -4,9 +4,12 @@
   "description": "Núcleo do editor de texto rico cds-text-editor: extensões Tiptap, utilitários e esquema do HTML.",
   "license": "MIT",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "files": [
     "dist",
+    "styles",
     "README.md",
     "LICENSE"
   ],
@@ -30,7 +33,8 @@
     "./code-languages": {
       "types": "./dist/code-languages/index.d.ts",
       "default": "./dist/code-languages/index.js"
-    }
+    },
+    "./styles/content.css": "./styles/content.css"
   },
   "peerDependencies": {
     "@tiptap/core": "^3.31.4",

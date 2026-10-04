@@ -19,3 +19,8 @@ nav {
 section {
   margin-block: 16px;
 }
+
+/* N13: a variável do consumidor vence a paleta do content.css (a regra sem camada ganha da camada). */
+.e2e-custom-palette .rte-content span[data-rt-color='red'] {
+  --rte-content-color: rgb(1, 2, 3);
+}
