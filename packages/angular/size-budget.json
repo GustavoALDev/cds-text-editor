@@ -1,0 +1,70 @@
+{
+  "scenarios": {
+    "editor": {
+      "entry": "dist/packages/angular/fesm2022/cds-rte-angular.mjs",
+      "exports": ["RteEditor", "provideRichText"],
+      "external": [
+        "@angular/*",
+        "@tiptap/*",
+        "@cds/*",
+        "lowlight",
+        "highlight.js",
+        "highlight.js/*",
+        "rxjs",
+        "rxjs/*",
+        "tslib"
+      ]
+    },
+    "whole": {
+      "entry": "dist/packages/angular/fesm2022/cds-rte-angular.mjs",
+      "exports": ["*"],
+      "external": [
+        "@angular/*",
+        "@tiptap/*",
+        "@cds/*",
+        "lowlight",
+        "highlight.js",
+        "highlight.js/*",
+        "rxjs",
+        "rxjs/*",
+        "tslib"
+      ]
+    },
+    "i18n": {
+      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-i18n.mjs",
+      "exports": ["*"],
+      "external": [
+        "@angular/*",
+        "@tiptap/*",
+        "@cds/*",
+        "lowlight",
+        "highlight.js",
+        "highlight.js/*",
+        "rxjs",
+        "rxjs/*",
+        "tslib"
+      ]
+    },
+    "validators": {
+      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-validators.mjs",
+      "exports": ["*"],
+      "external": [
+        "@angular/*",
+        "@tiptap/*",
+        "@cds/*",
+        "lowlight",
+        "highlight.js",
+        "highlight.js/*",
+        "rxjs",
+        "rxjs/*",
+        "tslib"
+      ]
+    }
+  },
+  "budgets": {
+    "editor": 6016,
+    "whole": 6016,
+    "i18n": 448,
+    "validators": 1024
+  }
+}

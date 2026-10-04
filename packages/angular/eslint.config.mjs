@@ -27,6 +27,7 @@ export default [
             '{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}',
             // ajudantes de teste, fora do build (usam @angular/compiler e node:*)
             '{projectRoot}/src/testing-support/**',
+            '{projectRoot}/vitest-base.config.mts',
           ],
           // Peers exigidos por D24 sem import direto no pacote: as extensões
           // do Tiptap, o lowlight e o highlight.js chegam pelo

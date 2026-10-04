@@ -222,11 +222,11 @@ App de teste `e2e/angular/app` (projeto Nx de aplicação, tag `scope:e2e` com p
 
 ## 7. Critérios de aceite
 
-- [ ] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size` verde; `npm run check:rules`, `check:licenses` (sem dependência de produção nova fora da allowlist), `notices` sem drift, `test:tools` e `typecheck:e2e` verdes.
-- [ ] Unitários 6.1 verdes nos alvos `test` e `test-zone`, inclusive a propriedade de igualdade de medida (R9) e o teste de SSR (R12).
-- [ ] N1–N8 verdes em Chromium, Firefox e WebKit (`npx playwright test -c e2e`) e no CI (o `nx affected` do workflow ganha `test-zone`; o *build* do app de teste roda pelo `webServer` ou num passo explícito antes do Playwright).
-- [ ] Números do N7/N8 e do tamanho (R16) registrados no ADR 0007; orçamento `angular:size` definido pela regra de D26.
-- [ ] ADR 0007 registra D1–D26, os desvios e as pendências; README do pacote e `CLAUDE.md` atualizados (R17); `docs/specs/README.md` marca a 05a como concluída; changeset do `@cds/rte-angular` registrado.
+- [x] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size` verde; `npm run check:rules`, `check:licenses` (sem dependência de produção nova fora da allowlist), `notices` sem drift, `test:tools` e `typecheck:e2e` verdes. _Evidência (2026-10-04): `check:rules`, `test:tools` (69 testes), `check:licenses` ("licenças ok"), `notices` sem diff e `typecheck:e2e` verdes; o `run-many` passou em todos os projetos; `theme:test` estourou o limite de 30 s do `derive.spec` sob a carga dos 6 projetos em paralelo e passou isolado (416/416) — flake conhecido do tema._
+- [x] Unitários 6.1 verdes nos alvos `test` e `test-zone`, inclusive a propriedade de igualdade de medida (R9) e o teste de SSR (R12). _Evidência: `npx nx run-many -t test,test-zone -p angular --skip-nx-cache` verde duas vezes seguidas em modo paralelo (247 testes por alvo)._
+- [ ] N1–N8 verdes em Chromium, Firefox e WebKit (`npx playwright test -c e2e`) e no CI (o `nx affected` do workflow ganha `test-zone`; o _build_ do app de teste roda pelo `webServer` ou num passo explícito antes do Playwright). _Local: `npx playwright test -c e2e --workers=4` com 437 passados e 25 pulados (3,6 min); o `ci.yml` já roda `test-zone`; falta a execução do CI do PR._
+- [x] Números do N7/N8 e do tamanho (R16) registrados no ADR 0007; orçamento `angular:size` definido pela regra de D26. _Evidência: ADR 0007 (d); `packages/angular/size-budget.json`._
+- [x] ADR 0007 registra D1–D26, os desvios e as pendências; README do pacote e `CLAUDE.md` atualizados (R17); `docs/specs/README.md` marca a 05a como concluída; changeset do `@cds/rte-angular` registrado. _Evidência: `docs/decisions/0007-componente-e-formularios.md`, `packages/angular/README.md`, `CLAUDE.md`, `docs/specs/README.md` ("concluída; falta o CI do PR"), `.changeset/angular-05a.md`._
 
 ## 8. Consequências para as partes seguintes e outras specs
 
@@ -248,3 +248,5 @@ App de teste `e2e/angular/app` (projeto Nx de aplicação, tag `scope:e2e` com p
 | `test-zone` dobrar o tempo do CI | Mesma suíte, alvo em cache do Nx; só roda quando o pacote é afetado |
 | Casca do SSR sem o conteúdo frustrar quem quer prévia | Documentado: exibição sem JS é o `rte-render` (spec 06); hidratação incremental fica para a spec 08 |
 | Peers obrigatórios do Tiptap (22 pacotes) assustarem o consumidor | README com o comando de instalação completo; npm 7+ instala peers sozinho |
+| O gancho `ɵngControlCreate` do `@angular/forms` (caminho nativo de D5) é interno e pode mudar numa 22.x | O piso do peer é a 22.2.1 (a única verificada); `forms.compat.spec.ts` cobre os três modos nos dois modos de teste; matriz de versões na spec 08 (ADR 0007, ruling 19) |
+| Um CVA no elemento (por exemplo `ngNoCva` ausente, ou diretiva de terceiros) vence o caminho nativo e degrada o estado | O pacote não provê `NG_VALUE_ACCESSOR`; o consumidor que adicionar um CVA ao elemento perde o estado do formulário (documentar; `ngNoCva` não se aplica a controle customizado) |

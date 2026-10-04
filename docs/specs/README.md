@@ -22,7 +22,7 @@ Esta pasta é **autocontida**: pode ser movida para a raiz do projeto novo. Nada
 | 03c | [Extensões de produtividade](03c-extensoes-de-produtividade.md) (concluída; falta o CI do PR) | `SearchReplace`, `SlashCommand` (lógica), `CharLimit`, placeholder | 03b |
 | 04 | [Sanitizador](04-sanitizador.md) | `@cds/rte-sanitizer`: allowlist derivada do esquema | 03 |
 | 05 | [Editor Angular](05-editor-angular.md) | `@cds/rte-angular`, dividida em 4 partes: | 02, 03 |
-| 05a | [Componente, formulários e base](05a-componente-e-formularios.md) | `rte-editor` sem toolbar, ponte de signals, Signal Forms, Reactive/Template Forms pelo caminho nativo (sem CVA) + `[(value)]`, rótulos e `/i18n`, validadores de texto, CSS funcional sem injeção (CSP), casca de SSR, app de teste nos 3 motores | 03c, 02 |
+| 05a | [Componente, formulários e base](05a-componente-e-formularios.md) (concluída; falta o CI do PR) | `rte-editor` sem toolbar, ponte de signals, Signal Forms, Reactive/Template Forms pelo caminho nativo (sem CVA) + `[(value)]`, rótulos e `/i18n`, validadores de texto, CSS funcional sem injeção (CSP), casca de SSR, app de teste nos 3 motores | 03c, 02 |
 | 05b | Barra de ferramentas, menus e diálogos (a escrever) | Toolbar configurável e acessível, menus flutuantes, diálogos nativos, tema por instância, CSS de conteúdo compartilhado | 05a |
 | 05c | Mídia, upload e rascunho (a escrever) | Adaptador de upload, diálogos de mídia, colar/soltar arquivos, `mediaChange`, rascunho | 05b |
 | 05d | Menu `/`, busca, contadores e fechamento (a escrever) | UI do menu `/` e da busca, contadores e `aria-live`, orçamentos de desempenho, `api-extractor` | 05c |

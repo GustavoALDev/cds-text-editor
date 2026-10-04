@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { ESLint } from 'eslint';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { workspacePath } from './testing-support/workspace';
 
 // Guardas por lint da spec 05a (D25, R1, R15): cada padrão proibido tem de
@@ -123,6 +123,12 @@ const forbidden: ReadonlyArray<[string, string, string]> = [
 ];
 
 describe('guardas por lint (spec 05a, D25)', () => {
+  // A primeira chamada do ESLint carrega a configuração do workspace (~20 s, até
+  // ~60 s com `test` e `test-zone` em paralelo): aquece fora do tempo dos casos.
+  beforeAll(async () => {
+    await ruleIds('export const warm = 1;', SRC_FILE);
+  }, 180_000);
+
   it.each(forbidden.map(([name, code, rule]) => ({ name, code, rule })))(
     '$name gera $rule',
     async ({ code, rule }) => {
