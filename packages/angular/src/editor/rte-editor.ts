@@ -129,7 +129,7 @@ export class RteEditor implements FormValueControl<string> {
     mergeLabels(this.providerLabels(), readLabelsSource(this.labels())),
   );
 
-  /** Desabilitado efetivo (a Tarefa 7 soma o `setDisabledState` do CVA). */
+  /** Desabilitado efetivo: por ora só a entrada `disabled` (sem CVA, D5). */
   protected readonly effectiveDisabled: Signal<boolean> = computed(() =>
     this.disabled(),
   );

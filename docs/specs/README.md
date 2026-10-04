@@ -22,7 +22,7 @@ Esta pasta é **autocontida**: pode ser movida para a raiz do projeto novo. Nada
 | 03c | [Extensões de produtividade](03c-extensoes-de-produtividade.md) (concluída; falta o CI do PR) | `SearchReplace`, `SlashCommand` (lógica), `CharLimit`, placeholder | 03b |
 | 04 | [Sanitizador](04-sanitizador.md) | `@cds/rte-sanitizer`: allowlist derivada do esquema | 03 |
 | 05 | [Editor Angular](05-editor-angular.md) | `@cds/rte-angular`, dividida em 4 partes: | 02, 03 |
-| 05a | [Componente, formulários e base](05a-componente-e-formularios.md) | `rte-editor` sem toolbar, ponte de signals, Signal Forms + CVA + `[(value)]`, rótulos e `/i18n`, validadores de texto, CSS funcional sem injeção (CSP), casca de SSR, app de teste nos 3 motores | 03c, 02 |
+| 05a | [Componente, formulários e base](05a-componente-e-formularios.md) | `rte-editor` sem toolbar, ponte de signals, Signal Forms, Reactive/Template Forms pelo caminho nativo (sem CVA) + `[(value)]`, rótulos e `/i18n`, validadores de texto, CSS funcional sem injeção (CSP), casca de SSR, app de teste nos 3 motores | 03c, 02 |
 | 05b | Barra de ferramentas, menus e diálogos (a escrever) | Toolbar configurável e acessível, menus flutuantes, diálogos nativos, tema por instância, CSS de conteúdo compartilhado | 05a |
 | 05c | Mídia, upload e rascunho (a escrever) | Adaptador de upload, diálogos de mídia, colar/soltar arquivos, `mediaChange`, rascunho | 05b |
 | 05d | Menu `/`, busca, contadores e fechamento (a escrever) | UI do menu `/` e da busca, contadores e `aria-live`, orçamentos de desempenho, `api-extractor` | 05c |
@@ -42,7 +42,7 @@ Esta pasta é **autocontida**: pode ser movida para a raiz do projeto novo. Nada
 | Integração Tiptap × Angular | 05 | **`Editor` direto** com wrapper próprio, sem `ngx-tiptap` |
 | Nome e escopo npm | 01 | **`@cds/rte-*`** (produto `cds-text-editor`); falta o autor confirmar a organização npm `cds` |
 | Ícones e overlay | 05 | **SVG internos** e **`<dialog>`/popover nativos**, sem lucide e sem CDK (spikes confirmam) |
-| Formulários no Angular | 05a | **`FormValueControl` no componente e CVA numa diretiva separada** (no Angular 22.2.1 um CVA no elemento vence o controle customizado do `[formField]`) |
+| Formulários no Angular | 05a | **`FormValueControl` no componente, sem CVA** (no Angular 22.2 o `NgControl` liga o controle customizado nativamente em Reactive/Template Forms; um CVA no elemento venceria esse caminho e o do `[formField]`) |
 
 **Ainda em aberto:**
 
