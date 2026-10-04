@@ -207,7 +207,7 @@ const owasp: Draft[] = [
     expected: '',
   },
   {
-    name: 'input type=image com javascript:',
+    name: 'input type=image com src javascript: vira o checkbox padrão do esquema',
     input: `<INPUT TYPE="IMAGE" SRC="javascript:alert('XSS');">`,
     expected: TASK_INPUT_OUT,
   },

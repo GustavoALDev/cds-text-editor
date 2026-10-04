@@ -16,6 +16,27 @@ const SAFE_PROTOCOLS: ReadonlySet<string> = new Set([
   'tel:',
 ]);
 
+/**
+ * Atributos que carregam URL em algum elemento do HTML (navegação, envio,
+ * recurso ou SVG); todos são conferidos, estejam ou não no esquema.
+ */
+const URL_ATTRIBUTES: ReadonlySet<string> = new Set([
+  'href',
+  'src',
+  'poster',
+  'action',
+  'formaction',
+  'data',
+  'xlink:href',
+  'background',
+  'codebase',
+  'cite',
+  'ping',
+]);
+
+/** Funções CSS que carregam URL (as mesmas que o `validateHtml` recusa). */
+const STYLE_URL_FUNCTIONS = ['url(', 'image-set(', 'src('] as const;
+
 /** Base para resolver URLs relativas: só o esquema importa. */
 const BASE = 'https://base.test/';
 
@@ -45,9 +66,9 @@ function srcsetUrls(value: string): string[] {
 
 /**
  * Lista os problemas de R5 em `html` (`[]` = seguro): elemento fora do
- * esquema, atributo `on*`, URL (`href`, `src`, `poster`, candidatos de
+ * esquema, atributo `on*` ou `srcdoc`, URL (`URL_ATTRIBUTES` e candidatos de
  * `srcset`) com esquema fora de `https`/`http`/`mailto`/`tel`, `style` com
- * `url(`, `expression` ou `\`, `iframe` com conteúdo, com `sandbox`/`allow`/
+ * `url(`, `image-set(`, `src(`, `expression` ou `\`, `iframe` com conteúdo, com `sandbox`/`allow`/
  * `referrerpolicy` diferentes do `default` ou com `src` recusado pela regra.
  * Comentário, *doctype*, PI e CDATA também contam como problema.
  */
@@ -99,8 +120,10 @@ export function findUnsafe(html: string, schema: RteHtmlSchema): string[] {
           problems.push(`<${tag}> fora do esquema`);
         }
         for (const [name, value] of attrs) {
-          if (/^on/i.test(name)) problems.push(`<${tag}> com ${name}`);
-          if (name === 'href' || name === 'src' || name === 'poster') {
+          if (/^on/i.test(name) || name === 'srcdoc') {
+            problems.push(`<${tag}> com ${name}`);
+          }
+          if (URL_ATTRIBUTES.has(name)) {
             const protocol = protocolOf(value);
             if (protocol === null || !SAFE_PROTOCOLS.has(protocol)) {
               problems.push(`<${tag}> com ${name}="${value}"`);
@@ -117,7 +140,7 @@ export function findUnsafe(html: string, schema: RteHtmlSchema): string[] {
           if (name === 'style') {
             const style = value.toLowerCase();
             if (
-              style.includes('url(') ||
+              STYLE_URL_FUNCTIONS.some((fn) => style.includes(fn)) ||
               style.includes('expression') ||
               style.includes('\\')
             ) {

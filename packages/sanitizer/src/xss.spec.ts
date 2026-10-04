@@ -3,6 +3,7 @@
 // independente do core (`validateHtml`).
 import { getHtmlSchema } from '@cds/rte-core';
 import { validateHtml } from '@cds/rte-core/html';
+import { Parser } from 'htmlparser2';
 import { describe, expect, it } from 'vitest';
 import { createSanitizer } from './index';
 import { findUnsafe } from './testing/safety';
@@ -11,6 +12,28 @@ import {
   XSS_MIN_PER_CATEGORY,
   type XssCategory,
 } from './testing/xss-corpus';
+
+const YOUTUBE = 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ';
+const IFRAME_FIXED =
+  ' referrerpolicy="strict-origin-when-cross-origin"' +
+  ' allow="encrypted-media; fullscreen; picture-in-picture"' +
+  ' sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox"';
+
+/** Tags abertas de fato em `html` (texto e valores de atributo não contam). */
+function openedTags(html: string): Set<string> {
+  const tags = new Set<string>();
+  const parser = new Parser(
+    {
+      onopentag(tag) {
+        tags.add(tag);
+      },
+    },
+    { decodeEntities: true },
+  );
+  parser.write(html);
+  parser.end();
+  return tags;
+}
 
 describe('corpus de XSS: forma', () => {
   it('tem ao menos 150 casos, com nomes únicos', () => {
@@ -32,13 +55,14 @@ describe('corpus de XSS: forma', () => {
     }
   });
 
-  it('toda tag do esquema aparece em algum caso de handlers', () => {
-    const handlers = XSS_CORPUS.filter((c) => c.category === 'handlers');
+  it('toda tag do esquema é aberta em algum caso de handlers', () => {
+    const covered = new Set<string>();
+    for (const c of XSS_CORPUS) {
+      if (c.category !== 'handlers') continue;
+      for (const tag of openedTags(c.input)) covered.add(tag);
+    }
     for (const tag of Object.keys(getHtmlSchema().elements)) {
-      expect(
-        handlers.some((c) => new RegExp(`<${tag}[\\s>/]`).test(c.input)),
-        `<${tag}>`,
-      ).toBe(true);
+      expect(covered.has(tag), `<${tag}>`).toBe(true);
     }
   });
 });
@@ -48,27 +72,33 @@ describe('findUnsafe acusa o que é executável', () => {
   it.each([
     '<p onclick="x">a</p>',
     '<a href="javascript:x">a</a>',
-    '<iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ">x</iframe>',
+    `<iframe src="${YOUTUBE}">x</iframe>`,
     '<!--x-->',
     '<script>x</script>',
     '<img src="https://example.com/a.jpg" srcset="data:x 1x" alt="">',
     '<video src="https://example.com/v.mp4" poster="vbscript:x" controls=""></video>',
     '<p style="background: URL(x)">a</p>',
+    '<p style="background: image-set(\'x.png\' 1x)">a</p>',
+    '<p style="background: src(x)">a</p>',
     '<p style="color: red\\">a</p>',
     '<p style="width: Expression(x)">a</p>',
     '<![CDATA[x]]>',
     '<?xml x?>',
+    '<iframe srcdoc="<script>alert(1)</script>">',
+    `<iframe src="${YOUTUBE}" title="v" srcdoc="<script>alert(1)</script>"${IFRAME_FIXED}></iframe>`,
+    '<input form="f" formaction="javascript:alert(1)">',
+    '<blockquote cite="javascript:alert(1)">q</blockquote>',
+    '<p background="javascript:alert(1)">a</p>',
+    '<a href="https://example.com/" ping="javascript:alert(1)">a</a>',
   ])('%s', (html) => {
     expect(findUnsafe(html, schema)).not.toEqual([]);
   });
 
-  it('aceita a saída canônica', () => {
-    expect(
-      findUnsafe(
-        '<p>a</p><a href="https://example.com/" target="_blank" rel="noopener noreferrer">b</a>',
-        schema,
-      ),
-    ).toEqual([]);
+  it.each([
+    '<p>a</p><a href="https://example.com/" target="_blank" rel="noopener noreferrer">b</a>',
+    `<iframe src="${YOUTUBE}" title="v"${IFRAME_FIXED}></iframe>`,
+  ])('aceita a saída canônica: %s', (html) => {
+    expect(findUnsafe(html, schema)).toEqual([]);
   });
 });
 
