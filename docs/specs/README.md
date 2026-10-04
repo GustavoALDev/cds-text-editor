@@ -21,10 +21,11 @@ Esta pasta é **autocontida**: pode ser movida para a raiz do projeto novo. Nada
 | 03b | [Extensões de conteúdo, fábrica e teste de contrato](03b-extensoes-de-conteudo.md) (concluída; falta o CI do PR) | Extensões Tiptap que geram HTML, `createEditorExtensions`, fixture e teste de contrato | 03a |
 | 03c | [Extensões de produtividade](03c-extensoes-de-produtividade.md) (concluída; falta o CI do PR) | `SearchReplace`, `SlashCommand` (lógica), `CharLimit`, placeholder | 03b |
 | 04 | [Sanitizador](04-sanitizador.md) | `@cds/rte-sanitizer`: allowlist derivada do esquema | 03 |
-| 05 | [Editor Angular](05-editor-angular.md) | `@cds/rte-angular`, dividida em 4 partes: | 02, 03 |
+| 05 | [Editor Angular](05-editor-angular.md) | `@cds/rte-angular`, dividida em 5 partes: | 02, 03 |
 | 05a | [Componente, formulários e base](05a-componente-e-formularios.md) (concluída; falta o CI do PR) | `rte-editor` sem toolbar, ponte de signals, Signal Forms, Reactive/Template Forms pelo caminho nativo (sem CVA) + `[(value)]`, rótulos e `/i18n`, validadores de texto, CSS funcional sem injeção (CSP), casca de SSR, app de teste nos 3 motores | 03c, 02 |
-| 05b | Barra de ferramentas, menus e diálogos (a escrever) | Toolbar configurável e acessível, menus flutuantes, diálogos nativos, tema por instância, CSS de conteúdo compartilhado | 05a |
-| 05c | Mídia, upload e rascunho (a escrever) | Adaptador de upload, diálogos de mídia, colar/soltar arquivos, `mediaChange`, rascunho | 05b |
+| 05b1 | [Barra de ferramentas, tema por instância e CSS de conteúdo](05b1-barra-de-ferramentas-e-tema.md) (escrita) | Toolbar configurável (presets/grupos) com foco itinerante e menus em `popover` nativo (implementação própria, sem `@angular/aria`), ícones SVG internos, comandos sem diálogo, guarda de tabela > 100, tema por instância por `applyRteTheme`, `content.css` `rt-*` no core (compartilhado com a 06) | 05a |
+| 05b2 | Menus flutuantes e diálogos (a escrever) | Menus flutuantes de texto, link, tabela e imagem; diálogos em `<dialog>` nativo com Signal Forms (link, idioma, autor da citação, detalhes de tabela) e `@defer`; itens `link`/`lang` | 05b1 |
+| 05c | Mídia, upload e rascunho (a escrever) | Adaptador de upload, diálogos de mídia, colar/soltar arquivos, `mediaChange`, rascunho | 05b2 |
 | 05d | Menu `/`, busca, contadores e fechamento (a escrever) | UI do menu `/` e da busca, contadores e `aria-live`, orçamentos de desempenho, `api-extractor` | 05c |
 | 06 | [Renderização](06-renderizacao.md) | `@cds/rte-render`: pipe, sumário, CSS de leitura | 02, 04 |
 | 07 | [Demo, docs e servidor de exemplo](07-demo-docs-exemplos.md) | App demo/playground, site de docs, `examples/server-node` | 05, 06 |
@@ -43,6 +44,7 @@ Esta pasta é **autocontida**: pode ser movida para a raiz do projeto novo. Nada
 | Nome e escopo npm | 01 | **`@cds/rte-*`** (produto `cds-text-editor`); falta o autor confirmar a organização npm `cds` |
 | Ícones e overlay | 05 | **SVG internos** e **`<dialog>`/popover nativos**, sem lucide e sem CDK (spikes confirmam) |
 | Formulários no Angular | 05a | **`FormValueControl` no componente, sem CVA** (no Angular 22.2 o `NgControl` liga o controle customizado nativamente em Reactive/Template Forms; um CVA no elemento venceria esse caminho e o do `[formField]`) |
+| `@angular/aria` × implementação própria (S2) | 05b1 | **Implementação própria** do foco itinerante e do *menu button* atrás de diretivas internas (o `@angular/aria@22.2.1` exige `@angular/cdk` 22.2.1 exato como peer, usa entry interno do core e não tem diálogo nem posicionamento) |
 
 **Ainda em aberto:**
 
