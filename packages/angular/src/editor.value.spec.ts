@@ -133,12 +133,19 @@ describe('RteEditor: valor externo (D9, R4)', () => {
     expect(host.html()).toBe('<p>a<b>b</b></p>');
     expect(host.writes).toBe(0);
 
+    // o canônico da carga não canônica já é o último valor conhecido
+    const canonical = watch(editor);
+    host.html.set('<p>a<strong>b</strong></p>');
+    await settle(fixture);
+    expect(canonical.all).toBe(0);
+
     const at = editor.state.doc.content.size - 1;
     editor.view.dispatch(editor.state.tr.insert(at, editor.schema.text('c')));
     expect(host.html()).toBe('<p>a<strong>b</strong>c</p>');
     expect(host.writes).toBe(1);
 
-    // igual ao último valor conhecido: ignorado
+    // o effect roda (o signal mudou duas vezes no tick), mas o valor final é
+    // igual ao último emitido: ignorado
     const probe = watch(editor);
     host.html.set('<p>outro</p>');
     host.html.set('<p>a<strong>b</strong>c</p>');
@@ -167,6 +174,46 @@ describe('RteEditor: valor externo (D9, R4)', () => {
     await settle(fixture);
     editor.commands.undo();
     expect(getRteHtml(editor)).toBe('<p>B</p>');
+  });
+
+  it('a carga zera o histórico: undo/redo não trazem o documento anterior', async () => {
+    const { fixture, host, editor } = await setup((h) =>
+      h.html.set('<p>old1</p><p>old2</p>'),
+    );
+    editor.view.dispatch(
+      editor.state.tr.delete(0, editor.state.doc.child(0).nodeSize),
+    );
+    expect(getRteHtml(editor)).toBe('<p>old2</p>');
+
+    host.html.set('<p>NEW</p>');
+    await settle(fixture);
+    expect(editor.can().undo()).toBe(false);
+    expect(editor.can().redo()).toBe(false);
+    editor.commands.undo();
+    expect(getRteHtml(editor)).toBe('<p>NEW</p>');
+
+    // redo: um passo desfeito antes da carga também não volta
+    editor.commands.insertContent('x');
+    editor.commands.undo();
+    expect(editor.can().redo()).toBe(true);
+    host.html.set('<p>DEPOIS</p>');
+    await settle(fixture);
+    expect(editor.can().redo()).toBe(false);
+    editor.commands.redo();
+    expect(getRteHtml(editor)).toBe('<p>DEPOIS</p>');
+  });
+
+  it('a carga não deixa o estado da ponte defasado', async () => {
+    const { fixture, host, cmp, editor } = await setup();
+    host.html.set('<p>abc</p>');
+    await settle(fixture);
+    expect(cmp.isEmpty()).toBe(false);
+    expect(cmp.textStats()?.characters).toBe(3);
+    host.html.set('');
+    await settle(fixture);
+    expect(cmp.isEmpty()).toBe(true);
+    expect(cmp.textStats()?.characters).toBe(0);
+    expect(editor.isEmpty).toBe(true);
   });
 
   it('null no componente direto vale "" e não escreve', async () => {
@@ -216,6 +263,15 @@ describe('RteEditor: valor externo (D9, R4)', () => {
 });
 
 describe('RteEditor: pedidos antes da criação', () => {
+  it('focus() depois de destruir não faz nada e não fica pendente', async () => {
+    const { fixture, cmp } = await setup();
+    fixture.destroy();
+    expect(() => cmp.focus()).not.toThrow();
+    expect((cmp as unknown as { pendingFocus: unknown }).pendingFocus).toBe(
+      null,
+    );
+  });
+
   it('valor e focus() pedidos antes da criação valem depois dela', async () => {
     TestBed.configureTestingModule({});
     const fixture = TestBed.createComponent(Host);

@@ -19,6 +19,8 @@ export interface RteBridge {
   readonly textStats: Signal<RteCharLimitState | null>;
   connect(editor: Editor): void;
   disconnect(): void;
+  /** Sobe a versão sem transação (troca de `EditorState` por `updateState`). */
+  refresh(): void;
 }
 
 const STATS_KEYS = [
@@ -76,6 +78,7 @@ export function createRteBridge(
       connected?.off('transaction', bump);
       connected = null;
     },
+    refresh: bump,
   };
 }
 

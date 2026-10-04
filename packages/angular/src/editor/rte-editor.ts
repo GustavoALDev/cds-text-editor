@@ -26,6 +26,7 @@ import {
 } from '@cds/rte-core/extensions';
 import { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { EditorState } from '@tiptap/pm/state';
 import { RTE_CONFIG, RTE_LABELS, type RteEditorConfig } from '../config';
 import { mergeLabels, readLabelsSource } from '../labels/merge';
 import type { RteLabels, RteLabelsSource } from '../labels/types';
@@ -100,6 +101,7 @@ export class RteEditor implements FormValueControl<string> {
   private lastDoc: ProseMirrorNode | null = null;
   private loading = false;
   private pendingFocus: FocusOptions | null = null;
+  private destroyed = false;
 
   // Estado (somente leitura)
   readonly editor: Signal<Editor | null> = this.instance.asReadonly();
@@ -166,7 +168,12 @@ export class RteEditor implements FormValueControl<string> {
     };
 
     // Valor externo (D9): fora do histórico, sem emitir, sem focar e sem
-    // escrever o canônico de volta no modelo.
+    // escrever o canônico de volta no modelo. `addToHistory: false` não basta:
+    // o prosemirror-history mapeia os passos antigos pela carga e os das
+    // bordas sobrevivem (undo traria trechos do documento anterior). Por isso
+    // o estado é recriado sobre o documento carregado, com os mesmos plugins,
+    // o que reinicia o estado de todos eles (histórico vazio; o contador
+    // `rejected` do limite volta a 0, coerente com um documento novo).
     effect(() => {
       const value = this.value() ?? '';
       untracked(() => {
@@ -182,9 +189,18 @@ export class RteEditor implements FormValueControl<string> {
             })
             .setContent(value, { emitUpdate: false })
             .run();
+          const { state, view } = editor;
+          view.updateState(
+            EditorState.create({
+              doc: state.doc,
+              plugins: state.plugins,
+              selection: state.selection,
+            }),
+          );
         } finally {
           this.loading = false;
         }
+        this.bridge.refresh();
         this.lastDoc = editor.state.doc;
         this.lastValue = readValue(editor);
       });
@@ -237,6 +253,8 @@ export class RteEditor implements FormValueControl<string> {
 
     inject(DestroyRef).onDestroy(() => {
       const editor = untracked(this.instance);
+      this.destroyed = true;
+      this.pendingFocus = null;
       if (!editor) return;
       this.bridge.disconnect();
       editor.off('transaction', onTransaction);
@@ -250,7 +268,7 @@ export class RteEditor implements FormValueControl<string> {
   focus(options?: FocusOptions): void {
     const editor = untracked(this.instance);
     if (!editor) {
-      this.pendingFocus = options ?? {};
+      if (!this.destroyed) this.pendingFocus = options ?? {};
       return;
     }
     editor.commands.focus(null, {
