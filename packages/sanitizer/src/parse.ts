@@ -20,14 +20,20 @@ function appendText(list: HtmlNode[], text: string): void {
  * *doctype*, PI e CDATA não têm callback e somem. O conteúdo de
  * `DISCARD_CONTENT_TAGS` e os filhos de `iframe` não são montados, mas contam
  * para a profundidade. Lança `RteSanitizeError('max-depth')` quando um
- * elemento abriria acima de `maxDepth`.
+ * elemento abriria acima de `maxDepth`. Um fechamento que não é o do elemento
+ * aberto mais interno é ignorado (tag inacabada no fim da entrada).
  */
 export function parseHtml(html: string, maxDepth: number): HtmlNode[] {
   const root: HtmlNode[] = [];
   /** Elementos montados ainda abertos. */
   const open: HtmlElement[] = [];
-  /** Elementos abertos (montados ou não), para S8. */
-  let depth = 0;
+  /** Tags abertas (montadas ou não); o tamanho é a profundidade de S8. */
+  const names: string[] = [];
+  /**
+   * Tag cujo nome já veio (`onopentagname`) e a abertura (`onopentag`) ainda
+   * não: só fica pendente quando a entrada acaba no meio da tag.
+   */
+  let pending: string | null = null;
   /** Elementos abertos dentro de conteúdo descartado, contando a raiz dele. */
   let discarded = 0;
   /** `plaintext` nunca fecha no navegador: descarta tudo até o fim. */
@@ -38,17 +44,19 @@ export function parseHtml(html: string, maxDepth: number): HtmlNode[] {
 
   const parser = new Parser(
     {
-      onopentagname() {
+      onopentagname(tag) {
+        pending = tag;
         attributes = [];
       },
       onattribute(name, value) {
         attributes.push([name, value]);
       },
       onopentag(tag) {
-        if (depth + 1 > maxDepth) {
+        pending = null;
+        if (names.length + 1 > maxDepth) {
           throw new RteSanitizeError('max-depth', maxDepth);
         }
-        depth++;
+        names.push(tag);
         const attrs = attributes;
         // Um `<form>` aninhado não emite abertura, mas emite os atributos:
         // eles não podem cair num elemento já montado.
@@ -68,8 +76,17 @@ export function parseHtml(html: string, maxDepth: number): HtmlNode[] {
         if (tag === 'iframe') discarded = 1;
         else open.push(element);
       },
-      onclosetag() {
-        depth--;
+      onclosetag(tag) {
+        // No fim da entrada, o `htmlparser2` fecha também a tag inacabada,
+        // que nunca chegou ao `onopentag`; e nenhum fechamento pode tirar da
+        // pilha um elemento que não é o mais interno.
+        if (pending !== null) {
+          const unfinished = pending;
+          pending = null;
+          if (tag === unfinished) return;
+        }
+        if (names[names.length - 1] !== tag) return;
+        names.pop();
         if (discarded > 0) discarded--;
         else open.pop();
       },
