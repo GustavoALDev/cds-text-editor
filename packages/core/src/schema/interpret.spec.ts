@@ -367,6 +367,34 @@ describe('sanitizeAttributes', () => {
       );
     });
 
+    it('target=_blank sempre tem noopener noreferrer, mesmo com rel longo', () => {
+      const all = el(
+        getHtmlSchema({
+          linkPolicy: { forceRel: ['nofollow', 'sponsored', 'ugc'] },
+        }),
+        'a',
+      );
+      // 199 unidades (cabe no maxLength 200) e 201 (rel descartado).
+      for (const rel of [
+        'ugc '.repeat(49) + 'ugc',
+        'ugc '.repeat(50) + 'u',
+        'nofollow sponsored ugc noopener noreferrer',
+      ]) {
+        for (const spec of [E.a, all]) {
+          const out = sanitizeAttributes(spec, [
+            ['href', HREF],
+            ['rel', rel],
+            ['target', '_blank'],
+          ]);
+          if (out.action !== 'keep') throw new Error('esperava keep');
+          const value = new Map(out.attributes).get('rel') ?? '';
+          expect(value.split(' ')).toEqual(
+            expect.arrayContaining(['noopener', 'noreferrer']),
+          );
+        }
+      }
+    });
+
     it('é idempotente na saída canônica', () => {
       const once = sanitizeAttributes(E.a, [
         ['href', HREF],
