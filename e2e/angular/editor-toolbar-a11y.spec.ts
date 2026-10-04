@@ -98,6 +98,8 @@ for (const scheme of ['light', 'dark', 'forced'] as const) {
       const active = await page.evaluate(
         () => matchMedia('(forced-colors: active)').matches,
       );
+      // No Chromium a emulação funciona: exigir, para não esconder regressão.
+      if (browserName === 'chromium') expect(active).toBe(true);
       test.skip(
         !active,
         `${browserName}: emulateMedia({forcedColors}) não ativa (forced-colors: active) neste motor`,
@@ -280,10 +282,17 @@ test('N14 (R7): o texto do blockType não muda a largura do botão (pt-BR e es)'
     );
     await selectIn(page, 'toolbar', 'a', 0);
     await expect.poll(async () => (await block()).text).toBe(paragraph);
+    // WCAG 2.5.3: o nome contém o texto visível (bloco atual) e o propósito
+    await expect(toolbarButton(page, 'toolbar', label)).toHaveAccessibleName(
+      `${paragraph}, ${label}`,
+    );
     const atParagraph = await block();
     // Seleção mista: o botão mostra o nome do item, como na casca.
     await editableOf(page, 'toolbar').press('ControlOrMeta+A');
     await expect.poll(async () => (await block()).text).toBe(label);
+    await expect(toolbarButton(page, 'toolbar', label)).toHaveAccessibleName(
+      label,
+    );
     const mixed = await block();
     expect(mixed.width, lang).toBe(atParagraph.width);
     expect(mixed.toolbar, lang).toBe(atParagraph.toolbar);

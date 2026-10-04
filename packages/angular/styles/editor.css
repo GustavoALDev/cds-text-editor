@@ -318,8 +318,14 @@
       border-color: Highlight;
     }
 
-    .rte-editor .rte-toolbar__button[aria-disabled='true'],
-    .rte-editor .rte-menu__item[aria-disabled='true'] {
+    /* Inaplicável em GrayText, menos o pressionado/marcado: GrayText sobre o
+     * fundo CanvasText do par invertido perderia o contraste. */
+    .rte-editor
+      .rte-toolbar__button[aria-disabled='true']:not(
+        .rte-toolbar__button--pressed
+      ),
+    .rte-editor
+      .rte-menu__item[aria-disabled='true']:not(.rte-menu__item--checked) {
       color: GrayText;
     }
 

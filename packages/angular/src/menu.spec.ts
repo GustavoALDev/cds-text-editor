@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  NgZone,
   signal,
   viewChild,
 } from '@angular/core';
@@ -517,6 +518,24 @@ describe('RteMenu e RteMenuTrigger (U6, U7)', () => {
     menuEl(fixture, 1).dispatchEvent(new Event('scroll'));
     await nextFrame();
     expect(tops()).toBe(2);
+  });
+
+  // Num app zone.js, os ouvintes registrados fora da zona (e o quadro que eles
+  // agendam) não disparam `tick` a cada rolagem com o menu aberto.
+  it('scroll e resize registrados fora da zona', async () => {
+    const fixture = await renderHost(Host);
+    const zones: [string, boolean][] = [];
+    const add = vi
+      .spyOn(window, 'addEventListener')
+      .mockImplementation(
+        (type: string) => void zones.push([type, NgZone.isInAngularZone()]),
+      );
+    await openWith(fixture, 'ArrowDown');
+    add.mockRestore();
+    expect(zones.filter(([t]) => t === 'scroll' || t === 'resize')).toEqual([
+      ['scroll', false],
+      ['resize', false],
+    ]);
   });
 
   it('fechar cancela o quadro de reposicionamento pendente', async () => {

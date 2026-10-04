@@ -563,7 +563,29 @@ describe('editor.css: barra, menus e amostras (spec 05b1)', () => {
       .join('\n');
     expect(text).toMatch(/rte-toolbar__button--pressed[^{]*\{[^}]*Highlight/);
     expect(text).toMatch(/rte-menu__item--checked[^{]*\{[^}]*Highlight/);
-    expect(text).toMatch(/GrayText/);
+  });
+
+  // Revisão final (minor 2): pressionado/marcado e inaplicável ao mesmo tempo
+  // ficaria GrayText sobre CanvasText; o GrayText exclui o par invertido.
+  it('forced-colors: GrayText só no inaplicável não pressionado/marcado', () => {
+    const rules: Rule[] = [];
+    root.walkAtRules('media', (at) => {
+      if (/forced-colors:\s*active/.test(at.params))
+        at.walkRules((r) => void rules.push(r));
+    });
+    const gray = rules.filter((r) =>
+      declarations(r).some((d) => d.value === 'GrayText' && d.prop === 'color'),
+    );
+    expect(gray.length).toBeGreaterThan(0);
+    const selectors = gray.flatMap((r) => r.selectors);
+    expect(selectors.length).toBe(2);
+    for (const selector of selectors) {
+      expect(selector).toContain("[aria-disabled='true']");
+      const own = selector.includes('rte-toolbar__button')
+        ? 'rte-toolbar__button--pressed'
+        : 'rte-menu__item--checked';
+      expect(selector.replace(/\s+/g, '')).toContain(`:not(.${own})`);
+    }
   });
 
   // Navegador real (N14): o par Highlight/HighlightText do Firefox e do

@@ -93,7 +93,7 @@ describe('sem ligação de estilo (R16, CSP)', () => {
   });
 
   const HOST_STYLE =
-    /host\s*:\s*\{[^}]*?(?:^|[\s,{])['"]?\[?(?:style|ngStyle|attr\.style)(?:\.[\w-]+)?\]?['"]?\s*:/;
+    /host\s*:\s*\{[^}]*?(?:^|[\s,{])['"]?\[?(?:style|ngStyle|attr\.style)(?:\.[\w-]+)*\]?['"]?\s*:/;
 
   it('a expressão de host pega chave style e [style…]', () => {
     for (const bad of [
@@ -101,6 +101,7 @@ describe('sem ligação de estilo (R16, CSP)', () => {
       "host: { class: 'a', '[style.color]': 'c' }",
       "host: {\n  '[style]': 's',\n}",
       "host: { '[attr.style]': 's' }",
+      "host: { '[style.width.px]': 'w' }",
     ])
       expect(bad).toMatch(HOST_STYLE);
     expect("host: { '[class.x]': 'c', 'data-style': 'x' }").not.toMatch(

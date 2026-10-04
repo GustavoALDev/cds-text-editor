@@ -512,28 +512,22 @@ export class RteEditor implements FormValueControl<string> {
   /** `focusout` para fora do host (ou sem destino): `editorBlur` e `touch` (D11). */
   protected onHostFocusOut(event: FocusEvent): void {
     if (!this.hostFocused() || this.isInsideHost(event.relatedTarget)) return;
-    const target = event.target;
-    if (event.relatedTarget === null && target instanceof Node) {
+    if (event.relatedTarget === null) {
       // Sem destino: o Chromium também dispara `focusout` ao remover do DOM o
       // elemento focado (um item da barra que saiu, ainda conectado durante o
-      // evento), e a barra devolve o foco ao item ativo depois do render. A
-      // decisão fica para a fase `read` do próximo render (depois desse
+      // evento), e a barra devolve o foco ao item ativo depois do render; o
+      // foco também pode sair e voltar no mesmo turno (`blur()` + `focus()`).
+      // A decisão fica para a fase `read` do próximo render (depois desse
       // `afterRenderEffect`; microtarefa não serve: no zone.js o ouvinte
       // disparado durante a detecção as esvazia com o item ainda no DOM): se
-      // o elemento saiu do DOM e o foco voltou ao host, não houve saída (D11).
+      // a janela tem o foco e ele está no host, não houve saída (D11). Com a
+      // janela sem foco (troca de janela), o `activeElement` continua no
+      // host, mas é saída.
       afterNextRender(
         {
           read: () => {
             if (this.destroyed || !this.hostFocused()) return;
-            const doc = this.host.ownerDocument;
-            const active = doc.activeElement;
-            if (
-              !target.isConnected &&
-              active !== null &&
-              active !== doc.body &&
-              this.host.contains(active)
-            )
-              return;
+            if (this.focusIsInsideHost()) return;
             // os ganchos de render rodam fora da zona: as saídas, dentro
             this.ngZone.run(() => this.leaveHost());
           },
@@ -549,6 +543,17 @@ export class RteEditor implements FormValueControl<string> {
     this.hostFocused.set(false);
     this.editorBlur.emit();
     this.touch.emit();
+  }
+
+  private focusIsInsideHost(): boolean {
+    const doc = this.host.ownerDocument;
+    const active = doc.activeElement;
+    return (
+      doc.hasFocus() &&
+      active !== null &&
+      active !== doc.body &&
+      this.host.contains(active)
+    );
   }
 
   private isInsideHost(target: EventTarget | null): boolean {

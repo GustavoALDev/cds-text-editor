@@ -64,6 +64,33 @@ test.describe('N11: comandos pela interface', () => {
   }
 });
 
+// Atalhos do core corrigidos na revisão final (K1, K2): Ctrl+Shift+B é citação
+// (o `Mod-B` do negrito roubava a tecla) e Ctrl+Shift+9 alterna tarefas.
+test.describe('N11: atalhos de citação, tarefas e negrito', () => {
+  test.beforeEach(async ({ page }) => {
+    await gotoApp(page, '/toolbar');
+    await waitForEditor(page, 'toolbar');
+  });
+
+  for (const [keys, expected] of [
+    ['ControlOrMeta+Shift+B', '<blockquote><p>ab</p></blockquote>'],
+    ['ControlOrMeta+B', '<p><strong>ab</strong></p>'],
+    [
+      'ControlOrMeta+Shift+9',
+      '<ul class="rt-tasks"><li class="rt-task"><label><input type="checkbox" disabled="">ab</label></li></ul>',
+    ],
+  ] as const) {
+    test(keys, async ({ page }) => {
+      await loadDoc(page, 'toolbar', P);
+      await selectIn(page, 'toolbar', 'ab', 0, 2);
+      await page.keyboard.press(keys);
+      await expect.poll(() => rteHtml(page, 'toolbar')).toBe(expected);
+      await page.keyboard.press('ControlOrMeta+Z');
+      await expect.poll(() => rteHtml(page, 'toolbar')).toBe(P);
+    });
+  }
+});
+
 test.describe('N11: guarda de tabela, cores e recursos', () => {
   test.beforeEach(async ({ page }) => {
     await gotoApp(page, '/toolbar');

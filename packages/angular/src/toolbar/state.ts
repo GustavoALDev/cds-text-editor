@@ -22,7 +22,10 @@ const OFF: RteItemState = Object.freeze({
   value: null,
 });
 
-/** Sonda de teste: quantas vezes o estado de todos os itens foi calculado. */
+/**
+ * Sonda de teste: quantas vezes o estado de todos os itens foi calculado. Só
+ * conta em desenvolvimento (`ngDevMode` some no build de produção).
+ */
 export const toolbarStateProbe = { computations: 0 };
 
 type CanCommands = Record<
@@ -106,8 +109,16 @@ function alignOf(node: ProseMirrorNode): string | null {
 }
 
 /**
+ * Valor de cor de uma seleção com cores diferentes (ou parte sem cor): não
+ * casa com nenhum item do menu, então nenhum fica marcado ("Cor padrão"
+ * inclusive), e o botão fica ativo (há cor na seleção).
+ */
+export const RTE_MIXED = '\0mixed';
+
+/**
  * Nome da paleta da marca `markName` comum a todo o texto da seleção; seleção
- * vazia lê as marcas guardadas ou as do cursor; mista → `null`.
+ * vazia lê as marcas guardadas ou as do cursor; nenhuma parte com a marca →
+ * `null`; mista → `RTE_MIXED`.
  */
 function colorOf(state: EditorState, markName: string): string | null {
   const type = state.schema.marks[markName];
@@ -118,14 +129,15 @@ function colorOf(state: EditorState, markName: string): string | null {
   };
   const { selection, doc, storedMarks } = state;
   if (selection.empty) return read(storedMarks ?? selection.$from.marks());
-  const texts: ProseMirrorNode[] = [];
+  const colors = new Set<string | null>();
   for (const range of selection.ranges) {
     doc.nodesBetween(range.$from.pos, range.$to.pos, (node) => {
-      if (node.isText) texts.push(node);
+      if (node.isText) colors.add(read(node.marks));
       return true;
     });
   }
-  return common(texts, (node) => read(node.marks));
+  if (colors.size > 1) return RTE_MIXED;
+  return colors.values().next().value ?? null;
 }
 
 /** Seleção vazia com marcas guardadas/no cursor, ou não vazia com alguma marca. */
@@ -271,7 +283,9 @@ export function createToolbarState(o: {
     const editor = o.editor();
     const ids = o.items();
     const interactive = o.interactive();
-    toolbarStateProbe.computations += 1;
+    if (typeof ngDevMode !== 'undefined' && ngDevMode) {
+      toolbarStateProbe.computations += 1;
+    }
     const out = new Map<RteToolbarItemId, RteItemState>();
     for (const id of ids) {
       if (!editor || editor.isDestroyed) {

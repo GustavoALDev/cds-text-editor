@@ -30,7 +30,7 @@ import {
   type RteToolbarItemKind,
 } from './items';
 import { RteMenu, RteMenuTrigger } from './menu';
-import { RteRovingFocus, RteRovingItem } from './roving-focus';
+import { isRtl, RteRovingFocus, RteRovingItem } from './roving-focus';
 import {
   ariaKeyShortcuts,
   detectPlatform,
@@ -158,6 +158,8 @@ export class RteToolbar {
 
   /** Notação do atalho; lida no navegador depois do primeiro render (U11). */
   protected readonly platform = signal<RtePlatform>('other');
+  /** Direção do host (ícone do alinhamento sem atributo); relida ao focar. */
+  private readonly rtl = signal(false);
 
   private readonly ids = computed(() => this.groups().flat(), {
     equal: sameIds,
@@ -226,6 +228,7 @@ export class RteToolbar {
 
     afterNextRender(() => {
       this.platform.set(detectPlatform(this.document.defaultView?.navigator));
+      this.rtl.set(isRtl(this.host));
     });
 
     // desabilitado ou somente leitura: nenhum menu fica aberto (U10)
@@ -265,7 +268,11 @@ export class RteToolbar {
   }
 
   protected itemIcon(id: RteToolbarItemId, value: string | null): RteIconName {
-    if (id === 'align') return ALIGN_ICONS[value ?? ''] ?? 'alignLeft';
+    if (id === 'align') {
+      // sem atributo, o texto segue o início da linha: à direita em `rtl`
+      const start = this.rtl() ? 'alignRight' : 'alignLeft';
+      return ALIGN_ICONS[value ?? ''] ?? start;
+    }
     return id as RteIconName;
   }
 
@@ -282,6 +289,19 @@ export class RteToolbar {
     const l = this.labels();
     return [l.blockType, l.paragraph, l.heading(2), l.heading(3), l.heading(4)];
   });
+
+  /**
+   * Nome acessível do gatilho de menu. No `blockType`, o texto visível (bloco
+   * atual) vem primeiro e o propósito depois ("Heading 2, Text style"): o
+   * nome contém o rótulo visível (WCAG 2.5.3) e o bloco atual é anunciado sem
+   * abrir o menu (U11). Sem bloco único, o texto visível já é o rótulo.
+   */
+  protected menuButtonName(id: RteToolbarItemId, value: string | null): string {
+    const label = this.label(id);
+    if (id !== 'blockType') return label;
+    const text = this.blockText(value);
+    return text === label ? label : `${text}, ${label}`;
+  }
 
   /** Texto do botão `blockType`: bloco atual ou o nome do item (U11). */
   protected blockText(value: string | null): string {
@@ -399,6 +419,7 @@ export class RteToolbar {
 
   protected onFocusIn(): void {
     this.focusInside = true;
+    this.rtl.set(isRtl(this.host));
   }
 
   protected onFocusOut(event: FocusEvent): void {
@@ -407,18 +428,23 @@ export class RteToolbar {
       this.focusInside = this.host.contains(next);
       return;
     }
-    // sem destino: saiu de verdade, a não ser que o item tenha saído do DOM.
-    // Decidido na fase `read` do próximo render, depois do `afterRenderEffect`
-    // que devolve o foco (no zone.js uma microtarefa rodaria ainda durante a
-    // detecção, com o item no DOM: o Chromium dispara `focusout` na remoção).
-    const target = event.target as Node | null;
+    // sem destino: saiu de verdade, a não ser que o foco esteja de novo na
+    // barra (item que saiu do DOM e foco devolvido ao item ativo, ou
+    // `blur()` + `focus()` no mesmo turno). Decidido na fase `read` do
+    // próximo render, depois do `afterRenderEffect` que devolve o foco (no
+    // zone.js uma microtarefa rodaria ainda durante a detecção, com o item no
+    // DOM: o Chromium dispara `focusout` na remoção). Mesmo critério do
+    // `RteEditor` (D11).
     afterNextRender(
       {
         read: () => {
-          if (!target?.isConnected) return;
-          if (!this.host.contains(this.document.activeElement)) {
-            this.focusInside = false;
-          }
+          const doc = this.document;
+          const active = doc.activeElement;
+          this.focusInside =
+            doc.hasFocus() &&
+            active !== null &&
+            active !== doc.body &&
+            this.host.contains(active);
         },
       },
       { injector: this.injector },

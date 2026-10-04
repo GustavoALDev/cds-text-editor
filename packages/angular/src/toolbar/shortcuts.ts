@@ -14,9 +14,7 @@ export type RteShortcutTarget =
 /**
  * Atalhos registrados pelas extensões do core/Tiptap, na notação do Tiptap
  * (`Mod` = Ctrl, ou Cmd no Mac). Conferidos contra o keymap em
- * `shortcuts.spec.ts` (U11). Ficam de fora `taskList` (`Mod-Shift-9`: o
- * `rtTaskList` do core não registra atalho) e `blockquote` (`Mod-Shift-b`: o
- * `Mod-B` do negrito, do Tiptap, vence a tecla); ver o ADR 0008.
+ * `shortcuts.spec.ts` (U11).
  */
 export const RTE_TOOLBAR_SHORTCUTS: Readonly<
   Partial<Record<RteShortcutTarget, string>>
@@ -32,6 +30,8 @@ export const RTE_TOOLBAR_SHORTCUTS: Readonly<
   subscript: 'Mod-,',
   bulletList: 'Mod-Shift-8',
   orderedList: 'Mod-Shift-7',
+  taskList: 'Mod-Shift-9',
+  blockquote: 'Mod-Shift-b',
   codeBlock: 'Mod-Alt-c',
   paragraph: 'Mod-Alt-0',
   heading2: 'Mod-Alt-2',

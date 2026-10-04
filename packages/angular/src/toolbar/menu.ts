@@ -6,6 +6,7 @@ import {
   ElementRef,
   inject,
   input,
+  NgZone,
   output,
   signal,
 } from '@angular/core';
@@ -42,6 +43,7 @@ export class RteMenu {
   private readonly element =
     inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly document = inject(DOCUMENT);
+  private readonly ngZone = inject(NgZone);
 
   /** `id` único por instância (`aria-controls` do gatilho). */
   readonly id = `rte-menu-${++nextMenuId}`;
@@ -112,8 +114,12 @@ export class RteMenu {
   private listen(): void {
     const view = this.document.defaultView;
     if (!view || this.listening) return;
-    view.addEventListener('scroll', this.reposition, true);
-    view.addEventListener('resize', this.reposition);
+    // fora da zona: cada `scroll`/`resize` (e o quadro que agenda) só grava a
+    // posição por CSSOM; dentro, num app zone.js, cada evento daria um `tick`
+    this.ngZone.runOutsideAngular(() => {
+      view.addEventListener('scroll', this.reposition, true);
+      view.addEventListener('resize', this.reposition);
+    });
     this.listening = true;
   }
 

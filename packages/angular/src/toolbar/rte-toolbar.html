@@ -7,7 +7,7 @@ track id) { @let s = state.item(id)(); @let kind = kindOf(id); @if (kind ===
   rteRovingItem
   [disabled]="!interactive()"
   [rteMenuTrigger]="menu"
-  [attr.aria-label]="label(id)"
+  [attr.aria-label]="menuButtonName(id, s.value)"
   [attr.title]="title(label(id), null)"
   [attr.aria-disabled]="ariaDisabled(s.enabled)"
   (mousedown)="$event.preventDefault()"

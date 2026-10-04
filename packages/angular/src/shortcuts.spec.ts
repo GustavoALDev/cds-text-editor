@@ -156,6 +156,8 @@ const CASES: Record<string, Case> = {
   subscript: mark('subscript'),
   bulletList: block((e) => e.isActive('bulletList')),
   orderedList: block((e) => e.isActive('orderedList')),
+  taskList: block((e) => e.isActive('rtTaskList')),
+  blockquote: block((e) => e.isActive('blockquote') && !e.isActive('bold')),
   codeBlock: block((e) => e.isActive('codeBlock')),
   paragraph: {
     doc: '<h2>hello</h2>',

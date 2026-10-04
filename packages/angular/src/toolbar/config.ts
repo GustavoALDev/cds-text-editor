@@ -32,6 +32,19 @@ function isPreset(value: unknown): value is keyof typeof RTE_TOOLBAR_PRESETS {
   return typeof value === 'string' && Object.hasOwn(RTE_TOOLBAR_PRESETS, value);
 }
 
+/**
+ * Descrição para aviso sem lançar: `String()` lança em objeto sem protótipo
+ * (ou com `toString` inválido) e o template literal lança em `Symbol`.
+ */
+function describeValue(value: unknown): string {
+  if (
+    (typeof value === 'object' && value !== null) ||
+    typeof value === 'function'
+  )
+    return Object.prototype.toString.call(value);
+  return String(value);
+}
+
 function isKnown(id: unknown): id is RteToolbarItemId {
   return typeof id === 'string' && Object.hasOwn(RTE_TOOLBAR_ITEMS, id);
 }
@@ -61,12 +74,22 @@ export function resolveToolbarGroups(
   const out: RteToolbarItemId[][] = [];
   for (const group of groups) {
     const kept: RteToolbarItemId[] = [];
-    for (const id of Array.isArray(group) ? group : []) {
+    if (!Array.isArray(group)) {
+      const name = describeValue(group);
+      warnOnce(
+        ctx.warned,
+        `group:${name}`,
+        `[rte-editor] grupo de barra inválido ignorado (esperado um array): ${name}.`,
+      );
+      continue;
+    }
+    for (const id of group as readonly unknown[]) {
       if (!isKnown(id)) {
+        const name = describeValue(id);
         warnOnce(
           ctx.warned,
-          `unknown:${String(id)}`,
-          `[rte-editor] item de barra desconhecido ignorado: "${String(id)}".`,
+          `unknown:${name}`,
+          `[rte-editor] item de barra desconhecido ignorado: "${name}".`,
         );
         continue;
       }

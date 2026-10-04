@@ -20,11 +20,8 @@ interface Case {
   /** Preparação extra (p. ex. uma edição para o `undo`). */
   prepare?: (editor: Editor) => void;
   expected: string;
-  /**
-   * O caso desfaz com um `undo()` (falso para `undo`/`redo`; `'core-gap'`:
-   * lacuna conhecida do core, conferida à parte com `it.fails`).
-   */
-  undoable?: false | 'core-gap';
+  /** O caso desfaz com um `undo()` (falso para `undo`/`redo`). */
+  undoable?: false;
 }
 
 const P = '<p>ab</p>';
@@ -356,7 +353,6 @@ const CASES: Case[] = [
       value: variant,
       doc: P,
       select: ['ab', 1],
-      undoable: 'core-gap',
       expected: `<aside class="rt-callout rt-callout--${variant}" role="note"><p class="rt-callout__title">${
         {
           info: 'Information',
@@ -447,24 +443,6 @@ describe('runToolbarCommand (R5)', () => {
       editor.commands.undo();
       expect(getRteHtml(editor)).toBe(initial);
     }
-  });
-
-  // Lacuna do core: `setCallout` aplica um `ReplaceAroundStep` com
-  // `structure: true` que insere o título (com texto); o inverso apaga esse
-  // texto e falha ("Structure gap-replace would overwrite content"), então o
-  // `undo()` não desfaz nada. Quando o core corrigir, este caso passa a
-  // falhar e a marca `'core-gap'` sai da tabela.
-  it.fails.each(
-    CASES.filter((c) => c.undoable === 'core-gap').map(
-      (c) => [label(c), c] as const,
-    ),
-  )('%s: um undo() volta ao HTML inicial (lacuna do core)', (_name, c) => {
-    const editor = createTestEditor(c.doc);
-    const initial = getRteHtml(editor);
-    selectText(editor, ...c.select);
-    expect(runToolbarCommand(editor, c.id, c.value)).toBe(true);
-    editor.commands.undo();
-    expect(getRteHtml(editor)).toBe(initial);
   });
 
   it('cobre todo item da barra', () => {

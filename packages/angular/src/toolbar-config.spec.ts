@@ -168,6 +168,39 @@ describe('resolveToolbarGroups', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
+  it('ids exóticos (sem protótipo, Symbol, null) avisam sem lançar', () => {
+    const bare = Object.create(null) as object;
+    const input = [
+      ['bold', bare, Symbol('s'), null, 7],
+    ] as unknown as RteToolbarConfig;
+    expect(() => resolveToolbarGroups(input, ctx())).not.toThrow();
+    expect(resolveToolbarGroups(input, ctx())).toEqual([['bold']]);
+    const messages = warn.mock.calls.map((args: unknown[]) => String(args[0]));
+    expect(messages).toContain(
+      '[rte-editor] item de barra desconhecido ignorado: "[object Object]".',
+    );
+    expect(messages).toContain(
+      '[rte-editor] item de barra desconhecido ignorado: "Symbol(s)".',
+    );
+    expect(messages).toContain(
+      '[rte-editor] item de barra desconhecido ignorado: "null".',
+    );
+  });
+
+  it('grupo que não é array é ignorado com aviso', () => {
+    const input = [
+      'bold',
+      ['italic'],
+      Object.create(null),
+    ] as unknown as RteToolbarConfig;
+    expect(resolveToolbarGroups(input, ctx())).toEqual([['italic']]);
+    const messages = warn.mock.calls.map((args: unknown[]) => String(args[0]));
+    expect(messages).toEqual([
+      '[rte-editor] grupo de barra inválido ignorado (esperado um array): bold.',
+      '[rte-editor] grupo de barra inválido ignorado (esperado um array): [object Object].',
+    ]);
+  });
+
   const gated: [string, RteFeatureId, RteToolbarItemId[]][] = [
     ['colors', 'colors', ['textColor', 'highlight']],
     ['tasks', 'tasks', ['taskList']],

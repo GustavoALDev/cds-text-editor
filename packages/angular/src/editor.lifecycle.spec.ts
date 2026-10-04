@@ -14,6 +14,7 @@ import {
   provideRichText,
   type RteEditorConfig,
   type RteLabelsSource,
+  type RteToolbarConfig,
 } from '@cds/rte-angular';
 import { getRteEditor } from '@cds/rte-angular/testing';
 import { Editor } from '@tiptap/core';
@@ -48,12 +49,13 @@ class Host {
   selector: 'rte-test-toggle',
   imports: [RteEditor],
   template: `@if (show()) {
-    <rte-editor />
+    <rte-editor [toolbar]="toolbar()" />
   }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class ToggleHost {
   readonly show = signal(false);
+  readonly toolbar = signal<RteToolbarConfig>('minimal');
 }
 
 @Component({
@@ -183,15 +185,19 @@ describe('RteEditor: ciclo de vida (D2, R2)', () => {
     expect(Object.getOwnPropertySymbols(host)).not.toContain(HOOK);
   });
 
-  it(
-    'alternar o editor 100× não deixa editores para trás',
-    // a barra 'article' (05b1) dobra o custo de criar o editor no jsdom; com
-    // a suíte em paralelo, 100 ciclos passam de 30 s
-    { timeout: 90_000 },
-    async () => {
+  // Vazamento do editor: 100 ciclos com a barra mínima; da barra e dos
+  // menus: 20 ciclos com a 'full' (criar a barra inteira no jsdom é o custo
+  // dominante, e 100 ciclos com ela passavam de 30 s com a suíte em paralelo).
+  it.each([
+    ['minimal', 100],
+    ['full', 20],
+  ] as const)(
+    "alternar o editor (barra '%s') %d× não deixa editores nem menus para trás",
+    async (toolbar, cycles) => {
       const destroy = vi.spyOn(Editor.prototype, 'destroy');
       const fixture = await renderHost(ToggleHost);
-      for (let i = 0; i < 100; i++) {
+      fixture.componentInstance.toolbar.set(toolbar);
+      for (let i = 0; i < cycles; i++) {
         fixture.componentInstance.show.set(true);
         await settle(fixture);
         expect(document.querySelectorAll('.ProseMirror')).toHaveLength(1);
@@ -200,7 +206,10 @@ describe('RteEditor: ciclo de vida (D2, R2)', () => {
       }
 
       expect(document.querySelectorAll('.ProseMirror')).toHaveLength(0);
-      expect(destroy).toHaveBeenCalledTimes(100);
+      expect(document.querySelectorAll('.rte-toolbar, .rte-menu')).toHaveLength(
+        0,
+      );
+      expect(destroy).toHaveBeenCalledTimes(cycles);
     },
   );
 

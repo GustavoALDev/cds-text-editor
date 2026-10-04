@@ -329,9 +329,6 @@ export const CASES: Case[] = [
       item: CALLOUT_TITLES[variant],
       doc: P,
       select: ['ab', 1],
-      // Lacuna do core (unitário `toolbar-commands.spec.ts`): o `setCallout`
-      // não desfaz.
-      undoable: false,
       expected: `<aside class="rt-callout rt-callout--${variant}" role="note"><p class="rt-callout__title">${CALLOUT_TITLES[variant]}</p><p>ab</p></aside>`,
     }),
   ),

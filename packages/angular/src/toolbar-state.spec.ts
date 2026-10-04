@@ -23,6 +23,7 @@ import { RTE_TOOLBAR_ITEMS, type RteToolbarItemId } from './toolbar/items';
 import {
   createToolbarState,
   readItemState,
+  RTE_MIXED,
   sameItemState,
   toolbarStateProbe,
   type RteItemState,
@@ -103,7 +104,7 @@ describe('readItemState (§4)', () => {
     expect(readItemState(editor, 'blockType').value).toBe(null);
   });
 
-  it('textColor/highlight: nome da paleta, null fora e na seleção mista', () => {
+  it('textColor/highlight: nome da paleta, null sem cor, sentinela na seleção mista', () => {
     const doc =
       '<p><span data-rt-color="red">ab</span><span data-rt-color="blue">cd</span>ef<mark data-rt-color="green">gh</mark></p>';
     const editor = createTestEditor(doc);
@@ -115,11 +116,18 @@ describe('readItemState (§4)', () => {
     });
     selectText(editor, 'ab');
     expect(readItemState(editor, 'textColor').value).toBe('red');
-    // duas cores
+    // duas cores: nenhum item casa, o botão fica ativo (K5)
     selectText(editor, 'abcd');
-    expect(readItemState(editor, 'textColor').value).toBe(null);
-    // cor e texto sem cor
+    expect(readItemState(editor, 'textColor')).toEqual({
+      active: true,
+      enabled: true,
+      value: RTE_MIXED,
+    });
+    // cor e texto sem cor: também mista ("Cor padrão" não fica marcada)
     selectText(editor, 'cdef');
+    expect(readItemState(editor, 'textColor').value).toBe(RTE_MIXED);
+    // texto todo sem cor
+    selectText(editor, 'ef');
     expect(readItemState(editor, 'textColor').value).toBe(null);
     selectText(editor, 'ef', 1);
     expect(readItemState(editor, 'textColor')).toEqual({

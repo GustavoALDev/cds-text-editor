@@ -5,6 +5,7 @@ import { editableOf, editorHost } from './app';
 /**
  * Botão da barra do editor `id` pelo `aria-label`. Só os filhos diretos da
  * `.rte-toolbar`: o menu (`[role=menu]`) tem o mesmo `aria-label` do gatilho.
+ * O `blockType` tem o bloco atual antes do rótulo ("Paragraph, Text style").
  */
 export function toolbarButton(
   page: Page,
@@ -13,7 +14,7 @@ export function toolbarButton(
 ): Locator {
   // `JSON.stringify` dá uma string CSS válida (rótulos com aspas).
   return editorHost(page, id).locator(
-    `.rte-toolbar > .rte-toolbar__button[aria-label=${JSON.stringify(label)}]`,
+    `.rte-toolbar > .rte-toolbar__button:is([aria-label=${JSON.stringify(label)}], [aria-label$=${JSON.stringify(`, ${label}`)}])`,
   );
 }
 
@@ -173,7 +174,8 @@ export function focusedLabel(page: Page): Promise<string | null> {
  */
 export async function arrowToButton(page: Page, label: string): Promise<void> {
   for (let i = 0; i < 40; i++) {
-    if ((await focusedLabel(page)) === label) return;
+    const focused = await focusedLabel(page);
+    if (focused === label || focused?.endsWith(`, ${label}`)) return;
     await page.keyboard.press('ArrowRight');
   }
   throw new Error(`item "${label}" não alcançado pelas setas`);

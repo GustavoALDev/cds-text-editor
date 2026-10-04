@@ -22,6 +22,7 @@ import {
 } from 'vitest';
 import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
+import { RTE_TEST_MODE } from './testing-support/test-mode';
 import { RteMenu } from './toolbar/menu';
 
 // Spec 05b1, Tarefa 7 (U18, R13): `disabled`/`hidden` com o foco dentro
@@ -40,6 +41,7 @@ import { RteMenu } from './toolbar/menu';
       [hidden]="hidden()"
       (touch)="count = count + 1"
       (editorBlur)="blurs = blurs + 1; onBlur()"
+      (editorFocus)="focuses = focuses + 1"
     />`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -49,6 +51,7 @@ class Host {
   readonly hidden = signal(false);
   count = 0;
   blurs = 0;
+  focuses = 0;
   /** Estado do DOM do editor no momento do `editorBlur` (já renderizado?). */
   seenAtBlur: { buttonDisabled: boolean; hostHidden: boolean } | null = null;
   readonly cmp = viewChild.required(RteEditor);
@@ -188,5 +191,69 @@ describe('blur de disabled/hidden depois da detecção (U18, R13)', () => {
     expect(host.count).toBe(1);
     expect(text(el, '.count')).toBe('1');
     noNg0100();
+  });
+});
+
+describe('saída adiada do host (D11, revisão final I1)', () => {
+  function outside(): HTMLButtonElement {
+    const b = document.createElement('button');
+    document.body.appendChild(b);
+    return b;
+  }
+
+  it.each(['toolbar', 'editable'] as const)(
+    'blur() + focus() síncronos (%s): nenhuma saída; a próxima saída real emite 1×',
+    async (where) => {
+      const { fixture, host, el, editor } = await setup();
+      const target =
+        where === 'toolbar' ? toolbarButton(el, 'Bold') : editor.view.dom;
+      target.focus();
+      await settle(fixture);
+      const rte = el.querySelector('rte-editor') as HTMLElement;
+      expect(rte.classList.contains('rte-editor--focused')).toBe(true);
+
+      target.blur();
+      target.focus();
+      await settle(fixture);
+      if (TestBed.inject(RTE_TEST_MODE) === 'zoneless') {
+        // a decisão fica para depois do `focus()`: nenhuma saída
+        expect([host.focuses, host.blurs, host.count]).toEqual([1, 0, 0]);
+      } else {
+        // zone.js: o fim da tarefa do `focusout` já roda a detecção (antes do
+        // `focus()`), o foco de fato saiu; o `focus()` volta a entrar. O
+        // estado fica coerente: uma saída e uma nova entrada.
+        expect([host.focuses, host.blurs, host.count]).toEqual([2, 1, 1]);
+      }
+      expect(rte.classList.contains('rte-editor--focused')).toBe(true);
+      const before = host.blurs;
+
+      const out = outside();
+      try {
+        out.focus();
+        await settle(fixture);
+        expect(host.blurs).toBe(before + 1);
+        expect(host.count).toBe(before + 1);
+        expect(rte.classList.contains('rte-editor--focused')).toBe(false);
+      } finally {
+        out.remove();
+      }
+      noNg0100();
+    },
+  );
+
+  it('focusout sem destino com a janela sem foco (alt-tab): sai 1×', async () => {
+    const { fixture, host, el } = await setup();
+    const bold = toolbarButton(el, 'Bold');
+    bold.focus();
+    await settle(fixture);
+    vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+    // a troca de janela mantém o `activeElement` no item
+    bold.dispatchEvent(
+      new FocusEvent('focusout', { bubbles: true, relatedTarget: null }),
+    );
+    await settle(fixture);
+    expect(document.activeElement).toBe(bold);
+    expect(host.blurs).toBe(1);
+    expect(host.count).toBe(1);
   });
 });

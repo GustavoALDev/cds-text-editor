@@ -20,12 +20,13 @@ import {
   type RteLabelsSource,
   type RteToolbarConfig,
 } from '@cds/rte-angular';
-import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
+import { RTE_LABELS_ES, RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
 import { getRteEditor } from '@cds/rte-angular/testing';
 import type { Editor } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { selectText } from './testing-support/editors';
 import { installPopoverShim } from './testing-support/popover';
+import { RTE_ICONS } from './toolbar/icons';
 import { renderHost, settle } from './testing-support/render';
 
 // Spec 05b1, Tarefa 6: a barra dentro do `rte-editor` (U2–U5, U8–U11, U13,
@@ -87,7 +88,7 @@ afterEach(() => {
 const ARTICLE_LABELS = [
   'Undo',
   'Redo',
-  'Text style',
+  'Paragraph, Text style',
   'Bold',
   'Italic',
   'Underline',
@@ -175,7 +176,11 @@ function buttons(el: ParentNode): HTMLButtonElement[] {
 }
 
 function button(el: ParentNode, label: string): HTMLButtonElement {
-  const found = buttons(el).find((b) => b.getAttribute('aria-label') === label);
+  // o `blockType` tem o bloco atual antes do rótulo ("Paragraph, Text style")
+  const found = buttons(el).find((b) => {
+    const name = b.getAttribute('aria-label');
+    return name === label || !!name?.endsWith(`, ${label}`);
+  });
   if (!found) throw new Error(`botão ${label} ausente`);
   return found;
 }
@@ -448,10 +453,77 @@ describe('comandos (U4)', () => {
     expect(checked?.classList.contains('rte-menu__item--checked')).toBe(true);
   });
 
+  it.each([
+    ['sem cor', '<p>ab</p>', 'Default color'],
+    ['mista', '<p><span data-rt-color="red">a</span>b</p>', null],
+    ['uniforme', '<p><span data-rt-color="red">ab</span></p>', 'Red'],
+  ])(
+    'menu textColor, seleção %s: só o item da cor comum fica marcado (K5)',
+    async (_case, doc, expected) => {
+      const { el, fixture } = await setup((h) => h.value.set(doc));
+      selectText(editorOf(el), 'ab');
+      await settle(fixture);
+      const trigger = button(el, 'Text color');
+      const menu = openMenu(trigger);
+      await settle(fixture);
+      const checked = [...menu.querySelectorAll('[aria-checked="true"]')];
+      expect(checked.map((i) => i.textContent?.trim())).toEqual(
+        expected ? [expected] : [],
+      );
+    },
+  );
+
+  it('alinhamento sem atributo: ícone do início da linha (alignRight em rtl)', async () => {
+    const { el, fixture } = await setup();
+    const paths = () =>
+      [...button(el, 'Alignment').querySelectorAll('.rte-icon path')]
+        .slice(0, RTE_ICONS.alignLeft.length)
+        .map((p) => p.getAttribute('d'));
+    expect(paths()).toEqual([...RTE_ICONS.alignLeft]);
+    el.setAttribute('dir', 'rtl');
+    button(el, 'Bold').focus();
+    await settle(fixture);
+    expect(paths()).toEqual([...RTE_ICONS.alignRight]);
+  });
+
   it('blockType mostra "Heading 2" num <h2>', async () => {
     const { el } = await setup((h) => h.value.set('<h2>ab</h2>'));
     const block = button(el, 'Text style');
     expect(blockText(block)).toBe('Heading 2');
+  });
+
+  // WCAG 2.5.3 (revisão final I2): o nome contém o texto visível e anuncia o
+  // bloco atual; sem bloco único, o texto visível já é o rótulo.
+  it('blockType: nome acessível = texto visível + rótulo, nos três idiomas', async () => {
+    const { el, fixture, host } = await setup((h) =>
+      h.value.set('<h2>ab</h2><p>cd</p>'),
+    );
+    const editor = editorOf(el);
+    const name = () =>
+      toolbarOf(el)
+        ?.querySelector('.rte-toolbar__text')
+        ?.closest('button')
+        ?.getAttribute('aria-label');
+    editor.commands.setTextSelection(2);
+    await settle(fixture);
+    expect(name()).toBe('Heading 2, Text style');
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1);
+    await settle(fixture);
+    expect(name()).toBe('Paragraph, Text style');
+    editor.commands.selectAll();
+    await settle(fixture);
+    expect(name()).toBe('Text style');
+    host.labels.set({ toolbar: RTE_LABELS_PT_BR.toolbar });
+    editor.commands.setTextSelection(2);
+    await settle(fixture);
+    expect(name()).toBe('Título 2, Estilo do texto');
+    host.labels.set({ toolbar: RTE_LABELS_ES.toolbar });
+    await settle(fixture);
+    expect(name()).toBe('Título 2, Estilo de texto');
+    // os demais gatilhos de menu mantêm o rótulo (R6)
+    expect(button(el, 'Color del texto').getAttribute('aria-label')).toBe(
+      'Color del texto',
+    );
   });
 
   // Navegador real (N14, R7): em pt-BR o rótulo da casca ("Estilo do texto")

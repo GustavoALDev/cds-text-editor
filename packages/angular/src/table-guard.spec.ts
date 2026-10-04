@@ -1,8 +1,8 @@
 import { getRteHtml } from '@cds/rte-core/extensions';
-import type { Editor } from '@tiptap/core';
+import { createDocument, type Editor } from '@tiptap/core';
 import { undoDepth } from '@tiptap/pm/history';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import { TextSelection } from '@tiptap/pm/state';
+import { EditorState, TextSelection } from '@tiptap/pm/state';
 import {
   CellSelection,
   TableMap,
@@ -20,6 +20,7 @@ import {
   RTE_SPAN_LIMIT,
   exceedsSpanLimit,
   readTableMenuState,
+  readTableOpState,
   type RteGrowingTableOp,
 } from './toolbar/table-guard';
 
@@ -424,28 +425,58 @@ const MAX_CELLS = 600;
 const MIN_PER_SIDE = 5;
 
 /**
- * Carrega e normaliza a tabela pelo `fixTables` (a carga não passa por ele).
- * `null` (fora do escopo da guarda) se o `prosemirror-tables` não consegue
- * normalizá-la (o `fixTable` lança em algumas tabelas patológicas), se ela
- * continua com problemas ou se a normalização passa de `MAX_CELLS` células
- * (rowspans longos viram linhas novas, e o jsdom levaria segundos).
+ * Documento da tabela normalizado pelo `fixTables` (a carga não passa por
+ * ele), lido e corrigido só no estado, sem render. `null` (fora do escopo da
+ * guarda) se o `prosemirror-tables` não consegue normalizá-la (o `fixTable`
+ * lança em algumas tabelas patológicas), se ela continua com problemas ou se
+ * a normalização passa de `MAX_CELLS` células (rowspans longos viram linhas
+ * novas, e o jsdom levaria segundos para renderizá-las).
  */
-function load(html: string): Editor | null {
-  const editor = createTestEditor(html);
+function prepare(html: string, editor: Editor): ProseMirrorNode | null {
+  let state = EditorState.create({
+    doc: createDocument(html, editor.schema, editor.options.parseOptions),
+  });
   try {
-    const fix = fixTables(editor.state);
-    if (fix && cellPositions(fix.doc).length > MAX_CELLS) return null;
-    if (fix) editor.view.dispatch(fix.setMeta('addToHistory', false));
+    const fix = fixTables(state);
+    if (fix) {
+      if (cellPositions(fix.doc).length > MAX_CELLS) return null;
+      state = state.apply(fix);
+    }
   } catch {
     return null;
   }
   let consistent = true;
-  editor.state.doc.descendants((node) => {
+  state.doc.descendants((node) => {
     if (node.type.spec['tableRole'] !== 'table') return true;
     if (TableMap.get(node).problems) consistent = false;
     return false;
   });
-  return consistent ? editor : null;
+  return consistent ? state.doc : null;
+}
+
+/** Carrega o documento já normalizado no editor reaproveitado (um render). */
+function load(editor: Editor, doc: ProseMirrorNode): Editor {
+  editor.commands.setContent(doc.toJSON(), { emitUpdate: false });
+  return editor;
+}
+
+/**
+ * Roda `editor.commands[op]()` com `view.dispatch` trocado por um que só
+ * captura a transação; devolve o documento resultante (o editor não muda).
+ */
+function runCaptured(editor: Editor, op: RteGrowingTableOp): ProseMirrorNode {
+  const { view } = editor;
+  const before = editor.state;
+  let doc = before.doc;
+  view.dispatch = (tr) => {
+    doc = before.apply(tr).doc;
+  };
+  try {
+    editor.commands[op]();
+  } finally {
+    delete (view as { dispatch?: unknown }).dispatch;
+  }
+  return doc;
 }
 
 /** Seleção numa célula, ou `CellSelection` com a vizinha (mergeCells). */
@@ -485,26 +516,32 @@ describe('propriedade: guarda ⇔ comando do Tiptap (R8)', () => {
     const seen = Object.fromEntries(
       GROWING.map((op) => [op, { limited: 0, free: 0 }]),
     ) as Record<RteGrowingTableOp, { limited: number; free: number }>;
+    // Dois editores reaproveitados entre as execuções (criar um `Editor` com
+    // todas as extensões por execução é o custo dominante no jsdom).
+    const [first, second] = [
+      createTestEditor('<p></p>'),
+      createTestEditor('<p></p>'),
+    ] as const;
     fc.assert(
       fc.property(tableArb, fc.nat(), (rows, index) => {
-        destroyTestEditors();
         const html = tableHtml(rows);
-        const guarded = load(html);
-        const real = load(html);
-        fc.pre(guarded !== null && real !== null);
-        if (!guarded || !real) return;
+        const doc = prepare(html, first);
+        fc.pre(doc !== null);
+        if (!doc) return;
+        const guarded = load(first, doc);
+        const real = load(second, doc);
         // Esquemas diferentes (uma instância cada): compara pelo JSON.
         expect(real.getJSON()).toEqual(guarded.getJSON());
         for (const op of GROWING) {
           const merge = op === 'mergeCells';
           if (!select(guarded, index, merge)) continue;
           select(real, index, merge);
-          const limited = readTableMenuState(guarded)[op].spanLimited;
+          // só a operação conferida (o estado do menu ensaiaria as cinco)
+          const limited = readTableOpState(guarded, op).spanLimited;
           seen[op][limited ? 'limited' : 'free'] += 1;
-          const snapshot = real.state;
-          real.commands[op]();
-          expect(limited).toBe(hasSpanOverLimit(real.state.doc));
-          real.view.updateState(snapshot);
+          // O comando do Tiptap de verdade, com a transação capturada em vez
+          // de aplicada à vista: sem render da tabela nem restauração.
+          expect(limited).toBe(hasSpanOverLimit(runCaptured(real, op)));
         }
       }),
       { numRuns: RUNS, ...(SEED ? { seed: Number(SEED) } : {}) },
