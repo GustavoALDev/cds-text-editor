@@ -71,7 +71,7 @@
   .rte-content blockquote {
     margin: 0 0 1em;
     padding-inline-start: 1em;
-    border-left: 3px solid var(--rte-border);
+    border-inline-start: 3px solid var(--rte-border);
     color: var(--rte-text-muted);
   }
 
@@ -240,7 +240,7 @@
   .rte-content .rt-pullquote {
     margin: 1.5em 0;
     padding-inline-start: 1em;
-    border-left: 4px solid var(--rte-primary-border);
+    border-inline-start: 4px solid var(--rte-primary-border);
     color: var(--rte-text);
   }
 
@@ -266,7 +266,7 @@
     color: var(--rte-text);
     background-color: var(--rte-surface-raised);
     border: 1px solid var(--rte-border);
-    border-left: 4px solid var(--rte-border);
+    border-inline-start: 4px solid var(--rte-border);
     border-radius: var(--rte-radius);
   }
 

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { validateHtml } from '../../html/src/validate-html';
 import { getRteHtml } from './serialize';
 import { createTestEditor, destroyTestEditors } from './testing/editor';
+import { pressChord } from './testing/press-chord';
 
 const ONLY_TASKS = {
   colors: false,
@@ -308,6 +309,22 @@ describe('tarefas: comandos', () => {
     expect(canonical(editor)).toBe(
       '<ul class="rt-tasks"><li class="rt-task"><label><input type="checkbox" disabled="">A</label></li></ul><p>B</p>',
     );
+  });
+
+  it('Ctrl+Shift+9 alterna a lista de tarefas (K2)', () => {
+    const editor = editorWith('<p>A</p>');
+    cursorIn(editor, 'A', 0);
+    // Shift+9 produz "(" no teclado americano: a tecla base vem do keyCode
+    expect(pressChord(editor, { key: '(', keyCode: 57, shift: true })).toBe(
+      true,
+    );
+    expect(canonical(editor)).toBe(
+      '<ul class="rt-tasks"><li class="rt-task"><label><input type="checkbox" disabled="">A</label></li></ul>',
+    );
+    expect(pressChord(editor, { key: '(', keyCode: 57, shift: true })).toBe(
+      true,
+    );
+    expect(canonical(editor)).toBe('<p>A</p>');
   });
 
   it('toggleTaskList recusa dentro de item de lista comum', () => {

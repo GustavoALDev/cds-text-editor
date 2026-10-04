@@ -520,7 +520,9 @@ export function createNewsBlockExtensions(
                       0,
                     ),
                     1 + title.nodeSize,
-                    true,
+                    // `structure: false`: o inverso (undo) apaga o título com
+                    // texto, o que `true` proíbe; o passo direto é o mesmo (K3)
+                    false,
                   ),
                 ).scrollIntoView();
               }

@@ -1,4 +1,4 @@
-import { mergeAttributes } from '@tiptap/core';
+import { isMacOS, mergeAttributes } from '@tiptap/core';
 import type { AnyExtension } from '@tiptap/core';
 import { Blockquote } from '@tiptap/extension-blockquote';
 import { Bold } from '@tiptap/extension-bold';
@@ -21,6 +21,7 @@ import { Superscript } from '@tiptap/extension-superscript';
 import { Text } from '@tiptap/extension-text';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { Underline } from '@tiptap/extension-underline';
+import { Plugin } from '@tiptap/pm/state';
 import { normalizeAttribute } from '../../src/schema/rules';
 import type { RteAttrRule } from '../../src/schema/types';
 import type { RteExtensionContext } from './context';
@@ -47,6 +48,38 @@ function createHeading() {
         `h${clampLevel(node.attrs['level'])}`,
         mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
         0,
+      ];
+    },
+  });
+}
+
+/**
+ * `bold` sem o `Mod-B` do Tiptap: no keymap do ProseMirror, `Mod-B` também
+ * casa com Ctrl+Shift+B (tecla de caractere com Shift é buscada de novo sem o
+ * Shift) e roubava o `Mod-Shift-b` da citação (K1). O Caps Lock (`B` sem
+ * Shift) continua alternando o negrito por um `handleKeyDown` próprio.
+ */
+function createBold() {
+  return Bold.extend({
+    addKeyboardShortcuts() {
+      return { 'Mod-b': () => this.editor.commands.toggleBold() };
+    },
+    addProseMirrorPlugins() {
+      const editor = this.editor;
+      return [
+        ...(this.parent?.() ?? []),
+        new Plugin({
+          props: {
+            handleKeyDown(_view, event) {
+              if (event.key !== 'B' || event.shiftKey || event.altKey)
+                return false;
+              const mod = isMacOS()
+                ? event.metaKey && !event.ctrlKey
+                : event.ctrlKey && !event.metaKey;
+              return mod && editor.commands.toggleBold();
+            },
+          },
+        }),
       ];
     },
   });
@@ -171,7 +204,7 @@ export function createBaseExtensions(ctx: RteExtensionContext): AnyExtension[] {
     ListItem.configure(),
     ListKeymap.configure(),
     createTextAlign(),
-    Bold.configure(),
+    createBold().configure(),
     Italic.configure(),
     Underline.configure(),
     Strike.configure(),

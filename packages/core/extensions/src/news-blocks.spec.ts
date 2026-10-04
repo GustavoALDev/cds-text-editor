@@ -382,6 +382,19 @@ describe('blocos de notícia: comandos', () => {
     );
   });
 
+  it('setCallout se desfaz com undo e refaz com redo (K3)', () => {
+    const editor = editorWith('<p>A</p><p>B</p>');
+    const before = canonical(editor);
+    cursorIn(editor, 'A', 0);
+    expect(editor.commands.setCallout('info')).toBe(true);
+    const after = canonical(editor);
+    expect(after).not.toBe(before);
+    expect(editor.commands.undo()).toBe(true);
+    expect(canonical(editor)).toBe(before);
+    expect(editor.commands.redo()).toBe(true);
+    expect(canonical(editor)).toBe(after);
+  });
+
   it('setCallout dentro de uma caixa devolve false', () => {
     const editor = editorWith(CALLOUT, PT);
     cursorIn(editor, 'Texto', 0);

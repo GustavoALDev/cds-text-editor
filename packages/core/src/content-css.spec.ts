@@ -271,6 +271,17 @@ describe('content.css (R11)', () => {
     }
   });
 
+  // Revisão final da 05b1 (minor 3): a barra lateral de citação, destaque,
+  // caixa e "leia também" segue o `dir` (`rtl` põe a barra à direita).
+  it('bordas e recuos laterais só por propriedades lógicas (inline-start/end)', () => {
+    const physical: string[] = [];
+    root.walkDecls((d) => {
+      if (/^(?:border|padding)-(?:left|right)(?:-|$)/.test(d.prop))
+        physical.push(`${(d.parent as Rule).selector} { ${d.prop} }`);
+    });
+    expect(physical).toEqual([]);
+  });
+
   it('só declara --rte-content-color e --rte-content-highlight como propriedades customizadas', () => {
     const custom = new Set(
       allDecls()
