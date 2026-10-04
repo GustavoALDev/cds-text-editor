@@ -10,8 +10,25 @@ function isBag(value: unknown): value is Bag {
   return value !== null && typeof value === 'object';
 }
 
+/**
+ * Chave própria de `bag`, ou `undefined`. Getter ou armadilha de Proxy do
+ * consumidor que lança vale como ausente (cai no rótulo da base, R8).
+ */
 function own(bag: unknown, key: string): unknown {
-  return isBag(bag) && Object.hasOwn(bag, key) ? bag[key] : undefined;
+  try {
+    return isBag(bag) && Object.hasOwn(bag, key) ? bag[key] : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Mescla de uma seção; qualquer exceção restante devolve a seção da base. */
+function safely<T>(merge: () => T, fallback: T): T {
+  try {
+    return merge();
+  } catch {
+    return fallback;
+  }
 }
 
 /** Lê a fonte; função que lança ou valor que não é objeto vale como ausente. */
@@ -127,9 +144,21 @@ export function mergeLabels(
 ): RteLabels {
   if (!isBag(input)) return base;
   return {
-    content: mergeContent(base.content, own(input, 'content')),
-    slash: mergeSlash(base.slash, own(input, 'slash')),
-    editor: mergeEditor(base.editor, own(input, 'editor')),
-    errors: mergeErrors(base.errors, own(input, 'errors')),
+    content: safely(
+      () => mergeContent(base.content, own(input, 'content')),
+      base.content,
+    ),
+    slash: safely(
+      () => mergeSlash(base.slash, own(input, 'slash')),
+      base.slash,
+    ),
+    editor: safely(
+      () => mergeEditor(base.editor, own(input, 'editor')),
+      base.editor,
+    ),
+    errors: safely(
+      () => mergeErrors(base.errors, own(input, 'errors')),
+      base.errors,
+    ),
   };
 }

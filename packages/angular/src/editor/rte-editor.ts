@@ -130,7 +130,11 @@ export class RteEditor implements FormValueControl<string> {
     mergeLabels(this.providerLabels(), readLabelsSource(this.labels())),
   );
 
-  /** Desabilitado efetivo: por ora só a entrada `disabled` (sem CVA, D5). */
+  /**
+   * Desabilitado efetivo: a entrada `disabled`, que os formulários (Signal,
+   * Reactive e Template) também ligam pelo caminho nativo de controle
+   * customizado (sem CVA).
+   */
   protected readonly effectiveDisabled: Signal<boolean> = computed(() =>
     this.disabled(),
   );

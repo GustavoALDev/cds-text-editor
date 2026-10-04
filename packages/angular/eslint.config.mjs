@@ -35,11 +35,12 @@ export default [
           // (uma cópia só do ProseMirror); o `@cds/rte-theme` é dependência
           // só de CSS (o tema nunca é importado em TypeScript).
           ignoredDependencies: [
-            // Peers de D24 ainda sem código que os importe (fundação da spec
-            // 05a, Tarefa 1): sair desta lista quando o componente, os
-            // rótulos e os formulários chegarem (Tarefas 2–7).
-            '@angular/common',
             // Permanentes:
+            // `@angular/common` é peer por D24 sem import no pacote: o
+            // template usa só o fluxo de controle embutido (`@if`), mas o
+            // consumidor sempre o tem e o peer fixa a mesma faixa de versão
+            // do `@angular/core` e do `@angular/forms`.
+            '@angular/common',
             '@cds/rte-theme',
             '@tiptap/extension-blockquote',
             '@tiptap/extension-bold',

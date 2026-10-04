@@ -34,7 +34,8 @@ export function readonlySelectionKeydown(
   if (view.editable || !event.shiftKey || event.altKey || event.metaKey) {
     return false;
   }
-  const entry = KEYS[event.key];
+  // Só chaves próprias: `event.key` sintético pode ser `constructor` etc.
+  const entry = Object.hasOwn(KEYS, event.key) ? KEYS[event.key] : undefined;
   const selection = view.dom.ownerDocument.getSelection();
   // `Selection.modify` não é padronizado (está nos 3 motores; não no jsdom).
   if (!entry || !selection || typeof selection.modify !== 'function') {

@@ -226,6 +226,102 @@ describe('erros tipados', () => {
   });
 });
 
+describe('formatRteError: formas de erro e rótulos malformados', () => {
+  const en = RTE_LABELS_EN.errors;
+
+  it('aceita o ReactiveValidationError ({ kind, context }) do controle nativo', () => {
+    expect(
+      formatRteError(
+        { kind: 'rteMaxChars', context: { max: 5, actual: 7 } },
+        RTE_LABELS_PT_BR,
+      ),
+    ).toBe(RTE_LABELS_PT_BR.errors.rteMaxChars({ max: 5, actual: 7 }));
+    expect(
+      formatRteError(
+        { kind: 'rteMaxWords', context: { max: 2, actual: 3 } },
+        RTE_LABELS_EN,
+      ),
+    ).toBe(en.rteMaxWords({ max: 2, actual: 3 }));
+    expect(
+      formatRteError({ kind: 'rteRequired', context: true }, RTE_LABELS_EN),
+    ).toBe(en.rteRequired);
+  });
+
+  it('aceita o control.errors do Reactive ({ rteMaxChars: { max, actual } })', () => {
+    const ctrl = new FormControl('<p>abcdefg</p>', [
+      RteValidators.required,
+      RteValidators.maxChars(5),
+    ]);
+    expect(ctrl.errors).toEqual({ rteMaxChars: { max: 5, actual: 7 } });
+    expect(formatRteError(ctrl.errors, RTE_LABELS_EN)).toBe(
+      'Use at most 5 characters (7 now).',
+    );
+    ctrl.setValue('');
+    expect(formatRteError(ctrl.errors, RTE_LABELS_PT_BR)).toBe(
+      RTE_LABELS_PT_BR.errors.rteRequired,
+    );
+    expect(
+      formatRteError({ rteMaxWords: { max: 1, actual: 2 } }, RTE_LABELS_EN),
+    ).toBe(en.rteMaxWords({ max: 1, actual: 2 }));
+    ctrl.setValue('<p>ok</p>');
+    expect(ctrl.errors).toBeNull();
+    expect(formatRteError(ctrl.errors, RTE_LABELS_EN)).toBe('');
+  });
+
+  it('kind desconhecido ou entrada inválida devolve string vazia, sem lançar', () => {
+    for (const input of [
+      { kind: 'required' },
+      { required: true },
+      {},
+      null,
+      undefined,
+      42,
+      'rteRequired',
+    ]) {
+      expect(formatRteError(input as never, RTE_LABELS_EN)).toBe('');
+    }
+  });
+
+  it('rótulos malformados caem no inglês, sem lançar', () => {
+    const throwing = {
+      errors: {
+        get rteRequired(): never {
+          throw new Error('getter');
+        },
+        rteMaxChars: () => {
+          throw new Error('fn');
+        },
+        rteMaxWords: () => 1,
+      },
+    } as unknown as typeof RTE_LABELS_EN;
+    const chars = { kind: 'rteMaxChars', max: 5, actual: 7 } as const;
+    const words = { kind: 'rteMaxWords', max: 5, actual: 7 } as const;
+    for (const labels of [
+      throwing,
+      {} as typeof RTE_LABELS_EN,
+      null as unknown as typeof RTE_LABELS_EN,
+      { errors: { rteRequired: 1, rteMaxChars: 'x' } } as never,
+    ]) {
+      expect(formatRteError({ kind: 'rteRequired' }, labels)).toBe(
+        en.rteRequired,
+      );
+      expect(formatRteError(chars, labels)).toBe(en.rteMaxChars(chars));
+      expect(formatRteError(words, labels)).toBe(en.rteMaxWords(words));
+    }
+  });
+
+  it('max/actual ausentes ou não numéricos devolvem string vazia (nunca "undefined")', () => {
+    for (const error of [
+      { kind: 'rteMaxChars' },
+      { kind: 'rteMaxWords', context: { max: '5', actual: 7 } },
+      { kind: 'rteMaxChars', context: null },
+      { rteMaxChars: true },
+    ]) {
+      expect(formatRteError(error as never, RTE_LABELS_EN)).toBe('');
+    }
+  });
+});
+
 @Component({
   selector: 'rte-test-measure',
   imports: [RteEditor],

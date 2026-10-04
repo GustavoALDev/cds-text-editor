@@ -131,4 +131,31 @@ describe('RteEditor: seleção pelo teclado em readonly (D10)', () => {
     }
     expect(modify).not.toHaveBeenCalled();
   });
+
+  it('nomes do protótipo de Object como tecla (eventos sintéticos) não são mapeados', async () => {
+    const { dom } = await setup({ readonly: true });
+    const errors: unknown[] = [];
+    const onError = (event: ErrorEvent) => {
+      errors.push(event.error);
+      event.preventDefault();
+    };
+    window.addEventListener('error', onError);
+    try {
+      for (const name of [
+        'constructor',
+        'toString',
+        'hasOwnProperty',
+        '__proto__',
+        'valueOf',
+      ]) {
+        expect(key(dom, { key: name, shiftKey: true }).defaultPrevented).toBe(
+          false,
+        );
+      }
+    } finally {
+      window.removeEventListener('error', onError);
+    }
+    expect(errors).toEqual([]);
+    expect(modify).not.toHaveBeenCalled();
+  });
 });

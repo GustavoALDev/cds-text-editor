@@ -98,13 +98,36 @@ O `maxLength()` nativo do Signal Forms mede a string HTML, o que não é o que o
 
 O componente não desenha mensagens; ligue-as com `ariaDescribedBy` e traduza com `formatRteError(error, labels)` (entry `/validators`) usando `RTE_LABELS`. `aria-invalid="true"` só aparece com `invalid() && touched()`.
 
+`formatRteError` aceita as três formas de erro e nunca lança: o erro de Signal Forms (`{ kind, max, actual }`), o `ReactiveValidationError` (`{ kind, context: { max, actual } }`) e o `control.errors` do Reactive/Template Forms (`{ rteMaxChars: { max, actual } }`; o primeiro erro do editor presente vence). Erro desconhecido ou malformado devolve `''`; rótulo ausente, de tipo errado ou que lança cai no inglês.
+
+```ts
+// Signal Forms
+readonly messages = computed(() =>
+  this.form.body().errors().filter(isRteValidationError).map((e) => formatRteError(e, this.labels())),
+);
+// Reactive Forms (o mesmo vale para `ngModel.errors`)
+readonly labels = inject(RTE_LABELS);
+message(): string {
+  return formatRteError(this.form.controls.body.errors, this.labels());
+}
+```
+
 ## Rótulos e idioma
 
 `RteLabels` = `content` + `slash` + `editor` + `errors`. A fonte é um objeto parcial **ou uma função** (lida dentro de `computed`, então pode ler signals). Prioridade: entrada `[labels]` > `provideRichText({ labels })` (também aninhado em rotas/componentes) > inglês. Pacotes completos em `@cds/rte-angular/i18n`: `RTE_LABELS_PT_BR`, `RTE_LABELS_EN`, `RTE_LABELS_ES`.
 
 ```ts
+// Por instância: a entrada `labels` ligada a um signal.
 readonly lang = signal<'pt' | 'en'>('pt');
-providers: [provideRichText({ labels: () => (this.lang() === 'pt' ? RTE_LABELS_PT_BR : RTE_LABELS_EN) })]
+readonly labels = computed(() => (this.lang() === 'pt' ? RTE_LABELS_PT_BR : RTE_LABELS_EN));
+// <rte-editor [labels]="labels()" />
+
+// Para a aplicação: a fonte é uma função lida dentro de `computed`; leia um
+// signal que exista fora de um componente (de módulo, como aqui).
+export const appLang = signal<'pt' | 'en'>('pt');
+bootstrapApplication(App, {
+  providers: [provideRichText({ labels: () => (appLang() === 'pt' ? RTE_LABELS_PT_BR : RTE_LABELS_EN) })],
+});
 ```
 
 Trocar o idioma atualiza no mesmo ciclo o nome acessível, o placeholder, o título vazio das caixas e o nome das tarefas, sem editar o texto. Detalhe: o título **vazio** de uma caixa serializa com o rótulo do idioma atual, mas a troca não emite valor; o `value` fica com o título no idioma anterior até a próxima edição.
@@ -119,7 +142,7 @@ Hidratação incremental fica para a spec 08. Com CSP estrita, desligue-a (`prov
 
 ## CSP
 
-Testado com `default-src 'self'; script-src 'self'; style-src 'self'` por cabeçalho. O pacote não cria `<style>` nem usa o atributo `style` em tempo de execução. **Desvio conhecido (Chromium):** ao carregar conteúdo (valor inicial, carga externa e provavelmente colagem) o `DOMParser` do Tiptap faz o Chromium relatar uma violação `style-src-attr` ("inline") por atributo `style` presente no HTML, mesmo sem aplicá-lo; o conteúdo chega íntegro. Firefox e WebKit não relatam. Quem usa `report-uri`/`report-to` pode ver esse ruído no Chromium.
+Testado com `default-src 'self'; script-src 'self'; style-src 'self'` por cabeçalho. O pacote não cria `<style>` nem usa o atributo `style` em tempo de execução. **Desvio conhecido (Chromium):** ao carregar conteúdo (valor inicial, carga externa e provavelmente colagem) o `DOMParser` do Tiptap faz o Chromium relatar uma violação `style-src-attr` ("inline") por atributo `style` presente no HTML, mesmo sem aplicá-lo; o conteúdo chega íntegro (o core lê o atributo `style`, inclusive o alinhamento, e não o CSSOM, que o Chromium deixa vazio nesse caso). Firefox e WebKit não relatam. Quem usa `report-uri`/`report-to` pode ver esse ruído no Chromium.
 
 ## Estados, foco e somente leitura
 

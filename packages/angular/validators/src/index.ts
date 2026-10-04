@@ -1,7 +1,9 @@
 export { formatRteError, isRteValidationError } from './errors';
 export type {
+  RteFormattableError,
   RteMaxCharsError,
   RteMaxWordsError,
+  RteReactiveValidationError,
   RteRequiredError,
   RteValidationError,
 } from './errors';

@@ -200,6 +200,72 @@ describe('mergeLabels', () => {
     expect(out.content.taskCheckbox('a')).toBe(base.content.taskCheckbox('a'));
   });
 
+  it('getter ou armadilha de Proxy que lança caem no rótulo da base', () => {
+    const getter = {
+      get editor(): never {
+        throw new Error('getter');
+      },
+      errors: {
+        get rteRequired(): never {
+          throw new Error('getter');
+        },
+      },
+      content: {
+        calloutTitles: {
+          get info(): never {
+            throw new Error('getter');
+          },
+          warning: 'W',
+        },
+      },
+    } as unknown as RteLabelsInput;
+    expect(() => mergeLabels(base, getter)).not.toThrow();
+    const fromGetter = mergeLabels(base, getter);
+    expect(fromGetter.editor).toEqual(base.editor);
+    expect(fromGetter.errors.rteRequired).toBe(base.errors.rteRequired);
+    expect(fromGetter.content.calloutTitles.info).toBe(
+      base.content.calloutTitles.info,
+    );
+    expect(fromGetter.content.calloutTitles.warning).toBe('W');
+
+    // `get` e `getOwnPropertyDescriptor` são as armadilhas que a mescla
+    // aciona; `has` e `ownKeys` não são lidas, mas também não podem vazar.
+    for (const trap of ['get', 'getOwnPropertyDescriptor', 'has', 'ownKeys']) {
+      const handler = {
+        [trap]: () => {
+          throw new Error(trap);
+        },
+      };
+      const reached = trap === 'get' || trap === 'getOwnPropertyDescriptor';
+      const top = new Proxy({ editor: { ariaLabel: 'X' } }, handler);
+      const nested = new Proxy(
+        { table: { title: 'T', keywords: [] } },
+        handler,
+      );
+      const keywords = new Proxy(['k'], handler);
+      const input = {
+        slash: nested,
+        content: { calloutTitles: top },
+        errors: top,
+      } as unknown as RteLabelsInput;
+      expect(() => mergeLabels(base, top as RteLabelsInput)).not.toThrow();
+      expect(mergeLabels(base, top as RteLabelsInput).editor).toEqual(
+        reached ? base.editor : { ariaLabel: 'X' },
+      );
+      expect(() => mergeLabels(base, input)).not.toThrow();
+      const out = mergeLabels(base, input);
+      expect(out.slash.table).toEqual(
+        reached ? base.slash.table : { title: 'T', keywords: [] },
+      );
+      expect(out.content.calloutTitles).toEqual(base.content.calloutTitles);
+      expect(out.errors.rteRequired).toBe(base.errors.rteRequired);
+      const withKeywords = {
+        slash: { table: { title: 'T', keywords } },
+      } as unknown as RteLabelsInput;
+      expect(() => mergeLabels(base, withKeywords)).not.toThrow();
+    }
+  });
+
   it('usa funções válidas do consumidor', () => {
     const out = mergeLabels(base, {
       errors: { rteMaxChars: ({ max }) => `max ${max}` },
@@ -348,6 +414,52 @@ describe('no editor', () => {
       title: 'Warning',
       task: 'Task: X',
     });
+  });
+
+  it('getter ou Proxy que lança (entrada e provider) valem en, sem exceção', async () => {
+    const throwing = new Proxy(
+      {},
+      {
+        get: () => {
+          throw new Error('get');
+        },
+        getOwnPropertyDescriptor: () => {
+          throw new Error('descriptor');
+        },
+        ownKeys: () => {
+          throw new Error('ownKeys');
+        },
+      },
+    ) as RteLabelsInput;
+    const getter = {
+      get editor(): never {
+        throw new Error('getter');
+      },
+      get content(): never {
+        throw new Error('getter');
+      },
+    } as unknown as RteLabelsInput;
+    const { fixture, host, read } = await setup([
+      provideRichText({ labels: throwing }),
+    ]);
+    expect(read()).toEqual({
+      aria: 'Rich text editor',
+      title: 'Warning',
+      task: 'Task: X',
+    });
+    host.labels.set(getter);
+    await settle(fixture);
+    expect(read()).toEqual({
+      aria: 'Rich text editor',
+      title: 'Warning',
+      task: 'Task: X',
+    });
+    host.labels.set(undefined);
+    await settle(fixture);
+    expect(read().aria).toBe('Rich text editor');
+    expect(fixture.nativeElement.querySelectorAll('.rte-content').length).toBe(
+      2,
+    );
   });
 
   it('prioridade: entrada labels > provideRichText > en', async () => {
