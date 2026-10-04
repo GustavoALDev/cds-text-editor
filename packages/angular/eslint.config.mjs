@@ -36,10 +36,8 @@ export default [
             // Peers de D24 ainda sem código que os importe (fundação da spec
             // 05a, Tarefa 1): sair desta lista quando o componente, os
             // rótulos e os formulários chegarem (Tarefas 2–7).
-            '@angular/core',
             '@angular/common',
             '@angular/forms',
-            '@cds/rte-core',
             // Permanentes:
             '@cds/rte-theme',
             '@tiptap/core',
