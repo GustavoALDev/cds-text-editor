@@ -228,6 +228,44 @@ describe('ativo e navegação (C12)', () => {
     expect(editor.commands.previousSearchMatch()).toBe(false);
   });
 
+  it('com o foco fora do editor, a navegação rola até o resultado ativo', () => {
+    // Navegador real (E10): sem foco, a seleção do DOM não é do editor e o
+    // `scrollIntoView` da transação não rola; o plugin rola o ativo.
+    const scrolled: Element[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this);
+    };
+    try {
+      const editor = createTestEditor({}, '<p>a a</p><p>a</p>');
+      const input = document.body.appendChild(document.createElement('input'));
+      input.focus();
+      editor.commands.setTextSelection(1);
+      q(editor, 'a');
+      expect(scrolled).toHaveLength(0);
+
+      expect(editor.commands.previousSearchMatch()).toBe(true);
+      expect(scrolled).toEqual([active(editor)[0]]);
+      expect(active(editor)[0]?.textContent).toBe('a');
+      expect(state(editor).activeIndex).toBe(2);
+      expect(document.activeElement).toBe(input);
+
+      // Um único resultado: o ativo não muda, mas a navegação rola de novo.
+      q(editor, 'a a');
+      scrolled.length = 0;
+      expect(editor.commands.nextSearchMatch()).toBe(true);
+      expect(scrolled).toEqual([active(editor)[0]]);
+
+      // Transações sem navegação não rolam.
+      scrolled.length = 0;
+      editor.commands.setSearchQuery('a');
+      editor.commands.insertContentAt(editor.state.doc.content.size - 1, 'b');
+      expect(scrolled).toHaveLength(0);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
   it('edição antes do ativo: o ativo continua no mesmo trecho', () => {
     const editor = createTestEditor({}, html);
     editor.commands.setTextSelection(1);

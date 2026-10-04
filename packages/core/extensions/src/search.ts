@@ -5,6 +5,7 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import type { EditorView } from '@tiptap/pm/view';
 import type { RteExtensionContext } from './context';
 import { truncateText } from './limits';
 import {
@@ -93,8 +94,12 @@ export type SearchAction =
 
 export const searchKey = new PluginKey<SearchPluginState>('rtSearch');
 
+// Estados do plugin produzidos por `nextSearchMatch`/`previousSearchMatch`.
+const navigated = new WeakSet<SearchPluginState>();
+
 const CLASS = 'rte-search-match';
-const CLASS_ACTIVE = 'rte-search-match rte-search-match--active';
+const CLASS_ACTIVE_ONLY = 'rte-search-match--active';
+const CLASS_ACTIVE = `${CLASS} ${CLASS_ACTIVE_ONLY}`;
 const NO_MATCHES: readonly RteSearchMatch[] = Object.freeze([]);
 
 function emptyState(
@@ -480,12 +485,41 @@ export function createSearchExtension(_ctx: RteExtensionContext): AnyExtension {
                 next = afterEdit(value, value.matcher, tr);
               }
               const action = tr.getMeta(searchKey) as SearchAction | undefined;
-              return action ? applyAction(next, action, tr) : next;
+              if (!action) return next;
+              const result = applyAction(next, action, tr);
+              if (action.type !== 'activate' || !tr.scrolledIntoView) {
+                return result;
+              }
+              // Navegação: objeto novo mesmo com o ativo igual (um resultado
+              // só), para a vista rolar de novo.
+              const navigatedTo = result === value ? { ...result } : result;
+              navigated.add(navigatedTo);
+              return navigatedTo;
             },
           },
           props: {
             decorations: (state) => searchKey.getState(state)?.decorations,
           },
+          view: () => ({
+            update(view: EditorView, prevState: EditorState) {
+              const value = searchKey.getState(view.state);
+              if (
+                !value ||
+                value === searchKey.getState(prevState) ||
+                !navigated.has(value)
+              ) {
+                return;
+              }
+              // Com o foco no editor, o ProseMirror rola até a seleção. Sem
+              // ele (foco na barra de busca, C12), a seleção do DOM não é do
+              // editor e o `scrollIntoView` da transação não rola nada.
+              if (view.hasFocus()) return;
+              const target = view.dom.querySelector(`.${CLASS_ACTIVE_ONLY}`);
+              if (typeof target?.scrollIntoView === 'function') {
+                target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+              }
+            },
+          }),
         }),
       ];
     },
