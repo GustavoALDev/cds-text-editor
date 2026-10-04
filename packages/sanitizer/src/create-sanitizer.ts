@@ -8,9 +8,12 @@ export interface RteSanitizeOptions extends RteHtmlSchemaOptions {
   /** Comprimento máximo da entrada em unidades UTF-16. Padrão `1_000_000`. */
   maxInputLength?: number;
   /**
-   * Profundidade máxima de elementos abertos, de 1 a 512 (o parser do
-   * Chromium achata o DOM acima de 512 níveis e a saída deixaria de ser
-   * estável sob ele, I1). Padrão `256`.
+   * Profundidade máxima de elementos abertos, de 1 a 512. Padrão `256`.
+   * O parser do Chromium achata o DOM acima de 512 elementos abertos e conta
+   * todos os ancestrais do ponto de inserção (`html`, `body`, os invólucros
+   * da aplicação; no SSR, o documento inteiro): a saída só é estável sob ele
+   * (I1) se a profundidade do ponto de inserção mais `maxDepth` ficar ≤ 512.
+   * O padrão deixa essa folga.
    */
   maxDepth?: number;
 }
@@ -49,8 +52,10 @@ function readLimit(
  * `maxDepth`.
  */
 export function createSanitizer(
-  options: RteSanitizeOptions = {},
+  options?: RteSanitizeOptions | null,
 ): (html: string) => string {
+  // `null` equivale a ausente: padrões, em vez de um `TypeError` cru.
+  options ??= {};
   const maxInputLength = readLimit(
     'maxInputLength',
     options.maxInputLength,
@@ -80,14 +85,15 @@ export function createSanitizer(
 let defaultSanitizer: ((html: string) => string) | undefined;
 
 /**
- * Sanitiza `html` pelo esquema. Sem `options`, usa o sanitizador padrão
- * memoizado; com `options`, equivale a `createSanitizer(options)(html)`.
+ * Sanitiza `html` pelo esquema. Sem `options` (ou com `null`), usa o
+ * sanitizador padrão memoizado; com `options`, equivale a
+ * `createSanitizer(options)(html)`.
  */
 export function sanitizeRichText(
   html: string,
-  options?: RteSanitizeOptions,
+  options?: RteSanitizeOptions | null,
 ): string {
-  if (options !== undefined) return createSanitizer(options)(html);
+  if (options != null) return createSanitizer(options)(html);
   defaultSanitizer ??= createSanitizer();
   return defaultSanitizer(html);
 }

@@ -8,25 +8,23 @@ import {
   type RteSanitizeOptions,
 } from './index';
 import { readFixture } from './testing/fixtures';
+import { cost, timed } from './testing/timed';
 
-/** Roda `run` cronometrado: todo caso adversarial termina em < 2 s (R8). */
-function timed<T>(run: () => T): T {
-  const start = performance.now();
-  try {
-    return run();
-  } finally {
-    expect(performance.now() - start).toBeLessThan(2000);
-  }
-}
-
-/** Captura o erro lançado por `run` (cronometrado). */
+/**
+ * Captura o erro lançado por `run` (cronometrado). O erro é capturado dentro
+ * da execução cronometrada: uma falha do teto de R8 nunca vira "o erro".
+ */
 function thrown(run: () => unknown): unknown {
-  try {
-    timed(run);
-  } catch (error) {
-    return error;
-  }
-  throw new Error('não lançou');
+  const caught = timed(() => {
+    try {
+      run();
+    } catch (error) {
+      return { error };
+    }
+    return null;
+  });
+  if (caught === null) throw new Error('não lançou');
+  return caught.error;
 }
 
 function expectLimitError(
@@ -144,6 +142,18 @@ describe('S8: opções e entrada inválidas', () => {
     });
   }
 
+  it('options null equivale a ausente (padrões)', () => {
+    const html = '<p class="x" onclick="y">a<script>b</script></p>';
+    const expected = sanitizeRichText(html);
+    expect(sanitizeRichText(html, null)).toBe(expected);
+    expect(createSanitizer(null)(html)).toBe(expected);
+    expectLimitError(
+      thrown(() => createSanitizer(null)('<b>'.repeat(257))),
+      'max-depth',
+      256,
+    );
+  });
+
   it.each([null, undefined, 1])('entrada %s → TypeError', (value) => {
     expect(() => sanitizeRichText(value as never)).toThrow(TypeError);
     expect(() => sanitizeRichText(value as never)).toThrow(
@@ -216,6 +226,43 @@ describe('R8: adversariais de até 1 000 000 unidades terminam em < 2 s', () => 
 
   it("'</' repetido", () => {
     expect(run('</'.repeat(500_000))).toBe('');
+  });
+});
+
+describe('R8: escala linear, independente da velocidade da máquina', () => {
+  /** Sanitiza; um `max-depth` também é um término válido. */
+  function sanitize(html: string): void {
+    try {
+      sanitizeRichText(html);
+    } catch (error) {
+      if (!(error instanceof RteSanitizeError)) throw error;
+    }
+  }
+
+  /** Menor de 3 custos de `run`. */
+  function best(run: () => void): number {
+    let min = Infinity;
+    for (let i = 0; i < 3; i++) min = Math.min(min, cost(run));
+    return min;
+  }
+
+  // Mesma quantidade de entrada nos dois lados: 1 documento de 16n contra 16
+  // documentos de n (os dois bem acima do passo de ~16 ms do relógio de CPU no
+  // Windows). Linear ≈ 1, quadrático ≈ 16; o teto 8 tolera o ruído de núcleos
+  // disputados e de cache.
+  it.each([
+    ["'<'", '<', 62_500],
+    ['<li>', '<li>', 15_625],
+  ])('%s: custo(16n) / (16 × custo(n)) < 8', (_, unit, n) => {
+    const small = unit.repeat(n);
+    const large = unit.repeat(16 * n);
+    sanitize(large); // aquece o JIT
+    const ratio =
+      best(() => sanitize(large)) /
+      best(() => {
+        for (let i = 0; i < 16; i++) sanitize(small);
+      });
+    expect(ratio).toBeLessThan(8);
   });
 });
 
