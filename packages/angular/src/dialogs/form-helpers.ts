@@ -95,6 +95,11 @@ function rangeChecks(
   });
 }
 
+/** Texto de um atributo do nó; `''` se não for texto. */
+export function text(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
 /** Erro visível do campo: só depois de tocado (ou de um envio) (G8). */
 export function fieldError<T>(
   field: FieldTree<T>,

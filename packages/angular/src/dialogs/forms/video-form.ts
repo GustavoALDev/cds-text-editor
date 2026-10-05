@@ -26,7 +26,7 @@ import { normalizeAttribute } from '@cds/rte-core';
 import type { RteVideoTrack } from '@cds/rte-core/extensions';
 import { applyVideo, removeMediaAt } from '../apply-media';
 import type { RteDialogRequest } from '../controller';
-import { focusFirstInvalid, langCodeValidator } from '../form-helpers';
+import { focusFirstInvalid, langCodeValidator, text } from '../form-helpers';
 import type { RteMediaRules } from '../media-rules';
 import { canonicalMediaUrl, mediaUrlValidator } from '../media-validate';
 import { RteDialogFormBase } from './form-base';
@@ -34,7 +34,7 @@ import { RteDialogFormBase } from './form-base';
 /** Limites do vídeo (V8): legenda e rótulo da faixa, da UI; faixas 0–10. */
 const CAPTION_MAX = 300;
 const LABEL_MAX = 100;
-export const VIDEO_TRACKS_MAX = 10;
+const VIDEO_TRACKS_MAX = 10;
 
 const KINDS: readonly RteVideoTrack['kind'][] = ['captions', 'subtitles'];
 
@@ -68,10 +68,6 @@ function newTrack(): TrackModel {
   };
 }
 
-function text(value: unknown): string {
-  return typeof value === 'string' ? value : '';
-}
-
 /** Faixas do nó (o core já as guarda canônicas, com no máximo um padrão). */
 function tracksOf(value: unknown): TrackModel[] {
   if (!Array.isArray(value)) return [];
@@ -93,7 +89,9 @@ function videoValues(req: RteDialogRequest): VideoModel {
     src: text(a['src']),
     poster: text(a['poster']),
     caption: text(a['caption']),
-    tracks: tracksOf(a['tracks']).slice(0, VIDEO_TRACKS_MAX),
+    // Todas as faixas do nó, mesmo acima do teto: nenhuma some em silêncio
+    // (R4); o teto só desabilita "Acrescentar faixa".
+    tracks: tracksOf(a['tracks']),
   };
 }
 
@@ -248,6 +246,8 @@ export class RteVideoForm extends RteDialogFormBase {
   private apply(): void {
     const req = untracked(this.request);
     if (req.kind !== 'video') return;
+    // Os retornos abaixo são inalcançáveis enquanto os validadores do
+    // formulário seguirem as mesmas regras; só protegem contra divergência.
     const m = untracked(this.model);
     const rules = untracked(this.rules);
     const src = canonicalMediaUrl(rules?.videoSrc ?? null, m.src);

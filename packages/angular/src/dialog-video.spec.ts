@@ -450,6 +450,40 @@ describe('editar vídeo (R4, V8)', () => {
   });
 });
 
+describe('editar vídeo com muitas faixas (R4, fix 1)', () => {
+  /** Vídeo com `n` faixas (`/t1.vtt`…), legenda "Old". */
+  function manyTracksDoc(n: number): string {
+    const tracks = Array.from({ length: n }, (_, i) =>
+      TRACK(
+        `kind="captions" src="/t${i + 1}.vtt" srclang="en" label="L${i + 1}"`,
+      ),
+    ).join('');
+    return `<p>ab</p>${VIDEO('src="/v.webm"', `>${tracks}`, '<figcaption>Old</figcaption>')}<p>cd</p>`;
+  }
+
+  it.each([10, 12])(
+    '%i faixas: todas carregadas, "Acrescentar" desabilitado, legenda trocada mantém todas',
+    async (n) => {
+      const s = await setup(manyTracksDoc(n));
+      expect(html(s).match(/<track /g)).toHaveLength(n);
+      selectNode(s.editor, 'rtVideo');
+      const o = await openVideo(s);
+      expect(fieldsets(o)).toHaveLength(n);
+      expect(buttonByText(o, ADD).disabled).toBe(true);
+      typeInto(field(o, CAPTION), 'Nova');
+      await submit(o);
+      expect(o.dialog.open).toBe(false);
+      expect(html(o)).toBe(
+        manyTracksDoc(n).replace(
+          '<figcaption>Old</figcaption>',
+          '<figcaption>Nova</figcaption>',
+        ),
+      );
+      expectOneStep(o);
+    },
+  );
+});
+
 describe('erros no campo (R4, V4, V8)', () => {
   /** Abre, com endereço válido e uma faixa válida exceto por `bad`. */
   async function withTrack(bad: TrackInput): Promise<Opened> {

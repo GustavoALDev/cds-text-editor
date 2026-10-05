@@ -22,7 +22,11 @@ import type { RteAttrRule } from '@cds/rte-core';
 import type { RteImageAlign } from '@cds/rte-core/extensions';
 import { applyImage, removeMediaAt } from '../apply-media';
 import type { RteDialogRequest } from '../controller';
-import { focusFirstInvalid, optionalIntegerInRange } from '../form-helpers';
+import {
+  focusFirstInvalid,
+  optionalIntegerInRange,
+  text,
+} from '../form-helpers';
 import { canonicalMediaUrl, mediaUrlValidator } from '../media-validate';
 import { RteDialogFormBase } from './form-base';
 
@@ -52,10 +56,6 @@ const IMAGE_INITIAL: Readonly<ImageModel> = Object.freeze({
   align: 'center',
   width: null,
 });
-
-function text(value: unknown): string {
-  return typeof value === 'string' ? value : '';
-}
 
 /**
  * Valores de abertura (pré-voo 6): inserir → vazio; editar → os atributos
