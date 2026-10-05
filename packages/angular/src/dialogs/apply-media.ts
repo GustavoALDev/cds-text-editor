@@ -1,5 +1,10 @@
 import { isDevMode } from '@angular/core';
-import type { RteImageAlign, RteImageAttrs } from '@cds/rte-core/extensions';
+import type {
+  RteImageAlign,
+  RteImageAttrs,
+  RteVideoAttrs,
+  RteVideoTrack,
+} from '@cds/rte-core/extensions';
 import type { ChainedCommands, CommandProps, Editor } from '@tiptap/core';
 import type { RteDialogRequest } from './controller';
 
@@ -14,6 +19,8 @@ export type MediaChain = ChainedCommands & {
   setImage(attrs: RteImageAttrs): MediaChain;
   updateImage(attrs: Partial<RteImageAttrs>): MediaChain;
   setImageSize(size: { width: number }): MediaChain;
+  setVideo(attrs: RteVideoAttrs): MediaChain;
+  updateVideo(attrs: Partial<RteVideoAttrs>): MediaChain;
 };
 
 /** Valores do diálogo de imagem já canônicos (o `src` pela regra, V4). */
@@ -82,6 +89,38 @@ export function applyImage(
       ? chain.setImageSize({ width: v.width })
       : chain;
   });
+}
+
+/** Valores do diálogo de vídeo já canônicos (endereços pela regra, V4). */
+export interface RteVideoApply {
+  src: string;
+  poster: string | null;
+  caption: string;
+  tracks: RteVideoTrack[];
+}
+
+/**
+ * Vídeo (V8, pré-voo 8). Inserir: `setVideo` na seleção viva (o core acha o
+ * ponto e deixa o vídeo selecionado). Editar: `updateVideo` no nó da
+ * abertura, com a lista de faixas inteira (substitui a anterior).
+ */
+export function applyVideo(
+  editor: Editor,
+  req: RteDialogRequest,
+  v: RteVideoApply,
+): boolean {
+  const attrs = {
+    src: v.src,
+    poster: v.poster,
+    caption: v.caption,
+    tracks: v.tracks,
+  };
+  if (req.mode !== 'edit') {
+    return runMedia(editor, (c) => c.setVideo(attrs));
+  }
+  return runMedia(editor, (c) =>
+    (c.setNodeSelection(req.range.from) as MediaChain).updateVideo(attrs),
+  );
 }
 
 /** Remove o nó de mídia da abertura (pré-voo 8); o cursor fica no lugar. */

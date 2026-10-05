@@ -44,5 +44,13 @@
     [rule]="mediaRules()?.imageSrc ?? null"
     [alignNames]="alignNames()"
   />
+  } @case ('video') {
+  <rte-video-form
+    [request]="req"
+    [controller]="controller()"
+    [labels]="labels()"
+    [idPrefix]="prefix"
+    [rules]="mediaRules()"
+  />
   } } }
 </dialog>

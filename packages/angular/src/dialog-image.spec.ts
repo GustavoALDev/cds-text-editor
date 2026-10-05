@@ -29,13 +29,11 @@ import {
   waitForDialog,
 } from './testing-support/dialog';
 import { selectText } from './testing-support/editors';
+import { anyMediaUrl, fcOptions } from './testing-support/media-urls';
 import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
 
 // Spec 05c1, Tarefa 4: diálogo de imagem (R3, R6 imagem; V4, V6, V7, V12).
-
-const RUNS = Number(process.env['FC_RUNS'] ?? 100);
-const SEED = process.env['FC_SEED'];
 
 const SRC = 'Image address (URL)';
 const ALT = 'Alternative text';
@@ -613,54 +611,7 @@ describe('comando recusado (V9, Ruling 4)', () => {
   });
 });
 
-/** Endereços gerados com ofuscações (R6): maiúsculas, TAB/LF, `\`, C0. */
-const OBFUSCATION = fc.constantFrom(
-  '\t',
-  '\n',
-  '\r',
-  '\\',
-  ' ',
-  '\u0000',
-  '\u0001',
-  '\u001f',
-  '\u007f',
-);
-const GENERATED_URL = fc
-  .tuple(
-    fc.constantFrom(
-      'https://',
-      'HTTPS://',
-      'hTtPs://',
-      'http://',
-      '//',
-      '/',
-      '',
-      'javascript:',
-      'JaVaScRiPt:',
-      'data:',
-      'blob:https://',
-      './',
-      '../',
-    ),
-    fc.constantFrom(
-      'media.example.test',
-      'MEDIA.Example.TEST',
-      'x.test',
-      'media.example.test.evil.test',
-      '',
-    ),
-    fc.constantFrom('/a.png', '/A%20b.PNG', '/a b.png', '?q=1#f', ''),
-    fc.array(fc.tuple(fc.nat(), OBFUSCATION), { maxLength: 3 }),
-  )
-  .map(([scheme, host, path, inserts]) => {
-    let s = scheme + host + path;
-    for (const [at, ch] of inserts) {
-      const i = at % (s.length + 1);
-      s = s.slice(0, i) + ch + s.slice(i);
-    }
-    return s;
-  });
-const ANY_URL = fc.oneof(fc.string({ maxLength: 40 }), GENERATED_URL);
+const ANY_URL = anyMediaUrl('png');
 
 function imageRule(config: RteEditorConfig): RteAttrRule {
   const rule = getHtmlSchema(config).elements['img']?.attributes['src']?.rule;
@@ -691,7 +642,7 @@ describe('propriedade R6: o diálogo aceita ⇔ a regra img[src] do esquema acei
           s !== '' && normalizeAttribute(rule, s.trim()) === null;
         expect(refused).toBe(expected);
       }),
-      { numRuns: RUNS, ...(SEED ? { seed: Number(SEED) } : {}) },
+      fcOptions(),
     );
   });
 
@@ -724,7 +675,7 @@ describe('propriedade R6: o diálogo aceita ⇔ a regra img[src] do esquema acei
         o.editor.commands.undo();
         expect(html(o)).toBe(o.initial);
       }),
-      { numRuns: 20, ...(SEED ? { seed: Number(SEED) } : {}) },
+      fcOptions(20),
     );
   });
 });

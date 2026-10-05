@@ -23,6 +23,7 @@ import { RteLangForm } from './forms/lang-form';
 import { RteLinkForm } from './forms/link-form';
 import { RteQuoteForm } from './forms/quote-form';
 import { RteTableForm } from './forms/table-form';
+import { RteVideoForm } from './forms/video-form';
 
 let nextInstance = 0;
 
@@ -36,7 +37,14 @@ let nextInstance = 0;
 @Component({
   selector: 'rte-dialogs',
   templateUrl: './rte-dialogs.html',
-  imports: [RteLinkForm, RteLangForm, RteQuoteForm, RteTableForm, RteImageForm],
+  imports: [
+    RteLinkForm,
+    RteLangForm,
+    RteQuoteForm,
+    RteTableForm,
+    RteImageForm,
+    RteVideoForm,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
 })
@@ -79,6 +87,8 @@ export class RteDialogs {
         return l.tableTitle;
       case 'image':
         return req.mode === 'edit' ? l.imageEditTitle : l.imageInsertTitle;
+      case 'video':
+        return req.mode === 'edit' ? l.videoEditTitle : l.videoInsertTitle;
       default:
         return '';
     }
