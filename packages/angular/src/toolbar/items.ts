@@ -23,6 +23,9 @@ export type RteToolbarItemId =
   | 'codeBlock'
   | 'codeLanguage'
   | 'horizontalRule'
+  | 'image'
+  | 'video'
+  | 'embed'
   | 'table'
   | 'callout'
   | 'pullquote'
@@ -38,7 +41,7 @@ export type RteToolbarItemKind = 'button' | 'toggle' | 'menu' | 'dialog';
 
 /** Recurso de `features` que, desligado, remove o item (U8). */
 export type RteToolbarItemFeature =
-  'colors' | 'tasks' | 'code' | 'tables' | 'newsBlocks';
+  'colors' | 'tasks' | 'code' | 'tables' | 'newsBlocks' | 'media' | 'embeds';
 
 const item = (
   kind: RteToolbarItemKind,
@@ -78,6 +81,9 @@ export const RTE_TOOLBAR_ITEMS: Readonly<
   codeBlock: item('toggle', 'code'),
   codeLanguage: item('menu', 'code'),
   horizontalRule: item('button'),
+  image: item('dialog', 'media'),
+  video: item('dialog', 'media'),
+  embed: item('dialog', 'embeds'),
   table: item('menu', 'tables'),
   callout: item('menu', 'newsBlocks'),
   pullquote: item('toggle', 'newsBlocks'),
@@ -109,6 +115,7 @@ export const RTE_TOOLBAR_PRESETS: Readonly<
     ['bulletList', 'orderedList', 'taskList'],
     ['align'],
     ['blockquote', 'codeBlock', 'horizontalRule'],
+    ['image', 'embed'],
     ['table'],
     ['clearFormatting'],
   ]),
@@ -130,6 +137,7 @@ export const RTE_TOOLBAR_PRESETS: Readonly<
     ['bulletList', 'orderedList', 'taskList', 'indent', 'outdent'],
     ['align'],
     ['blockquote', 'codeBlock', 'codeLanguage', 'horizontalRule'],
+    ['image', 'video', 'embed'],
     ['table'],
     ['callout', 'pullquote', 'quoteAuthor', 'readAlso'],
     ['clearFormatting'],

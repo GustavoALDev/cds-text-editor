@@ -105,6 +105,8 @@ const ARTICLE_LABELS = [
   'Quote',
   'Code block',
   'Horizontal line',
+  'Insert image',
+  'Insert embedded content',
   'Table',
   'Clear formatting',
 ];
@@ -255,7 +257,7 @@ describe('estrutura (U2, U8, U9)', () => {
     const separators = toolbar.querySelectorAll(
       '.rte-toolbar__separator[role=separator][aria-orientation=vertical]',
     );
-    expect(separators).toHaveLength(8);
+    expect(separators).toHaveLength(9);
     for (const sep of separators) {
       expect(sep.hasAttribute('tabindex')).toBe(false);
       expect(sep.previousElementSibling).not.toBeNull();
@@ -830,6 +832,9 @@ describe('itens de diálogo (G11, G16, G17)', () => {
       'Quote',
       'Code block',
       'Horizontal line',
+      'Insert image',
+      'Insert video',
+      'Insert embedded content',
       'Table',
       'Callout box',
       'Pull quote',

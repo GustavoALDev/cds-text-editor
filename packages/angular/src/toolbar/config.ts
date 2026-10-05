@@ -18,6 +18,8 @@ export function pickToolbarConfig(
 export interface ResolveToolbarContext {
   features: readonly RteFeatureId[];
   hasCodeLanguages: boolean;
+  /** Algum provedor de *embed* ativo (sem ele o item `embed` sai; V9). */
+  hasEmbedProviders: boolean;
   /** Avisos já emitidos (um por id e por conjunto). */
   warned: Set<string>;
 }
@@ -105,6 +107,7 @@ export function resolveToolbarGroups(
       const { feature } = RTE_TOOLBAR_ITEMS[id];
       if (feature !== null && !ctx.features.includes(feature)) continue;
       if (id === 'codeLanguage' && !ctx.hasCodeLanguages) continue;
+      if (id === 'embed' && !ctx.hasEmbedProviders) continue;
       kept.push(id);
     }
     if (kept.length > 0) out.push(kept);

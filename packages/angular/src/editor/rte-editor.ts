@@ -28,10 +28,12 @@ import {
   type RtePaletteColor,
 } from '@cds/rte-core';
 import type { RteCodeLanguage } from '@cds/rte-core/code-languages';
+import { DEFAULT_EMBED_PROVIDERS } from '@cds/rte-core/embeds';
 import {
   createEditorExtensions,
   RTE_LABELS_META,
   type RteCharLimitState,
+  type RteImageAlign,
 } from '@cds/rte-core/extensions';
 import { applyRteTheme, warnIfPoorTheme, type RteTheme } from '@cds/rte-theme';
 import { Editor } from '@tiptap/core';
@@ -44,6 +46,7 @@ import {
   RteDialogController,
 } from '../dialogs/controller';
 import { RteDeferFailed } from '../dialogs/defer-failed';
+import { readMediaRules, type RteMediaRules } from '../dialogs/media-rules';
 import { RteDialogs } from '../dialogs/rte-dialogs';
 import { dialogTarget } from '../dialogs/target';
 import type { RteDialogKind } from '../dialogs/types';
@@ -101,10 +104,7 @@ function sameGroups(
   );
 }
 
-function sameIds(
-  a: readonly RteToolbarItemId[],
-  b: readonly RteToolbarItemId[],
-): boolean {
+function sameIds(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((id, i) => id === b[i]);
 }
 
@@ -284,6 +284,19 @@ export class RteEditor implements FormValueControl<string> {
     }
   });
 
+  /**
+   * Nomes dos provedores de *embed* ativos (pré-voo 4): a dica do diálogo e
+   * a condição do item `embed`. `DEFAULT_EMBED_PROVIDERS` fica no *chunk*
+   * principal; o `rte-dialogs` só recebe os nomes.
+   */
+  protected readonly embedProviderNames: Signal<readonly string[]> = computed(
+    () =>
+      (this.editorConfig().embedProviders ?? DEFAULT_EMBED_PROVIDERS).map(
+        (p) => p.name,
+      ),
+    { equal: sameIds },
+  );
+
   protected readonly codeLanguages = computed(
     () => this.editorConfig().codeLanguages ?? NO_LANGUAGES,
   );
@@ -298,6 +311,7 @@ export class RteEditor implements FormValueControl<string> {
         {
           features: this.schema().features,
           hasCodeLanguages: this.codeLanguages().length > 0,
+          hasEmbedProviders: this.embedProviderNames().length > 0,
           warned: this.toolbarWarned,
         },
       ),
@@ -383,6 +397,31 @@ export class RteEditor implements FormValueControl<string> {
   /** Política de links da criação (G9): a mesma que o editor usa. */
   protected readonly linkPolicy = computed(
     () => this.editorConfig().linkPolicy,
+  );
+  /** Regras de URL/idioma das mídias do esquema (V4); `null` sem `media`. */
+  protected readonly mediaRules: Signal<RteMediaRules | null> = computed(() =>
+    readMediaRules(this.schema()),
+  );
+  /** Nomes dos alinhamentos de imagem no diálogo, de `floating` (V14). */
+  protected readonly alignNames: Signal<
+    Readonly<Record<RteImageAlign, string>>
+  > = computed(
+    () => {
+      const f = this.resolvedLabels().floating;
+      return {
+        left: f.imageAlignLeft,
+        center: f.imageAlignCenter,
+        right: f.imageAlignRight,
+        full: f.imageAlignFull,
+      };
+    },
+    {
+      equal: (a, b) =>
+        a.left === b.left &&
+        a.center === b.center &&
+        a.right === b.right &&
+        a.full === b.full,
+    },
   );
   /** Regra do `span[lang]` do esquema (G14). */
   protected readonly langRule = computed(

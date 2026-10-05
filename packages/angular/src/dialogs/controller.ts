@@ -72,7 +72,8 @@ export interface RteDialogView {
  * (carregado por `@defer`) lê o pedido e registra a vista para ser fechado.
  */
 export class RteDialogController {
-  private readonly editor: Signal<Editor | null>;
+  /** Editor do controlador (validação do *embed* no *chunk*, pré-voo 5). */
+  readonly editor: Signal<Editor | null>;
   private readonly current = signal<RteDialogRequest | null>(null);
   private readonly wanted = signal(false);
   private readonly broken = signal(false);

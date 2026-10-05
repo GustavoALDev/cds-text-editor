@@ -14,8 +14,10 @@ import {
   ViewEncapsulation,
 } from '@angular/core';
 import type { RteAttrRule, RteLinkPolicy } from '@cds/rte-core';
+import type { RteImageAlign } from '@cds/rte-core/extensions';
 import type { RteDialogLabels } from '../labels/types';
 import type { RteDialogController, RteDialogRequest } from './controller';
+import type { RteMediaRules } from './media-rules';
 import { RteLangForm } from './forms/lang-form';
 import { RteLinkForm } from './forms/link-form';
 import { RteQuoteForm } from './forms/quote-form';
@@ -42,6 +44,13 @@ export class RteDialogs {
   readonly labels = input.required<RteDialogLabels>();
   readonly linkPolicy = input<Partial<RteLinkPolicy> | undefined>(undefined);
   readonly langRule = input<RteAttrRule | null>(null);
+  /** Regras das mídias (V4); `null` sem `media`. */
+  readonly mediaRules = input<RteMediaRules | null>(null);
+  /** Nomes dos provedores de *embed* ativos (dica do diálogo, V5). */
+  readonly embedProviders = input<readonly string[]>([]);
+  /** Nomes dos alinhamentos de imagem, de `floating` (V14). */
+  readonly alignNames =
+    input.required<Readonly<Record<RteImageAlign, string>>>();
 
   protected readonly prefix = `rte-dialog-${++nextInstance}`;
   protected readonly ids = { title: `${this.prefix}-title` };
