@@ -25,6 +25,7 @@ import { RTE_LABELS_ES, RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
 import { getRteEditor } from '@cds/rte-angular/testing';
 import type { Editor } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { RteDialogController } from './dialogs/controller';
 import { selectText } from './testing-support/editors';
 import { installPopoverShim } from './testing-support/popover';
 import { RTE_ICONS } from './toolbar/icons';
@@ -950,6 +951,12 @@ describe('itens de diálogo (G11, G16, G17)', () => {
   });
 
   it('escolher Insert table… fecha o menu, foca o gatilho e emite table', async () => {
+    // O pedido não abre o diálogo: com o chunk já carregado no worker
+    // (`isolate: false`), o <dialog> abriria durante o `settle`, sem o calço,
+    // roubaria o foco e vazaria o pedido para os arquivos seguintes.
+    vi.spyOn(RteDialogController.prototype, 'open').mockImplementation(
+      () => undefined,
+    );
     const { el, fixture } = await setup();
     const spy = vi.fn();
     toolbarCmp(fixture).dialog.subscribe(spy);

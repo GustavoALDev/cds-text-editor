@@ -291,7 +291,7 @@ const inCell = (editor: Editor) => () => selectText(editor, 'c1', 1);
 const image = (editor: Editor) => () => selectNode(editor, 'rtImage');
 
 describe('começam ocultos (R2)', () => {
-  it('sem .rte-floating antes da criação; depois, 4 popover="manual" fechados entre o mount e os diálogos', async () => {
+  it('sem .rte-floating antes da criação; depois, 6 popover="manual" fechados entre o mount e os diálogos', async () => {
     const fixture = TestBed.createComponent(Host);
     expect(menus(fixture.nativeElement as HTMLElement)).toHaveLength(0);
     fixture.autoDetectChanges();
@@ -302,6 +302,8 @@ describe('começam ocultos (R2)', () => {
     const found = menus(el);
     expect(found.map((m) => m.getAttribute('data-rte-kind'))).toEqual([
       'image',
+      'video',
+      'embed',
       'link',
       'text',
       'table',
@@ -324,6 +326,10 @@ describe('começam ocultos (R2)', () => {
       }
     }
     expect(menu(el, 'text').getAttribute('aria-label')).toBe('Text formatting');
+    expect(menu(el, 'video').getAttribute('aria-label')).toBe('Video');
+    expect(menu(el, 'embed').getAttribute('aria-label')).toBe(
+      'Embedded content',
+    );
     expect(openKinds(el)).toEqual([]);
   });
 
@@ -359,17 +365,40 @@ describe('começam ocultos (R2)', () => {
       'Delete column',
       'More table operations',
     ]);
+    // Ruling 13: "Image details…" passou a ser o primeiro item (V10)
     expect(names('image')).toEqual([
+      'Image details…',
       'Align left',
       'Center',
       'Align right',
       'Full width',
       'Remove image',
     ]);
+    expect(names('video')).toEqual(['Video details…', 'Remove video']);
+    expect(names('embed')).toEqual([
+      'Embedded content details…',
+      'Remove embedded content',
+    ]);
+    for (const kind of ['image', 'video', 'embed']) {
+      const [details] = menu(el, kind).querySelectorAll('.rte-toolbar__button');
+      expect(details?.getAttribute('aria-haspopup')).toBe('dialog');
+      expect(details?.getAttribute('title')).toBe(
+        details?.getAttribute('aria-label'),
+      );
+      expect(details?.querySelector('path')?.getAttribute('d')).toBeTruthy();
+    }
+    // pré-voo 10: detalhes · alinhamentos · remover; detalhes · remover
+    const separatorsAfter = (kind: string) =>
+      [...menu(el, kind).children]
+        .filter((c) => c.classList.contains('rte-toolbar__separator'))
+        .map((c) => c.previousElementSibling?.getAttribute('aria-label'));
+    expect(separatorsAfter('image')).toEqual(['Image details…', 'Full width']);
+    expect(separatorsAfter('video')).toEqual(['Video details…']);
+    expect(separatorsAfter('embed')).toEqual(['Embedded content details…']);
     const buttons = [
       ...el.querySelectorAll<HTMLElement>('.rte-floating .rte-toolbar__button'),
     ];
-    expect(buttons.length).toBe(18);
+    expect(buttons.length).toBe(23);
     for (const b of buttons) {
       expect(b.getAttribute('tabindex')).toBe('-1');
       const down = new MouseEvent('mousedown', {
@@ -728,8 +757,9 @@ describe('foco (R6, M11)', () => {
     await focusAnd(fixture, editor, image(editor));
     expect(floatingOf(fixture).focusActive()).toBe(true);
     await settle(fixture);
+    // Ruling 13: o primeiro item do menu de imagem é "Image details…" (V10)
     expect(document.activeElement?.getAttribute('aria-label')).toBe(
-      'Align left',
+      'Image details…',
     );
     host.value.set('<p>x</p>');
     await settle(fixture);
@@ -811,7 +841,7 @@ describe('configuração (R11)', () => {
     expect(host.blurs).toBe(0);
   });
 
-  it('features sem media/tables → sem menus de imagem e de tabela (m6)', async () => {
+  it('features sem media/tables → sem menus de imagem, vídeo e tabela (m6)', async () => {
     const { el } = await setup((h) => {
       (h as { options: unknown }).options = {
         features: { media: false, tables: false },
@@ -819,14 +849,16 @@ describe('configuração (R11)', () => {
       h.value.set('<p>abc</p>');
     });
     expect(menus(el).map((m) => m.getAttribute('data-rte-kind'))).toEqual([
+      'embed',
       'link',
       'text',
     ]);
     expect(el.querySelector('.rte-floating--image')).toBeNull();
+    expect(el.querySelector('.rte-floating--video')).toBeNull();
     expect(el.querySelector('.rte-floating--table')).toBeNull();
   });
 
-  it('floatingMenus: false → sem rte-floating-menus; { table: false } → 3; ao vivo sem recriar', async () => {
+  it('floatingMenus: false → sem rte-floating-menus; { table: false } → 5; ao vivo sem recriar', async () => {
     const ready = vi.fn();
     const { fixture, host, el, cmp } = await setup((h) =>
       h.floating.set(false),
@@ -837,12 +869,14 @@ describe('configuração (R11)', () => {
     await settle(fixture);
     expect(menus(el).map((m) => m.getAttribute('data-rte-kind'))).toEqual([
       'image',
+      'video',
+      'embed',
       'link',
       'text',
     ]);
     host.floating.set(true);
     await settle(fixture);
-    expect(menus(el)).toHaveLength(4);
+    expect(menus(el)).toHaveLength(6);
     expect(ready).not.toHaveBeenCalled();
   });
 });
@@ -1262,5 +1296,160 @@ describe('submenu de tabela × diálogo (R10, M13)', () => {
     expect(order).toEqual(['close', 'hidePopover']);
     expect(isPopoverOpen(sub)).toBe(false);
     expect(openKinds(s.el)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Spec 05c1, Tarefa 8: menus de vídeo e de embed e "Detalhes…" (V10, R8).
+
+const VIDEO_HTML =
+  '<figure class="rt-figure rt-figure--video"><video src="https://example.com/v.webm" controls="" preload="metadata" playsinline=""></video></figure>';
+const EMBED_HTML =
+  '<figure class="rt-embed rt-embed--youtube" data-rt-provider="youtube"><iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" title="YouTube" width="560" height="315"></iframe></figure>';
+const MEDIA_DOC =
+  '<p>x</p><figure class="rt-figure rt-figure--center"><img src="https://example.com/a.jpg" alt="A"></figure>' +
+  `${VIDEO_HTML}${EMBED_HTML}<p>y</p>`;
+
+const MEDIA = [
+  {
+    kind: 'video',
+    node: 'rtVideo',
+    details: 'Video details…',
+    remove: 'Remove video',
+    tag: '<video',
+    other: '<iframe',
+  },
+  {
+    kind: 'embed',
+    node: 'rtEmbed',
+    details: 'Embedded content details…',
+    remove: 'Remove embedded content',
+    tag: '<iframe',
+    other: '<video',
+  },
+] as const;
+
+const DETAILS = [
+  { kind: 'image', node: 'rtImage', details: 'Image details…' },
+  ...MEDIA,
+] as const;
+
+describe('menus de vídeo e de embed (V10, R8)', () => {
+  it.each(MEDIA)(
+    'NodeSelection de $node → menu $kind aberto, sem mexer no foco',
+    async (m) => {
+      const s = await setup((h) => h.value.set(MEDIA_DOC));
+      await focusAnd(s.fixture, s.editor, () => selectNode(s.editor, m.node));
+      expect(openKinds(s.el)).toEqual([m.kind]);
+      expect(item(menu(s.el, m.kind), m.details)).toBeTruthy();
+      expect(item(menu(s.el, m.kind), m.remove)).toBeTruthy();
+      expect(document.activeElement).toBe(s.editor.view.dom);
+      expect(error).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(MEDIA)(
+    '$remove → nó fora, um passo, uma emissão, foco no editável',
+    async (m) => {
+      const s = await setup((h) => h.value.set(MEDIA_DOC));
+      await focusAnd(s.fixture, s.editor, () => selectNode(s.editor, m.node));
+      const before = getRteHtml(s.editor);
+      expect(before).toContain(m.tag);
+      s.host.changes = 0;
+      item(menu(s.el, m.kind), m.remove).click();
+      await settle(s.fixture);
+      await nextFrame();
+      await settle(s.fixture);
+      const after = getRteHtml(s.editor);
+      expect(after).not.toContain(m.tag);
+      expect(after).toContain(m.other);
+      expect(after).toContain('<img');
+      expect(s.host.changes).toBe(1);
+      expect(document.activeElement).toBe(s.editor.view.dom);
+      s.editor.commands.undo();
+      expect(getRteHtml(s.editor)).toBe(before);
+      expect(error).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(DETAILS)(
+    '$details → modo editar com origem no editável; cancelar → foco no editável e menu de volta (M14)',
+    async (m) => {
+      const open = vi.spyOn(RteDialogController.prototype, 'open');
+      const s = await setup((h) => h.value.set(MEDIA_DOC));
+      await focusAnd(s.fixture, s.editor, () => selectNode(s.editor, m.node));
+      expect(openKinds(s.el)).toEqual([m.kind]);
+      const before = getRteHtml(s.editor);
+      item(menu(s.el, m.kind), m.details).click();
+      await settle(s.fixture);
+      expect(open).toHaveBeenCalledTimes(1);
+      const [kind, target, origin] = open.mock.calls[0] ?? [];
+      expect(kind).toBe(m.kind);
+      expect(target?.mode).toBe('edit');
+      expect(origin).toBe(s.editor.view.dom);
+      const dialog = await waitForDialog(s.fixture);
+      expect(openKinds(s.el)).toEqual([]);
+      item(dialog, 'Cancel').click();
+      await settle(s.fixture);
+      await nextFrame();
+      await settle(s.fixture);
+      expect(document.activeElement).toBe(s.editor.view.dom);
+      expect(openKinds(s.el)).toEqual([m.kind]);
+      expect(getRteHtml(s.editor)).toBe(before);
+      expect(s.host.blurs).toBe(0);
+      expect(error).not.toHaveBeenCalled();
+    },
+  );
+
+  it('{ embed: false } desliga só o de embed; { video: false }, só o de vídeo', async () => {
+    const s = await setup((h) => {
+      h.value.set(MEDIA_DOC);
+      h.floating.set({ embed: false });
+    });
+    expect(menus(s.el).map((m) => m.getAttribute('data-rte-kind'))).toEqual([
+      'image',
+      'video',
+      'link',
+      'text',
+      'table',
+    ]);
+    await focusAnd(s.fixture, s.editor, () => selectNode(s.editor, 'rtEmbed'));
+    expect(openKinds(s.el)).toEqual([]);
+    selectNode(s.editor, 'rtVideo');
+    await settle(s.fixture);
+    expect(openKinds(s.el)).toEqual(['video']);
+    s.host.floating.set({ video: false });
+    await settle(s.fixture);
+    expect(openKinds(s.el)).toEqual([]);
+    selectNode(s.editor, 'rtEmbed');
+    await settle(s.fixture);
+    expect(openKinds(s.el)).toEqual(['embed']);
+  });
+
+  it('Review Focus 5: readonly por setInput sem detectChanges → Video details… não pede diálogo', async () => {
+    const open = vi.spyOn(RteDialogController.prototype, 'open');
+    const fixture = TestBed.createComponent(RteEditor);
+    fixture.componentRef.setInput('value', MEDIA_DOC);
+    fixture.componentRef.setInput('options', OPTIONS);
+    fixture.componentRef.setInput('toolbar', 'full');
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const editor = fixture.componentInstance.editor() as Editor;
+    restoreCoords.push(fakeCoords(editor, coords));
+    const el = fixture.nativeElement as HTMLElement;
+    editor.view.dom.focus();
+    selectNode(editor, 'rtVideo');
+    await settle(fixture);
+    expect(openKinds(el)).toEqual(['video']);
+    const details = item(menu(el, 'video'), 'Video details…');
+    fixture.componentRef.setInput('readonly', true);
+    details.click();
+    expect(open).not.toHaveBeenCalled();
+    await settle(fixture);
+    await nextFrame();
+    await settle(fixture);
+    expect(open).not.toHaveBeenCalled();
+    expect(el.querySelector('dialog.rte-dialog[open]')).toBeNull();
+    expect(error).not.toHaveBeenCalled();
   });
 });

@@ -766,12 +766,26 @@ describe('floatingMenus ao vivo (M17, R11)', () => {
     fixture.autoDetectChanges();
     await fixture.whenStable();
     const cmp = fixture.componentInstance as unknown as EditorInternals;
-    expect(cmp.floatingKinds()).toEqual(['image', 'link', 'text', 'table']);
+    // 05c1 (V10): os menus de vídeo e de embed entram na lista
+    expect(cmp.floatingKinds()).toEqual([
+      'image',
+      'video',
+      'embed',
+      'link',
+      'text',
+      'table',
+    ]);
     expect([...cmp.toolbarState.all().keys()]).toContain('bold');
     changes = 0;
     fixture.componentRef.setInput('floatingMenus', { text: false });
     await fixture.whenStable();
-    expect(cmp.floatingKinds()).toEqual(['image', 'link', 'table']);
+    expect(cmp.floatingKinds()).toEqual([
+      'image',
+      'video',
+      'embed',
+      'link',
+      'table',
+    ]);
     expect(cmp.toolbarState.all().size).toBe(0);
     expect(ready).toHaveLength(1);
     expect(changes).toBe(0);
