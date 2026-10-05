@@ -16,6 +16,7 @@ describe('@cds/rte-render', () => {
       'RENDER_VERSION',
       'RTE_RENDER_LABELS',
       'RTE_RENDER_LABELS_EN',
+      'RteContent',
       'provideRteRender',
     ]);
     expect(api.RENDER_VERSION).toBe('0.0.0');
