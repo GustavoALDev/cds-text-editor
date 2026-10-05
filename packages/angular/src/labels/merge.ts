@@ -5,6 +5,7 @@ import type {
 import { RTE_DIALOG_LANGUAGES } from '../dialogs/types';
 import type {
   RteDialogLabels,
+  RteFloatingMenuLabels,
   RteLabels,
   RteLabelsInput,
   RteLabelsSource,
@@ -203,6 +204,19 @@ function mergeDialogs(base: RteDialogLabels, given: unknown): RteDialogLabels {
   return out as unknown as RteDialogLabels;
 }
 
+function mergeFloating(
+  base: RteFloatingMenuLabels,
+  given: unknown,
+): RteFloatingMenuLabels {
+  if (!isBag(given)) return base;
+  const out: Record<string, unknown> = { ...base };
+  for (const key of Object.keys(base)) {
+    const value = own(given, key);
+    if (typeof value === 'string') out[key] = value;
+  }
+  return out as unknown as RteFloatingMenuLabels;
+}
+
 /**
  * Mescla a entrada sobre `base` por seção e por chave: só chaves próprias com
  * o tipo esperado. Sem entrada, devolve `base` (o mesmo objeto).
@@ -236,6 +250,10 @@ export function mergeLabels(
     dialogs: safely(
       () => mergeDialogs(base.dialogs, own(input, 'dialogs')),
       base.dialogs,
+    ),
+    floating: safely(
+      () => mergeFloating(base.floating, own(input, 'floating')),
+      base.floating,
     ),
   };
 }

@@ -9,6 +9,13 @@
  * Feather (MIT, Cole Bemis), assim como `link`; o texto dessa licença está em
  * THIRD-PARTY-NOTICES.md.
  *
+ * Menus flutuantes (05b2b): `addRowAfter` e `addColumnAfter` vêm de
+ * `between-horizontal-end` (duas linhas empilhadas) e `between-vertical-end`
+ * (duas colunas lado a lado), trocados em relação ao nome do Lucide porque o
+ * desenho é que diz linha ou coluna; `deleteRow`/`deleteColumn` vêm de
+ * `panel-bottom-close`/`panel-right-close` (o Lucide não tem remover
+ * linha/coluna: nome acessível e dica dizem a operação).
+ *
  * ISC License
  *
  * Copyright (c) 2026 Lucide Icons and Contributors
@@ -34,7 +41,16 @@ export type RteIconName =
   | 'alignRight'
   | 'alignJustify'
   | 'chevronDown'
-  | 'check';
+  | 'check'
+  | 'addRowAfter'
+  | 'addColumnAfter'
+  | 'deleteRow'
+  | 'deleteColumn'
+  | 'tableMore'
+  | 'removeLink'
+  | 'openLink'
+  | 'imageAlignFull'
+  | 'removeImage';
 
 /** Lista de `d` por ícone (viewBox 24, traço 2, `currentColor`). */
 export const RTE_ICONS: Readonly<Record<RteIconName, readonly string[]>> =
@@ -152,4 +168,53 @@ export const RTE_ICONS: Readonly<Record<RteIconName, readonly string[]>> =
     ],
     chevronDown: ['m6 9 6 6 6-6'],
     check: ['M20 6 9 17l-5-5'],
+    addRowAfter: [
+      'M4 3H15A1 1 0 0 1 16 4V9A1 1 0 0 1 15 10H4A1 1 0 0 1 3 9V4A1 1 0 0 1 4 3Z',
+      'm22 15-3-3 3-3',
+      'M4 14H15A1 1 0 0 1 16 15V20A1 1 0 0 1 15 21H4A1 1 0 0 1 3 20V15A1 1 0 0 1 4 14Z',
+    ],
+    addColumnAfter: [
+      'M4 3H9A1 1 0 0 1 10 4V15A1 1 0 0 1 9 16H4A1 1 0 0 1 3 15V4A1 1 0 0 1 4 3Z',
+      'm9 22 3-3 3 3',
+      'M15 3H20A1 1 0 0 1 21 4V15A1 1 0 0 1 20 16H15A1 1 0 0 1 14 15V4A1 1 0 0 1 15 3Z',
+    ],
+    deleteRow: [
+      'M5 3H19A2 2 0 0 1 21 5V19A2 2 0 0 1 19 21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3Z',
+      'M3 15h18',
+      'm15 8-3 3-3-3',
+    ],
+    deleteColumn: [
+      'M5 3H19A2 2 0 0 1 21 5V19A2 2 0 0 1 19 21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3Z',
+      'M15 3v18',
+      'm8 9 3 3-3 3',
+    ],
+    tableMore: [
+      'M13 12A1 1 0 0 1 11 12A1 1 0 0 1 13 12Z',
+      'M20 12A1 1 0 0 1 18 12A1 1 0 0 1 20 12Z',
+      'M6 12A1 1 0 0 1 4 12A1 1 0 0 1 6 12Z',
+    ],
+    removeLink: [
+      'm18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71',
+      'm5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71',
+      'M8 2L8 5',
+      'M2 8L5 8',
+      'M16 19L16 22',
+      'M19 16L22 16',
+    ],
+    openLink: [
+      'M15 3h6v6',
+      'M10 14 21 3',
+      'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6',
+    ],
+    imageAlignFull: [
+      'M4 4H20A2 2 0 0 1 22 6V8A2 2 0 0 1 20 10H4A2 2 0 0 1 2 8V6A2 2 0 0 1 4 4Z',
+      'M4 14H20A2 2 0 0 1 22 16V18A2 2 0 0 1 20 20H4A2 2 0 0 1 2 18V16A2 2 0 0 1 4 14Z',
+    ],
+    removeImage: [
+      'M10 11v6',
+      'M14 11v6',
+      'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6',
+      'M3 6h18',
+      'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
+    ],
   });

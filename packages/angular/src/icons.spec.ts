@@ -15,6 +15,15 @@ const NAMES: RteIconName[] = [
   'alignJustify',
   'chevronDown',
   'check',
+  'addRowAfter',
+  'addColumnAfter',
+  'deleteRow',
+  'deleteColumn',
+  'tableMore',
+  'removeLink',
+  'openLink',
+  'imageAlignFull',
+  'removeImage',
 ];
 
 describe('RTE_ICONS', () => {

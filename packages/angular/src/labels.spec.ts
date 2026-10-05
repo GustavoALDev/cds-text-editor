@@ -173,6 +173,38 @@ describe('pacotes de rótulos', () => {
   });
 });
 
+describe('rótulos dos menus flutuantes', () => {
+  const packs = [
+    ['en', RTE_LABELS_EN],
+    ['pt-BR', RTE_LABELS_PT_BR],
+    ['es', RTE_LABELS_ES],
+  ] as const;
+
+  it('floating completa e sem string vazia nos três pacotes', () => {
+    for (const [, pack] of packs) {
+      expect(Object.keys(pack.floating).length).toBe(12);
+      for (const text of strings(pack.floating)) expect(text).not.toBe('');
+    }
+  });
+
+  it('floating: cópia da tabela', () => {
+    expect(RTE_LABELS_EN.floating.openLink).toBe('Opens in a new tab');
+    expect(RTE_LABELS_EN.floating.tableMore).toBe('More table operations');
+    expect(RTE_LABELS_PT_BR.floating.textMenu).toBe('Formatação do texto');
+    expect(RTE_LABELS_PT_BR.floating.imageAlignFull).toBe('Largura total');
+    expect(RTE_LABELS_ES.floating.imageAlignFull).toBe('Ancho completo');
+    expect(RTE_LABELS_ES.floating.removeLink).toBe('Quitar enlace');
+  });
+
+  it('mergeLabels mescla floating por chave, só strings', () => {
+    const merged = mergeLabels(RTE_LABELS_EN, {
+      floating: { removeLink: 'X', tableMore: 1 as never },
+    });
+    expect(merged.floating.removeLink).toBe('X');
+    expect(merged.floating.tableMore).toBe('More table operations');
+  });
+});
+
 describe('rótulos dos diálogos', () => {
   const packs = [
     ['en', RTE_LABELS_EN],
