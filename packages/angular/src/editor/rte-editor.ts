@@ -38,6 +38,12 @@ import { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { RTE_CONFIG, RTE_LABELS, type RteEditorConfig } from '../config';
+import { RteDialogController } from '../dialogs/controller';
+import { RteDeferFailed } from '../dialogs/defer-failed';
+import { RteDialogs } from '../dialogs/rte-dialogs';
+import { dialogTarget } from '../dialogs/target';
+import type { RteDialogKind } from '../dialogs/types';
+import { createRteUiExtension } from '../dialogs/ui-extension';
 import { mergeLabels, readLabelsSource } from '../labels/merge';
 import type { RteLabels, RteLabelsSource } from '../labels/types';
 import { pickToolbarConfig, resolveToolbarGroups } from '../toolbar/config';
@@ -105,7 +111,8 @@ function toCharLimit(value: number | undefined): number | null {
   selector: 'rte-editor',
   exportAs: 'rteEditor',
   templateUrl: './rte-editor.html',
-  imports: [RteToolbar],
+  // `RteDialogs` só aqui e no `@defer` do template (G7: senão o chunk some).
+  imports: [RteToolbar, RteDialogs, RteDeferFailed],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   host: {
@@ -279,6 +286,21 @@ export class RteEditor implements FormValueControl<string> {
   );
   private readonly slashLabels = computed(() => this.resolvedLabels().slash);
 
+  /** Diálogos (G2–G7): o pedido e o G5 ficam aqui; a interface, no chunk. */
+  protected readonly dialogs = new RteDialogController({
+    editor: this.instance,
+  });
+  protected readonly dialogRequested = this.dialogs.requested;
+  protected readonly onDialogsFailed = () => this.dialogs.fail();
+  /** Política de links da criação (G9): a mesma que o editor usa. */
+  protected readonly linkPolicy = computed(
+    () => this.editorConfig().linkPolicy,
+  );
+  /** Regra do `span[lang]` do esquema (G14). */
+  protected readonly langRule = computed(
+    () => this.schema().elements['span']?.attributes['lang']?.rule ?? null,
+  );
+
   constructor() {
     bindRteBridge(this, this.bridge);
 
@@ -304,6 +326,14 @@ export class RteEditor implements FormValueControl<string> {
     // Emissão síncrona (D8): só transações que mudam o documento fora de uma
     // carga externa; as anexadas por `appendTransaction` vêm no mesmo evento.
     const onTransaction = ({ editor }: { editor: Editor }) => {
+      // G5: documento diferente do da abertura (carga externa, `setContent`,
+      // API do consumidor) fecha o diálogo como cancelamento. Na própria
+      // transação, não num `effect` sobre a versão: no zone.js o efeito
+      // notificado fora da zona disparava `tick` recursivo (NG0101).
+      const req = untracked(this.dialogs.request);
+      if (req && editor.state.doc !== req.doc) {
+        zone.run(() => this.dialogs.cancel('cancelled'));
+      }
       if (this.loading || editor.state.doc === this.lastDoc) return;
       this.lastDoc = editor.state.doc;
       const html = readValue(editor);
@@ -392,12 +422,26 @@ export class RteEditor implements FormValueControl<string> {
         const off = this.effectiveDisabled() || this.hidden();
         if (!off && !this.readonly()) return;
         untracked(() => {
+          // G5: `disabled`/`hidden` não movem o foco; `readonly` segue G4.
+          this.dialogs.cancel(off ? 'state' : 'cancelled');
           this.toolbarRef()?.closeMenus();
           const active = host.ownerDocument?.activeElement as
             (HTMLElement & { blur?: () => void }) | null | undefined;
           if (!active || active === host || !host.contains(active)) return;
           const scope = off ? host : host.querySelector('.rte-toolbar');
           if (scope?.contains(active)) active.blur?.();
+        });
+      },
+    });
+
+    // G5: a troca de `toolbar` que tira a origem do DOM cancela (foco ao
+    // editável, G4).
+    afterRenderEffect({
+      write: () => {
+        this.toolbarGroups();
+        untracked(() => {
+          const origin = this.dialogs.request()?.origin;
+          if (origin && !origin.isConnected) this.dialogs.cancel('cancelled');
         });
       },
     });
@@ -447,14 +491,17 @@ export class RteEditor implements FormValueControl<string> {
         optionsAtCreation = this.options();
         const merged = mergeEditorConfig(config.editor, optionsAtCreation);
         this.creationConfig.set(merged);
-        const extensions = createEditorExtensions(
-          buildEditorOptions(merged, {
-            placeholder: () => this.placeholder(),
-            charLimit: () => toCharLimit(this.maxLength()),
-            content: () => this.resolvedLabels().content,
-            slash: () => this.resolvedLabels().slash,
-          }),
-        );
+        const extensions = [
+          ...createEditorExtensions(
+            buildEditorOptions(merged, {
+              placeholder: () => this.placeholder(),
+              charLimit: () => toCharLimit(this.maxLength()),
+              content: () => this.resolvedLabels().content,
+              slash: () => this.resolvedLabels().slash,
+            }),
+          ),
+          createRteUiExtension({ openLink: () => this.openDialog('link') }),
+        ];
         const element = this.mount().nativeElement;
         const content = this.value() || '';
         const editable = !this.effectiveDisabled() && !this.readonly();
@@ -491,6 +538,7 @@ export class RteEditor implements FormValueControl<string> {
 
     inject(DestroyRef).onDestroy(() => {
       const editor = untracked(this.instance);
+      this.dialogs.dispose();
       this.destroyed = true;
       this.pendingFocus = null;
       if (!editor) return;
@@ -589,6 +637,45 @@ export class RteEditor implements FormValueControl<string> {
   focusToolbar(): void {
     if (!untracked(this.interactive)) return;
     untracked(this.toolbarRef)?.focusActive();
+  }
+
+  /**
+   * Abre um diálogo (G18). `true` = pedido aceito (o diálogo abre quando o
+   * chunk chegar); `false` = sem editor, não editável, recurso desligado,
+   * inaplicável ou outro diálogo aberto (em qualquer editor da página).
+   */
+  openDialog(kind: RteDialogKind): boolean {
+    return this.ngZone.run(() => this.requestDialog(kind, null));
+  }
+
+  /** Pedido da barra ou da API; sem origem dada, o foco no host ou o editável. */
+  protected requestDialog(
+    kind: RteDialogKind,
+    origin: HTMLElement | null,
+  ): boolean {
+    const editor = untracked(this.instance);
+    if (!editor || editor.isDestroyed || this.destroyed) return false;
+    if (
+      !untracked(this.interactive) ||
+      untracked(this.dialogs.failed) ||
+      untracked(this.dialogs.request) ||
+      this.host.ownerDocument.querySelector('dialog.rte-dialog[open]')
+    ) {
+      return false;
+    }
+    const target = dialogTarget(editor, kind);
+    if (!target) return false;
+    untracked(this.toolbarRef)?.closeMenus();
+    this.dialogs.open(kind, target, origin ?? this.focusOrigin(editor));
+    return true;
+  }
+
+  /** Origem de um pedido sem origem: o elemento focado no host ou o editável. */
+  private focusOrigin(editor: Editor): HTMLElement {
+    const active = this.host.ownerDocument.activeElement as HTMLElement | null;
+    return active && active !== this.host && this.host.contains(active)
+      ? active
+      : editor.view.dom;
   }
 
   /** Foca o editável; antes da criação, o pedido vale logo depois dela. */
