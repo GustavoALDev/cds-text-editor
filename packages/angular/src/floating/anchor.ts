@@ -74,7 +74,7 @@ export function readFloatingAnchor(
   if (kind === 'text' || kind === 'link') {
     const { from, to } = kind === 'link' ? identity : view.state.selection;
     const a = view.coordsAtPos(Math.min(from, to));
-    const b = view.coordsAtPos(Math.max(from, to));
+    const b = view.coordsAtPos(Math.max(from, to), -1);
     return unionRect(toRect(a), toRect(b));
   }
   const dom: unknown = view.nodeDOM(identity.from);

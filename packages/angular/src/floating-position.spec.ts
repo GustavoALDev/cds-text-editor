@@ -95,6 +95,37 @@ describe('positionFloating (M9)', () => {
       placement: 'below',
     });
   });
+  it('visible.bottom bloqueia abaixo (a viewport não): overlay', () => {
+    const r = place(rect(20, 40), {
+      visible: { top: 0, right: 1000, bottom: 80, left: 0 },
+    });
+    expect(r).toEqual({ left: 400, top: 28, placement: 'overlay' });
+  });
+  it('overlay com âncora acima da área visível: visible.top + 8', () => {
+    const r = place(rect(10, 790), {
+      visible: { top: 100, right: 1000, bottom: 700, left: 0 },
+    });
+    expect(r).toEqual({ left: 400, top: 108, placement: 'overlay' });
+  });
+  it('encaixe exato é aceito (acima e abaixo)', () => {
+    // acima: 88 - 8 - 40 = 40 = visible.top
+    const above = place(rect(88, 100), {
+      visible: { top: 40, right: 1000, bottom: 800, left: 0 },
+    });
+    expect(above).toEqual({ left: 400, top: 40, placement: 'above' });
+    // abaixo: 100 + 8 + 40 = 148 = visible.bottom
+    const below = place(rect(80, 100), {
+      prefer: 'below',
+      visible: { top: 0, right: 1000, bottom: 148, left: 0 },
+    });
+    expect(below).toEqual({ left: 400, top: 108, placement: 'below' });
+    // margem da viewport: 8 + 8 + 40 = 56 acima; abaixo termina em 792
+    expect(place(rect(56, 70)).placement).toBe('above');
+    expect(place(rect(720, 744), { prefer: 'below' })).toMatchObject({
+      top: 752,
+      placement: 'below',
+    });
+  });
   it('prefer below sem espaço abaixo cai para acima', () => {
     expect(place(rect(760, 780), { prefer: 'below' }).placement).toBe('above');
   });
@@ -144,6 +175,11 @@ describe('positionFloating (M9)', () => {
           expect(r.top + m.height).toBeLessThanOrEqual(g.vh - 8);
           const overlaps = r.top < anchor.bottom && r.top + m.height > at;
           expect(overlaps).toBe(false);
+          // dentro da área visível (quando a âncora a intersecta)
+          if (at < vis.bottom && ab > vis.top) {
+            expect(r.top).toBeGreaterThanOrEqual(vis.top);
+            expect(r.top + m.height).toBeLessThanOrEqual(vis.bottom);
+          }
         }
         const preferredFits =
           g.prefer === 'above'
@@ -232,21 +268,24 @@ describe('readFloatingAnchor (M7)', () => {
     right: pos * 5 + 1,
   });
 
-  it('texto: seleção de trás para frente = para frente', () => {
+  it('texto em duas linhas: a união cobre o fim à esquerda do início', () => {
     const editor = createTestEditor('<p>abcdefghijkl</p>');
-    const restore = fakeCoords(editor, at);
+    const restore = fakeCoords(editor, (pos) =>
+      pos === 9
+        ? { top: 130, bottom: 150, left: 50, right: 51 }
+        : { top: 100, bottom: 120, left: 300, right: 301 },
+    );
     try {
       const { doc } = editor.state;
       editor.view.dispatch(
-        editor.state.tr.setSelection(TextSelection.create(doc, 2, 9)),
-      );
-      const fwd = readFloatingAnchor(editor, ctx('text', 2, 9));
-      editor.view.dispatch(
         editor.state.tr.setSelection(TextSelection.create(doc, 9, 2)),
       );
-      const back = readFloatingAnchor(editor, ctx('text', 9, 2));
-      expect(back).toEqual(fwd);
-      expect(fwd).toEqual({ top: 20, bottom: 110, left: 10, right: 46 });
+      expect(readFloatingAnchor(editor, ctx('text', 9, 2))).toEqual({
+        top: 100,
+        bottom: 150,
+        left: 50,
+        right: 301,
+      });
     } finally {
       restore();
     }
