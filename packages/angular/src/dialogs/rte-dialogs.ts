@@ -18,13 +18,29 @@ import {
   FormField,
   FormRoot,
   maxLength,
+  required,
+  validate,
   type FieldTree,
 } from '@angular/forms/signals';
-import type { RteAttrRule, RteLinkPolicy } from '@cds/rte-core';
+import {
+  normalizeAttribute,
+  normalizeHref,
+  type RteAttrRule,
+  type RteLinkPolicy,
+} from '@cds/rte-core';
 import type { RteDialogLabels } from '../labels/types';
-import { applyQuote, applyTable } from './apply';
+import {
+  applyLang,
+  applyLink,
+  applyQuote,
+  applyTable,
+  linkTargetPreserved,
+  removeLang,
+  removeLink,
+} from './apply';
 import type { RteDialogController, RteDialogRequest } from './controller';
 import { dialogErrorText, integerInRange } from './forms';
+import { RTE_DIALOG_LANGUAGES } from './types';
 
 /** Tamanho máximo de autor e cargo (G15; limite só da interface). */
 const QUOTE_MAX = 200;
@@ -32,7 +48,24 @@ const QUOTE_MAX = 200;
 const TABLE_ROWS_MAX = 100;
 const TABLE_COLS_MAX = 20;
 
+/** Valor da opção "Outro…" do idioma (nunca casa a regra BCP 47 do esquema). */
+const LANG_OTHER = 'other';
+/** Idiomas da lista que sugerem a direção `rtl` (G14). */
+const RTL_LANGUAGES: ReadonlySet<string> = new Set(['ar', 'he']);
+
 let nextInstance = 0;
+
+interface LinkModel {
+  url: string;
+  text: string;
+  newTab: boolean;
+}
+
+interface LangModel {
+  choice: string;
+  code: string;
+  dir: '' | 'ltr' | 'rtl';
+}
 
 interface QuoteModel {
   author: string;
@@ -76,6 +109,12 @@ export class RteDialogs {
   private readonly prefix = `rte-dialog-${++nextInstance}`;
   protected readonly ids = {
     title: `${this.prefix}-title`,
+    linkUrl: `${this.prefix}-link-url`,
+    linkText: `${this.prefix}-link-text`,
+    linkNewTab: `${this.prefix}-link-new-tab`,
+    langLanguage: `${this.prefix}-lang-language`,
+    langCode: `${this.prefix}-lang-code`,
+    langDirection: `${this.prefix}-lang-direction`,
     quoteAuthor: `${this.prefix}-quote-author`,
     quoteRole: `${this.prefix}-quote-role`,
     tableRows: `${this.prefix}-table-rows`,
@@ -109,6 +148,78 @@ export class RteDialogs {
         return '';
     }
   });
+
+  protected readonly languages = RTE_DIALOG_LANGUAGES;
+  protected readonly langOther = LANG_OTHER;
+
+  /** "Abrir em nova aba" só quando a política preserva o `target` (G9). */
+  protected readonly linkNewTabShown = computed(() =>
+    linkTargetPreserved(this.linkPolicy()),
+  );
+
+  private readonly linkModel = signal<LinkModel>({
+    url: '',
+    text: '',
+    newTab: false,
+  });
+  protected readonly linkForm: FieldTree<LinkModel> = form(
+    this.linkModel,
+    (p) => {
+      required(p.url);
+      // A mesma política que criou o editor (G9): o que ela recusa não passa.
+      validate(p.url, ({ value }) => {
+        const url = value();
+        return url !== '' && normalizeHref(url, this.linkPolicy()) === null
+          ? { kind: 'rteLinkUrl' }
+          : undefined;
+      });
+      required(p.text, { when: () => this.active()?.mode === 'insert' });
+    },
+    {
+      submission: {
+        action: async () => {
+          this.applyLink();
+          return undefined;
+        },
+        onInvalid: () =>
+          this.focusFirstInvalid([this.linkForm.url, this.linkForm.text]),
+      },
+    },
+  );
+
+  private readonly langModel = signal<LangModel>({
+    choice: 'en',
+    code: '',
+    dir: '',
+  });
+  /** A direção atual veio da sugestão de `ar`/`he` (pré-voo 8). */
+  private autoDir = false;
+  protected readonly langForm: FieldTree<LangModel> = form(
+    this.langModel,
+    (p) => {
+      required(p.code, {
+        when: ({ valueOf }) => valueOf(p.choice) === LANG_OTHER,
+      });
+      // A regra `span[lang]` do esquema (G14), a mesma do `setLang`.
+      validate(p.code, ({ value, valueOf }) => {
+        const code = value();
+        if (valueOf(p.choice) !== LANG_OTHER || code === '') return undefined;
+        const rule = this.langRule();
+        return rule === null || normalizeAttribute(rule, code) === null
+          ? { kind: 'rteLangCode' }
+          : undefined;
+      });
+    },
+    {
+      submission: {
+        action: async () => {
+          this.applyLang();
+          return undefined;
+        },
+        onInvalid: () => this.focusFirstInvalid([this.langForm.code]),
+      },
+    },
+  );
 
   private readonly quoteModel = signal<QuoteModel>({ author: '', role: '' });
   protected readonly quoteForm: FieldTree<QuoteModel> = form(
@@ -194,6 +305,35 @@ export class RteDialogs {
     this.controller().cancel('cancelled');
   }
 
+  /** Idioma escolhido: `ar`/`he` sugerem `rtl`; os demais desfazem a sugestão. */
+  protected onLangChoice(): void {
+    const { choice } = untracked(this.langModel);
+    if (RTL_LANGUAGES.has(choice)) {
+      this.autoDir = true;
+      this.langModel.update((m) => ({ ...m, dir: 'rtl' }));
+    } else if (this.autoDir) {
+      this.autoDir = false;
+      this.langModel.update((m) => ({ ...m, dir: '' }));
+    }
+  }
+
+  /** Direção escolhida à mão: deixa de ser sugestão. */
+  protected onLangDir(): void {
+    this.autoDir = false;
+  }
+
+  protected removeLink(): void {
+    const req = untracked(this.controller().request);
+    if (req?.kind !== 'link' || req.mode !== 'edit') return;
+    this.controller().apply((editor) => removeLink(editor, req));
+  }
+
+  protected removeLang(): void {
+    const req = untracked(this.controller().request);
+    if (req?.kind !== 'lang' || req.mode !== 'edit') return;
+    this.controller().apply((editor) => removeLang(editor, req));
+  }
+
   /** Erro visível do campo: só depois de tocado (ou de um envio) (G8). */
   protected errorOf<T>(field: FieldTree<T>): string | null {
     const state = field();
@@ -203,7 +343,12 @@ export class RteDialogs {
   }
 
   private prepare(req: RteDialogRequest): void {
-    if (req.kind === 'quoteAuthor') {
+    if (req.kind === 'link') {
+      this.linkForm().reset(linkValues(req));
+    } else if (req.kind === 'lang') {
+      this.autoDir = false;
+      this.langForm().reset(langValues(req));
+    } else if (req.kind === 'quoteAuthor') {
       this.quoteForm().reset(quoteValues(req));
     } else if (req.kind === 'table') {
       this.tableForm().reset({ ...TABLE_INITIAL });
@@ -231,6 +376,24 @@ export class RteDialogs {
     fields
       .find((f) => f().invalid())?.()
       .focusBoundControl();
+  }
+
+  private applyLink(): void {
+    const req = untracked(this.controller().request);
+    if (req?.kind !== 'link') return;
+    const value = untracked(this.linkModel);
+    const policy = untracked(this.linkPolicy);
+    this.controller().apply((editor) => applyLink(editor, req, value, policy));
+  }
+
+  private applyLang(): void {
+    const req = untracked(this.controller().request);
+    if (req?.kind !== 'lang') return;
+    const { choice, code, dir } = untracked(this.langModel);
+    const lang = choice === LANG_OTHER ? code : choice;
+    this.controller().apply((editor) =>
+      applyLang(editor, req, { lang, dir: dir || null }),
+    );
   }
 
   private applyQuote(): void {
@@ -264,4 +427,45 @@ function quoteValues(req: RteDialogRequest): QuoteModel {
     }
   }
   return { author: '', role: '' };
+}
+
+/** Atributos da marca `name` no intervalo do pedido (modo editar), ou `null`. */
+function markAttrs(
+  req: RteDialogRequest,
+  name: string,
+): Readonly<Record<string, unknown>> | null {
+  let attrs: Readonly<Record<string, unknown>> | null = null;
+  req.doc.nodesBetween(req.range.from, req.range.to, (node) => {
+    attrs ??= node.marks.find((m) => m.type.name === name)?.attrs ?? null;
+    return !attrs;
+  });
+  return attrs;
+}
+
+/** Valores de abertura do link: no modo editar, `href` e `target` da marca. */
+function linkValues(req: RteDialogRequest): LinkModel {
+  const attrs = req.mode === 'edit' ? markAttrs(req, 'link') : null;
+  const href = attrs?.['href'];
+  return {
+    url: typeof href === 'string' ? href : '',
+    text: '',
+    newTab: attrs?.['target'] === '_blank',
+  };
+}
+
+/**
+ * Valores de abertura do idioma (pré-voo 8): novo → `en` e "Padrão"; editar →
+ * o idioma e a direção do trecho, com código fora da lista em "Outro…".
+ */
+function langValues(req: RteDialogRequest): LangModel {
+  const attrs = req.mode === 'edit' ? markAttrs(req, 'rtLang') : null;
+  const lang = attrs?.['lang'];
+  const dir = attrs?.['dir'];
+  const direction = dir === 'ltr' || dir === 'rtl' ? dir : '';
+  if (typeof lang !== 'string' || lang === '') {
+    return { choice: 'en', code: '', dir: direction };
+  }
+  return (RTE_DIALOG_LANGUAGES as readonly string[]).includes(lang)
+    ? { choice: lang, code: '', dir: direction }
+    : { choice: LANG_OTHER, code: lang, dir: direction };
 }

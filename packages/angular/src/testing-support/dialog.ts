@@ -141,3 +141,13 @@ export function setChecked(input: HTMLInputElement, checked: boolean): void {
   input.dispatchEvent(new Event('input', { bubbles: true }));
   input.dispatchEvent(new Event('change', { bubbles: true }));
 }
+
+/**
+ * Escolhe a opção `value` de um `<select>` (eventos `input` e `change`, nessa
+ * ordem, como o navegador).
+ */
+export function chooseOption(select: HTMLSelectElement, value: string): void {
+  select.value = value;
+  select.dispatchEvent(new Event('input', { bubbles: true }));
+  select.dispatchEvent(new Event('change', { bubbles: true }));
+}

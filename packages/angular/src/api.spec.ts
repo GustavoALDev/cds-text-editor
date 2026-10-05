@@ -12,19 +12,22 @@ import {
   type RteEditorConfig,
   type RteToolbarConfig,
 } from '@cds/rte-angular';
+import { getRteHtml } from '@cds/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  chooseOption,
+  dialogField,
   escapeDialog,
   installDialogShim,
+  typeInto,
   waitForDialog,
 } from './testing-support/dialog';
 import { selectText } from './testing-support/editors';
 import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
 
-// Spec 05b2a, Tarefa 4: `openDialog` (R17). Os demais tipos com `toolbar:
-// false` entram na Tarefa 6.
+// Spec 05b2a, Tarefas 4 e 6: `openDialog` (R17).
 
 const DOC =
   '<p>texto</p><figure class="rt-pullquote"><blockquote><p>Uma frase.</p></blockquote></figure>';
@@ -160,5 +163,73 @@ describe('openDialog (R17)', () => {
     await settle(fixture);
     expect(dialog.open).toBe(false);
     expect(document.activeElement).toBe(editor.view.dom);
+  });
+});
+
+describe('openDialog com toolbar: false (R17)', () => {
+  function title(dialog: HTMLElement): string | undefined {
+    return dialog.querySelector('.rte-dialog__title')?.textContent?.trim();
+  }
+
+  async function submit(
+    fixture: ComponentFixture<Host>,
+    dialog: HTMLElement,
+  ): Promise<void> {
+    dialog.querySelector<HTMLButtonElement>('.rte-dialog__apply')?.click();
+    await settle(fixture);
+  }
+
+  it('link: abre Insert link e aplica', async () => {
+    const { fixture, cmp, editor } = await setup((h) => h.toolbar.set(false));
+    selectText(editor, 'texto');
+    expect(cmp.openDialog('link')).toBe(true);
+    const dialog = await waitForDialog(fixture);
+    expect(title(dialog)).toBe('Insert link');
+    typeInto(dialogField(dialog, 'Address (URL)'), 'site.com');
+    await submit(fixture, dialog);
+    expect(getRteHtml(editor)).toContain(
+      '<p><a href="https://site.com/">texto</a></p>',
+    );
+  });
+
+  it('lang: abre Mark language e aplica', async () => {
+    const { fixture, cmp, editor } = await setup((h) => h.toolbar.set(false));
+    selectText(editor, 'texto');
+    expect(cmp.openDialog('lang')).toBe(true);
+    const dialog = await waitForDialog(fixture);
+    expect(title(dialog)).toBe('Mark language');
+    chooseOption(
+      dialogField(dialog, 'Language') as unknown as HTMLSelectElement,
+      'es',
+    );
+    await settle(fixture);
+    await submit(fixture, dialog);
+    expect(getRteHtml(editor)).toContain('<p><span lang="es">texto</span></p>');
+  });
+
+  it('table: abre Insert table e aplica', async () => {
+    const { fixture, cmp, editor } = await setup((h) => h.toolbar.set(false));
+    selectText(editor, 'texto', 5);
+    expect(cmp.openDialog('table')).toBe(true);
+    const dialog = await waitForDialog(fixture);
+    expect(title(dialog)).toBe('Insert table');
+    await submit(fixture, dialog);
+    expect(getRteHtml(editor)).toContain('<table>');
+  });
+
+  it('Mod-k no editável abre o diálogo de link', async () => {
+    const { fixture, editor } = await setup((h) => h.toolbar.set(false));
+    selectText(editor, 'texto');
+    const event = new KeyboardEvent('keydown', {
+      key: 'k',
+      keyCode: 75,
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    editor.view.dom.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    const dialog = await waitForDialog(fixture);
+    expect(title(dialog)).toBe('Insert link');
   });
 });

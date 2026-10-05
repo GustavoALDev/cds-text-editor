@@ -5,7 +5,157 @@
   (close)="onClose()"
 >
   <h2 class="rte-dialog__title" [id]="ids.title">{{ title() }}</h2>
-  @switch (active()?.kind) { @case ('quoteAuthor') {
+  @switch (active()?.kind) { @case ('link') {
+  <form class="rte-dialog__form" [formRoot]="linkForm">
+    @let urlError = errorOf(linkForm.url);
+    <div class="rte-dialog__field">
+      <label class="rte-dialog__label" [for]="ids.linkUrl"
+        >{{ labels().linkUrl }}</label
+      >
+      <input
+        class="rte-dialog__input"
+        type="text"
+        inputmode="url"
+        autocomplete="url"
+        spellcheck="false"
+        [id]="ids.linkUrl"
+        [formField]="linkForm.url"
+        [attr.aria-invalid]="urlError ? 'true' : null"
+        [attr.aria-describedby]="
+          ids.linkUrl + '-hint' + (urlError ? ' ' + ids.linkUrl + '-error' : '')
+        "
+      />
+      <p class="rte-dialog__hint" [id]="ids.linkUrl + '-hint'">
+        {{ labels().linkUrlHint }}
+      </p>
+      @if (urlError) {
+      <p class="rte-dialog__error" [id]="ids.linkUrl + '-error'">
+        {{ urlError }}
+      </p>
+      }
+    </div>
+    @if (active()?.mode === 'insert') { @let textError = errorOf(linkForm.text);
+    <div class="rte-dialog__field">
+      <label class="rte-dialog__label" [for]="ids.linkText"
+        >{{ labels().linkText }}</label
+      >
+      <input
+        class="rte-dialog__input"
+        type="text"
+        [id]="ids.linkText"
+        [formField]="linkForm.text"
+        [attr.aria-invalid]="textError ? 'true' : null"
+        [attr.aria-describedby]="textError ? ids.linkText + '-error' : null"
+      />
+      @if (textError) {
+      <p class="rte-dialog__error" [id]="ids.linkText + '-error'">
+        {{ textError }}
+      </p>
+      }
+    </div>
+    } @if (linkNewTabShown()) {
+    <div class="rte-dialog__field">
+      <input
+        class="rte-dialog__checkbox"
+        type="checkbox"
+        [id]="ids.linkNewTab"
+        [formField]="linkForm.newTab"
+      />
+      <label class="rte-dialog__label" [for]="ids.linkNewTab"
+        >{{ labels().linkNewTab }}</label
+      >
+    </div>
+    }
+    <div class="rte-dialog__actions">
+      @if (active()?.mode === 'edit') {
+      <button type="button" class="rte-dialog__remove" (click)="removeLink()">
+        {{ labels().linkRemove }}
+      </button>
+      }
+      <button type="button" class="rte-dialog__cancel" (click)="cancel()">
+        {{ labels().cancel }}
+      </button>
+      <button type="submit" class="rte-dialog__apply">
+        {{ labels().apply }}
+      </button>
+    </div>
+  </form>
+  } @case ('lang') {
+  <form class="rte-dialog__form" [formRoot]="langForm">
+    <div class="rte-dialog__field">
+      <label class="rte-dialog__label" [for]="ids.langLanguage"
+        >{{ labels().langLanguage }}</label
+      >
+      <select
+        class="rte-dialog__select"
+        [id]="ids.langLanguage"
+        [formField]="langForm.choice"
+        (change)="onLangChoice()"
+      >
+        @for (code of languages; track code) {
+        <option [value]="code">{{ labels().languageNames[code] }}</option>
+        }
+        <option [value]="langOther">{{ labels().langOther }}</option>
+      </select>
+    </div>
+    @if (langForm.choice().value() === langOther) { @let codeError =
+    errorOf(langForm.code);
+    <div class="rte-dialog__field">
+      <label class="rte-dialog__label" [for]="ids.langCode"
+        >{{ labels().langCode }}</label
+      >
+      <input
+        class="rte-dialog__input"
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+        [id]="ids.langCode"
+        [formField]="langForm.code"
+        [attr.aria-invalid]="codeError ? 'true' : null"
+        [attr.aria-describedby]="
+          ids.langCode + '-hint' + (codeError ? ' ' + ids.langCode + '-error' : '')
+        "
+      />
+      <p class="rte-dialog__hint" [id]="ids.langCode + '-hint'">
+        {{ labels().langCodeHint }}
+      </p>
+      @if (codeError) {
+      <p class="rte-dialog__error" [id]="ids.langCode + '-error'">
+        {{ codeError }}
+      </p>
+      }
+    </div>
+    }
+    <div class="rte-dialog__field">
+      <label class="rte-dialog__label" [for]="ids.langDirection"
+        >{{ labels().langDirection }}</label
+      >
+      <select
+        class="rte-dialog__select"
+        [id]="ids.langDirection"
+        [formField]="langForm.dir"
+        (change)="onLangDir()"
+      >
+        <option value="">{{ labels().langDirectionDefault }}</option>
+        <option value="ltr">{{ labels().langDirectionLtr }}</option>
+        <option value="rtl">{{ labels().langDirectionRtl }}</option>
+      </select>
+    </div>
+    <div class="rte-dialog__actions">
+      @if (active()?.mode === 'edit') {
+      <button type="button" class="rte-dialog__remove" (click)="removeLang()">
+        {{ labels().langRemove }}
+      </button>
+      }
+      <button type="button" class="rte-dialog__cancel" (click)="cancel()">
+        {{ labels().cancel }}
+      </button>
+      <button type="submit" class="rte-dialog__apply">
+        {{ labels().apply }}
+      </button>
+    </div>
+  </form>
+  } @case ('quoteAuthor') {
   <form class="rte-dialog__form" [formRoot]="quoteForm">
     @let authorError = errorOf(quoteForm.author);
     <div class="rte-dialog__field">
