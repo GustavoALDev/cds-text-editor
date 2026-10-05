@@ -94,7 +94,7 @@ Tamanho (`min+gzip`, Angular, Tiptap, `@cds/*`, `lowlight` e `highlight.js` exte
 | `i18n`       | 1544         | 2455  | 1792            | 2880            |
 | `validators` | 1156         | 1156  | 1344            | 1344 (igual)    |
 
-O acréscimo do `editor`/`whole` (+3,6 kB gzip) vem dos itens novos, de `RteUiExtension`, do controlador e dos rótulos `dialogs` nos três idiomas; os formulários ficam no _chunk_. O _chunk_ dos diálogos (`fesm2022/cds-rte-angular-rte-dialogs-<hash>.mjs`): 43066 B brutos no pacote, 29592 B minificados, 5059 B gzip na medida de tamanho (7993 B com `gzip -9` do arquivo bruto).
+O acréscimo do `editor`/`whole` (+3,6 kB gzip) vem dos itens novos, de `RteUiExtension`, do controlador e dos rótulos `dialogs` em inglês (`RTE_LABELS_EN`; pt-BR e es ficam no entry `/i18n`); os formulários ficam no _chunk_. O _chunk_ dos diálogos (`fesm2022/cds-rte-angular-rte-dialogs-<hash>.mjs`): 43066 B brutos no pacote, 29592 B minificados, 5059 B gzip na medida de tamanho (7993 B com `gzip -9` do arquivo bruto).
 
 `editor.css`: 22644 B brutos, 5109 B gzip (05b1: 17287 / 4197).
 

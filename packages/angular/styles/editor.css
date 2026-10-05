@@ -118,12 +118,7 @@
     cursor: not-allowed;
   }
 
-  .rte-editor .rte-toolbar__button--pressed {
-    color: var(--rte-primary-text);
-    background-color: var(--rte-primary-subtle);
-    border-color: var(--rte-primary-border);
-  }
-
+  .rte-editor .rte-toolbar__button--pressed,
   .rte-editor .rte-toolbar__button--active {
     color: var(--rte-primary-text);
     background-color: var(--rte-primary-subtle);
@@ -320,6 +315,7 @@
     inline-size: min(32rem, 100vw - 32px);
     max-inline-size: calc(100vw - 32px);
     max-block-size: calc(100vh - 32px);
+    max-block-size: calc(100dvh - 32px);
     margin: auto;
     padding: 1rem;
     overflow-y: auto;

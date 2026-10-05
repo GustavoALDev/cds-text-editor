@@ -122,6 +122,7 @@ track id) { @let s = state.item(id)(); @let kind = kindOf(id); @if (kind ===
 } @else if (kind === 'dialog') { @let name = dialogLabel(id, s.active);
 <button
   type="button"
+  #dialogButton
   class="rte-toolbar__button"
   rteRovingItem
   aria-haspopup="dialog"
@@ -132,7 +133,7 @@ track id) { @let s = state.item(id)(); @let kind = kindOf(id); @if (kind ===
   [attr.aria-disabled]="ariaDisabled(s.enabled)"
   [class.rte-toolbar__button--active]="s.active"
   (mousedown)="$event.preventDefault()"
-  (click)="openFromItem(id, $any($event.currentTarget))"
+  (click)="openFromItem(id, dialogButton)"
 >
   <svg
     class="rte-icon"

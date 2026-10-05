@@ -471,6 +471,19 @@ describe('itens de diálogo (G11)', () => {
     });
   });
 
+  it('link e lang: na borda inicial o estado segue o alvo do diálogo (editar)', () => {
+    expect(stateOf(LINK, ['xab', 1], 'link')).toEqual({
+      active: true,
+      enabled: true,
+      value: null,
+    });
+    expect(stateOf(LANG, ['xab', 1], 'lang')).toEqual({
+      active: true,
+      enabled: true,
+      value: null,
+    });
+  });
+
   it('quoteAuthor: habilitado só em rt-pullquote, nunca ativo', () => {
     expect(stateOf('<p>ab</p>', ['ab', 1], 'quoteAuthor').enabled).toBe(false);
     expect(stateOf(PULL, ['ab', 1], 'quoteAuthor')).toEqual({

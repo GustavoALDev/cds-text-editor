@@ -7,7 +7,7 @@ import {
   type Selection,
 } from '@tiptap/pm/state';
 import { isInTable } from '@tiptap/pm/tables';
-import { can } from '../toolbar/state';
+import { can } from '../toolbar/can';
 import { RTE_INSERT_TABLE } from '../toolbar/table-guard';
 import type { RteDialogKind } from './types';
 
