@@ -75,15 +75,17 @@ async function setup(): Promise<Setup> {
   const cmp = host.cmp();
   const editor = cmp.editor() as Editor;
   selectText(editor, 'abcd');
+  // Dois blocos (Tarefa 8b da 05b2b): os menus flutuantes, dentro de
+  // `.rte-editor__frame`, vêm antes; o dos diálogos é o segundo.
   const blocks = await fixture.getDeferBlocks();
-  expect(blocks).toHaveLength(1);
+  expect(blocks).toHaveLength(2);
   return {
     fixture,
     host,
     root: fixture.nativeElement as HTMLElement,
     cmp,
     editor,
-    block: blocks[0] as DeferBlockFixture,
+    block: blocks[1] as DeferBlockFixture,
   };
 }
 
@@ -118,7 +120,7 @@ async function render(s: Setup, state: DeferBlockState): Promise<void> {
 }
 
 describe('@defer dos diálogos (R12 unitário, G7)', () => {
-  it('antes da carga: um bloco, nenhum rte-dialogs; o pedido abre na chegada com foco na URL', async () => {
+  it('antes da carga: nenhum rte-dialogs; o pedido abre na chegada com foco na URL', async () => {
     const s = await setup();
     expect(s.root.querySelector('rte-dialogs')).toBeNull();
     expect(s.cmp.openDialog('link')).toBe(true);

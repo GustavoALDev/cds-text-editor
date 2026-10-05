@@ -53,7 +53,11 @@ import {
 } from './commands';
 import { bindFloatingListeners } from './listeners';
 import { placeFloatingMenu, RTE_FLOATING_MEASURING } from './place';
-import type { RteFloatingMenuKind } from './types';
+import {
+  RTE_FLOATING_MENUS,
+  type RteFloatingMenuKind,
+  type RteFloatingMenusApi,
+} from './types';
 import {
   mapFloatingIdentity,
   readFloatingContext,
@@ -84,6 +88,7 @@ function sameContext(
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   host: { '(keydown)': 'onMenuKeydown($event)' },
+  providers: [{ provide: RTE_FLOATING_MENUS, useExisting: RteFloatingMenus }],
   imports: [
     RteRovingFocus,
     RteRovingItem,
@@ -92,7 +97,7 @@ function sameContext(
     NgTemplateOutlet,
   ],
 })
-export class RteFloatingMenus {
+export class RteFloatingMenus implements RteFloatingMenusApi {
   readonly editor = input.required<Editor>();
   readonly version = input.required<Signal<number>>();
   readonly state = input.required<RteToolbarState>();

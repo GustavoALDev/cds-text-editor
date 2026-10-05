@@ -26,16 +26,31 @@ export async function measureMinGzip(code) {
 /**
  * *Chunks* irmãos (`./x.mjs`, como os do `@defer` no FESM do ng-packagr) ficam fora do
  * bundle: sem `splitting`, o esbuild embutiria o `import()` relativo na medida do entry.
+ * `dynamic` só deixa fora os `import()`: com mais de um `@defer`, o rollup divide o entry
+ * principal num reexportador mais um *chunk* compartilhado importado estaticamente, que
+ * precisa entrar na medida (spec 05b2b, Tarefa 8b).
  */
-const EXTERNAL_CHUNKS = {
-  name: 'external-chunks',
-  setup(b) {
-    b.onResolve({ filter: /^\.\/[^/]+\.mjs$/ }, (args) => ({
-      path: args.path,
-      external: true,
-    }));
-  },
-};
+function externalChunksPlugin(mode) {
+  return {
+    name: 'external-chunks',
+    setup(b) {
+      b.onResolve({ filter: /^\.\/[^/]+\.mjs$/ }, (args) =>
+        mode === 'dynamic' && args.kind !== 'dynamic-import'
+          ? undefined
+          : { path: args.path, external: true },
+      );
+    },
+  };
+}
+
+function chunkPlugins(externalChunks) {
+  if (externalChunks === undefined || externalChunks === false) return [];
+  if (externalChunks === true) return [externalChunksPlugin('all')];
+  if (externalChunks === 'dynamic') return [externalChunksPlugin('dynamic')];
+  throw new Error(
+    `externalChunks inválido: ${JSON.stringify(externalChunks)} (use true, false ou "dynamic")`,
+  );
+}
 
 /**
  * Resolve um `entry` com curinga `*` no nome do arquivo (não na pasta): precisa casar
@@ -85,7 +100,7 @@ export async function bundleScenario(distFile, exportsList, opts = {}) {
     format: 'esm',
     treeShaking: true,
     external: opts.external ?? [],
-    plugins: opts.externalChunks ? [EXTERNAL_CHUNKS] : [],
+    plugins: chunkPlugins(opts.externalChunks),
     write: false,
     logLevel: 'silent',
   });
@@ -96,7 +111,9 @@ export async function bundleScenario(distFile, exportsList, opts = {}) {
  * Mede cenários descritos num arquivo de configuração:
  * `{ scenarios: { nome: { entry, exports, external?, externalChunks? } }, budgets: { nome: bytes } }`.
  * `external` lista pacotes que ficam fora do bundle (peers do consumidor);
- * `externalChunks: true` deixa fora os *chunks* irmãos `./x.mjs` (custo inicial do entry).
+ * `externalChunks: true` deixa fora todos os *chunks* irmãos `./x.mjs` (medida de um *chunk*
+ * do `@defer` sozinho); `externalChunks: "dynamic"` deixa fora só os carregados por `import()`
+ * (custo inicial de um entry que o rollup dividiu num *chunk* compartilhado).
  * Os caminhos de `entry` são relativos à raiz do repositório (cwd) e aceitam um curinga `*`
  * no nome do arquivo, que precisa casar exatamente um arquivo (`resolveEntry`).
  */

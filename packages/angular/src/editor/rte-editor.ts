@@ -53,10 +53,12 @@ import {
   resolveFloatingKinds,
   sameKinds,
 } from '../floating/config';
+// Só em `imports`: o `@defer` do template põe a classe num chunk à parte (M2).
 import { RteFloatingMenus } from '../floating/rte-floating-menus';
-import type {
-  RteFloatingMenuKind,
-  RteFloatingMenusConfig,
+import {
+  RTE_FLOATING_MENUS,
+  type RteFloatingMenuKind,
+  type RteFloatingMenusConfig,
 } from '../floating/types';
 import { mergeLabels, readLabelsSource } from '../labels/merge';
 import type { RteLabels, RteLabelsSource } from '../labels/types';
@@ -78,6 +80,9 @@ import { readonlySelectionKeydown } from './readonly-selection';
 
 const OPTIONS_IGNORED =
   '[rte-editor] options só é lido na criação; a mudança foi ignorada.';
+
+const FLOATING_FAILED =
+  '[rte-editor] não foi possível carregar os menus flutuantes; o editor segue sem eles.';
 
 const NO_LANGUAGES: readonly RteCodeLanguage[] = Object.freeze([]);
 
@@ -243,8 +248,12 @@ export class RteEditor implements FormValueControl<string> {
 
   private readonly mount = viewChild.required<ElementRef<HTMLElement>>('mount');
   private readonly toolbarRef = viewChild(RteToolbar);
-  /** Menus flutuantes (M2); `undefined` antes da criação ou sem tipos. */
-  protected readonly floatingRef = viewChild(RteFloatingMenus);
+  /**
+   * Menus flutuantes (M2), pelo token: a classe no `viewChild` a puxaria
+   * para o chunk principal. `undefined` antes da criação, sem tipos ou antes
+   * de o chunk do `@defer` chegar.
+   */
+  protected readonly floatingRef = viewChild(RTE_FLOATING_MENUS);
 
   private readonly config = inject(RTE_CONFIG);
   /** Configuração fixada na criação (`null` antes dela). */
@@ -352,6 +361,14 @@ export class RteEditor implements FormValueControl<string> {
   });
   protected readonly dialogRequested = this.dialogs.requested;
   protected readonly onDialogsFailed = () => this.dialogs.fail();
+  /** `@error` do chunk dos menus (M2): o editor segue sem eles. */
+  protected readonly onFloatingFailed = () => {
+    if (isDevMode()) console.warn(FLOATING_FAILED);
+  };
+  /** Dispara o `@defer` dos menus: editor criado e algum tipo ligado (M2). */
+  protected readonly floatingWanted = computed(
+    () => this.editor() !== null && this.floatingKinds().length > 0,
+  );
   /** Menus flutuantes só com editor interativo e visível (M5). */
   protected readonly floatingEnabled = computed(
     () => this.interactive() && !this.hidden(),

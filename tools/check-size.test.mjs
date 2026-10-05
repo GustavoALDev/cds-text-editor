@@ -299,3 +299,67 @@ test('--config: entry com curinga mede o único arquivo casado', () => {
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /chunk/);
 });
+
+// Spec 05b2b (Tarefa 8b): com dois `@defer`, o rollup divide o entry principal
+// (`cds-rte-angular.mjs` só reexporta um chunk compartilhado). `externalChunks: true`
+// deixaria o chunk compartilhado fora e o entry mediria ~0; `"dynamic"` só deixa fora
+// os `import()`.
+const SHARED_MARK = 'conteudo-compartilhado-'.repeat(20);
+
+function splitEntryFixture() {
+  const dir = chunkFixture();
+  writeFileSync(
+    join(dir, 'main.mjs'),
+    "export * from './main-shared-x.mjs';\n",
+  );
+  writeFileSync(
+    join(dir, 'main-shared-x.mjs'),
+    `export const shared = '${SHARED_MARK}';\n` +
+      "export const lazy = () => import('./b-x.mjs');\n" +
+      Array.from(
+        { length: 300 },
+        (_, i) => `export const s${i} = ${(i * 7919) % 100003};\n`,
+      ).join(''),
+  );
+  return dir;
+}
+
+test('bundleScenario: externalChunks "dynamic" mede o chunk estático e deixa o import() fora', async () => {
+  const entry = join(splitEntryFixture(), 'main.mjs');
+  const code = await bundleScenario(entry, ['*'], {
+    externalChunks: 'dynamic',
+  });
+  assert.match(code, new RegExp(SHARED_MARK));
+  assert.doesNotMatch(code, new RegExp(CHUNK_MARK));
+  assert.match(code, /b-x\.mjs/);
+});
+
+test('bundleScenario: externalChunks true num entry dividido deixa tudo fora (armadilha)', async () => {
+  const entry = join(splitEntryFixture(), 'main.mjs');
+  const code = await bundleScenario(entry, ['*'], { externalChunks: true });
+  assert.doesNotMatch(code, new RegExp(SHARED_MARK));
+  assert.doesNotMatch(code, new RegExp(CHUNK_MARK));
+});
+
+test('measureConfig: entry dividido com "dynamic" mede o chunk compartilhado', async () => {
+  const entry = join(splitEntryFixture(), 'main.mjs');
+  const m = await measureConfig({
+    scenarios: {
+      all: { entry, exports: ['*'], externalChunks: true },
+      dynamic: { entry, exports: ['*'], externalChunks: 'dynamic' },
+      inlined: { entry, exports: ['*'] },
+    },
+  });
+  assert.ok(m.dynamic.gzip > m.all.gzip * 2, JSON.stringify(m));
+  assert.ok(m.dynamic.min < m.inlined.min);
+});
+
+test('measureConfig: externalChunks inválido é erro em pt-BR', async () => {
+  const entry = join(splitEntryFixture(), 'main.mjs');
+  await assert.rejects(
+    measureConfig({
+      scenarios: { x: { entry, exports: ['*'], externalChunks: 'tudo' } },
+    }),
+    /externalChunks/,
+  );
+});
