@@ -1,0 +1,49 @@
+@layer rte.reset, rte.base, rte.theme, rte.components, rte.content;
+
+/*
+ * Exibição (spec 06): só o rolador das tabelas, o sumário e a margem de rolagem dos
+ * títulos. A aparência do conteúdo `rt-*` é do `content.css` do core. Cores só por tokens
+ * `--rte-*`; cores de sistema apenas em `forced-colors`.
+ */
+@layer rte.components {
+  .rte-content .rte-table-scroll {
+    overflow-x: auto;
+    max-inline-size: 100%;
+  }
+
+  .rte-content .rte-table-scroll:focus-visible,
+  .rte-toc__link:focus-visible {
+    outline: var(--rte-focus-width) solid var(--rte-focus);
+    outline-offset: 2px;
+  }
+
+  .rte-toc__list {
+    list-style: none;
+    margin: 0;
+    padding-inline-start: 0;
+  }
+
+  .rte-toc__list .rte-toc__list {
+    padding-inline-start: 1em;
+  }
+
+  .rte-toc__link {
+    display: inline-block;
+    min-block-size: 24px;
+    line-height: 24px;
+    color: var(--rte-primary-text);
+  }
+
+  @media (forced-colors: active) {
+    .rte-content .rte-table-scroll:focus-visible,
+    .rte-toc__link:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+}
+
+@layer rte.content {
+  .rte-content [id] {
+    scroll-margin-top: var(--rte-scroll-margin, 1rem);
+  }
+}

@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "description": "Renderização do HTML do editor de texto rico cds-text-editor.",
   "license": "MIT",
+  "exports": {
+    "./styles/render.css": "./styles/render.css"
+  },
   "sideEffects": [
     "**/*.css"
   ],

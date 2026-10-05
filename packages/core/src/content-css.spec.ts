@@ -186,6 +186,26 @@ describe('content.css (R11)', () => {
     expect(missing).toEqual([]);
   });
 
+  it('tarefas da exibição (label em flex) e legenda de tabela têm regra', () => {
+    const value = (selector: string, prop: string) => {
+      let found: string | undefined;
+      styleRules()
+        .find((r) => r.selectors.includes(selector))
+        ?.walkDecls(prop, (d) => {
+          found = d.value;
+        });
+      return found;
+    };
+    expect(value('.rte-content .rt-task > label', 'display')).toBe('flex');
+    expect(value('.rte-content .rt-task > label > input', 'accent-color')).toBe(
+      'var(--rte-primary)',
+    );
+    expect(value('.rte-content caption', 'caption-side')).toBe('top');
+    expect(value('.rte-content caption', 'color')).toBe(
+      'var(--rte-text-muted)',
+    );
+  });
+
   it.each([
     ['span', RTE_TEXT_COLORS, '--rte-content-color'],
     ['mark', RTE_HIGHLIGHT_COLORS, '--rte-content-highlight'],
