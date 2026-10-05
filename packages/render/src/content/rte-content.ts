@@ -87,12 +87,13 @@ export class RteContent implements OnInit {
     () => this.result().error,
   );
 
+  /** O HTML inserido: `renderedHtml()` com as transformações da H6. */
+  private readonly preparedHtml: Signal<string> = computed(() =>
+    prepareRteHtml(this.renderedHtml(), { fragmentBase: this.fragmentBase() }),
+  );
+
   protected readonly safeHtml: Signal<SafeHtml> = computed(() =>
-    this.domSanitizer.bypassSecurityTrustHtml(
-      prepareRteHtml(this.renderedHtml(), {
-        fragmentBase: this.fragmentBase(),
-      }),
-    ),
+    this.domSanitizer.bypassSecurityTrustHtml(this.preparedHtml()),
   );
 
   protected readonly effectiveLabels: Signal<RteRenderLabels> = computed(() =>
@@ -105,7 +106,8 @@ export class RteContent implements OnInit {
       write: () => {
         this.safeHtml(); // cada inserção
         const host = this.host.nativeElement;
-        restoreContentStyles(host);
+        // Os valores vêm do HTML inserido: o Firefox sob CSP lê o atributo vazio.
+        restoreContentStyles(host, this.preparedHtml());
         // Criado aqui, e não num `afterNextRender` (que roda depois desta
         // fase), para a 1ª inserção já ser observada (Ruling 7).
         if (this.scrollers === undefined)

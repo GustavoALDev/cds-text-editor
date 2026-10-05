@@ -164,3 +164,89 @@ describe('RteContent: estilos por CSSOM depois de cada inserção (H8, R5)', () 
     expect(el(fixture).querySelector('p')!.style.textAlign).toBe('center');
   });
 });
+
+/**
+ * O Firefox, sob CSP sem `'unsafe-inline'`, mantém o atributo `style` do HTML
+ * inserido mas com valor vazio (`getAttribute('style') === ''`, achado da L2):
+ * os valores vêm do HTML preparado, casados pela ordem do documento e pela tag.
+ */
+describe('restoreContentStyles com o HTML preparado (Firefox sob CSP)', () => {
+  /** Simula o Gecko: o atributo `style` existe, mas lê vazio. */
+  function blankStyleAttributes(): void {
+    const get = Element.prototype.getAttribute;
+    vi.spyOn(Element.prototype, 'getAttribute').mockImplementation(function (
+      this: Element,
+      name: string,
+    ) {
+      return name === 'style' ? '' : get.call(this, name);
+    });
+  }
+
+  function build(html: string, styled: string[]): HTMLElement {
+    // A árvore exibida, com `style=""` como o Firefox a deixa.
+    const root = document.createElement('div');
+    for (const tag of styled) {
+      const child = document.createElement(tag);
+      child.setAttribute('style', '');
+      root.append(child);
+    }
+    void html;
+    return root;
+  }
+
+  it('usa os valores do HTML, na ordem do documento', () => {
+    const html =
+      '<!-- <p style="color: red"> --><h2 style="text-align: right">t</h2>' +
+      '<p>x</p><p style="text-align: justify">j&amp;</p>' +
+      '<table><colgroup><col style="width: 200px"></colgroup></table>';
+    const root = build(html, ['h2', 'p', 'col']);
+    blankStyleAttributes();
+    const calls = spyCssText();
+    expect(restoreContentStyles(root, html)).toBe(3);
+    expect(calls.map((c) => c.value)).toEqual([
+      'text-align: right',
+      'text-align: justify',
+      'width: 200px',
+    ]);
+  });
+
+  it('entidades no valor do atributo são decodificadas', () => {
+    const html = '<span style="font-family: &quot;A&amp;B&quot;">a</span>';
+    const root = build(html, ['span']);
+    blankStyleAttributes();
+    const calls = spyCssText();
+    restoreContentStyles(root, html);
+    expect(calls.map((c) => c.value)).toEqual(['font-family: "A&B"']);
+  });
+
+  it('tags fora de ordem ou em número diferente → valores do próprio atributo', () => {
+    const root = document.createElement('div');
+    const p = document.createElement('p');
+    p.setAttribute('style', P_STYLE);
+    root.append(p);
+    const calls = spyCssText();
+    // O HTML não corresponde à árvore (h2 em vez de p; dois em vez de um).
+    restoreContentStyles(root, '<h2 style="text-align: right">t</h2>');
+    restoreContentStyles(
+      root,
+      '<p style="color: red">a</p><p style="color: blue">b</p>',
+    );
+    // A 1ª escrita por CSSOM re-serializa o atributo (`…;`).
+    expect(calls.map((c) => c.value.replace(/;$/, ''))).toEqual([
+      P_STYLE,
+      P_STYLE,
+    ]);
+  });
+
+  it('RteContent: reaplica os valores do HTML com o atributo lido vazio', async () => {
+    blankStyleAttributes();
+    const calls = spyCssText();
+    const fixture = await renderHost(Host);
+    await settle(fixture);
+    expect(contentWrites(fixture, calls)).toEqual([
+      ['p', P_STYLE],
+      ['col', COL_STYLE],
+    ]);
+    expect(el(fixture).querySelector('p')!.style.textAlign).toBe('center');
+  });
+});
