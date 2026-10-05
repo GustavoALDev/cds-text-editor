@@ -1,5 +1,5 @@
 import type { Editor } from '@tiptap/core';
-import { NodeSelection } from '@tiptap/pm/state';
+import { AllSelection, NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { dialogTarget } from './dialogs/target';
 import {
   createTestEditor,
@@ -12,6 +12,12 @@ afterEach(() => {
 });
 
 const X = 'https://x.com/';
+
+/** Seleciona tudo (Ctrl+A do Tiptap: `AllSelection`). */
+function selectAll(editor: Editor): void {
+  editor.commands.selectAll();
+  expect(editor.state.selection).toBeInstanceOf(AllSelection);
+}
 
 function at(html: string, text: string, from?: number, to?: number): Editor {
   const editor = createTestEditor(html);
@@ -49,6 +55,29 @@ describe('dialogTarget: link', () => {
     expect(dialogTarget(e, 'link')).toEqual({
       mode: 'edit',
       range: { from: 1, to: 4 },
+    });
+  });
+
+  it('cursor exatamente nas bordas de um link → edit', () => {
+    const e = at(`<p>x<a href="${X}">abc</a>y</p>`, 'xabcy', 1);
+    expect(dialogTarget(e, 'link')).toEqual({
+      mode: 'edit',
+      range: { from: 2, to: 5 },
+    });
+    selectText(e, 'xabcy', 4);
+    expect(e.state.selection.from).toBe(5);
+    expect(dialogTarget(e, 'link')).toEqual({
+      mode: 'edit',
+      range: { from: 2, to: 5 },
+    });
+  });
+
+  it('seleção de tudo (Ctrl+A) → apply com o documento inteiro', () => {
+    const e = createTestEditor('<p>ab</p><p>cd</p>');
+    selectAll(e);
+    expect(dialogTarget(e, 'link')).toEqual({
+      mode: 'apply',
+      range: { from: 0, to: e.state.doc.content.size },
     });
   });
 
@@ -125,6 +154,15 @@ describe('dialogTarget: lang', () => {
     });
   });
 
+  it('seleção de tudo (Ctrl+A) → apply com o documento inteiro', () => {
+    const e = createTestEditor('<p>ab</p><p>cd</p>');
+    selectAll(e);
+    expect(dialogTarget(e, 'lang')).toEqual({
+      mode: 'apply',
+      range: { from: 0, to: e.state.doc.content.size },
+    });
+  });
+
   it('em bloco de código → null', () => {
     const e = at('<pre><code>abc</code></pre>', 'abc');
     expect(dialogTarget(e, 'lang')).toBeNull();
@@ -152,6 +190,17 @@ describe('dialogTarget: quoteAuthor', () => {
     });
   });
 
+  it('seleção que começa dentro e termina fora de rtPullquote → null', () => {
+    const e = at(QUOTE, 'frase', 2);
+    const from = e.state.selection.from;
+    selectText(e, 'fora', 2);
+    const to = e.state.selection.from;
+    e.view.dispatch(
+      e.state.tr.setSelection(TextSelection.create(e.state.doc, from, to)),
+    );
+    expect(dialogTarget(e, 'quoteAuthor')).toBeNull();
+  });
+
   it('fora de rtPullquote → null', () => {
     const e = at(QUOTE, 'fora', 2);
     expect(dialogTarget(e, 'quoteAuthor')).toBeNull();
@@ -164,6 +213,14 @@ describe('dialogTarget: table', () => {
     expect(dialogTarget(e, 'table')).toEqual({
       mode: 'insert',
       range: { from: 2, to: 2 },
+    });
+  });
+
+  it('com seleção → insert no ponto de inserção', () => {
+    const e = at('<p>ab</p>', 'ab');
+    expect(dialogTarget(e, 'table')).toEqual({
+      mode: 'insert',
+      range: { from: 1, to: 1 },
     });
   });
 

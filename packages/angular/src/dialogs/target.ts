@@ -1,6 +1,11 @@
 import { getMarkRange, type Editor } from '@tiptap/core';
 import type { MarkType } from '@tiptap/pm/model';
-import { TextSelection, type EditorState } from '@tiptap/pm/state';
+import {
+  AllSelection,
+  TextSelection,
+  type EditorState,
+  type Selection,
+} from '@tiptap/pm/state';
 import { isInTable } from '@tiptap/pm/tables';
 import { can } from '../toolbar/state';
 import { RTE_INSERT_TABLE } from '../toolbar/table-guard';
@@ -19,6 +24,13 @@ function target(mode: RteDialogMode, from: number, to: number) {
   return { mode, range: { from, to } } satisfies RteDialogTarget;
 }
 
+/** Seleção de texto: `TextSelection` ou a de tudo (`AllSelection`, Ctrl+A). */
+function isTextRange(selection: Selection): boolean {
+  return (
+    selection instanceof TextSelection || selection instanceof AllSelection
+  );
+}
+
 function inCodeBlock(state: EditorState): boolean {
   const { $from, $to } = state.selection;
   return (
@@ -27,7 +39,13 @@ function inCodeBlock(state: EditorState): boolean {
   );
 }
 
-/** Intervalo da marca em `$from` que contém a seleção inteira; senão `null`. */
+/**
+ * Intervalo da marca em `$from` que contém a seleção inteira; senão `null`.
+ * Um cursor exatamente na borda da marca (antes do 1º ou depois do último
+ * caractere) conta como dentro: `getMarkRange` olha o nó depois e, sem a
+ * marca nele, o nó antes; o modo é então `edit` (decisão da revisão da
+ * Tarefa 2).
+ */
 function enclosingMark(
   state: EditorState,
   type: MarkType,
@@ -41,7 +59,7 @@ function linkTarget(editor: Editor): RteDialogTarget | null {
   const state = editor.state;
   const { selection, schema, doc } = state;
   const link = schema.marks['link'];
-  if (!link || !(selection instanceof TextSelection) || inCodeBlock(state)) {
+  if (!link || !isTextRange(selection) || inCodeBlock(state)) {
     return null;
   }
   const code = schema.marks['code'];
@@ -64,7 +82,7 @@ function langTarget(editor: Editor): RteDialogTarget | null {
   const state = editor.state;
   const { selection } = state;
   const lang = state.schema.marks['rtLang'];
-  if (!lang || !(selection instanceof TextSelection) || inCodeBlock(state)) {
+  if (!lang || !isTextRange(selection) || inCodeBlock(state)) {
     return null;
   }
   const edit = enclosingMark(state, lang);
@@ -72,21 +90,23 @@ function langTarget(editor: Editor): RteDialogTarget | null {
   return selection.empty ? null : target('apply', selection.from, selection.to);
 }
 
+/** Seleção inteira dentro de um `rtPullquote` → `edit`; senão `null`. */
 function quoteAuthorTarget(editor: Editor): RteDialogTarget | null {
   const { $from, from, to } = editor.state.selection;
   for (let depth = $from.depth; depth > 0; depth--) {
     if ($from.node(depth).type.name === 'rtPullquote') {
-      return target('edit', from, to);
+      return to <= $from.end(depth) ? target('edit', from, to) : null;
     }
   }
   return null;
 }
 
+/** Fora de tabela → `insert` no ponto de inserção (`{from, from}`). */
 function tableTarget(editor: Editor): RteDialogTarget | null {
-  const { selection } = editor.state;
+  const { from } = editor.state.selection;
   if (isInTable(editor.state)) return null;
   return can(editor, 'insertTable', RTE_INSERT_TABLE)
-    ? target('insert', selection.from, selection.to)
+    ? target('insert', from, from)
     : null;
 }
 

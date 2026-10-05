@@ -87,4 +87,33 @@ describe('seleção pendente (R8)', () => {
     });
     expect(pendingText(e)).toBe('bc');
   });
+
+  it('não dispara o evento update (não emite valor)', () => {
+    const e = make('<p>abcd</p>');
+    let updates = 0;
+    e.on('update', () => {
+      updates++;
+    });
+    setPendingSelection(e, { from: 1, to: 3 });
+    setPendingSelection(e, null);
+    expect(updates).toBe(0);
+  });
+
+  it('intervalo apagado vira vazio e a decoração some', () => {
+    const e = make('<p>abcdef</p>');
+    setPendingSelection(e, { from: 2, to: 4 });
+    e.commands.deleteRange({ from: 1, to: 5 });
+    const pending = RTE_UI_PLUGIN_KEY.getState(e.state)?.pending;
+    expect(pending?.from).toBe(pending?.to);
+    expect(e.view.dom.querySelector('.rte-pending-selection')).toBeNull();
+  });
+
+  it('destruir com seleção pendente não falha e a decoração some', () => {
+    const e = make('<p>abcd</p>');
+    setPendingSelection(e, { from: 1, to: 3 });
+    expect(document.querySelector('.rte-pending-selection')).not.toBeNull();
+    expect(() => e.destroy()).not.toThrow();
+    expect(document.querySelector('.rte-pending-selection')).toBeNull();
+    expect(() => setPendingSelection(e, null)).not.toThrow();
+  });
 });
