@@ -306,7 +306,9 @@ describe('toolbar ao vivo no rte-editor (R2)', () => {
     const fixture = await renderHost(LiveHost);
     const host = fixture.componentInstance;
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelectorAll('.rte-toolbar__button')).toHaveLength(1);
+    expect(
+      el.querySelectorAll('.rte-toolbar .rte-toolbar__button'),
+    ).toHaveLength(1);
     for (const next of [
       'minimal',
       [['italic'], ['bold', 'nope' as RteToolbarItemId]],
@@ -315,9 +317,9 @@ describe('toolbar ao vivo no rte-editor (R2)', () => {
       host.toolbar.set(next);
       await settle(fixture);
     }
-    expect(el.querySelectorAll('.rte-toolbar__button').length).toBeGreaterThan(
-      20,
-    );
+    expect(
+      el.querySelectorAll('.rte-toolbar .rte-toolbar__button').length,
+    ).toBeGreaterThan(20);
     expect(host.ready).toHaveLength(1);
     expect(host.changes).toBe(0);
     const unknown = warn.mock.calls.filter(([message]) =>

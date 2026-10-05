@@ -1,0 +1,234 @@
+@for (kind of kinds(); track kind) {
+<div
+  #floating
+  class="rte-floating"
+  [class]="'rte-floating--' + kind"
+  popover="manual"
+  role="toolbar"
+  aria-orientation="horizontal"
+  [attr.aria-label]="menuLabel(kind)"
+  [attr.data-rte-kind]="kind"
+  rteRovingFocus
+  [rteRovingTabStop]="false"
+>
+  @switch (kind) { @case ('text') { @for (id of textMarks; track id) { @let s =
+  state().item(id)();
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    [attr.aria-label]="markLabel(id)"
+    [attr.title]="title(markLabel(id), id)"
+    [attr.aria-pressed]="s.active"
+    [attr.aria-disabled]="s.enabled ? null : 'true'"
+    [class.rte-toolbar__button--pressed]="s.active"
+    (mousedown)="$event.preventDefault()"
+  >
+    <svg
+      class="rte-icon"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      @for (d of icon(id); track $index) {
+      <path [attr.d]="d" />
+      }
+    </svg>
+  </button>
+  }
+  <div
+    class="rte-toolbar__separator"
+    role="separator"
+    aria-orientation="vertical"
+  ></div>
+  @let link = state().item('link')(); @let linkName = link.active ?
+  toolbarLabels().editLink : toolbarLabels().link;
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    aria-haspopup="dialog"
+    [attr.aria-label]="linkName"
+    [attr.title]="title(linkName, 'link')"
+    [attr.aria-disabled]="link.enabled ? null : 'true'"
+    [class.rte-toolbar__button--active]="link.active"
+    (mousedown)="$event.preventDefault()"
+  >
+    <svg
+      class="rte-icon"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      @for (d of icon('link'); track $index) {
+      <path [attr.d]="d" />
+      }
+    </svg>
+  </button>
+  } @case ('link') {
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    aria-haspopup="dialog"
+    [attr.aria-label]="toolbarLabels().editLink"
+    [attr.title]="title(toolbarLabels().editLink, 'link')"
+    (mousedown)="$event.preventDefault()"
+  >
+    <svg
+      class="rte-icon"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      @for (d of icon('link'); track $index) {
+      <path [attr.d]="d" />
+      }
+    </svg>
+  </button>
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    [attr.aria-label]="labels().removeLink"
+    [attr.title]="labels().removeLink"
+    (mousedown)="$event.preventDefault()"
+  >
+    <svg
+      class="rte-icon"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      @for (d of icon('removeLink'); track $index) {
+      <path [attr.d]="d" />
+      }
+    </svg>
+  </button>
+  } @case ('table') { @for (op of tableOps; track op) {
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    [attr.aria-label]="toolbarLabels()[op]"
+    [attr.title]="toolbarLabels()[op]"
+    (mousedown)="$event.preventDefault()"
+  >
+    <svg
+      class="rte-icon"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      @for (d of icon(op); track $index) {
+      <path [attr.d]="d" />
+      }
+    </svg>
+  </button>
+  }
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    aria-haspopup="menu"
+    [attr.aria-label]="labels().tableMore"
+    [attr.title]="labels().tableMore"
+    (mousedown)="$event.preventDefault()"
+  >
+    <svg
+      class="rte-icon"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      @for (d of icon('tableMore'); track $index) {
+      <path [attr.d]="d" />
+      }
+    </svg>
+  </button>
+  } @case ('image') { @let align = imageAlign(); @for (a of imageAligns; track
+  a[0]) {
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    [attr.aria-label]="labels()[a[1]]"
+    [attr.title]="labels()[a[1]]"
+    [attr.aria-pressed]="align === a[0]"
+    [class.rte-toolbar__button--pressed]="align === a[0]"
+    (mousedown)="$event.preventDefault()"
+  >
+    <svg
+      class="rte-icon"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      @for (d of icon(a[2]); track $index) {
+      <path [attr.d]="d" />
+      }
+    </svg>
+  </button>
+  }
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    [attr.aria-label]="labels().removeImage"
+    [attr.title]="labels().removeImage"
+    (mousedown)="$event.preventDefault()"
+  >
+    <svg
+      class="rte-icon"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      @for (d of icon('removeImage'); track $index) {
+      <path [attr.d]="d" />
+      }
+    </svg>
+  </button>
+  } }
+</div>
+}

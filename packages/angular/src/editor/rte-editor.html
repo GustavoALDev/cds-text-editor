@@ -33,6 +33,21 @@
   </div>
   }
   <div #mount class="rte-editor__mount"></div>
+  @if (floatingKinds().length && editor(); as ed) {
+  <rte-floating-menus
+    [editor]="ed"
+    [version]="version"
+    [state]="toolbarState"
+    [kinds]="floatingKinds()"
+    [enabled]="floatingEnabled()"
+    [blocked]="floatingBlocked()"
+    [focused]="isFocused()"
+    [labels]="resolvedLabels().floating"
+    [toolbarLabels]="resolvedLabels().toolbar"
+    [linkPolicy]="linkPolicy()"
+    (dialog)="requestDialog($event, ed.view.dom)"
+  />
+  }
 </div>
 @defer (when dialogRequested(); prefetch on idle) {
 <rte-dialogs

@@ -38,7 +38,11 @@ import { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { RTE_CONFIG, RTE_LABELS, type RteEditorConfig } from '../config';
-import { dialogBusy, RteDialogController } from '../dialogs/controller';
+import {
+  dialogBusy,
+  documentDialogBusy,
+  RteDialogController,
+} from '../dialogs/controller';
 import { RteDeferFailed } from '../dialogs/defer-failed';
 import { RteDialogs } from '../dialogs/rte-dialogs';
 import { dialogTarget } from '../dialogs/target';
@@ -49,6 +53,7 @@ import {
   resolveFloatingKinds,
   sameKinds,
 } from '../floating/config';
+import { RteFloatingMenus } from '../floating/rte-floating-menus';
 import type {
   RteFloatingMenuKind,
   RteFloatingMenusConfig,
@@ -129,7 +134,7 @@ function toCharLimit(value: number | undefined): number | null {
   exportAs: 'rteEditor',
   templateUrl: './rte-editor.html',
   // `RteDialogs` só aqui e no `@defer` do template (G7: senão o chunk some).
-  imports: [RteToolbar, RteDialogs, RteDeferFailed],
+  imports: [RteToolbar, RteFloatingMenus, RteDialogs, RteDeferFailed],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   host: {
@@ -238,6 +243,8 @@ export class RteEditor implements FormValueControl<string> {
 
   private readonly mount = viewChild.required<ElementRef<HTMLElement>>('mount');
   private readonly toolbarRef = viewChild(RteToolbar);
+  /** Menus flutuantes (M2); `undefined` antes da criação ou sem tipos. */
+  protected readonly floatingRef = viewChild(RteFloatingMenus);
 
   private readonly config = inject(RTE_CONFIG);
   /** Configuração fixada na criação (`null` antes dela). */
@@ -345,6 +352,16 @@ export class RteEditor implements FormValueControl<string> {
   });
   protected readonly dialogRequested = this.dialogs.requested;
   protected readonly onDialogsFailed = () => this.dialogs.fail();
+  /** Menus flutuantes só com editor interativo e visível (M5). */
+  protected readonly floatingEnabled = computed(
+    () => this.interactive() && !this.hidden(),
+  );
+  /** Pedido de diálogo deste editor ou de outro do documento (M5, G6). */
+  protected readonly floatingBlocked = computed(
+    () =>
+      this.dialogs.request() !== null ||
+      documentDialogBusy(this.host.ownerDocument)(),
+  );
   /** Política de links da criação (G9): a mesma que o editor usa. */
   protected readonly linkPolicy = computed(
     () => this.editorConfig().linkPolicy,

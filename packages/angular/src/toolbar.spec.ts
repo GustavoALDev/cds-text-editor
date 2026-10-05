@@ -175,7 +175,11 @@ function toolbarOf(el: HTMLElement): HTMLElement | null {
 }
 
 function buttons(el: ParentNode): HTMLButtonElement[] {
-  return [...el.querySelectorAll<HTMLButtonElement>('.rte-toolbar__button')];
+  return [
+    ...el.querySelectorAll<HTMLButtonElement>(
+      '.rte-toolbar .rte-toolbar__button',
+    ),
+  ];
 }
 
 function button(el: ParentNode, label: string): HTMLButtonElement {
