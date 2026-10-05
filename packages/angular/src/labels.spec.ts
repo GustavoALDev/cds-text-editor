@@ -183,7 +183,7 @@ describe('rótulos dos menus flutuantes', () => {
 
   it('floating completa e sem string vazia nos três pacotes', () => {
     for (const [, pack] of packs) {
-      expect(Object.keys(pack.floating).length).toBe(12);
+      expect(Object.keys(pack.floating).length).toBe(19);
       for (const text of strings(pack.floating)) expect(text).not.toBe('');
     }
   });
@@ -800,5 +800,120 @@ describe('rótulos dos menus flutuantes ao vivo (R13)', () => {
       restoreGeometry();
       restorePopover();
     }
+  });
+});
+
+describe('rótulos de mídia (05c1)', () => {
+  const packs = [
+    ['en', RTE_LABELS_EN],
+    ['pt-BR', RTE_LABELS_PT_BR],
+    ['es', RTE_LABELS_ES],
+  ] as const;
+  const KEYS = {
+    toolbar: ['image', 'editImage', 'video', 'editVideo', 'embed', 'editEmbed'],
+    floating: [
+      'videoMenu',
+      'embedMenu',
+      'imageDetails',
+      'videoDetails',
+      'embedDetails',
+      'removeVideo',
+      'removeEmbed',
+    ],
+    dialogs: [
+      'imageInsertTitle',
+      'imageEditTitle',
+      'imageUrl',
+      'imageUrlHint',
+      'imageAlt',
+      'imageAltHint',
+      'imageDecorative',
+      'imageCaption',
+      'imageCredit',
+      'imageAlign',
+      'imageWidth',
+      'imageWidthHint',
+      'videoInsertTitle',
+      'videoEditTitle',
+      'videoUrl',
+      'videoUrlHint',
+      'videoPoster',
+      'videoCaption',
+      'videoTracks',
+      'videoTrack',
+      'videoTrackKind',
+      'videoTrackCaptions',
+      'videoTrackSubtitles',
+      'videoTrackUrl',
+      'videoTrackLang',
+      'videoTrackLabel',
+      'videoTrackDefault',
+      'videoTrackAdd',
+      'videoTrackRemove',
+      'videoCaptionsHint',
+      'embedInsertTitle',
+      'embedEditTitle',
+      'embedUrl',
+      'embedUrlHint',
+      'embedCaption',
+      'errorMediaUrl',
+      'errorEmbedUrl',
+    ],
+  } as const;
+
+  it('as chaves novas existem e têm texto nos três pacotes', () => {
+    for (const [name, pack] of packs) {
+      for (const [section, keys] of Object.entries(KEYS)) {
+        const bag = (
+          pack as unknown as Record<string, Record<string, unknown>>
+        )[section];
+        for (const key of keys) {
+          const value = bag?.[key];
+          const text =
+            typeof value === 'function'
+              ? key === 'embedUrlHint'
+                ? (value as (p: string[]) => string)(['YouTube', 'Vimeo'])
+                : (value as (n: number) => string)(3)
+              : value;
+          expect(typeof text, `${name}.${section}.${key}`).toBe('string');
+          expect(text, `${name}.${section}.${key}`).not.toBe('');
+        }
+      }
+    }
+  });
+
+  it('cópia da tabela', () => {
+    expect(RTE_LABELS_EN.dialogs.videoTrack(2)).toBe('Track 2');
+    expect(RTE_LABELS_EN.dialogs.videoTrackRemove(3)).toBe('Remove track 3');
+    expect(RTE_LABELS_PT_BR.dialogs.embedUrlHint(['YouTube', 'Vimeo'])).toBe(
+      'Aceitos: YouTube, Vimeo.',
+    );
+    expect(RTE_LABELS_ES.dialogs.embedUrlHint(['YouTube'])).toBe(
+      'Se aceptan: YouTube.',
+    );
+    expect(RTE_LABELS_ES.floating.removeEmbed).toBe(
+      'Quitar contenido incrustado',
+    );
+    expect(RTE_LABELS_PT_BR.toolbar.editEmbed).toBe(
+      'Editar conteúdo incorporado',
+    );
+    expect(RTE_LABELS_EN.dialogs.imageUrlHint).toBe(
+      RTE_LABELS_EN.dialogs.videoUrlHint,
+    );
+  });
+
+  it('mergeLabels protege as funções novas de dialogs', () => {
+    const merged = mergeLabels(RTE_LABELS_EN, {
+      dialogs: {
+        videoTrack: () => 7 as never,
+        videoTrackRemove: () => {
+          throw new Error('x');
+        },
+        embedUrlHint: (p) => p.join('|'),
+      },
+    });
+    expect(merged.dialogs.videoTrack(1)).toBe('Track 1');
+    expect(merged.dialogs.videoTrackRemove(2)).toBe('Remove track 2');
+    expect(merged.dialogs.embedUrlHint(['a', 'b'])).toBe('a|b');
   });
 });

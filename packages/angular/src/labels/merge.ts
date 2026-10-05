@@ -169,31 +169,32 @@ function mergeToolbar(
   return out as unknown as RteToolbarLabels;
 }
 
+/** Funções de `dialogs`, cada uma com `guard` (valor não função → o da base). */
+const DIALOG_FUNCTIONS = [
+  'errorRange',
+  'errorMaxLength',
+  'videoTrack',
+  'videoTrackRemove',
+  'embedUrlHint',
+] as const;
+
 function mergeDialogs(base: RteDialogLabels, given: unknown): RteDialogLabels {
   if (!isBag(given)) return base;
   const out: Record<string, unknown> = { ...base };
+  const functions: readonly string[] = DIALOG_FUNCTIONS;
   for (const key of Object.keys(base)) {
-    if (
-      key === 'languageNames' ||
-      key === 'errorRange' ||
-      key === 'errorMaxLength'
-    )
-      continue;
+    if (key === 'languageNames' || functions.includes(key)) continue;
     const value = own(given, key);
     if (typeof value === 'string') out[key] = value;
   }
-  const range = own(given, 'errorRange');
-  if (typeof range === 'function')
-    out['errorRange'] = guard(
-      range as (min: number, max: number) => unknown,
-      base.errorRange,
-    );
-  const maxLength = own(given, 'errorMaxLength');
-  if (typeof maxLength === 'function')
-    out['errorMaxLength'] = guard(
-      maxLength as (max: number) => unknown,
-      base.errorMaxLength,
-    );
+  for (const key of DIALOG_FUNCTIONS) {
+    const value = own(given, key);
+    if (typeof value === 'function')
+      out[key] = guard(
+        value as (...args: never[]) => unknown,
+        base[key] as (...args: never[]) => string,
+      );
+  }
   const names: Record<string, string> = { ...base.languageNames };
   const givenNames = own(given, 'languageNames');
   for (const code of RTE_DIALOG_LANGUAGES) {

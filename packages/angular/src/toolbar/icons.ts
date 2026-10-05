@@ -16,6 +16,9 @@
  * `panel-bottom-close`/`panel-right-close` (o Lucide não tem remover
  * linha/coluna: nome acessível e dica dizem a operação).
  *
+ * Mídia (05c1): `mediaDetails` vem de `pencil` (Lucide 1.52.0, sem
+ * conversão: já são só caminhos).
+ *
  * ISC License
  *
  * Copyright (c) 2026 Lucide Icons and Contributors
@@ -50,7 +53,8 @@ export type RteIconName =
   | 'removeLink'
   | 'openLink'
   | 'imageAlignFull'
-  | 'removeImage';
+  | 'removeImage'
+  | 'mediaDetails';
 
 /** Lista de `d` por ícone (viewBox 24, traço 2, `currentColor`). */
 export const RTE_ICONS: Readonly<Record<RteIconName, readonly string[]>> =
@@ -209,6 +213,10 @@ export const RTE_ICONS: Readonly<Record<RteIconName, readonly string[]>> =
     imageAlignFull: [
       'M4 4H20A2 2 0 0 1 22 6V8A2 2 0 0 1 20 10H4A2 2 0 0 1 2 8V6A2 2 0 0 1 4 4Z',
       'M4 14H20A2 2 0 0 1 22 16V18A2 2 0 0 1 20 20H4A2 2 0 0 1 2 18V16A2 2 0 0 1 4 14Z',
+    ],
+    mediaDetails: [
+      'M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z',
+      'm15 5 4 4',
     ],
     removeImage: [
       'M10 11v6',

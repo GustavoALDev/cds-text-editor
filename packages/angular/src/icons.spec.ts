@@ -24,9 +24,15 @@ const NAMES: RteIconName[] = [
   'openLink',
   'imageAlignFull',
   'removeImage',
+  'mediaDetails',
 ];
 
 describe('RTE_ICONS', () => {
+  it('tem o ícone mediaDetails (image/video/embed vêm com os ids da barra)', () => {
+    expect(RTE_ICONS['mediaDetails'].length).toBeGreaterThan(0);
+    expect(RTE_ICONS['mediaDetails'][0]).not.toBe('');
+  });
+
   it('tem pelo menos um caminho para cada ícone', () => {
     expect(Object.keys(RTE_ICONS).sort()).toEqual([...NAMES].sort());
     for (const name of NAMES)
