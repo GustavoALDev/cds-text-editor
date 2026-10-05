@@ -7,6 +7,7 @@ import {
   settlePage,
   waitForEditor,
 } from './helpers/app';
+import { expectFloating } from './helpers/floating';
 import {
   arrowToButton,
   expectSelection,
@@ -189,6 +190,13 @@ for (const zone of [false, true]) {
     }) => {
       await loadDoc(page, 'toolbar', '<p>abcd</p>');
       await selectIn(page, 'toolbar', 'abcd', 0, 2);
+      // Texto selecionado: o menu flutuante (05b2b) vê o primeiro Alt+F10;
+      // o segundo vai dele à barra (M12).
+      await expectFloating(page, 'toolbar', 'text');
+      await page.keyboard.press('Alt+F10');
+      await expect(
+        editorHost(page, 'toolbar').locator('.rte-floating--text :focus'),
+      ).toHaveCount(1);
       await page.keyboard.press('Alt+F10');
       await arrowToButton(page, 'Bold');
       const bold = toolbarButton(page, 'toolbar', 'Bold');

@@ -27,7 +27,9 @@ export type RteE2eId =
   | 'toolbar-scroll'
   | 'toolbar-nofeat'
   | 'dialogs'
-  | 'dialogs-api';
+  | 'dialogs-api'
+  | 'floating'
+  | 'floating-alt';
 export type RteE2eToggle = 'disabled' | 'readonly' | 'hidden' | 'show';
 export type RteE2eLang = 'en' | 'pt-BR' | 'es';
 
@@ -50,6 +52,10 @@ export interface RteE2eHandle {
   setTheme?(theme: RteTheme | undefined): void;
   /** `openDialog(kind)` do editor (página `dialogs`). */
   openDialog?(kind: string): boolean;
+  /** `[floatingMenus]` ao vivo (página `floating`). */
+  setFloatingMenus?(config: unknown): void;
+  /** `focusFloatingMenu()` do editor (página `floating`). */
+  focusFloatingMenu?(): boolean;
 }
 
 /** `window.rteE2e`: só o que os testes leem (spec 05a, §6.2; sem `ng.getComponent`). */
@@ -67,6 +73,16 @@ export interface RteE2eApi {
   setTheme(id: RteE2eId, theme: RteTheme | undefined): void;
   /** `openDialog(kind)` do editor `id` (G18); o retorno da API. */
   openDialog(id: RteE2eId, kind: string): boolean;
+  /** `[floatingMenus]` ao vivo do editor `id` (N21). */
+  setFloatingMenus(id: RteE2eId, config: unknown): void;
+  /** `focusFloatingMenu()` do editor `id` (N9, N24). */
+  focusFloatingMenu(id: RteE2eId): boolean;
+  /** Passa a contar as mutações do `rte-floating-menus` do editor `id` (R16). */
+  watchFloating(id: RteE2eId): void;
+  /** Mutações (`total`) e as de `style` desde o `watchFloating(id)`. */
+  floatingMutations(id: RteE2eId): { total: number; style: number };
+  /** Voltas de `NgZone.onMicrotaskEmpty` (no build zone, cada uma é um `tick`). */
+  zoneTurns(): number;
   /** `applyRteTheme` num elemento qualquer (referência do N12). */
   applyTheme(element: HTMLElement, theme: RteTheme): void;
   /** Detecção de mudanças síncrona (`ApplicationRef.tick`), para medir o render (N15). */
@@ -137,6 +153,19 @@ export class E2eBridge {
     return open(kind);
   }
 
+  setFloatingMenus(id: RteE2eId, config: unknown): void {
+    const set = this.handle(id).setFloatingMenus;
+    if (!set) throw new Error(`rteE2e: editor '${id}' sem [floatingMenus].`);
+    set(config);
+  }
+
+  focusFloatingMenu(id: RteE2eId): boolean {
+    const focus = this.handle(id).focusFloatingMenu;
+    if (!focus)
+      throw new Error(`rteE2e: editor '${id}' sem focusFloatingMenu.`);
+    return focus();
+  }
+
   toggle(name: RteE2eToggle): void {
     this.toggledAt = performance.now();
     this[name].update((v) => !v);
@@ -159,6 +188,23 @@ export function installE2eBridge(): void {
       RteE2eId,
       { observer: MutationObserver; count: number }
     >();
+    let turns = 0;
+    zone.onMicrotaskEmpty.subscribe(() => turns++);
+    const watchedFloating = new Map<
+      RteE2eId,
+      { observer: MutationObserver; total: number; style: number }
+    >();
+    const drainFloating = (entry: {
+      observer: MutationObserver;
+      total: number;
+      style: number;
+    }): void => {
+      for (const record of entry.observer.takeRecords()) {
+        entry.total++;
+        if (record.type === 'attributes' && record.attributeName === 'style')
+          entry.style++;
+      }
+    };
     win.rteE2e = {
       getRteEditor,
       rteHtml: (host) => {
@@ -205,6 +251,44 @@ export function installE2eBridge(): void {
         entry.count += entry.observer.takeRecords().length;
         return entry.count;
       },
+      setFloatingMenus: (id, config) =>
+        run(() => bridge.setFloatingMenus(id, config)),
+      focusFloatingMenu: (id) => run(() => bridge.focusFloatingMenu(id)),
+      watchFloating: (id) => {
+        const menus = doc.querySelector(
+          `rte-editor[data-testid="${id}"] rte-floating-menus`,
+        );
+        if (!menus) throw new Error(`rteE2e: editor '${id}' sem menus.`);
+        watchedFloating.get(id)?.observer.disconnect();
+        const entry = {
+          observer: new MutationObserver((records) => {
+            for (const record of records) {
+              entry.total++;
+              if (
+                record.type === 'attributes' &&
+                record.attributeName === 'style'
+              )
+                entry.style++;
+            }
+          }),
+          total: 0,
+          style: 0,
+        };
+        entry.observer.observe(menus, {
+          subtree: true,
+          attributes: true,
+          childList: true,
+          characterData: true,
+        });
+        watchedFloating.set(id, entry);
+      },
+      floatingMutations: (id) => {
+        const entry = watchedFloating.get(id);
+        if (!entry) throw new Error(`rteE2e: '${id}' sem watchFloating.`);
+        drainFloating(entry);
+        return { total: entry.total, style: entry.style };
+      },
+      zoneTurns: () => turns,
       readyAt: bridge.readyAt,
       get toggledAt() {
         return bridge.toggledAt;

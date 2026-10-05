@@ -358,16 +358,32 @@ describe('Escape no editável (M6)', () => {
     expectQuiet(s);
   });
 
-  it('Escape já consumido (ouvinte de captura) → menu continua (Review Focus 5)', async () => {
+  it('o ProseMirror consome todo Escape do editável (captureKeyDown): o menu ainda é dispensado', async () => {
     const s = await setup();
     await focusAnd(s, bold(s.editor));
-    const consume = (e: Event) => e.preventDefault();
-    s.el.addEventListener('keydown', consume, { capture: true });
+    const pm = (e: Event) => e.preventDefault();
+    s.editor.view.dom.addEventListener('keydown', pm);
     try {
       key(s.editor.view.dom, 'Escape');
       await settle(s.fixture);
     } finally {
-      s.el.removeEventListener('keydown', consume, { capture: true });
+      s.editor.view.dom.removeEventListener('keydown', pm);
+    }
+    expect(openKinds(s.el)).toEqual([]);
+    expectQuiet(s);
+  });
+
+  it('Escape já consumido (ouvinte de captura) → menu continua (Review Focus 5)', async () => {
+    const s = await setup();
+    await focusAnd(s, bold(s.editor));
+    const consume = (e: Event) => e.preventDefault();
+    // num ancestral: a captura chega antes da do host
+    document.addEventListener('keydown', consume, { capture: true });
+    try {
+      key(s.editor.view.dom, 'Escape');
+      await settle(s.fixture);
+    } finally {
+      document.removeEventListener('keydown', consume, { capture: true });
     }
     expect(openKinds(s.el)).toEqual(['text']);
     expectQuiet(s);

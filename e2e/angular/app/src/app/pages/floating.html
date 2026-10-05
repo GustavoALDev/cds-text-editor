@@ -1,0 +1,32 @@
+<button id="before-floating" type="button">before</button>
+<div class="e2e-spacer"></div>
+<div class="e2e-floating-scroller">
+  <rte-editor
+    #main
+    data-testid="floating"
+    ariaLabel="Floating editor"
+    toolbar="full"
+    [options]="options"
+    [labels]="labels"
+    [theme]="mainTheme"
+    [floatingMenus]="floatingMenus()"
+    [formField]="f.body"
+    (editorReady)="bridge.ready('floating')"
+  />
+</div>
+<button id="after-floating" type="button">after</button>
+<div class="e2e-spacer"></div>
+<section>
+  <rte-editor
+    #alt
+    data-testid="floating-alt"
+    ariaLabel="Second floating editor"
+    [toolbar]="false"
+    [options]="options"
+    [labels]="labels"
+    [theme]="altTheme"
+    [floatingMenus]="altMenus"
+    [(value)]="altValue"
+    (editorReady)="bridge.ready('floating-alt')"
+  />
+</section>

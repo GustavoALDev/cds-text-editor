@@ -255,6 +255,11 @@
     line-height: var(--rte-line-height);
   }
 
+  /* O `display` acima vence o `display: none` do UA para `[popover]:not(:popover-open)`. */
+  .rte-editor .rte-floating:not(:popover-open) {
+    display: none;
+  }
+
   /* Medição transitória do `place.ts`: ocupa o leiaute sem aparecer. */
   .rte-editor .rte-floating--measuring {
     visibility: hidden;

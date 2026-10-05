@@ -304,6 +304,8 @@ export class RteEditor implements FormValueControl<string> {
   );
 
   private readonly floatingWarned = new Set<string>();
+  /** Teclas já consumidas antes do ProseMirror (fase de captura do host). */
+  private readonly consumedEarly = new WeakSet<Event>();
   /** Tipos de menu flutuante ligados (M17), na ordem de prioridade. */
   protected readonly floatingKinds: Signal<readonly RteFloatingMenuKind[]> =
     computed(
@@ -634,7 +636,15 @@ export class RteEditor implements FormValueControl<string> {
       if (focus) this.focus(focus);
     });
 
+    // O ProseMirror consome todo `Escape` do editável (`captureKeyDown`): só
+    // o que já vinha consumido na captura (antes dele) vale como consumido.
+    const markConsumed = (event: Event): void => {
+      if (event.defaultPrevented) this.consumedEarly.add(event);
+    };
+    host.addEventListener('keydown', markConsumed, true);
+
     inject(DestroyRef).onDestroy(() => {
+      host.removeEventListener('keydown', markConsumed, true);
       const editor = untracked(this.instance);
       this.dialogs.dispose();
       this.destroyed = true;
@@ -717,10 +727,16 @@ export class RteEditor implements FormValueControl<string> {
    * um `.rte-floating`, a barra.
    */
   protected onHostKeydown(event: KeyboardEvent): void {
-    if (event.defaultPrevented) return;
     const target = event.target;
     if (!(target instanceof Element)) return;
     const inEditable = this.mount().nativeElement.contains(target);
+    // `Escape` no editável já vem consumido pelo ProseMirror (ver o ouvinte de captura).
+    if (
+      event.key === 'Escape' && inEditable
+        ? this.consumedEarly.has(event)
+        : event.defaultPrevented
+    )
+      return;
     if (event.key === 'Escape') {
       if (inEditable && untracked(this.floatingRef)?.dismiss()) {
         event.preventDefault();

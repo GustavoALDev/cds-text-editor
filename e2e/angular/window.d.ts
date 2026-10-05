@@ -13,7 +13,9 @@ export type RteE2eId =
   | 'toolbar-scroll'
   | 'toolbar-nofeat'
   | 'dialogs'
-  | 'dialogs-api';
+  | 'dialogs-api'
+  | 'floating'
+  | 'floating-alt';
 
 /** `RteToolbarConfig` do `@cds/rte-angular` (sem importar o pacote Angular aqui). */
 export type RteE2eToolbarConfig =
@@ -46,6 +48,11 @@ declare global {
       ): void;
       /** `openDialog(kind)` do editor `id` (G18); o retorno da API. */
       openDialog(id: RteE2eId, kind: string): boolean;
+      setFloatingMenus(id: RteE2eId, config: unknown): void;
+      focusFloatingMenu(id: RteE2eId): boolean;
+      watchFloating(id: RteE2eId): void;
+      floatingMutations(id: RteE2eId): { total: number; style: number };
+      zoneTurns(): number;
       /** `applyRteTheme` num elemento qualquer (referência do N12). */
       applyTheme(
         element: HTMLElement,

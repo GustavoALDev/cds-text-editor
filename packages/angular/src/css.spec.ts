@@ -917,6 +917,17 @@ describe('editor.css: menus flutuantes (spec 05b2b, M18)', () => {
     expect(decls.some((d) => d.prop === 'padding')).toBe(true);
   });
 
+  it('o menu fechado fica fora do leiaute (o display do autor vence o display:none do UA)', () => {
+    const closed = styleRules().filter((r) =>
+      r.selectors.some((s) =>
+        /\.rte-floating:not\(:popover-open\)\s*$/.test(s.trim()),
+      ),
+    );
+    expect(closed.flatMap((r) => declarations(r))).toContainEqual(
+      expect.objectContaining({ prop: 'display', value: 'none' }),
+    );
+  });
+
   it('--measuring esconde sem tirar do leiaute', () => {
     expect(declsEndingWith('.rte-floating--measuring')).toContainEqual(
       expect.objectContaining({ prop: 'visibility', value: 'hidden' }),

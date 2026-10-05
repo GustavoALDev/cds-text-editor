@@ -32,4 +32,8 @@ export const routes: Routes = [
     path: 'dialogs',
     loadComponent: () => import('./pages/dialogs').then((m) => m.DialogsPage),
   },
+  {
+    path: 'floating',
+    loadComponent: () => import('./pages/floating').then((m) => m.FloatingPage),
+  },
 ];
