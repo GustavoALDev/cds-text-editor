@@ -1,8 +1,13 @@
+import { DOCUMENT } from '@angular/common';
 import {
+  afterRenderEffect,
   computed,
+  DestroyRef,
   Directive,
+  ElementRef,
   inject,
   input,
+  NgZone,
   type OnInit,
   type Signal,
 } from '@angular/core';
@@ -17,6 +22,8 @@ import type {
   RteSanitizeErrorLike,
 } from '../types';
 import { missingSanitizerError, renderContent } from './render-content';
+import { restoreContentStyles } from './restore-styles';
+import { createTableScrollers, type RteTableScrollers } from './table-scroller';
 
 /**
  * Exibe HTML do editor no elemento do consumidor (H3), que ganha
@@ -34,6 +41,10 @@ import { missingSanitizerError, renderContent } from './render-content';
  * Esta é a única porta de HTML do pacote (H9): `bypassSecurityTrustHtml` só
  * recebe `prepareRteHtml(renderedHtml())`, e `renderedHtml()` é a saída do
  * sanitizador (ou o HTML `trusted`).
+ *
+ * No navegador, depois de cada inserção (inclusive a da hidratação), os
+ * `style` do conteúdo são reaplicados por CSSOM (H8) e os roladores de tabela
+ * passam a ser observados (H7); nada disso roda no servidor.
  *
  * `<article [rteContent]="post.body" #c="rteContent"></article>`
  */
@@ -57,6 +68,11 @@ export class RteContent implements OnInit {
   private readonly providedLabels = inject(RTE_RENDER_LABELS);
   private readonly domSanitizer = inject(DomSanitizer);
   private readonly fragmentBase = injectFragmentBase();
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly document = inject(DOCUMENT);
+  private readonly ngZone = inject(NgZone);
+  /** `undefined` = ainda não criado; `null` = sem `ResizeObserver`. */
+  private scrollers: RteTableScrollers | null | undefined;
 
   // Memoizado: sanitiza (e avisa, H5) uma vez por troca de HTML ou modo (H18).
   private readonly result = computed(() =>
@@ -82,6 +98,42 @@ export class RteContent implements OnInit {
   protected readonly effectiveLabels: Signal<RteRenderLabels> = computed(() =>
     mergeRenderLabels(this.providedLabels, this.labels()),
   );
+
+  constructor() {
+    // Ganchos de render não rodam no servidor (H7, H8).
+    afterRenderEffect({
+      write: () => {
+        this.safeHtml(); // cada inserção
+        const host = this.host.nativeElement;
+        restoreContentStyles(host);
+        // Criado aqui, e não num `afterNextRender` (que roda depois desta
+        // fase), para a 1ª inserção já ser observada (Ruling 7).
+        if (this.scrollers === undefined)
+          this.scrollers = this.createScrollers(host);
+        this.scrollers?.refresh();
+      },
+    });
+    afterRenderEffect({
+      write: () => {
+        this.effectiveLabels();
+        this.scrollers?.relabel();
+      },
+    });
+    inject(DestroyRef).onDestroy(() => this.scrollers?.destroy());
+  }
+
+  private createScrollers(host: HTMLElement): RteTableScrollers | null {
+    const win = this.document.defaultView;
+    if (!win) return null;
+    // Fora da zona: o *callback* do observador só escreve atributos (H18).
+    return this.ngZone.runOutsideAngular(() =>
+      createTableScrollers(
+        host,
+        win,
+        () => this.effectiveLabels().tableScroller,
+      ),
+    );
+  }
 
   ngOnInit(): void {
     // Falha cedo, já com as entradas lidas (H4, pré-voo 4); o `computed`
