@@ -4,6 +4,9 @@ import { expect, test, type Page } from '@playwright/test';
 import { editorHost, gotoApp, readFixture, waitForEditor } from './helpers/app';
 import { blockThirdParty, gotoRender, renderHost } from './helpers/render';
 
+/** Blocos de texto vazios entre dois parágrafos (o editor mostra uma linha em cada um). */
+const EMPTY_BLOCKS = '<p>a</p><p></p><h3></h3><p>b</p>';
+
 const TABLE_WITH_CAPTION =
   '<table><caption>Legenda</caption><tbody><tr><td><p>a</p></td></tr></tbody></table>';
 
@@ -106,6 +109,59 @@ for (const zone of [false, true]) {
           Math.abs(rendered[key] - edited[key]),
           `${key}: ${rendered[key]} x ${edited[key]}`,
         ).toBeLessThanOrEqual(1);
+    });
+
+    test('parágrafo e título vazios com uma linha de altura, como no editor', async ({
+      page,
+    }) => {
+      // Altura e distância ao bloco anterior de cada bloco (as páginas diferem na posição).
+      const measure = (p: Page, root: string) =>
+        p.evaluate((sel) => {
+          const host = document.querySelector(sel);
+          if (!host) throw new Error(`contêiner ausente: ${sel}`);
+          const blocks = [...host.querySelectorAll(':scope > :is(p, h3)')];
+          return blocks.map((el, i) => {
+            const r = el.getBoundingClientRect();
+            const prev = i ? blocks[i - 1]?.getBoundingClientRect() : null;
+            return { height: r.height, gap: prev ? r.top - prev.bottom : 0 };
+          });
+        }, root);
+
+      await gotoRender(page, '/render', { zone });
+      await page.evaluate(
+        (html) => window.rteE2e.setRenderInput(html),
+        EMPTY_BLOCKS,
+      );
+      const host = renderHost(page, 'render-input');
+      await expect(host.locator('h3')).toHaveCount(1);
+      const rendered = await measure(page, '[data-testid="render-input"]');
+
+      await gotoApp(page, '/content', { zone });
+      await waitForEditor(page, 'content');
+      await page.evaluate(
+        (html) => window.rteE2e.setValue('content', html),
+        EMPTY_BLOCKS,
+      );
+      await expect(editorHost(page, 'content').locator('h3')).toHaveCount(1);
+      const edited = await measure(
+        page,
+        'rte-editor[data-testid="content"] .ProseMirror',
+      );
+
+      expect(rendered).toHaveLength(4);
+      expect(edited).toHaveLength(4);
+      rendered.forEach((r, i) => {
+        const e = edited[i];
+        expect(r.height, `bloco ${i}: altura`).toBeGreaterThan(0);
+        expect(
+          Math.abs(r.height - (e?.height ?? NaN)),
+          `bloco ${i}: altura ${r.height} x ${e?.height}`,
+        ).toBeLessThanOrEqual(1);
+        expect(
+          Math.abs(r.gap - (e?.gap ?? NaN)),
+          `bloco ${i}: distância ${r.gap} x ${e?.gap}`,
+        ).toBeLessThanOrEqual(1);
+      });
     });
 
     test('legenda de tabela (caption)', async ({ page }) => {

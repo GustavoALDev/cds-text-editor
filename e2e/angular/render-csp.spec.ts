@@ -26,6 +26,16 @@ const THIRD_PARTY =
 
 type Violation = { directive: string; blockedURI: string; sample: string };
 
+/** Contagem por `where` (diagnóstico). */
+function count(targets: readonly { directive: string; where: string }[]) {
+  const out: Record<string, number> = {};
+  for (const t of targets) {
+    const key = `${t.directive} ${t.where}`;
+    out[key] = (out[key] ?? 0) + 1;
+  }
+  return out;
+}
+
 /** Violações desde a última leitura, sem as mídias e quadros de terceiros (pré-voo 14). */
 async function takeViolations(page: Page): Promise<Violation[]> {
   await settlePage(page);
@@ -33,13 +43,79 @@ async function takeViolations(page: Page): Promise<Violation[]> {
   return all.filter((v) => !THIRD_PARTY.test(v.blockedURI));
 }
 
+/** Espera o número de violações registradas parar de crescer (entre duas esperas seguidas). */
+async function settleViolations(page: Page): Promise<void> {
+  let last = -1;
+  await expect
+    .poll(async () => {
+      await settlePage(page);
+      const now = await page.evaluate(() => window.__violations.length);
+      const stable = now === last;
+      last = now;
+      return stable;
+    })
+    .toBe(true);
+}
+
+type Target = { directive: string; where: string };
+
+/**
+ * Diagnóstico: para cada violação, o elemento alvo (`tag` e `data-testid` do host mais
+ * próximo); o evento vai ao elemento cujo `style` foi barrado.
+ */
+async function watchTargets(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __cspTargets?: Target[] };
+    if (w.__cspTargets) return;
+    const list: Target[] = (w.__cspTargets = []);
+    document.addEventListener('securitypolicyviolation', (e) => {
+      const el = e.target instanceof Element ? e.target : null;
+      const host = el?.closest('[data-testid]')?.getAttribute('data-testid');
+      list.push({
+        directive: e.effectiveDirective || e.violatedDirective,
+        where: el
+          ? `${host ?? '-'} ${el.localName}`
+          : `#document ${e.sourceFile}:${e.lineNumber}:${e.columnNumber} [${e.sample}]`,
+      });
+    });
+  });
+}
+
+/**
+ * Todo alvo é um elemento de uma exibição `render-*` ou o documento (o Chromium e o WebKit
+ * atribuem ao documento a violação levantada pela própria atribuição de `innerHTML` do
+ * *renderer* do Angular, com `sourceFile` no *bundle* principal, ver `e2e/README.md`).
+ */
+function expectContentTargets(targets: readonly Target[]): void {
+  const styles = targets.filter((t) => t.directive.startsWith('style-src'));
+  expect(
+    styles.filter(
+      (t) => !t.where.startsWith('#document') && !t.where.startsWith('render-'),
+    ),
+  ).toEqual([]);
+}
+
+function takeTargets(page: Page): Promise<Target[]> {
+  return page.evaluate(() =>
+    (
+      (window as unknown as { __cspTargets?: Target[] }).__cspTargets ?? []
+    ).splice(0),
+  );
+}
+
 /** Elementos com `style` dentro do seletor. */
 function styledCount(page: Page, selector: string): Promise<number> {
   return page.locator(`${selector} [style]`).count();
 }
 
-/** Só o atributo `style` do conteúdo, no máximo `2 × styled`, e nenhuma de script. */
-function expectOnlyContentStyles(found: Violation[], styled: number): void {
+/**
+ * Só o atributo `style` do conteúdo, entre `min` e `2 × styled` violações, e nenhuma de script.
+ */
+function expectOnlyContentStyles(
+  found: Violation[],
+  styled: number,
+  min: number,
+): void {
   expect(found.filter((v) => v.directive.startsWith('script-src'))).toEqual([]);
   expect(
     found.filter(
@@ -50,6 +126,7 @@ function expectOnlyContentStyles(found: Violation[], styled: number): void {
         ),
     ),
   ).toEqual([]);
+  expect(found.length).toBeGreaterThanOrEqual(min);
   expect(found.length).toBeLessThanOrEqual(2 * styled);
 }
 
@@ -64,22 +141,28 @@ for (const zone of [false, true]) {
     test('render: só o style do conteúdo, na carga e depois de trocar o HTML', async ({
       page,
     }, testInfo) => {
+      await watchTargets(page);
       await gotoRender(page, '/render', { zone });
       const main = renderHost(page, 'render-main');
       await expect(main.locator('#rt-subtitulo')).toHaveCSS(
         'text-align',
         'center',
       );
-      // Na rota: o fixture, a tabela larga e a entrada livre (vazia); `render-keep` sem `style`.
+      // Na rota: o fixture e a tabela larga; a entrada livre (vazia) e `render-keep` sem `style`.
       const styled = await styledCount(page, '.rte-content');
-      expect(styled).toBeGreaterThanOrEqual(
-        await styledCount(page, '[data-testid="render-main"]'),
-      );
+      await settleViolations(page);
       const load = await takeViolations(page);
-      expectOnlyContentStyles(load, styled);
+      const loadTargets = await takeTargets(page);
+      expectContentTargets(loadTargets);
+      // Piso = controle positivo (cada `style` do HTML do servidor é barrado ao menos uma vez);
+      // teto = análise do servidor + re-inserção da hidratação (H10).
+      expectOnlyContentStyles(load, styled, styled);
       const note = `${testInfo.project.name} ${build}: ${load.length} violações de style na carga (${styled} elementos com style)`;
       testInfo.annotations.push({ type: 'L4', description: note });
       console.log(`[L4] ${note}`);
+      console.log(
+        `[L4] alvos da carga: ${JSON.stringify(count(loadTargets.filter((t) => t.directive.startsWith('style-src'))))}`,
+      );
 
       await page.evaluate(
         (html) => window.rteE2e.setRenderInput(html),
@@ -102,14 +185,18 @@ for (const zone of [false, true]) {
         ),
       ).toBeLessThanOrEqual(1);
       await expect(input.locator('iframe')).toHaveCSS('aspect-ratio', '9 / 16');
+      await settleViolations(page);
       const swap = await takeViolations(page);
+      const swapTargets = await takeTargets(page);
+      expectContentTargets(swapTargets);
       console.log(
-        `[L4] ${testInfo.project.name} ${build}: ${swap.length} violações de style na troca`,
+        `[L4] ${testInfo.project.name} ${build}: ${swap.length} violações de style na troca; alvos ${JSON.stringify(count(swapTargets))}`,
       );
-      expectOnlyContentStyles(
-        swap,
-        await styledCount(page, '[data-testid="render-input"]'),
+      const swapStyled = await styledCount(
+        page,
+        '[data-testid="render-input"]',
       );
+      expectOnlyContentStyles(swap, swapStyled, swapStyled);
     });
 
     test('render-tt: conteúdo exibido e, com Trusted Types, nenhuma violação e a política imposta', async ({

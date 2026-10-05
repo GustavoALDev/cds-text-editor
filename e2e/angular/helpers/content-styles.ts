@@ -93,6 +93,8 @@ export interface ContentBlock {
   tag: string;
   width: number;
   height: number;
+  /** Distância do topo do bloco ao topo do contêiner (margens e colapso entre blocos). */
+  top: number;
   /** Tabela mais larga que o rolador (a altura dela fica fora da H20). */
   wide?: boolean;
   /**
@@ -162,9 +164,11 @@ export function collectBlocks(
       tag: string;
       width: number;
       height: number;
+      top: number;
       wide?: boolean;
       empty?: boolean;
     }[] = [];
+    const rootTop = root.getBoundingClientRect().top;
     for (const child of root.children) {
       if ([...child.classList].some((c) => c.startsWith('ProseMirror-')))
         continue;
@@ -178,6 +182,7 @@ export function collectBlocks(
         tag: el.localName,
         width: rect.width,
         height: rect.height,
+        top: rect.top - rootTop,
       };
       if (wrapper) block.wide = wrapper.scrollWidth > wrapper.clientWidth;
       if (

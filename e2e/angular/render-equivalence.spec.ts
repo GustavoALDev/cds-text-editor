@@ -9,10 +9,9 @@
 //   conta por estilo e por altura do `ul`; o `span.rte-task__check` × `label > input` não);
 // - o realce do código (H15): os `span.hljs-*` do editor não são comparados (o `pre` sim);
 // - a altura das tabelas largas (rolador): o fixture não tem nenhuma, e `collectBlocks` marca
-//   `wide` para o caso de passar a ter;
-// - a altura do título vazio (`h3#rt-section`): no editor o ProseMirror põe um
-//   `br.ProseMirror-trailingBreak` para o cursor caber (uma linha de altura); na página o
-//   título vazio não tem altura, como numa página estática (ruling da Tarefa 10; a largura conta).
+//   `wide` para o caso de passar a ter.
+// O título vazio (`h3#rt-section`) entra: o `content.css` dá uma linha a `p`/`h1`–`h6` vazios
+// (`:empty`), a mesma altura do `br.ProseMirror-trailingBreak` do editor.
 // Ruling 9 (spec 06): as tabelas **entram** na geometria (o pré-voo 13 as tirava).
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
@@ -146,7 +145,7 @@ for (const zone of [false, true]) {
           .toEqual(editor.extra[selector]);
       }
       const values = (selector: string, prop: string) =>
-        render.extra[selector]!.map((s) => s[prop]);
+        (render.extra[selector] ?? []).map((s) => s[prop]);
       expect(values('h2', 'text-align')).toEqual(['left', 'justify']);
       expect(values('h3', 'text-align')).toContain('center');
       expect(values('h4', 'text-align')).toEqual(['right']);
@@ -163,33 +162,31 @@ for (const zone of [false, true]) {
         '16 / 9',
       ]);
 
-      // Geometria de cada bloco (±1 px); a altura de tabela larga fica fora (H20).
+      // Geometria de cada bloco (±1 px): largura, altura e distância ao topo do contêiner; a
+      // altura de tabela larga fica fora (H20).
       expect(render.blocks.map((b) => b.tag)).toEqual(
         editor.blocks.map((b) => b.tag),
       );
-      editor.blocks.forEach((e, i) => {
-        const r = render.blocks[i]!;
-        const where = `bloco ${i} (${e.tag})`;
-        expect
-          .soft(
-            Math.abs(r.width - e.width),
-            `${where}: largura ${e.width} × ${r.width}`,
-          )
-          .toBeLessThanOrEqual(1);
-        if (e.wide || r.wide) return;
-        if (e.empty && r.empty) return;
-        expect
-          .soft(
-            Math.abs(r.height - e.height),
-            `${where}: altura ${e.height} × ${r.height}`,
-          )
-          .toBeLessThanOrEqual(1);
+      render.blocks.forEach((r, i) => {
+        const e = editor.blocks[i];
+        if (!e) return;
+        const where = `bloco ${i} (${e.tag}${e.empty ? ', vazio' : ''})`;
+        const near = (prop: 'width' | 'height' | 'top', label: string) =>
+          expect
+            .soft(
+              Math.abs(r[prop] - e[prop]),
+              `${where}: ${label} ${e[prop]} × ${r[prop]}`,
+            )
+            .toBeLessThanOrEqual(1);
+        near('width', 'largura');
+        near('top', 'topo');
+        if (!e.wide && !r.wide) near('height', 'altura');
       });
       expect(render.blocks.some((b) => b.tag === 'table' && !b.wide)).toBe(
         true,
       );
-      // A exclusão do vazio vale só para o `h3#rt-section` do fixture.
-      expect(editor.blocks.filter((b) => b.empty).map((b) => b.tag)).toEqual([
+      // O fixture tem um título vazio, e ele está na geometria.
+      expect(render.blocks.filter((b) => b.empty).map((b) => b.tag)).toEqual([
         'h3',
       ]);
     });

@@ -206,6 +206,20 @@ describe('content.css (R11)', () => {
     );
   });
 
+  it('parágrafo e títulos vazios têm uma linha de altura (como no editor)', () => {
+    // Na edição o ProseMirror mantém um `br` no bloco vazio (`:empty` não casa); na página o
+    // bloco vazio colapsaria a 0 px (spec 06, H20).
+    const rule = styleRules().find((r) =>
+      r.selectors.includes('.rte-content :is(p, h1, h2, h3, h4, h5, h6):empty'),
+    );
+    expect(rule).toBeDefined();
+    const decls: Record<string, string> = {};
+    rule?.walkDecls((d) => {
+      decls[d.prop] = d.value;
+    });
+    expect(decls).toEqual({ 'min-block-size': '1lh' });
+  });
+
   it.each([
     ['span', RTE_TEXT_COLORS, '--rte-content-color'],
     ['mark', RTE_HIGHLIGHT_COLORS, '--rte-content-highlight'],

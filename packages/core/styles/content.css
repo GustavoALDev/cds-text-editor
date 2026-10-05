@@ -54,6 +54,14 @@
     font-size: 1.1em;
   }
 
+  /*
+   * Bloco de texto vazio com uma linha de altura, como na edição (o ProseMirror mantém um `br` no
+   * bloco vazio, então `:empty` só casa fora do editor): sem isso a página o colapsaria a 0 px.
+   */
+  .rte-content :is(p, h1, h2, h3, h4, h5, h6):empty {
+    min-block-size: 1lh;
+  }
+
   .rte-content ul,
   .rte-content ol {
     margin: 0 0 1em;
