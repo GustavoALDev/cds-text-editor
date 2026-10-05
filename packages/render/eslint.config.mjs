@@ -23,7 +23,7 @@ const SANITIZER_PATH = {
 const CORE_HTML_PATH = {
   name: '@cds/rte-core/html',
   message:
-    'Só src/toc/** importa @cds/rte-core/html; o RteContent fica sem htmlparser2 (spec 06, R1).',
+    'Só o entry /toc (toc/src/**) importa @cds/rte-core/html; o RteContent fica sem htmlparser2 (spec 06, R1, Ruling 11).',
 };
 
 const D25_SELECTORS = [
@@ -124,7 +124,7 @@ export default [
           ignoredDependencies: [
             // `@angular/common` e `@angular/platform-browser` são peers por
             // H17 (a faixa de versão do Angular; `DomSanitizer` vive no
-            // segundo) e `@cds/rte-core` entra com o `src/toc/`: declarados
+            // segundo) e `@cds/rte-core` entra com o entry `/toc`: declarados
             // antes de serem importados.
             '@angular/common',
             '@angular/platform-browser',
@@ -215,8 +215,8 @@ export default [
     },
   },
   {
-    // R1: só `src/toc/**` importa `@cds/rte-core/html`.
-    files: ['**/src/toc/**/*.ts'],
+    // R1: só o entry `/toc` (`toc/src/**`) importa `@cds/rte-core/html`.
+    files: ['**/toc/src/**/*.ts'],
     ignores: NOT_PUBLISHED,
     rules: {
       '@typescript-eslint/no-restricted-imports': [

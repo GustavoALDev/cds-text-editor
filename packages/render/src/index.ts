@@ -8,3 +8,6 @@ export type {
   RteRenderOptions,
   RteSanitizeErrorLike,
 } from './types';
+// Internos para o entry `/toc` (Ruling 11); não fazem parte da API.
+export { injectFragmentBase as ɵinjectFragmentBase } from './fragment-base';
+export { mergeRenderLabels as ɵmergeRenderLabels } from './labels';

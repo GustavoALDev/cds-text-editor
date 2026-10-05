@@ -7,6 +7,8 @@ import type {
   RteRenderOptions,
   RteSanitizeErrorLike,
 } from '@cds/rte-render';
+import * as toc from '@cds/rte-render/toc';
+import type { RteTocEntry } from '@cds/rte-render/toc';
 import * as i18n from '@cds/rte-render/i18n';
 import { describe, expect, it } from 'vitest';
 
@@ -18,8 +20,14 @@ describe('@cds/rte-render', () => {
       'RTE_RENDER_LABELS_EN',
       'RteContent',
       'provideRteRender',
+      'ɵinjectFragmentBase',
+      'ɵmergeRenderLabels',
     ]);
     expect(api.RENDER_VERSION).toBe('0.0.0');
+  });
+
+  it('o /toc exporta só o RteToc (Ruling 11)', () => {
+    expect(Object.keys(toc)).toEqual(['RteToc']);
   });
 
   it('o /i18n exporta os rótulos pt-BR e es', () => {
@@ -43,11 +51,13 @@ describe('@cds/rte-render', () => {
       limit: 1,
       message: 'm',
     };
-    expect([mode, labels.toc, options.fragmentLinks, error.code]).toEqual([
-      'trusted',
-      'a',
-      'keep',
-      'max-depth',
-    ]);
+    const entry: RteTocEntry = { id: 'rt-a', text: 'A', level: 2 };
+    expect([
+      mode,
+      labels.toc,
+      options.fragmentLinks,
+      error.code,
+      entry.id,
+    ]).toEqual(['trusted', 'a', 'keep', 'max-depth', 'rt-a']);
   });
 });

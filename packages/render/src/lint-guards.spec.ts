@@ -10,7 +10,7 @@ const SRC_FILE = 'packages/render/src/__guard__.ts';
 const SPEC_FILE = 'packages/render/src/__guard__.spec.ts';
 const CONTENT_FILE = 'packages/render/src/content/rte-content.ts';
 const CONTENT_OTHER = 'packages/render/src/content/x.ts';
-const TOC_FILE = 'packages/render/src/toc/x.ts';
+const TOC_FILE = 'packages/render/toc/src/x.ts';
 
 const eslint = new ESLint({
   cwd: workspacePath('.'),
@@ -201,7 +201,7 @@ describe('guardas por lint (spec 06, H19)', () => {
     ).not.toContain(TS_IMPORTS);
   });
 
-  it('@cds/rte-core/html é permitido em src/toc/ e barrado em src/content/', async () => {
+  it('@cds/rte-core/html é permitido no entry /toc e barrado em src/content/', async () => {
     expect(await ruleIds(EXTRACT_TOC, TOC_FILE)).not.toContain(TS_IMPORTS);
     expect(await ruleIds(EXTRACT_TOC, CONTENT_OTHER)).toContain(TS_IMPORTS);
     expect(await ruleIds("import 'zone.js';\n", TOC_FILE)).toContain(

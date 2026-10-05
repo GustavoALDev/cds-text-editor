@@ -34,7 +34,8 @@
         "./packages/angular/validators/src/index.ts"
       ],
       "@cds/rte-render": ["./packages/render/src/index.ts"],
-      "@cds/rte-render/i18n": ["./packages/render/i18n/src/index.ts"]
+      "@cds/rte-render/i18n": ["./packages/render/i18n/src/index.ts"],
+      "@cds/rte-render/toc": ["./packages/render/toc/src/index.ts"]
     }
   }
 }
