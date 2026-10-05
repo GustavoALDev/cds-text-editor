@@ -49,8 +49,15 @@ export async function blockThirdParty(context: BrowserContext): Promise<void> {
 
 /** Resultado do pré-voo da H10: identidade dos nós do servidor depois da hidratação. */
 export interface H10Measure {
-  /** `===` entre o nó criado pelo *parser* e o atual (primeiro `h2`, `iframe`, rolador). */
-  sameNodes: { h2: boolean; iframe: boolean; scroller: boolean };
+  /**
+   * `===` entre o nó criado pelo *parser* e o atual (primeiro `h2`, `iframe`, rolador);
+   * `null` = o *parser* não chegou a criá-lo (medida inválida, não "nó novo").
+   */
+  sameNodes: {
+    h2: boolean | null;
+    iframe: boolean | null;
+    scroller: boolean | null;
+  };
   /** `iframe` que entraram em `render-main` além dos do *parser* (re-inserção). */
   iframeReloads: number;
   /** Eventos `load` de `iframe` em `render-main` (informativo: `loading="lazy"` e CSP). */
@@ -98,13 +105,13 @@ export function measureH10(page: Page): Promise<H10Measure> {
     const s = window.__h10!;
     const root = document.querySelector('[data-testid="render-main"]')!;
     const iframes = root.querySelectorAll('iframe').length;
+    const same = (server: Element | null, selector: string) =>
+      server === null ? null : server === root.querySelector(selector);
     return {
       sameNodes: {
-        h2: s.h2 !== null && s.h2 === root.querySelector('h2'),
-        iframe: s.iframe !== null && s.iframe === root.querySelector('iframe'),
-        scroller:
-          s.scroller !== null &&
-          s.scroller === root.querySelector('.rte-table-scroll'),
+        h2: same(s.h2, 'h2'),
+        iframe: same(s.iframe, 'iframe'),
+        scroller: same(s.scroller, '.rte-table-scroll'),
       },
       iframeReloads: s.iframes.size - iframes,
       iframeLoads: s.iframeLoads,

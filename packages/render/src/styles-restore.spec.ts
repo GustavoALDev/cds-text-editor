@@ -182,15 +182,10 @@ describe('restoreContentStyles com o HTML preparado (Firefox sob CSP)', () => {
     });
   }
 
-  function build(html: string, styled: string[]): HTMLElement {
-    // A árvore exibida, com `style=""` como o Firefox a deixa.
+  /** A árvore exibida: o próprio HTML analisado (o Gecko a deixa com `style=""`). */
+  function parse(html: string): HTMLElement {
     const root = document.createElement('div');
-    for (const tag of styled) {
-      const child = document.createElement(tag);
-      child.setAttribute('style', '');
-      root.append(child);
-    }
-    void html;
+    root.innerHTML = html;
     return root;
   }
 
@@ -199,7 +194,7 @@ describe('restoreContentStyles com o HTML preparado (Firefox sob CSP)', () => {
       '<!-- <p style="color: red"> --><h2 style="text-align: right">t</h2>' +
       '<p>x</p><p style="text-align: justify">j&amp;</p>' +
       '<table><colgroup><col style="width: 200px"></colgroup></table>';
-    const root = build(html, ['h2', 'p', 'col']);
+    const root = parse(html);
     blankStyleAttributes();
     const calls = spyCssText();
     expect(restoreContentStyles(root, html)).toBe(3);
@@ -212,11 +207,53 @@ describe('restoreContentStyles com o HTML preparado (Firefox sob CSP)', () => {
 
   it('entidades no valor do atributo são decodificadas', () => {
     const html = '<span style="font-family: &quot;A&amp;B&quot;">a</span>';
-    const root = build(html, ['span']);
+    const root = parse(html);
     blankStyleAttributes();
     const calls = spyCssText();
     restoreContentStyles(root, html);
     expect(calls.map((c) => c.value)).toEqual(['font-family: "A&B"']);
+  });
+
+  it('style dentro do valor de outro atributo não conta: vale o par chamado style', () => {
+    const html =
+      '<iframe title="x style=" data-a="y style=&quot;color: red&quot;" style="aspect-ratio: 9 / 16"></iframe>';
+    const root = parse(html);
+    blankStyleAttributes();
+    const calls = spyCssText();
+    expect(restoreContentStyles(root, html)).toBe(1);
+    expect(calls.map((c) => c.value)).toEqual(['aspect-ratio: 9 / 16']);
+  });
+
+  it('conteúdo de elementos raw text e comentários não são tags', () => {
+    const html =
+      '<textarea><p style="color: red">falso</p></textarea>' +
+      '<!-- <h2 style="color: blue"> --><p style="text-align: center">a</p>';
+    const root = parse(html);
+    blankStyleAttributes();
+    const calls = spyCssText();
+    expect(restoreContentStyles(root, html)).toBe(1);
+    expect(calls.map((c) => c.value)).toEqual(['text-align: center']);
+  });
+
+  it('reordenação do parser (foster parenting) com a mesma sequência de tags → atributo, sem troca', () => {
+    // O span B é tirado da tabela e posto antes dela: no DOM vem antes do A.
+    const html =
+      '<table><tbody><tr><td><span style="color: red">A</span></td></tr></tbody>' +
+      '<span style="color: blue">B</span></table>';
+    const root = parse(html);
+    const spans = [...root.querySelectorAll('span')];
+    expect(spans.map((e) => e.textContent)).toEqual(['B', 'A']);
+    const calls = spyCssText();
+    restoreContentStyles(root, html);
+    expect(
+      calls.map((c) => [
+        spans.find((e) => e.style === c.target)!.textContent,
+        c.value,
+      ]),
+    ).toEqual([
+      ['B', 'color: blue'],
+      ['A', 'color: red'],
+    ]);
   });
 
   it('tags fora de ordem ou em número diferente → valores do próprio atributo', () => {
