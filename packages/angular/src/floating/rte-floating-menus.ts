@@ -11,6 +11,7 @@ import {
   ElementRef,
   inject,
   input,
+  linkedSignal,
   NgZone,
   output,
   signal,
@@ -22,12 +23,12 @@ import {
 } from '@angular/core';
 import type { RteLinkPolicy } from '@cds/rte-core';
 import type { Editor } from '@tiptap/core';
-import { NodeSelection, type Transaction } from '@tiptap/pm/state';
+import type { Transaction } from '@tiptap/pm/state';
 import type { RteDialogKind } from '../dialogs/types';
 import type { RteFloatingMenuLabels, RteToolbarLabels } from '../labels/types';
 import { RTE_ICONS, type RteIconName } from '../toolbar/icons';
 import type { RteToolbarItemId } from '../toolbar/items';
-import { RteMenu } from '../toolbar/menu';
+import { RteMenu, RteMenuTrigger } from '../toolbar/menu';
 import { RteRovingFocus, RteRovingItem } from '../toolbar/roving-focus';
 import {
   detectPlatform,
@@ -37,6 +38,19 @@ import {
 } from '../toolbar/shortcuts';
 import type { RteToolbarState } from '../toolbar/state';
 import { clipAncestors } from './anchor';
+import {
+  alignImage,
+  createFloatingActions,
+  imageAlignAt,
+  linkHrefAt,
+  readTableStates,
+  removeImage,
+  removeLinkAt,
+  RTE_FLOATING_IMAGE_ALIGNS,
+  RTE_FLOATING_TABLE_MORE,
+  RTE_FLOATING_TABLE_OPS,
+  RTE_FLOATING_TEXT_MARKS,
+} from './commands';
 import { bindFloatingListeners } from './listeners';
 import { placeFloatingMenu, RTE_FLOATING_MEASURING } from './place';
 import type { RteFloatingMenuKind } from './types';
@@ -49,20 +63,6 @@ import {
   type RteFloatingIdentity,
 } from './visibility';
 import { RteViewportWatch } from './viewport-watch';
-
-const TEXT_MARKS = ['bold', 'italic', 'underline', 'strike', 'code'] as const;
-const TABLE_OPS = [
-  'addRowAfter',
-  'addColumnAfter',
-  'deleteRow',
-  'deleteColumn',
-] as const;
-const IMAGE_ALIGNS = [
-  ['left', 'imageAlignLeft', 'alignLeft'],
-  ['center', 'imageAlignCenter', 'alignCenter'],
-  ['right', 'imageAlignRight', 'alignRight'],
-  ['full', 'imageAlignFull', 'imageAlignFull'],
-] as const;
 
 function sameContext(
   a: RteFloatingContext | null,
@@ -83,7 +83,13 @@ function sameContext(
   templateUrl: './rte-floating-menus.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
-  imports: [RteRovingFocus, RteRovingItem, NgTemplateOutlet],
+  imports: [
+    RteRovingFocus,
+    RteRovingItem,
+    RteMenu,
+    RteMenuTrigger,
+    NgTemplateOutlet,
+  ],
 })
 export class RteFloatingMenus {
   readonly editor = input.required<Editor>();
@@ -110,9 +116,18 @@ export class RteFloatingMenus {
   private readonly rovings = viewChildren('floating', { read: RteRovingFocus });
   private readonly menus = viewChildren(RteMenu);
 
-  protected readonly textMarks = TEXT_MARKS;
-  protected readonly tableOps = TABLE_OPS;
-  protected readonly imageAligns = IMAGE_ALIGNS;
+  protected readonly textMarks = RTE_FLOATING_TEXT_MARKS;
+  protected readonly tableOpIds = RTE_FLOATING_TABLE_OPS;
+  protected readonly tableMoreIds = RTE_FLOATING_TABLE_MORE;
+  protected readonly imageAligns = RTE_FLOATING_IMAGE_ALIGNS;
+  protected readonly commands = { removeLinkAt, alignImage, removeImage };
+  /** Cliques dos itens (M13, M14, M16): só com o editor interativo. */
+  protected readonly act = createFloatingActions({
+    editor: () => untracked(this.editor),
+    enabled: () => untracked(this.enabled),
+    state: () => untracked(this.state),
+    dialog: (kind) => this.dialog.emit(kind),
+  });
   protected readonly platform = signal<RtePlatform>('other');
 
   private readonly focusInMenu = signal(false);
@@ -156,11 +171,39 @@ export class RteFloatingMenus {
   /** Alinhamento da imagem selecionada (`aria-pressed` do menu de imagem). */
   protected readonly imageAlign = computed(() => {
     this.version()();
-    const { selection } = this.editor().state;
-    return selection instanceof NodeSelection &&
-      selection.node.type.name === 'rtImage'
-      ? String(selection.node.attrs['align'] ?? '')
-      : null;
+    return imageAlignAt(this.editor());
+  });
+
+  /**
+   * Endereço revalidado do link (M13), lido só com o menu de link visível.
+   * Oculto, mantém o último valor: o `<a>` não sai do DOM antes de `hide()`
+   * tirar o foco dele (M11).
+   */
+  protected readonly href = linkedSignal<
+    string | null | undefined,
+    string | null
+  >({
+    source: () => {
+      if (this.visibleKind() !== 'link') return undefined;
+      this.version()();
+      return linkHrefAt(this.editor(), this.linkPolicy());
+    },
+    computation: (next, prev) =>
+      next === undefined ? (prev?.value ?? null) : next,
+  });
+
+  /** Os quatro botões de tabela, ensaiados só com o menu visível (M16). */
+  protected readonly tableOps = computed(() => {
+    if (this.visibleKind() !== 'table') return null;
+    this.version()();
+    return readTableStates(this.editor(), RTE_FLOATING_TABLE_OPS);
+  });
+
+  /** Entradas do submenu "Mais", ensaiadas só com ele aberto (M16). */
+  protected readonly moreOps = computed(() => {
+    if (!this.menus()[0]?.isOpen()) return null;
+    this.version()();
+    return readTableStates(this.editor(), RTE_FLOATING_TABLE_MORE);
   });
 
   private shown: HTMLElement | null = null;
@@ -271,12 +314,23 @@ export class RteFloatingMenus {
     return RTE_ICONS[name];
   }
 
-  protected title(label: string, target: RteShortcutTarget | null): string {
-    return shortcutTitle(label, target, this.platform());
+  /** Dica com atalho (U11); `limited` acrescenta o motivo da guarda (M16). */
+  protected title(
+    label: string,
+    target: RteShortcutTarget | null,
+    limited = false,
+  ): string {
+    const base = shortcutTitle(label, target, this.platform());
+    return limited ? `${base} — ${this.toolbarLabels().spanLimit}` : base;
   }
 
   protected markLabel(id: RteToolbarItemId): string {
-    return this.toolbarLabels()[id as (typeof TEXT_MARKS)[number]];
+    return this.toolbarLabels()[id as (typeof RTE_FLOATING_TEXT_MARKS)[number]];
+  }
+
+  /** `Tab` saiu do submenu: o foco volta ao editável. */
+  protected tabOut(): void {
+    this.run(() => this.focusEditable());
   }
 
   /** Identidade dispensada mapeada; anulada quando o contexto muda (M6). */

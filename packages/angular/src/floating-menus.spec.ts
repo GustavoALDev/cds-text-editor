@@ -10,8 +10,10 @@ import { By } from '@angular/platform-browser';
 import { form, FormField } from '@angular/forms/signals';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import { RteEditor, type RteFloatingMenusConfig } from '@cds/rte-angular';
+import { getRteHtml } from '@cds/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
-import { NodeSelection } from '@tiptap/pm/state';
+import { EditorState, NodeSelection } from '@tiptap/pm/state';
+import { CellSelection } from '@tiptap/pm/tables';
 import {
   afterEach,
   beforeEach,
@@ -21,16 +23,23 @@ import {
   vi,
   type MockInstance,
 } from 'vitest';
+import { RteDialogController } from './dialogs/controller';
+import { floatingHref } from './floating/commands';
 import { RteFloatingMenus } from './floating/rte-floating-menus';
-import { installDialogShim, waitForDialog } from './testing-support/dialog';
+import {
+  dialogField,
+  installDialogShim,
+  waitForDialog,
+} from './testing-support/dialog';
 import { selectText } from './testing-support/editors';
 import { fakeCoords, installGeometry } from './testing-support/geometry';
 import { installPopoverShim, isPopoverOpen } from './testing-support/popover';
 import { settle } from './testing-support/render';
+import { RteMenu } from './toolbar/menu';
 import { positionFloating, type RteRect } from './toolbar/position';
 
-// Spec 05b2b, Tarefa 5: exibição, posição aplicada e foco dos menus
-// flutuantes (R2, R4, R5, R6, R10, R11; M11).
+// Spec 05b2b, Tarefas 5 e 6: exibição, posição aplicada, foco e comandos dos
+// menus flutuantes (R2, R4, R5, R6, R8, R9, R10, R11; M11, M13, M14).
 
 const DOC =
   '<p>Texto <strong>negrito</strong> e <a href="https://example.com/">exemplo</a> fim</p>' +
@@ -67,6 +76,7 @@ const coords = (pos: number): RteRect => ({
   imports: [RteEditor],
   template: `<rte-editor
     [(value)]="value"
+    (valueChange)="changes = changes + 1"
     [options]="options"
     toolbar="full"
     [disabled]="disabled()"
@@ -89,6 +99,7 @@ class Host {
   blurs = 0;
   focuses = 0;
   touches = 0;
+  changes = 0;
   readonly cmp = viewChild.required(RteEditor);
 }
 
@@ -812,5 +823,383 @@ describe('destruição (Review Focus 2)', () => {
     expect(cancel).toHaveBeenCalled();
     await nextFrame();
     expect(error).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tarefa 6: comandos (R8), link (R9) e submenu × diálogo (R10).
+
+const td = (text: string, attrs = '') => `<td${attrs}><p>${text}</p></td>`;
+const tr = (...cells: string[]) => `<tr>${cells.join('')}</tr>`;
+const table = (...rows: string[]) =>
+  `<table><tbody>${rows.join('')}</tbody></table>`;
+const EMPTY_TD = '<td><p></p></td>';
+const TABLE = table(tr(td('a'), td('b')), tr(td('c'), td('d')));
+const LINK_DOC = '<p><a href="https://x.com/">abc</a></p>';
+const IMAGE_DOC =
+  '<p>x</p><figure class="rt-figure rt-figure--center"><img src="/a.png" alt="A"></figure>';
+
+/** Botão (ou item de menu) pelo nome acessível ou pelo texto. */
+function item(root: ParentNode, name: string): HTMLElement {
+  const found = [
+    ...root.querySelectorAll<HTMLElement>('button, [role^="menuitem"]'),
+  ].find(
+    (b) =>
+      b.getAttribute('aria-label') === name || b.textContent?.trim() === name,
+  );
+  if (!found) throw new Error(`item "${name}" ausente`);
+  return found;
+}
+
+function selectFirstTwoCells(editor: Editor): void {
+  const cells: number[] = [];
+  editor.state.doc.descendants((node, pos) => {
+    if (node.type.name === 'tableCell') cells.push(pos);
+  });
+  editor.view.dispatch(
+    editor.state.tr.setSelection(
+      CellSelection.create(editor.state.doc, cells[0] ?? 0, cells[1] ?? 0),
+    ),
+  );
+}
+
+type Setup = Awaited<ReturnType<typeof setup>>;
+
+interface CommandCase {
+  name: string;
+  doc: string;
+  select: (editor: Editor) => void;
+  kind: string;
+  /** Itens clicados em sequência (o botão do submenu antes da entrada). */
+  click: readonly string[];
+  expected: string;
+  /** Conferências depois do comando, antes do `undo`. */
+  after?: (s: Setup) => void;
+}
+
+/** Cursor vazio no deslocamento `offset` do bloco de texto. */
+function expectCursorAt(s: Setup, offset: number): void {
+  const { from, to } = s.editor.state.selection;
+  expect(from).toBe(to);
+  expect(s.editor.state.doc.resolve(from).parentOffset).toBe(offset);
+}
+
+const CASES: readonly CommandCase[] = [
+  ...(
+    [
+      ['Bold', '<p>a<strong>b</strong>c</p>'],
+      ['Italic', '<p>a<em>b</em>c</p>'],
+      ['Underline', '<p>a<u>b</u>c</p>'],
+      ['Strikethrough', '<p>a<s>b</s>c</p>'],
+      ['Inline code', '<p>a<code>b</code>c</p>'],
+    ] as const
+  ).map(([name, expected]): CommandCase => ({
+    name,
+    doc: '<p>abc</p>',
+    select: (e) => selectText(e, 'abc', 1, 2),
+    kind: 'text',
+    click: [name],
+    expected,
+  })),
+  {
+    name: 'Remove link (cursor em b)',
+    doc: LINK_DOC,
+    select: (e) => selectText(e, 'abc', 1),
+    kind: 'link',
+    click: ['Remove link'],
+    expected: '<p>abc</p>',
+    after: (s) => expectCursorAt(s, 1),
+  },
+  {
+    name: 'Remove link (cursor na borda final)',
+    doc: LINK_DOC,
+    select: (e) => selectText(e, 'abc', 3),
+    kind: 'link',
+    click: ['Remove link'],
+    expected: '<p>abc</p>',
+    after: (s) => expectCursorAt(s, 3),
+  },
+  {
+    name: 'Align left',
+    doc: IMAGE_DOC,
+    select: (e) => selectNode(e, 'rtImage'),
+    kind: 'image',
+    click: ['Align left'],
+    expected:
+      '<p>x</p><figure class="rt-figure rt-figure--left"><img src="/a.png" alt="A" loading="lazy" decoding="async"></figure>',
+    after: ({ el }) => {
+      const pressed = [
+        ...menu(el, 'image').querySelectorAll('[aria-pressed="true"]'),
+      ].map((b) => b.getAttribute('aria-label'));
+      expect(openKinds(el)).toEqual(['image']);
+      expect(pressed).toEqual(['Align left']);
+    },
+  },
+  {
+    name: 'Full width',
+    doc: IMAGE_DOC,
+    select: (e) => selectNode(e, 'rtImage'),
+    kind: 'image',
+    click: ['Full width'],
+    expected:
+      '<p>x</p><figure class="rt-figure rt-figure--full"><img src="/a.png" alt="A" loading="lazy" decoding="async"></figure>',
+  },
+  {
+    name: 'Remove image',
+    doc: IMAGE_DOC,
+    select: (e) => selectNode(e, 'rtImage'),
+    kind: 'image',
+    click: ['Remove image'],
+    expected: '<p>x</p>',
+  },
+  {
+    name: 'Insert row below',
+    doc: TABLE,
+    select: (e) => selectText(e, 'a', 1),
+    kind: 'table',
+    click: ['Insert row below'],
+    expected: table(
+      tr(td('a'), td('b')),
+      tr(EMPTY_TD, EMPTY_TD),
+      tr(td('c'), td('d')),
+    ),
+  },
+  {
+    name: 'Insert column after',
+    doc: TABLE,
+    select: (e) => selectText(e, 'a', 1),
+    kind: 'table',
+    click: ['Insert column after'],
+    expected: table(
+      tr(td('a'), EMPTY_TD, td('b')),
+      tr(td('c'), EMPTY_TD, td('d')),
+    ),
+  },
+  {
+    name: 'Delete row',
+    doc: TABLE,
+    select: (e) => selectText(e, 'a', 1),
+    kind: 'table',
+    click: ['Delete row'],
+    expected: table(tr(td('c'), td('d'))),
+  },
+  {
+    name: 'Delete column',
+    doc: TABLE,
+    select: (e) => selectText(e, 'a', 1),
+    kind: 'table',
+    click: ['Delete column'],
+    expected: table(tr(td('b')), tr(td('d'))),
+  },
+  {
+    name: 'More → Delete table',
+    doc: `${TABLE}<p>z</p>`,
+    select: (e) => selectText(e, 'a', 1),
+    kind: 'table',
+    click: ['More table operations', 'Delete table'],
+    expected: '<p>z</p>',
+  },
+  {
+    name: 'More → Merge cells (CellSelection)',
+    doc: TABLE,
+    select: selectFirstTwoCells,
+    kind: 'table',
+    click: ['More table operations', 'Merge cells'],
+    expected: table(tr(td('a</p><p>b', ' colspan="2"')), tr(td('c'), td('d'))),
+  },
+];
+
+describe('comandos (R8)', () => {
+  it.each(CASES.map((c) => [c.name, c] as const))(
+    '%s → getRteHtml, uma emissão, foco no editável e undo de volta',
+    async (_name, c) => {
+      const s = await setup((h) => h.value.set(c.doc));
+      await focusAnd(s.fixture, s.editor, () => c.select(s.editor));
+      expect(openKinds(s.el)).toEqual([c.kind]);
+      const before = getRteHtml(s.editor);
+      s.host.changes = 0;
+      const m = menu(s.el, c.kind);
+      for (const name of c.click) {
+        item(m, name).click();
+        await settle(s.fixture);
+      }
+      // com o foco fora do editável o `focus()` do Tiptap espera um quadro
+      await nextFrame();
+      await settle(s.fixture);
+      expect(getRteHtml(s.editor)).toBe(c.expected);
+      expect(s.host.changes).toBe(1);
+      expect(document.activeElement).toBe(s.editor.view.dom);
+      c.after?.(s);
+      s.editor.commands.undo();
+      expect(getRteHtml(s.editor)).toBe(before);
+      expect(error).not.toHaveBeenCalled();
+    },
+  );
+
+  it('com o foco no item (teclado): o comando devolve o foco ao editável (U4)', async () => {
+    const s = await setup((h) => h.value.set(TABLE));
+    await focusAnd(s.fixture, s.editor, () => selectText(s.editor, 'a', 1));
+    expect(floatingOf(s.fixture).focusActive()).toBe(true);
+    await settle(s.fixture);
+    const active = document.activeElement as HTMLElement;
+    expect(menu(s.el, 'table').contains(active)).toBe(true);
+    active.click();
+    await settle(s.fixture);
+    await nextFrame();
+    await settle(s.fixture);
+    expect(document.activeElement).toBe(s.editor.view.dom);
+    expect(s.host.blurs).toBe(0);
+    expect(s.host.touches).toBe(0);
+  });
+});
+
+describe('link (R9)', () => {
+  it('floatingHref revalida pela política', () => {
+    expect(floatingHref('HTTPS://X.com', undefined)).toBe('https://x.com/');
+    expect(floatingHref('http://x.com/', { protocols: ['https'] })).toBeNull();
+    expect(floatingHref(42, undefined)).toBeNull();
+  });
+
+  it('endereço: <a class="rte-floating__link"> com href, texto, nova aba e dica', async () => {
+    const s = await setup((h) => h.value.set(LINK_DOC));
+    await focusAnd(s.fixture, s.editor, () => selectText(s.editor, 'abc', 1));
+    expect(openKinds(s.el)).toEqual(['link']);
+    const a = menu(s.el, 'link').querySelector<HTMLAnchorElement>(
+      'a.rte-floating__link',
+    );
+    expect(a).not.toBeNull();
+    expect(a?.getAttribute('href')).toBe('https://x.com/');
+    expect(a?.textContent?.trim()).toBe('https://x.com/');
+    expect(a?.getAttribute('target')).toBe('_blank');
+    expect(a?.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(a?.getAttribute('title')).toBe('Opens in a new tab');
+    expect(a?.getAttribute('tabindex')).toBe('-1');
+    expect(a?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('marca com href rejeitado (transação direta) → sem <a>, Editar e Remover presentes', async () => {
+    const s = await setup((h) => h.value.set('<p>abc</p>'));
+    const { editor } = s;
+    const link = editor.schema.marks['link'];
+    if (!link) throw new Error('marca link ausente');
+    // `tr.addMark` aplicado sem o `appendTransaction` do core (que trocaria o
+    // href pelo canônico): o estado vem pronto por `updateState`
+    const doc = editor.state.tr.addMark(
+      1,
+      4,
+      link.create({ href: 'javascript:alert(1)' }),
+    ).doc;
+    editor.view.updateState(
+      EditorState.create({ doc, plugins: editor.state.plugins }),
+    );
+    expect(editor.state.doc.nodeAt(1)?.marks[0]?.attrs['href']).toBe(
+      'javascript:alert(1)',
+    );
+    await focusAnd(s.fixture, editor, () => selectText(editor, 'abc', 1));
+    expect(openKinds(s.el)).toEqual(['link']);
+    const m = menu(s.el, 'link');
+    expect(m.querySelector('a')).toBeNull();
+    expect(item(m, 'Edit link')).toBeTruthy();
+    expect(item(m, 'Remove link')).toBeTruthy();
+  });
+
+  it('Editar link → modo editar com origem no editável; cancelar → foco no editável e menu de volta (M14)', async () => {
+    const open = vi.spyOn(RteDialogController.prototype, 'open');
+    const s = await setup((h) => h.value.set(LINK_DOC));
+    await focusAnd(s.fixture, s.editor, () => selectText(s.editor, 'abc', 1));
+    expect(floatingOf(s.fixture).focusActive()).toBe(true);
+    await settle(s.fixture);
+    item(menu(s.el, 'link'), 'Edit link').click();
+    await settle(s.fixture);
+    expect(open).toHaveBeenCalledTimes(1);
+    const [kind, target, origin] = open.mock.calls[0] ?? [];
+    expect(kind).toBe('link');
+    expect(target?.mode).toBe('edit');
+    expect(origin).toBe(s.editor.view.dom);
+    const dialog = await waitForDialog(s.fixture);
+    expect(openKinds(s.el)).toEqual([]);
+    expect(
+      (dialogField(dialog, 'Address (URL)') as HTMLInputElement).value,
+    ).toBe('https://x.com/');
+    item(dialog, 'Cancel').click();
+    await settle(s.fixture);
+    await nextFrame();
+    await settle(s.fixture);
+    expect(document.activeElement).toBe(s.editor.view.dom);
+    expect(openKinds(s.el)).toEqual(['link']);
+    expect(s.host.blurs).toBe(0);
+  });
+
+  it('item link do menu de texto → pedido com origem no editável', async () => {
+    const open = vi.spyOn(RteDialogController.prototype, 'open');
+    const s = await setup((h) => h.value.set('<p>abc</p>'));
+    await focusAnd(s.fixture, s.editor, () =>
+      selectText(s.editor, 'abc', 1, 2),
+    );
+    item(menu(s.el, 'text'), 'Link').click();
+    await settle(s.fixture);
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open.mock.calls[0]?.[0]).toBe('link');
+    expect(open.mock.calls[0]?.[1]?.mode).toBe('apply');
+    expect(open.mock.calls[0]?.[2]).toBe(s.editor.view.dom);
+  });
+
+  it('@error (controlador fail()) → Editar link não faz nada e o foco fica no item', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const s = await setup((h) => h.value.set(LINK_DOC));
+    (s.cmp as unknown as { dialogs: RteDialogController }).dialogs.fail();
+    await focusAnd(s.fixture, s.editor, () => selectText(s.editor, 'abc', 1));
+    expect(floatingOf(s.fixture).focusActive()).toBe(true);
+    await settle(s.fixture);
+    const edit = item(menu(s.el, 'link'), 'Edit link');
+    edit.focus();
+    const before = s.editor.state;
+    edit.click();
+    await settle(s.fixture);
+    expect(document.activeElement).toBe(edit);
+    expect(s.editor.state).toBe(before);
+    expect(s.el.querySelector('.rte-dialog[open]')).toBeNull();
+    expect(openKinds(s.el)).toEqual(['link']);
+  });
+});
+
+describe('submenu de tabela × diálogo (R10, M13)', () => {
+  it('More aberto + openDialog em outra parte do documento → submenu fechado antes do menu', async () => {
+    const s = await setup((h) =>
+      h.value.set(
+        `${TABLE}<figure class="rt-pullquote"><blockquote><p>Uma frase marcante.</p></blockquote>` +
+          '<figcaption><cite>Fulana</cite></figcaption></figure>',
+      ),
+    );
+    await focusAnd(s.fixture, s.editor, () => selectText(s.editor, 'a', 1));
+    const m = menu(s.el, 'table');
+    item(m, 'More table operations').click();
+    await settle(s.fixture);
+    const sub = m.querySelector<HTMLElement>('.rte-menu');
+    if (!sub) throw new Error('submenu ausente');
+    expect(isPopoverOpen(sub)).toBe(true);
+    expect(sub.contains(document.activeElement)).toBe(true);
+    const order: string[] = [];
+    const rteMenu = s.fixture.debugElement
+      .query(By.directive(RteFloatingMenus))
+      .query(By.directive(RteMenu))
+      .injector.get(RteMenu);
+    const close = rteMenu.close.bind(rteMenu);
+    vi.spyOn(rteMenu, 'close').mockImplementation((to) => {
+      order.push('close');
+      close(to);
+    });
+    const hide = m.hidePopover.bind(m);
+    vi.spyOn(m, 'hidePopover').mockImplementation(() => {
+      order.push('hidePopover');
+      hide();
+    });
+    // seleção movida e pedido no mesmo passo, antes do render
+    selectText(s.editor, 'marcante');
+    expect(s.cmp.openDialog('quoteAuthor')).toBe(true);
+    await settle(s.fixture);
+    expect(order).toEqual(['close', 'hidePopover']);
+    expect(isPopoverOpen(sub)).toBe(false);
+    expect(openKinds(s.el)).toEqual([]);
   });
 });

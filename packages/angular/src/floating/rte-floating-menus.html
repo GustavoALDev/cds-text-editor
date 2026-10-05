@@ -40,6 +40,7 @@
     [attr.aria-disabled]="s.enabled ? null : 'true'"
     [class.rte-toolbar__button--pressed]="s.active"
     (mousedown)="$event.preventDefault()"
+    (click)="act.mark(id)"
   >
     <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: id }" />
   </button>
@@ -61,10 +62,23 @@
     [attr.aria-disabled]="link.enabled ? null : 'true'"
     [class.rte-toolbar__button--active]="link.active"
     (mousedown)="$event.preventDefault()"
+    (click)="act.link()"
   >
     <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: 'link' }" />
   </button>
-  } @case ('link') {
+  } @case ('link') { @let address = href(); @if (address !== null) {
+  <a
+    class="rte-floating__link"
+    rteRovingItem
+    target="_blank"
+    rel="noopener noreferrer"
+    [href]="address"
+    [attr.title]="labels().openLink"
+    (mousedown)="$event.preventDefault()"
+    >{{ address }}<ng-container
+      *ngTemplateOutlet="iconTpl; context: { $implicit: 'openLink' }"
+  /></a>
+  }
   <button
     type="button"
     class="rte-toolbar__button"
@@ -73,6 +87,7 @@
     [attr.aria-label]="toolbarLabels().editLink"
     [attr.title]="title(toolbarLabels().editLink, 'link')"
     (mousedown)="$event.preventDefault()"
+    (click)="act.link()"
   >
     <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: 'link' }" />
   </button>
@@ -83,19 +98,23 @@
     [attr.aria-label]="labels().removeLink"
     [attr.title]="labels().removeLink"
     (mousedown)="$event.preventDefault()"
+    (click)="act.exec(commands.removeLinkAt)"
   >
     <ng-container
       *ngTemplateOutlet="iconTpl; context: { $implicit: 'removeLink' }"
     />
   </button>
-  } @case ('table') { @for (op of tableOps; track op) {
+  } @case ('table') { @let ops = tableOps(); @for (op of tableOpIds; track op) {
+  @let st = ops?.[op];
   <button
     type="button"
     class="rte-toolbar__button"
     rteRovingItem
     [attr.aria-label]="toolbarLabels()[op]"
-    [attr.title]="toolbarLabels()[op]"
+    [attr.title]="title(toolbarLabels()[op], null, st?.spanLimited)"
+    [attr.aria-disabled]="!st || st.enabled ? null : 'true'"
     (mousedown)="$event.preventDefault()"
+    (click)="act.table(op)"
   >
     <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: op }" />
   </button>
@@ -105,6 +124,7 @@
     class="rte-toolbar__button"
     rteRovingItem
     aria-haspopup="menu"
+    [rteMenuTrigger]="more"
     [attr.aria-label]="labels().tableMore"
     [attr.title]="labels().tableMore"
     (mousedown)="$event.preventDefault()"
@@ -113,6 +133,27 @@
       *ngTemplateOutlet="iconTpl; context: { $implicit: 'tableMore' }"
     />
   </button>
+  <div
+    rteMenu
+    #more="rteMenu"
+    [attr.aria-label]="labels().tableMore"
+    (tabOut)="tabOut()"
+  >
+    @let entries = moreOps(); @for (op of tableMoreIds; track op) { @let st =
+    entries?.[op];
+    <button
+      type="button"
+      class="rte-menu__item"
+      tabindex="-1"
+      role="menuitem"
+      [attr.aria-disabled]="st?.enabled ? null : 'true'"
+      [attr.title]="title(toolbarLabels()[op], null, st?.spanLimited)"
+      (click)="act.table(op, more)"
+    >
+      <span class="rte-menu__label">{{ toolbarLabels()[op] }}</span>
+    </button>
+    }
+  </div>
   } @case ('image') { @let align = imageAlign(); @for (a of imageAligns; track
   a[0]) {
   <button
@@ -124,6 +165,7 @@
     [attr.aria-pressed]="align === a[0]"
     [class.rte-toolbar__button--pressed]="align === a[0]"
     (mousedown)="$event.preventDefault()"
+    (click)="act.exec(commands.alignImage, a[0])"
   >
     <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: a[2] }" />
   </button>
@@ -135,6 +177,7 @@
     [attr.aria-label]="labels().removeImage"
     [attr.title]="labels().removeImage"
     (mousedown)="$event.preventDefault()"
+    (click)="act.exec(commands.removeImage)"
   >
     <ng-container
       *ngTemplateOutlet="iconTpl; context: { $implicit: 'removeImage' }"
