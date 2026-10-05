@@ -41,3 +41,62 @@ export function positionMenu(i: {
   const left = Math.max(m, Math.min(start, viewport.width - m - menu.width));
   return { left, top, maxHeight, placement };
 }
+
+/** Espaço, em px CSS, entre o menu flutuante e a âncora (M9). */
+export const RTE_FLOATING_GAP = 8;
+
+/** Retângulo em coordenadas da viewport. */
+export interface RteRect {
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+  readonly left: number;
+}
+
+/** Posição do menu flutuante em coordenadas da viewport (`position: fixed`). */
+export interface RteFloatingPlacement {
+  left: number;
+  top: number;
+  placement: 'above' | 'below' | 'overlay';
+}
+
+/**
+ * Posição de um menu flutuante junto a uma âncora (M9), função pura: tenta o
+ * lado preferido e depois o outro, cada um medido contra a viewport (margem
+ * de 8) e a área visível; sem lado que caiba, `overlay` no topo da parte
+ * visível da âncora. Horizontal centrado na âncora, em
+ * `[8, viewport.width - 8 - width]` (prevalece o 8); independe de `dir`.
+ */
+export function positionFloating(i: {
+  anchor: RteRect;
+  visible: RteRect;
+  menu: { width: number; height: number };
+  viewport: { width: number; height: number };
+  prefer: 'above' | 'below';
+}): RteFloatingPlacement {
+  const { anchor, visible, menu, viewport, prefer } = i;
+  const m = RTE_MENU_MARGIN;
+  const gap = RTE_FLOATING_GAP;
+  const aboveTop = anchor.top - gap - menu.height;
+  const belowTop = anchor.bottom + gap;
+  const fits = {
+    above: aboveTop >= Math.max(m, visible.top),
+    below:
+      belowTop + menu.height <= Math.min(viewport.height - m, visible.bottom),
+  };
+  const center = (anchor.left + anchor.right) / 2;
+  const left = Math.max(
+    m,
+    Math.min(center - menu.width / 2, viewport.width - m - menu.width),
+  );
+  const other = prefer === 'above' ? 'below' : 'above';
+  const side = fits[prefer] ? prefer : fits[other] ? other : null;
+  if (side === null) {
+    return {
+      left,
+      top: Math.max(anchor.top, visible.top) + gap,
+      placement: 'overlay',
+    };
+  }
+  return { left, top: side === 'above' ? aboveTop : belowTop, placement: side };
+}
