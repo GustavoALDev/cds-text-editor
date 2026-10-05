@@ -133,6 +133,12 @@ describe('RteEditor no servidor (R12)', () => {
       expect(html).not.toContain('rte-dialog');
       expect(html).not.toContain('Insert link');
       expect(html).not.toContain('Apply');
+
+      // Menus flutuantes (spec 05b2b, R12): nenhum menu nem texto deles no servidor.
+      expect(html).not.toContain('rte-floating');
+      // Os menus da barra (`popover="auto"`) existem no servidor; os flutuantes (`manual`) não.
+      expect(html).not.toContain('popover="manual"');
+      expect(html).not.toContain('Text formatting');
     },
   );
   it(

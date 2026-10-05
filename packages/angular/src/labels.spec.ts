@@ -38,7 +38,8 @@ import {
   waitForDialog,
 } from './testing-support/dialog';
 import { selectText } from './testing-support/editors';
-import { installPopoverShim } from './testing-support/popover';
+import { fakeCoords, installGeometry } from './testing-support/geometry';
+import { installPopoverShim, isPopoverOpen } from './testing-support/popover';
 import { mergeLabels, readLabelsSource } from './labels/merge';
 import { settle } from './testing-support/render';
 
@@ -692,6 +693,111 @@ describe('rótulos dos diálogos ao vivo (R16)', () => {
       TestBed.resetTestingModule();
       restorePopover();
       restoreDialog();
+    }
+  });
+});
+
+const LINK_DOC = '<p>Texto <a href="https://example.com/">exemplo</a> fim</p>';
+
+@Component({
+  selector: 'rte-test-live-floating',
+  imports: [RteEditor],
+  template: `<rte-editor
+    [value]="content"
+    [labels]="labels()"
+    (valueChange)="writes = writes + 1"
+  />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class LiveFloatingHost {
+  readonly content = LINK_DOC;
+  readonly lang = signal<keyof typeof PACKS>('en');
+  readonly labels = signal<RteLabelsSource | undefined>(
+    () => PACKS[this.lang()],
+  );
+  writes = 0;
+  readonly cmp = viewChildren(RteEditor);
+}
+
+describe('rótulos dos menus flutuantes ao vivo (R13)', () => {
+  it('trocar o idioma com o menu de link visível atualiza aria-label e title sem fechar nem editar', async () => {
+    const restorePopover = installPopoverShim();
+    const editable = { top: 100, left: 100, right: 900, bottom: 700 };
+    const block = { top: 300, left: 150, right: 450, bottom: 400 };
+    const restoreGeometry = installGeometry({
+      viewport: { width: 1000, height: 800 },
+      rects: (el) =>
+        el.classList.contains('rte-floating')
+          ? null
+          : el.classList.contains('ProseMirror')
+            ? editable
+            : block,
+      size: (el) =>
+        el.classList.contains('rte-floating')
+          ? { width: 200, height: 40 }
+          : { width: 300, height: 100 },
+    });
+    try {
+      const fixture = TestBed.createComponent(LiveFloatingHost);
+      fixture.autoDetectChanges();
+      await settle(fixture);
+      const host = fixture.componentInstance;
+      const editor = (host.cmp()[0] as RteEditor).editor() as Editor;
+      const restoreCoords = fakeCoords(editor, (pos) => ({
+        top: 200,
+        bottom: 220,
+        left: 100 + pos * 2,
+        right: 100 + pos * 2,
+      }));
+      let transactions = 0;
+      editor.on('transaction', ({ transaction }) => {
+        if (transaction.docChanged) transactions++;
+      });
+      const doc = editor.state.doc;
+      editor.view.dom.focus();
+      selectText(editor, 'exemplo', 2);
+      await settle(fixture);
+
+      const el = fixture.nativeElement as HTMLElement;
+      const menu = el.querySelector<HTMLElement>('.rte-floating--link');
+      if (!menu) throw new Error('menu de link ausente');
+      expect(isPopoverOpen(menu)).toBe(true);
+      const read = () => ({
+        menu: menu.getAttribute('aria-label'),
+        edit: menu
+          .querySelector('button[aria-haspopup="dialog"]')
+          ?.getAttribute('aria-label'),
+        remove: [...menu.querySelectorAll('button')]
+          .at(-1)
+          ?.getAttribute('aria-label'),
+        address: menu
+          .querySelector('.rte-floating__link')
+          ?.getAttribute('title'),
+      });
+      expect(read()).toEqual({
+        menu: 'Link',
+        edit: 'Edit link',
+        remove: 'Remove link',
+        address: 'Opens in a new tab',
+      });
+
+      host.lang.set('pt-BR');
+      await settle(fixture);
+      expect(isPopoverOpen(menu)).toBe(true);
+      expect(read()).toEqual({
+        menu: 'Link',
+        edit: 'Editar link',
+        remove: 'Remover link',
+        address: 'Abre em nova aba',
+      });
+      expect(transactions).toBe(0);
+      expect(editor.state.doc).toBe(doc);
+      expect(host.writes).toBe(0);
+      restoreCoords();
+    } finally {
+      TestBed.resetTestingModule();
+      restoreGeometry();
+      restorePopover();
     }
   });
 });

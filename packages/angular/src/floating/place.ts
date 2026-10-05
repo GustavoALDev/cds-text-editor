@@ -61,6 +61,8 @@ export function placeFloatingMenu(o: {
     el.style.setProperty('left', `${left}px`);
     el.style.setProperty('top', `${top}px`);
   }
-  el.classList.remove(RTE_FLOATING_MEASURING);
+  // `remove` de uma classe ausente ainda grava o atributo (registro de mutação, R12).
+  if (el.classList.contains(RTE_FLOATING_MEASURING))
+    el.classList.remove(RTE_FLOATING_MEASURING);
   return 'placed';
 }
