@@ -138,7 +138,8 @@ export class RteDialogController {
   /**
    * Aplica (G5): com outro documento no estado, cancela e devolve `false`;
    * senão fecha o diálogo, limpa a seleção pendente, roda o comando (que
-   * devolve o foco ao editável) e encerra o pedido.
+   * devolve o foco ao editável) e encerra o pedido. Comando que devolve
+   * `false` encerra como cancelamento: foco na origem ou no editável (V9).
    */
   apply(run: (editor: Editor) => boolean): boolean {
     const req = untracked(this.current);
@@ -149,13 +150,18 @@ export class RteDialogController {
       return false;
     }
     this.settling = true;
+    let ok = false;
     try {
       this.view?.hide();
       setPendingSelection(editor, null);
-      return run(editor);
+      ok = run(editor);
+      return ok;
     } finally {
       this.clear();
       this.settling = false;
+      // Comando recusado: fecha como cancelamento (V9, Ruling 4), com o
+      // foco de volta à origem ou ao editável (G4).
+      if (!ok && !this.disposed) restoreFocus(req.origin, editor);
     }
   }
 

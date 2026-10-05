@@ -1,0 +1,93 @@
+import { isDevMode } from '@angular/core';
+import type { RteImageAlign, RteImageAttrs } from '@cds/rte-core/extensions';
+import type { ChainedCommands, CommandProps, Editor } from '@tiptap/core';
+import type { RteDialogRequest } from './controller';
+
+const REFUSED = '[rte-editor] o editor recusou a mídia; nada foi aplicado.';
+
+/**
+ * Comandos de mídia do core na cadeia: o `declare module` do core não chega
+ * ao `.d.ts` do *build* (mesmo caso do `setImageAlign` em
+ * `floating/commands.ts`), então os tipos ficam aqui (pré-voo 8).
+ */
+export type MediaChain = ChainedCommands & {
+  setImage(attrs: RteImageAttrs): MediaChain;
+  updateImage(attrs: Partial<RteImageAttrs>): MediaChain;
+  setImageSize(size: { width: number }): MediaChain;
+};
+
+/** Valores do diálogo de imagem já canônicos (o `src` pela regra, V4). */
+export interface RteImageApply {
+  src: string;
+  alt: string;
+  caption: string;
+  credit: string;
+  align: RteImageAlign;
+  width: number | null;
+  /** A largura mudou em relação à abertura (só então se mexe nela). */
+  widthChanged: boolean;
+}
+
+/**
+ * Roda os comandos de mídia numa transação só (D8) e foca o editável.
+ * Qualquer comando recusado (`false`) descarta a transação inteira (nenhum
+ * passo parcial é despachado, nem o foco) e avisa em `isDevMode()`; o
+ * controlador fecha como cancelamento (V9, Ruling 4).
+ */
+export function runMedia(
+  editor: Editor,
+  build: (chain: MediaChain) => MediaChain,
+): boolean {
+  const ok = editor
+    .chain()
+    .command((props: CommandProps) => {
+      if (build(props.chain() as MediaChain).run()) {
+        return props.commands.focus();
+      }
+      props.tr.setMeta('preventDispatch', true);
+      return false;
+    })
+    .run();
+  if (!ok && isDevMode()) console.warn(REFUSED);
+  return ok;
+}
+
+/**
+ * Imagem (V6, pré-voo 8). Inserir: `setImage` na seleção viva (o core acha
+ * o ponto e deixa a imagem selecionada, V12). Editar: `updateImage` no nó da
+ * abertura e, se a largura mudou, `setImageSize` (a altura segue a
+ * proporção) ou, apagada, `width`/`height` nulos na mesma chamada.
+ */
+export function applyImage(
+  editor: Editor,
+  req: RteDialogRequest,
+  v: RteImageApply,
+): boolean {
+  const { src, alt, caption, credit } = v;
+  if (req.mode !== 'edit') {
+    return runMedia(editor, (c) => c.setImage({ src, alt, caption, credit }));
+  }
+  const cleared = v.widthChanged && v.width === null;
+  return runMedia(editor, (c) => {
+    const at = c.setNodeSelection(req.range.from) as MediaChain;
+    const chain = at.updateImage({
+      src,
+      alt,
+      caption,
+      credit,
+      align: v.align,
+      ...(cleared ? { width: null, height: null } : {}),
+    });
+    return v.widthChanged && v.width !== null
+      ? chain.setImageSize({ width: v.width })
+      : chain;
+  });
+}
+
+/** Remove o nó de mídia da abertura (pré-voo 8); o cursor fica no lugar. */
+export function removeMediaAt(editor: Editor, req: RteDialogRequest): boolean {
+  return runMedia(
+    editor,
+    (c) => c.setNodeSelection(req.range.from).deleteSelection() as MediaChain,
+  );
+}

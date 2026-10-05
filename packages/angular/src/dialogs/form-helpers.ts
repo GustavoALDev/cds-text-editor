@@ -32,6 +32,10 @@ export function dialogErrorText(
       return labels.errorLinkUrl;
     case 'rteLangCode':
       return labels.errorLangCode;
+    case 'rteMediaUrl':
+      return labels.errorMediaUrl;
+    case 'rteEmbedUrl':
+      return labels.errorEmbedUrl;
     case 'min':
     case 'max':
     case 'rteInteger':
@@ -59,8 +63,28 @@ export function integerInRange(
   lo: number,
   hi: number,
 ): void {
-  const error = integerError(lo, hi);
   required(path);
+  rangeChecks(path, lo, hi);
+}
+
+/**
+ * Inteiro opcional em `[lo, hi]` (pré-voo 7): vazio passa; fora do intervalo
+ * ou não inteiro → `rteInteger` com os dois limites (o mesmo `errorRange`).
+ */
+export function optionalIntegerInRange(
+  path: SchemaPath<number | null>,
+  lo: number,
+  hi: number,
+): void {
+  rangeChecks(path, lo, hi);
+}
+
+function rangeChecks(
+  path: SchemaPath<number | null>,
+  lo: number,
+  hi: number,
+): void {
+  const error = integerError(lo, hi);
   min(path, lo, { error });
   max(path, hi, { error });
   validate(path, ({ value }) => {

@@ -35,5 +35,14 @@
     [labels]="labels()"
     [idPrefix]="prefix"
   />
+  } @case ('image') {
+  <rte-image-form
+    [request]="req"
+    [controller]="controller()"
+    [labels]="labels()"
+    [idPrefix]="prefix"
+    [rule]="mediaRules()?.imageSrc ?? null"
+    [alignNames]="alignNames()"
+  />
   } } }
 </dialog>

@@ -18,6 +18,7 @@ import type { RteImageAlign } from '@cds/rte-core/extensions';
 import type { RteDialogLabels } from '../labels/types';
 import type { RteDialogController, RteDialogRequest } from './controller';
 import type { RteMediaRules } from './media-rules';
+import { RteImageForm } from './forms/image-form';
 import { RteLangForm } from './forms/lang-form';
 import { RteLinkForm } from './forms/link-form';
 import { RteQuoteForm } from './forms/quote-form';
@@ -35,7 +36,7 @@ let nextInstance = 0;
 @Component({
   selector: 'rte-dialogs',
   templateUrl: './rte-dialogs.html',
-  imports: [RteLinkForm, RteLangForm, RteQuoteForm, RteTableForm],
+  imports: [RteLinkForm, RteLangForm, RteQuoteForm, RteTableForm, RteImageForm],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
 })
@@ -76,6 +77,8 @@ export class RteDialogs {
         return l.quoteTitle;
       case 'table':
         return l.tableTitle;
+      case 'image':
+        return req.mode === 'edit' ? l.imageEditTitle : l.imageInsertTitle;
       default:
         return '';
     }
