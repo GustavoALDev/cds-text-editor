@@ -34,7 +34,11 @@ type CanCommands = Record<
 >;
 
 /** `editor.can().<command>(...args)`; comando ausente (recurso desligado) = `false`. */
-function can(editor: Editor, command: string, ...args: unknown[]): boolean {
+export function can(
+  editor: Editor,
+  command: string,
+  ...args: unknown[]
+): boolean {
   const fn = (editor.can() as unknown as CanCommands)[command];
   return typeof fn === 'function' && fn(...args);
 }

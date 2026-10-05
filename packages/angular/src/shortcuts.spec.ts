@@ -1,6 +1,7 @@
 import { createEditorExtensions } from '@cds/rte-core/extensions';
 import { Editor } from '@tiptap/core';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createRteUiExtension } from './dialogs/ui-extension';
 import {
   ariaKeyShortcuts,
   detectPlatform,
@@ -19,6 +20,8 @@ describe('formatShortcut', () => {
     expect(formatShortcut('Mod-Alt-2', 'mac')).toBe('⌥⌘2');
     expect(formatShortcut('Mod-b', 'mac')).toBe('⌘B');
     expect(formatShortcut('Ctrl-Alt-Shift-Meta-x', 'mac')).toBe('⌃⌥⇧⌘X');
+    expect(formatShortcut('Mod-k', 'mac')).toBe('⌘K');
+    expect(formatShortcut('Mod-k', 'other')).toBe('Ctrl+K');
   });
 });
 
@@ -27,6 +30,8 @@ describe('ariaKeyShortcuts', () => {
     expect(ariaKeyShortcuts('Mod-Shift-z', 'mac')).toBe('Meta+Shift+Z');
     expect(ariaKeyShortcuts('Mod-Shift-z', 'other')).toBe('Control+Shift+Z');
     expect(ariaKeyShortcuts('Mod-Alt-c', 'other')).toBe('Control+Alt+C');
+    expect(ariaKeyShortcuts('Mod-k', 'other')).toBe('Control+K');
+    expect(ariaKeyShortcuts('Mod-k', 'mac')).toBe('Meta+K');
   });
 });
 
@@ -50,7 +55,7 @@ describe('detectPlatform', () => {
 const SHIFTED: Record<string, string> = { '7': '&', '8': '*', '9': '(' };
 const KEYCODES: Record<string, number> = { '.': 190, ',': 188 };
 
-function keyEvent(spec: string): KeyboardEvent {
+function keyEvent(spec: string, init: KeyboardEventInit = {}): KeyboardEvent {
   const parts = spec.split('-');
   const base = parts[parts.length - 1] as string;
   const mods = parts.slice(0, -1);
@@ -73,10 +78,18 @@ function keyEvent(spec: string): KeyboardEvent {
     altKey: mods.includes('Alt'),
     bubbles: true,
     cancelable: true,
+    ...init,
   });
 }
 
 const editors: Editor[] = [];
+/** Resposta do `openLink` da `RteUiExtension` (o `Mod-K`). */
+let linkApplicable = true;
+const openLink = vi.fn(() => linkApplicable);
+beforeEach(() => {
+  linkApplicable = true;
+  openLink.mockClear();
+});
 afterEach(() => {
   while (editors.length) editors.pop()?.destroy();
 });
@@ -94,17 +107,21 @@ function make(content: string): Editor {
         embeds: true,
         newsBlocks: true,
       },
-    }),
+    }).concat(createRteUiExtension({ openLink })),
     content,
   });
   editors.push(editor);
   return editor;
 }
 
-function press(editor: Editor, spec: string): boolean {
+function press(
+  editor: Editor,
+  spec: string,
+  init: KeyboardEventInit = {},
+): boolean {
   const { view } = editor;
   return Boolean(
-    view.someProp('handleKeyDown', (f) => f(view, keyEvent(spec))),
+    view.someProp('handleKeyDown', (f) => f(view, keyEvent(spec, init))),
   );
 }
 
@@ -175,6 +192,11 @@ const CASES: Record<string, Case> = {
     },
     expected: (e) => e.getAttributes('paragraph')['textAlign'] === 'left',
   },
+  link: {
+    doc: '<p>hello</p>',
+    select: [2, 2],
+    expected: () => openLink.mock.calls.length === 1,
+  },
   alignCenter: align('center'),
   alignRight: align('right'),
   alignJustify: align('justify'),
@@ -190,6 +212,7 @@ describe('RTE_TOOLBAR_SHORTCUTS', () => {
       subscript: 'Mod-,',
       paragraph: 'Mod-Alt-0',
       heading4: 'Mod-Alt-4',
+      link: 'Mod-k',
     });
   });
 
@@ -222,4 +245,25 @@ describe('RTE_TOOLBAR_SHORTCUTS', () => {
       expect(c.expected(editor)).toBe(true);
     },
   );
+});
+
+describe('Mod-K (RteUiExtension)', () => {
+  it('não consome a tecla quando o link é inaplicável', () => {
+    linkApplicable = false;
+    const editor = make('<p>hello</p>');
+    expect(press(editor, 'Mod-k')).toBe(false);
+    expect(openLink).toHaveBeenCalledTimes(1);
+  });
+
+  it('não age durante composição de IME', () => {
+    const editor = make('<p>hello</p>');
+    editor.view.dom.dispatchEvent(
+      new CompositionEvent('compositionstart', { bubbles: true }),
+    );
+    expect(editor.view.composing).toBe(true);
+    // Pelo DOM (o ProseMirror ignora) e direto no keymap (a guarda da extensão).
+    editor.view.dom.dispatchEvent(keyEvent('Mod-k', { isComposing: true }));
+    expect(press(editor, 'Mod-k', { isComposing: true })).toBe(false);
+    expect(openLink).not.toHaveBeenCalled();
+  });
 });

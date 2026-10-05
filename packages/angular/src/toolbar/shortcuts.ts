@@ -2,6 +2,8 @@ import type { RteToolbarItemId } from './items';
 
 export type RteShortcutTarget =
   | RteToolbarItemId
+  // `Mod-K` do diálogo de link (G12); redundante quando `link` for item da barra.
+  | 'link'
   | 'paragraph'
   | 'heading2'
   | 'heading3'
@@ -28,6 +30,7 @@ export const RTE_TOOLBAR_SHORTCUTS: Readonly<
   code: 'Mod-e',
   superscript: 'Mod-.',
   subscript: 'Mod-,',
+  link: 'Mod-k',
   bulletList: 'Mod-Shift-8',
   orderedList: 'Mod-Shift-7',
   taskList: 'Mod-Shift-9',
