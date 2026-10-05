@@ -31,6 +31,14 @@ import {
 } from '@cds/rte-angular/i18n';
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
+import {
+  dialogField,
+  installDialogShim,
+  typeInto,
+  waitForDialog,
+} from './testing-support/dialog';
+import { selectText } from './testing-support/editors';
+import { installPopoverShim } from './testing-support/popover';
 import { mergeLabels, readLabelsSource } from './labels/merge';
 import { settle } from './testing-support/render';
 
@@ -602,5 +610,56 @@ describe('no editor', () => {
       title: 'Atención',
       task: 'Tarea: X',
     });
+  });
+});
+
+describe('rótulos dos diálogos ao vivo (R16)', () => {
+  it('trocar o idioma com o diálogo de link aberto e erro visível atualiza os textos sem fechar nem apagar', async () => {
+    const restoreDialog = installDialogShim();
+    const restorePopover = installPopoverShim();
+    try {
+      const fixture = TestBed.createComponent(LiveLabelsHost);
+      fixture.autoDetectChanges();
+      await settle(fixture);
+      const host = fixture.componentInstance;
+      const cmp = host.editors()[0] as RteEditor;
+      const editor = cmp.editor() as Editor;
+      selectText(editor, 'corpo');
+      let transactions = 0;
+      editor.on('transaction', ({ transaction }) => {
+        if (transaction.docChanged) transactions++;
+      });
+      const doc = editor.state.doc;
+
+      expect(cmp.openDialog('link')).toBe(true);
+      const dialog = await waitForDialog(fixture);
+      const url = dialogField(dialog, 'Address (URL)');
+      typeInto(url, 'x y');
+      dialog.querySelector<HTMLButtonElement>('.rte-dialog__apply')?.click();
+      await settle(fixture);
+      const text = (selector: string) =>
+        dialog.querySelector(selector)?.textContent?.trim();
+      expect(text('.rte-dialog__error')).toBe(
+        'Address not accepted. Check the format or use another address.',
+      );
+
+      host.lang.set('pt-BR');
+      await settle(fixture);
+      expect(dialog.open).toBe(true);
+      expect(text('.rte-dialog__title')).toBe('Inserir link');
+      expect(text('.rte-dialog__apply')).toBe('Aplicar');
+      expect(text('.rte-dialog__error')).toBe(
+        'Endereço não aceito. Confira o formato ou use outro endereço.',
+      );
+      expect(dialogField(dialog, 'Endereço (URL)')).toBe(url);
+      expect(url.value).toBe('x y');
+      expect(transactions).toBe(0);
+      expect(editor.state.doc).toBe(doc);
+      expect(host.writes).toBe(0);
+    } finally {
+      TestBed.resetTestingModule();
+      restorePopover();
+      restoreDialog();
+    }
   });
 });

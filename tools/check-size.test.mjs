@@ -9,7 +9,9 @@ import {
   bundleScenario,
   checkSizes,
   measureMinGzip,
+  measureConfig,
   measureScenario,
+  resolveEntry,
 } from './check-size.mjs';
 
 const dist = resolve('packages/theme/dist/index.js');
@@ -218,4 +220,82 @@ test('--config: cenário com external mede', () => {
   };
   assert.equal(run(['fake-ext']).status, 0);
   assert.equal(run(undefined).status, 2);
+});
+
+// Spec 05b2a (pré-voo 4): o chunk do `@defer` fica fora da medida do entry.
+const CHUNK_MARK = 'conteudo-do-chunk-'.repeat(20);
+
+function chunkFixture() {
+  const dir = mkdtempSync(join(tmpdir(), 'check-size-chunk-'));
+  writeFileSync(
+    join(dir, 'a.mjs'),
+    "export const a = () => import('./b-x.mjs');\n",
+  );
+  writeFileSync(join(dir, 'b-x.mjs'), `export const b = '${CHUNK_MARK}';\n`);
+  return dir;
+}
+
+test('bundleScenario: externalChunks deixa o import() relativo fora da medida', async () => {
+  const entry = join(chunkFixture(), 'a.mjs');
+  const inlined = await bundleScenario(entry, ['*']);
+  assert.match(inlined, new RegExp(CHUNK_MARK));
+  const external = await bundleScenario(entry, ['*'], {
+    externalChunks: true,
+  });
+  assert.doesNotMatch(external, new RegExp(CHUNK_MARK));
+  assert.match(external, /b-x\.mjs/);
+});
+
+test('measureConfig: externalChunks mede menos que sem a opção', async () => {
+  const entry = join(chunkFixture(), 'a.mjs');
+  const m = await measureConfig({
+    scenarios: {
+      inlined: { entry, exports: ['*'] },
+      external: { entry, exports: ['*'], externalChunks: true },
+    },
+  });
+  assert.ok(m.external.min < m.inlined.min);
+});
+
+test('resolveEntry: sem curinga devolve o caminho como está', () => {
+  assert.equal(resolveEntry('dist/x/a.mjs'), 'dist/x/a.mjs');
+});
+
+test('resolveEntry: curinga com exatamente um casamento', () => {
+  const dir = chunkFixture();
+  writeFileSync(join(dir, 'b-x.mjs.map'), '{}');
+  writeFileSync(join(dir, 'c.mjs'), '');
+  assert.equal(
+    resolve(resolveEntry(join(dir, 'b-*.mjs'))),
+    resolve(join(dir, 'b-x.mjs')),
+  );
+});
+
+test('resolveEntry: curinga com 0 ou 2 casamentos é erro em pt-BR', () => {
+  const dir = chunkFixture();
+  writeFileSync(join(dir, 'b-y.mjs'), '');
+  assert.throws(() => resolveEntry(join(dir, 'z-*.mjs')), /nenhum arquivo/);
+  assert.throws(
+    () => resolveEntry(join(dir, 'b-*.mjs')),
+    /2 arquivos.*exatamente um/,
+  );
+});
+
+test('--config: entry com curinga mede o único arquivo casado', () => {
+  const dir = chunkFixture();
+  const cfg = join(dir, 'cfg.json');
+  writeFileSync(
+    cfg,
+    JSON.stringify({
+      scenarios: {
+        chunk: { entry: join(dir, 'b-*.mjs'), exports: ['*'] },
+      },
+      budgets: { chunk: 100000 },
+    }),
+  );
+  const r = spawnSync('node', ['tools/check-size.mjs', '--config', cfg], {
+    encoding: 'utf8',
+  });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /chunk/);
 });

@@ -126,6 +126,13 @@ describe('RteEditor no servidor (R12)', () => {
       const hosts = [...html.matchAll(/<rte-editor\b[^>]*>/g)].map(([m]) => m);
       expect(hosts).toHaveLength(2);
       for (const host of hosts) expect(host).not.toMatch(/\sstyle=/);
+
+      // Diálogos (spec 05b2a, R12, G7): o `@defer` só renderiza o placeholder
+      // vazio no servidor.
+      expect(html).not.toContain('<dialog');
+      expect(html).not.toContain('rte-dialog');
+      expect(html).not.toContain('Insert link');
+      expect(html).not.toContain('Apply');
     },
   );
   it(

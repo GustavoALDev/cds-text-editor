@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { build, transform } from 'esbuild';
@@ -23,6 +23,51 @@ export async function measureMinGzip(code) {
   return gzipSync(min, { level: 9 }).length;
 }
 
+/**
+ * *Chunks* irmãos (`./x.mjs`, como os do `@defer` no FESM do ng-packagr) ficam fora do
+ * bundle: sem `splitting`, o esbuild embutiria o `import()` relativo na medida do entry.
+ */
+const EXTERNAL_CHUNKS = {
+  name: 'external-chunks',
+  setup(b) {
+    b.onResolve({ filter: /^\.\/[^/]+\.mjs$/ }, (args) => ({
+      path: args.path,
+      external: true,
+    }));
+  },
+};
+
+/**
+ * Resolve um `entry` com curinga `*` no nome do arquivo (não na pasta): precisa casar
+ * exatamente um arquivo (o *chunk* tem *hash* no nome). Sem curinga, devolve como está.
+ */
+export function resolveEntry(pattern) {
+  if (!pattern.includes('*')) return pattern;
+  const dir = dirname(pattern);
+  const name = basename(pattern);
+  if (dir.includes('*')) {
+    throw new Error(`curinga só no nome do arquivo: "${pattern}"`);
+  }
+  const re = new RegExp(
+    `^${name
+      .split('*')
+      .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+      .join('.*')}$`,
+  );
+  const found = existsSync(dir)
+    ? readdirSync(dir).filter((f) => re.test(f))
+    : [];
+  if (found.length === 0) {
+    throw new Error(`curinga "${pattern}": nenhum arquivo casou`);
+  }
+  if (found.length > 1) {
+    throw new Error(
+      `curinga "${pattern}": ${found.length} arquivos casaram (${found.join(', ')}); precisa casar exatamente um`,
+    );
+  }
+  return join(dir, found[0]);
+}
+
 /** Empacota só `exportsList` (ou `['*']`) de `distFile` como um consumidor faria. */
 export async function bundleScenario(distFile, exportsList, opts = {}) {
   const abs = resolve(distFile);
@@ -40,6 +85,7 @@ export async function bundleScenario(distFile, exportsList, opts = {}) {
     format: 'esm',
     treeShaking: true,
     external: opts.external ?? [],
+    plugins: opts.externalChunks ? [EXTERNAL_CHUNKS] : [],
     write: false,
     logLevel: 'silent',
   });
@@ -48,19 +94,25 @@ export async function bundleScenario(distFile, exportsList, opts = {}) {
 
 /**
  * Mede cenários descritos num arquivo de configuração:
- * `{ scenarios: { nome: { entry, exports, external? } }, budgets: { nome: bytes } }`.
- * `external` lista pacotes que ficam fora do bundle (peers do consumidor).
- * Os caminhos de `entry` são relativos à raiz do repositório (cwd).
+ * `{ scenarios: { nome: { entry, exports, external?, externalChunks? } }, budgets: { nome: bytes } }`.
+ * `external` lista pacotes que ficam fora do bundle (peers do consumidor);
+ * `externalChunks: true` deixa fora os *chunks* irmãos `./x.mjs` (custo inicial do entry).
+ * Os caminhos de `entry` são relativos à raiz do repositório (cwd) e aceitam um curinga `*`
+ * no nome do arquivo, que precisa casar exatamente um arquivo (`resolveEntry`).
  */
 export async function measureConfig(config) {
   const measurements = {};
-  for (const [name, { entry, exports: list, external }] of Object.entries(
-    config.scenarios ?? {},
-  )) {
+  for (const [
+    name,
+    { entry, exports: list, external, externalChunks },
+  ] of Object.entries(config.scenarios ?? {})) {
     if (!entry || !Array.isArray(list) || list.length === 0) {
       throw new Error(`cenário "${name}" inválido: precisa de entry e exports`);
     }
-    const code = await bundleScenario(entry, list, { external });
+    const code = await bundleScenario(resolveEntry(entry), list, {
+      external,
+      externalChunks,
+    });
     measurements[name] = {
       min: Buffer.byteLength(code),
       gzip: await measureMinGzip(code),

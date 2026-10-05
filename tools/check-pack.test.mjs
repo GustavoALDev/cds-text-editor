@@ -62,6 +62,24 @@ test('ng-packagr: rejects sources, specs, tsbuildinfo and dist/', () => {
   assert.equal(errors.length, 5);
 });
 
+test('ng-packagr: accepts lazy chunks directly under fesm2022/ (spec 05b2a, R1)', () => {
+  assert.deepEqual(
+    checkPackFiles(
+      [
+        'fesm2022/cds-rte-angular-rte-dialogs-AbC123.mjs',
+        'fesm2022/cds-rte-angular-rte-dialogs-AbC123.mjs.map',
+      ],
+      'ng-packagr',
+    ),
+    [],
+  );
+});
+
+test('ng-packagr: rejects nested paths and non-.mjs files under fesm2022/', () => {
+  assert.equal(checkPackFiles(['fesm2022/a/b.mjs'], 'ng-packagr').length, 1);
+  assert.equal(checkPackFiles(['fesm2022/x.ts'], 'ng-packagr').length, 1);
+});
+
 test('ng-packagr: accepts CSS files under styles/ (spec 05a, D16)', () => {
   assert.deepEqual(checkPackFiles(['styles/editor.css'], 'ng-packagr'), []);
 });

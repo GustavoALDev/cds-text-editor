@@ -313,6 +313,160 @@
     background-color: light-dark(#eadcff, #3f2a63);
   }
 
+  /* Diálogos (spec 05b2a, G20): `<dialog>` modal nativo, último filho do host. Só tokens do tema,
+   * alvos ≥ 24 px, sem animação (nada a desligar em `prefers-reduced-motion`). */
+  .rte-editor .rte-dialog {
+    box-sizing: border-box;
+    inline-size: min(32rem, 100vw - 32px);
+    max-inline-size: calc(100vw - 32px);
+    max-block-size: calc(100vh - 32px);
+    margin: auto;
+    padding: 1rem;
+    overflow-y: auto;
+    color: var(--rte-text);
+    background-color: var(--rte-surface);
+    border: 1px solid var(--rte-border);
+    border-radius: var(--rte-radius);
+    font-family: var(--rte-font-sans);
+    font-size: var(--rte-font-size);
+    line-height: var(--rte-line-height);
+  }
+
+  /* Recuo literal para motores em que o `::backdrop` não herda as propriedades do `<dialog>`. */
+  .rte-editor .rte-dialog::backdrop {
+    background-color: rgb(0 0 0 / 0.4);
+    background-color: color-mix(in oklab, var(--rte-text) 40%, transparent);
+  }
+
+  .rte-editor .rte-dialog__title {
+    margin: 0 0 0.75rem;
+    font-size: 1.125em;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .rte-editor .rte-dialog__form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 0;
+  }
+
+  /* Rótulo, campo, dica e erro em linhas próprias; a caixa de seleção fica ao lado do rótulo. */
+  .rte-editor .rte-dialog__field {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+  }
+
+  .rte-editor .rte-dialog__label {
+    flex: 0 1 auto;
+    font-weight: 500;
+  }
+
+  .rte-editor .rte-dialog__input,
+  .rte-editor .rte-dialog__select {
+    flex: 1 1 100%;
+    box-sizing: border-box;
+    min-inline-size: 24px;
+    min-block-size: max(24px, calc(2rem * var(--rte-density)));
+    margin: 0;
+    padding: 0 0.5rem;
+    color: var(--rte-text);
+    background-color: var(--rte-surface);
+    border: 1px solid var(--rte-border);
+    border-radius: var(--rte-radius);
+    font: inherit;
+  }
+
+  .rte-editor .rte-dialog__input[aria-invalid='true'] {
+    border-color: var(--rte-danger);
+  }
+
+  .rte-editor .rte-dialog__checkbox {
+    flex: none;
+    min-inline-size: 24px;
+    min-block-size: 24px;
+    margin: 0;
+    accent-color: var(--rte-primary);
+  }
+
+  .rte-editor .rte-dialog__hint,
+  .rte-editor .rte-dialog__error {
+    flex: 1 1 100%;
+    margin: 0;
+    font-size: 0.875em;
+  }
+
+  .rte-editor .rte-dialog__hint {
+    color: var(--rte-text-muted);
+  }
+
+  .rte-editor .rte-dialog__error {
+    color: var(--rte-danger);
+  }
+
+  .rte-editor .rte-dialog__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-block-start: 0.25rem;
+  }
+
+  .rte-editor .rte-dialog__apply,
+  .rte-editor .rte-dialog__cancel,
+  .rte-editor .rte-dialog__remove {
+    box-sizing: border-box;
+    min-inline-size: 24px;
+    min-block-size: max(24px, calc(2rem * var(--rte-density)));
+    margin: 0;
+    padding: 0 0.75rem;
+    color: var(--rte-text);
+    background-color: transparent;
+    border: 1px solid var(--rte-border);
+    border-radius: var(--rte-radius);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  /* "Remover" à esquerda; "Cancelar" e "Aplicar" à direita, na ordem do DOM. */
+  .rte-editor .rte-dialog__remove {
+    margin-inline-end: auto;
+  }
+
+  .rte-editor .rte-dialog__cancel:hover,
+  .rte-editor .rte-dialog__remove:hover {
+    background-color: var(--rte-surface-raised);
+  }
+
+  .rte-editor .rte-dialog__apply {
+    color: var(--rte-on-primary);
+    background-color: var(--rte-primary);
+    border-color: var(--rte-primary);
+  }
+
+  .rte-editor .rte-dialog__apply:hover {
+    background-color: var(--rte-primary-hover);
+    border-color: var(--rte-primary-hover);
+  }
+
+  .rte-editor .rte-dialog__input:focus-visible,
+  .rte-editor .rte-dialog__select:focus-visible,
+  .rte-editor .rte-dialog__checkbox:focus-visible,
+  .rte-editor .rte-dialog__apply:focus-visible,
+  .rte-editor .rte-dialog__cancel:focus-visible,
+  .rte-editor .rte-dialog__remove:focus-visible {
+    outline: var(--rte-focus-width) solid var(--rte-focus);
+    outline-offset: 1px;
+  }
+
+  /* Seleção pendente (G13): o alvo do diálogo aberto continua visível sem o foco no editável. */
+  .rte-editor .rte-pending-selection {
+    background-color: var(--rte-primary-subtle);
+  }
+
   @media (forced-colors: active) {
     /* Par principal invertido (o contraste é o do tema do sistema; o par
      * Highlight/HighlightText de motores emulados fica abaixo de 4,5:1) e o
@@ -339,6 +493,15 @@
 
     .rte-editor .rte-swatch {
       forced-color-adjust: none;
+    }
+
+    .rte-editor .rte-dialog {
+      border-color: CanvasText;
+    }
+
+    .rte-editor .rte-pending-selection {
+      color: HighlightText;
+      background-color: Highlight;
     }
   }
 

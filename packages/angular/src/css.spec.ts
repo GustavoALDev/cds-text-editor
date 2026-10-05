@@ -148,6 +148,40 @@ function declarations(container: Container = root): Declaration[] {
   return decls;
 }
 
+const BACKDROP_FALLBACK = 'rgb(0 0 0 / 0.4)';
+const BACKDROP_MIX = 'color-mix(in oklab, var(--rte-text) 40%, transparent)';
+
+/** Regra só de `.rte-dialog::backdrop` (spec 05b2a, G20). */
+function isBackdropRule(node: Container | undefined): node is Rule {
+  return (
+    node?.type === 'rule' &&
+    (node as Rule).selectors.every((s) => /\.rte-dialog::backdrop$/.test(s))
+  );
+}
+
+/** O `background-color` com `color-mix` do `::backdrop`. */
+function isBackdropMix(d: Declaration): boolean {
+  return (
+    isBackdropRule(d.parent) &&
+    d.prop === 'background-color' &&
+    d.value === BACKDROP_MIX
+  );
+}
+
+/**
+ * A cor literal do `::backdrop` só vale como recuo: um `background-color`
+ * seguido, na mesma regra, do `color-mix` sobre `--rte-text`.
+ */
+function isBackdropFallback(d: Declaration): boolean {
+  if (!isBackdropRule(d.parent)) return false;
+  if (d.prop !== 'background-color' || d.value !== BACKDROP_FALLBACK)
+    return false;
+  const decls = d.parent.nodes.filter(
+    (n): n is Declaration => n.type === 'decl',
+  );
+  return decls.slice(decls.indexOf(d) + 1).some(isBackdropMix);
+}
+
 /** Tokens `rte-*` nas fontes publicadas das extensões do core. */
 function coreClassTokens(): string[] {
   const tokens = new Set<string>();
@@ -262,6 +296,9 @@ describe('editor.css (R10)', () => {
       );
       if (swatch && PALETTE_VALUE.test(d.value.trim())) continue;
       if (forced && SYSTEM_COLOR.test(d.value.trim())) continue;
+      // exceção da 05b2a (G20): o `::backdrop` do diálogo, com o recuo
+      // literal seguido do `color-mix` sobre `--rte-text`
+      if (isBackdropFallback(d) || isBackdropMix(d)) continue;
       if (d.prop.startsWith('--')) {
         bad.push(`${d.prop}: ${d.value}`);
       } else if (COLOR_PROPS.test(d.prop)) {
@@ -629,5 +666,177 @@ describe('editor.css: barra, menus e amostras (spec 05b1)', () => {
       'background-color': 'CanvasText',
       'border-color': 'Highlight',
     });
+  });
+});
+
+describe('editor.css: diálogos (spec 05b2a, G20)', () => {
+  function dialogRules(): Rule[] {
+    return styleRules().filter((r) =>
+      r.selectors.some((s) => /\.rte-dialog(?:__[\w-]+)?(?![\w-])/.test(s)),
+    );
+  }
+
+  /** Declarações das regras cujo seletor termina exatamente em `suffix`. */
+  function declsEndingWith(suffix: string): Declaration[] {
+    return styleRules()
+      .filter((r) => r.selectors.some((s) => s.trim().endsWith(suffix)))
+      .flatMap((r) => declarations(r));
+  }
+
+  function minPx(value: string): number {
+    const max = /^max\(\s*([\d.]+)px\s*,/.exec(value);
+    if (max) return Number(max[1]);
+    const px = /^([\d.]+)px$/.exec(value);
+    return px ? Number(px[1]) : 0;
+  }
+
+  it.each([
+    'rte-dialog',
+    'rte-dialog__title',
+    'rte-dialog__form',
+    'rte-dialog__field',
+    'rte-dialog__label',
+    'rte-dialog__hint',
+    'rte-dialog__error',
+    'rte-dialog__actions',
+    'rte-dialog__apply',
+    'rte-dialog__remove',
+    'rte-dialog__cancel',
+    'rte-dialog__input',
+    'rte-dialog__select',
+    'rte-dialog__checkbox',
+    'rte-pending-selection',
+  ])('tem regra para %s', (cls) => {
+    expect(
+      styleRules().some((r) => r.selectors.some((s) => hasClass(s, cls))),
+    ).toBe(true);
+  });
+
+  it('regras dos diálogos e da seleção pendente ficam em rte.components, sob .rte-editor', () => {
+    const rules = [
+      ...dialogRules(),
+      ...styleRules().filter((r) =>
+        r.selectors.some((s) => hasClass(s, 'rte-pending-selection')),
+      ),
+    ];
+    expect(rules.length).toBeGreaterThan(5);
+    const misplaced = rules
+      .filter(
+        (r) =>
+          layerOf(r) !== 'rte.components' ||
+          !r.selectors.every((s) => /^\.rte-editor\s/.test(s.trim())),
+      )
+      .map((r) => r.selector);
+    expect(misplaced).toEqual([]);
+  });
+
+  it('o diálogo: largura min(32rem, 100vw - 32px), rolagem interna e cores do tema', () => {
+    const decls = declsEndingWith('.rte-dialog');
+    for (const [prop, value] of [
+      ['inline-size', 'min(32rem, 100vw - 32px)'],
+      ['overflow-y', 'auto'],
+      ['color', 'var(--rte-text)'],
+      ['background-color', 'var(--rte-surface)'],
+      ['border', '1px solid var(--rte-border)'],
+      ['border-radius', 'var(--rte-radius)'],
+    ])
+      expect(decls).toContainEqual(expect.objectContaining({ prop, value }));
+    expect(decls.some((d) => d.prop === 'max-block-size')).toBe(true);
+  });
+
+  it('::backdrop: cor literal de recuo antes do color-mix sobre --rte-text', () => {
+    const rule = styleRules().find((r) => isBackdropRule(r));
+    expect(rule).toBeDefined();
+    const decls = declarations(rule as Rule).filter(
+      (d) => d.prop === 'background-color',
+    );
+    expect(decls.map((d) => d.value)).toEqual([
+      BACKDROP_FALLBACK,
+      BACKDROP_MIX,
+    ]);
+  });
+
+  it('dica em --rte-text-muted, erro em --rte-danger e Aplicar em --rte-primary/--rte-on-primary', () => {
+    expect(declsEndingWith('.rte-dialog__hint')).toContainEqual(
+      expect.objectContaining({
+        prop: 'color',
+        value: 'var(--rte-text-muted)',
+      }),
+    );
+    expect(declsEndingWith('.rte-dialog__error')).toContainEqual(
+      expect.objectContaining({ prop: 'color', value: 'var(--rte-danger)' }),
+    );
+    const apply = declsEndingWith('.rte-dialog__apply');
+    expect(apply).toContainEqual(
+      expect.objectContaining({
+        prop: 'background-color',
+        value: 'var(--rte-primary)',
+      }),
+    );
+    expect(apply).toContainEqual(
+      expect.objectContaining({
+        prop: 'color',
+        value: 'var(--rte-on-primary)',
+      }),
+    );
+  });
+
+  it.each([
+    'rte-dialog__input',
+    'rte-dialog__select',
+    'rte-dialog__checkbox',
+    'rte-dialog__apply',
+    'rte-dialog__cancel',
+    'rte-dialog__remove',
+  ])('%s: alvo ≥ 24 px e foco visível com --rte-focus', (cls) => {
+    const decls = declsEndingWith(`.${cls}`);
+    for (const prop of ['min-block-size', 'min-inline-size']) {
+      const decl = decls.find((d) => d.prop === prop);
+      expect(decl, prop).toBeDefined();
+      expect(minPx(decl?.value ?? '')).toBeGreaterThanOrEqual(24);
+    }
+    expect(declsEndingWith(`.${cls}:focus-visible`)).toContainEqual(
+      expect.objectContaining({
+        prop: 'outline',
+        value: 'var(--rte-focus-width) solid var(--rte-focus)',
+      }),
+    );
+  });
+
+  it('forced-colors: borda CanvasText no diálogo', () => {
+    const rules: Rule[] = [];
+    root.walkAtRules('media', (at) => {
+      if (/forced-colors:\s*active/.test(at.params))
+        at.walkRules((r) => void rules.push(r));
+    });
+    const dialog = rules.filter((r) =>
+      r.selectors.some((s) => s.trim().endsWith('.rte-dialog')),
+    );
+    expect(
+      dialog
+        .flatMap((r) => declarations(r))
+        .some(
+          (d) =>
+            (d.prop === 'border-color' && d.value === 'CanvasText') ||
+            (d.prop === 'border' && d.value.endsWith('CanvasText')),
+        ),
+    ).toBe(true);
+  });
+
+  it('sem animation/transition nas regras dos diálogos', () => {
+    const moving = dialogRules()
+      .flatMap((r) => declarations(r))
+      .filter((d) => /^(?:animation|transition)(?:-|$)/.test(d.prop))
+      .map((d) => `${d.prop}: ${d.value}`);
+    expect(moving).toEqual([]);
+  });
+
+  it('seleção pendente com fundo --rte-primary-subtle', () => {
+    expect(declsEndingWith('.rte-pending-selection')).toContainEqual(
+      expect.objectContaining({
+        prop: 'background-color',
+        value: 'var(--rte-primary-subtle)',
+      }),
+    );
   });
 });
