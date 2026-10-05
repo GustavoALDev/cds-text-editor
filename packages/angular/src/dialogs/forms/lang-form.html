@@ -1,4 +1,8 @@
-<form class="rte-dialog__form" [formRoot]="form">
+<form
+  class="rte-dialog__form"
+  [formRoot]="form"
+  (mousedown)="keepFocus($event)"
+>
   <div class="rte-dialog__field">
     <label class="rte-dialog__label" [for]="ids().language"
       >{{ labels().langLanguage }}</label

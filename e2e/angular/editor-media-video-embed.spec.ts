@@ -18,6 +18,8 @@ import { loadDoc, rteHtml, selectIn } from './helpers/toolbar';
 // *cue* do `.vtt` com `mode = 'hidden'` (Ruling 6 do ADR 0011).
 
 const ID = 'media';
+/** Janela do ProseMirror para agrupar passos de desfazer (newGroupDelay 500 ms). */
+const UNDO_GROUP_MS = 600;
 const BASE = '<p>Início</p><p>Fim</p>';
 
 const TRACK_ERROR_URL =
@@ -125,11 +127,9 @@ for (const zone of [false, true]) {
       ).toBeFocused();
       await tab(page);
       await expect(add).toBeFocused();
-      // com uma faixa de legendas a dica some
-      await expect(dialog.locator('.rte-dialog__hint')).toHaveCount(
-        // dicas dos campos de endereço do vídeo e da imagem de capa não existem
-        // além da do vídeo (`videoUrlHint`)
-        1,
+      // com uma faixa de legendas a dica de WCAG 1.2.2 some
+      await expect(dialog.locator('.rte-dialog__hint')).not.toContainText(
+        'No captions track',
       );
 
       // faixa 2: legendas de tradução em inglês
@@ -165,10 +165,9 @@ for (const zone of [false, true]) {
       await expect(trackField(dialog, 2, 'Type')).toBeFocused();
 
       // remover a faixa 2 devolve o foco à "seguinte"; como não há, à anterior
+      await trackField(dialog, 2, 'Label').focus();
       await tab(page);
-      await tab(page);
-      await tab(page);
-      await tab(page);
+      await expect(trackField(dialog, 2, 'Default')).toBeFocused();
       await tab(page);
       await expect(
         dialog.getByRole('button', { name: 'Remove track 2' }),
@@ -190,6 +189,7 @@ for (const zone of [false, true]) {
 
       await submitDialog(dialog);
       await expect(dialog).toBeHidden();
+      await expect(editableOf(page, ID)).toBeFocused();
 
       const video = editableOf(page, ID).locator(
         'figure.rt-figure--video video',
@@ -240,10 +240,10 @@ for (const zone of [false, true]) {
         'http://media.example.test/a.vtt',
       );
       await trackField(dialog, 1, 'Language code (BCP 47)').fill('xx yy');
-      // Enter no campo (envio implícito): o clique em "Apply" logo depois do
-      // `blur` do idioma é perdido no Firefox quando o erro que aparece desloca
-      // o botão entre o mousedown e o mouseup.
-      await trackField(dialog, 1, 'Language code (BCP 47)').press('Enter');
+      // clique direto em "Apply" logo depois de digitar no idioma: o `mousedown`
+      // não tira o foco do campo (o Firefox perdia o clique quando o erro em
+      // linha deslocava o botão entre o `mousedown` e o `mouseup`)
+      await dialog.locator('.rte-dialog__apply').click();
       await expect(dialog).toBeVisible();
 
       const expectError = async (field: Locator, text: string) => {
@@ -295,6 +295,7 @@ for (const zone of [false, true]) {
         );
         await submitDialog(dialog);
         await expect(dialog).toBeHidden();
+        await expect(editableOf(page, ID)).toBeFocused();
         await expect
           .poll(() => rteHtml(page, ID))
           .toContain(`<iframe src="${embed.src}`);
@@ -355,6 +356,7 @@ for (const zone of [false, true]) {
       await expect(
         dialog.locator('input[type="text"]').first(),
       ).toHaveAttribute('id', /caption/);
+      const before = await rteHtml(page, ID);
       await dialogField(dialog, 'Caption').fill('Clipe de abertura');
       await submitDialog(dialog);
       await expect(dialog).toBeHidden();
@@ -364,6 +366,136 @@ for (const zone of [false, true]) {
         'src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"',
       );
       await expect(editableOf(page, ID)).toBeFocused();
+      await page.keyboard.press('ControlOrMeta+z');
+      await expect.poll(() => rteHtml(page, ID)).toBe(before);
+    });
+
+    // --- edição de vídeo e embed pelo "Details…" ---
+    const VIDEO = (tracks: string) =>
+      `<figure class="rt-figure rt-figure--video"><video src="/e2e.webm" controls preload="metadata" playsinline>${tracks}</video></figure>`;
+    const TRACK = (n: number) =>
+      `<track kind="captions" src="/e2e.vtt" srclang="pt-BR" label="Faixa ${n}">`;
+
+    async function loadMedia(
+      page: Page,
+      html: string,
+      kind: 'video' | 'embed',
+    ) {
+      await page.evaluate(
+        (html) => window.rteE2e.setValue('media', html),
+        `<p>Início</p>${html}<p>Fim</p>`,
+      );
+      await expect(
+        editableOf(page, ID).locator(
+          kind === 'video'
+            ? 'figure.rt-figure--video video'
+            : '.rt-embed iframe',
+        ),
+      ).toHaveCount(1);
+      await selectMediaByClick(page, ID, kind);
+      await expectFloating(page, ID, kind);
+    }
+
+    async function openDetails(page: Page, kind: 'video' | 'embed') {
+      await floatingItem(
+        floatingMenu(page, ID, kind),
+        kind === 'video' ? 'Video details…' : 'Embedded content details…',
+      ).click();
+      const dialog = openDialogOf(page, ID);
+      await expect(dialog).toBeVisible();
+      return dialog;
+    }
+
+    test('vídeo com 11 faixas: todas carregadas, "Add track" desabilitado, Apply mantém as 11', async ({
+      page,
+    }) => {
+      const tracks = Array.from({ length: 11 }, (_, i) => TRACK(i + 1)).join(
+        '',
+      );
+      await loadMedia(page, VIDEO(tracks), 'video');
+      const dialog = await openDetails(page, 'video');
+      await expect(dialog.locator('fieldset.rte-dialog__fieldset')).toHaveCount(
+        11,
+      );
+      await expect(
+        dialog.getByRole('button', { name: 'Add track' }),
+      ).toBeDisabled();
+      await submitDialog(dialog);
+      await expect(dialog).toBeHidden();
+      await expect
+        .poll(
+          async () =>
+            ((await rteHtml(page, ID)).match(/<track /g) ?? []).length,
+        )
+        .toBe(11);
+    });
+
+    for (const kind of ['video', 'embed'] as const) {
+      test(`${kind}: Details… e Remove tiram o nó; um Mod+Z o traz de volta`, async ({
+        page,
+      }) => {
+        await loadMedia(
+          page,
+          kind === 'video' ? VIDEO(TRACK(1)) : YOUTUBE,
+          kind,
+        );
+        const target = editableOf(page, ID).locator(
+          kind === 'video' ? 'figure.rt-figure--video' : '.rt-embed',
+        );
+        const before = await rteHtml(page, ID);
+        await page.waitForTimeout(UNDO_GROUP_MS);
+        const dialog = await openDetails(page, kind);
+        await dialog.locator('.rte-dialog__remove').click();
+        await expect(dialog).toBeHidden();
+        await expect(target).toHaveCount(0);
+        await expect(editableOf(page, ID)).toBeFocused();
+        await page.keyboard.press('ControlOrMeta+z');
+        await expect(target).toHaveCount(1);
+        await expect.poll(() => rteHtml(page, ID)).toBe(before);
+      });
+    }
+
+    test('vídeo: legenda e faixa pelo Details… e um Mod+Z restaura o estado anterior', async ({
+      page,
+    }) => {
+      await loadMedia(page, VIDEO(TRACK(1)), 'video');
+      const before = await rteHtml(page, ID);
+      await page.waitForTimeout(UNDO_GROUP_MS);
+      const dialog = await openDetails(page, 'video');
+      await dialogField(dialog, 'Caption').fill('Abertura');
+      await trackField(dialog, 1, 'Label').fill('Outro nome');
+      await submitDialog(dialog);
+      await expect(dialog).toBeHidden();
+      await expect.poll(() => rteHtml(page, ID)).toContain('Abertura');
+      expect(await rteHtml(page, ID)).toContain('label="Outro nome"');
+      await expect(editableOf(page, ID)).toBeFocused();
+      await page.keyboard.press('ControlOrMeta+z');
+      await expect.poll(() => rteHtml(page, ID)).toBe(before);
+    });
+
+    test('vídeo: endereço e pôster recusados anunciam o erro e nada muda', async ({
+      page,
+    }) => {
+      const dialog = await openVideoDialog(page);
+      const src = dialogField(dialog, 'Video address (URL)');
+      const poster = dialogField(dialog, 'Cover image address (optional)');
+      await src.fill('http://media.example.test/a.webm');
+      await poster.fill('data:image/png;base64,AAAA');
+      await dialog.locator('.rte-dialog__apply').click();
+      await expect(dialog).toBeVisible();
+      for (const field of [src, poster]) {
+        await expect(field).toHaveAttribute('aria-invalid', 'true');
+        const ids = (
+          (await field.getAttribute('aria-describedby')) ?? ''
+        ).split(' ');
+        const errorId = ids.find((i) => i.endsWith('-error'));
+        expect(errorId).toBeTruthy();
+        await expect(dialog.locator(`[id="${errorId}"]`)).toHaveText(
+          TRACK_ERROR_URL,
+        );
+      }
+      await expect(src).toBeFocused();
+      expect(await rteHtml(page, ID)).toBe(BASE);
     });
   });
 }

@@ -23,6 +23,8 @@ import {
 
 const ID = 'media';
 const BASE = '<p>Início</p><p>Fim</p>';
+const MEDIA_URL_ERROR =
+  'Address not accepted. Use https:// or a path starting with /, on an allowed host.';
 const IMG = 'figure.rt-figure img';
 /** Janela do ProseMirror para agrupar passos de desfazer (newGroupDelay 500 ms). */
 const UNDO_GROUP_MS = 600;
@@ -215,12 +217,51 @@ for (const zone of [false, true]) {
         await expect(dialog).toBeVisible();
         await expect(src).toHaveAttribute('aria-invalid', 'true');
         const error = dialog.locator('.rte-dialog__error').first();
-        await expect(error).toBeVisible();
+        await expect(error).toHaveText(MEDIA_URL_ERROR);
         const errorId = await error.getAttribute('id');
         expect(errorId).toBeTruthy();
         expect(await src.getAttribute('aria-describedby')).toContain(errorId);
         expect(await rteHtml(page, ID)).toBe(BASE);
       }
+    });
+
+    test('alt vazio sem marcar decorativa: erro anunciado e nada muda', async ({
+      page,
+    }) => {
+      await selectIn(page, ID, 'Início', 6);
+      const dialog = await openDialogFrom(page, ID, 'toolbar', 'image');
+      await dialogField(dialog, 'Image address (URL)').fill('/e2e.png');
+      await dialog.locator('.rte-dialog__apply').click();
+      await expect(dialog).toBeVisible();
+      const alt = dialogField(dialog, 'Alternative text');
+      await expect(alt).toHaveAttribute('aria-invalid', 'true');
+      await expect(alt).toBeFocused();
+      const ids = ((await alt.getAttribute('aria-describedby')) ?? '').split(
+        ' ',
+      );
+      const errorId = ids.find((i) => i.endsWith('-error'));
+      expect(errorId).toBeTruthy();
+      await expect(dialog.locator(`[id="${errorId}"]`)).toHaveText(
+        'Fill in this field.',
+      );
+      expect(await rteHtml(page, ID)).toBe(BASE);
+    });
+
+    test('Details… muda a largura e um Mod+Z restaura o estado anterior', async ({
+      page,
+    }) => {
+      await insertViaToolbar(page, { src: '/e2e.png', alt: 'Logo' });
+      await expect(editableOf(page, ID).locator(IMG)).toHaveCount(1);
+      const before = await rteHtml(page, ID);
+      await page.waitForTimeout(UNDO_GROUP_MS);
+      const dialog = await openDetails(page);
+      await dialogField(dialog, 'Width (px)').fill('120');
+      await submitDialog(dialog);
+      await expect(dialog).toBeHidden();
+      await expect.poll(() => rteHtml(page, ID)).toContain('width="120"');
+      await expect(editableOf(page, ID)).toBeFocused();
+      await page.keyboard.press('ControlOrMeta+z');
+      await expect.poll(() => rteHtml(page, ID)).toBe(before);
     });
 
     test('digitar logo depois de inserir substitui a imagem; Mod+Z a traz de volta', async ({

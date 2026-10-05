@@ -1,4 +1,8 @@
-<form class="rte-dialog__form" [formRoot]="form">
+<form
+  class="rte-dialog__form"
+  [formRoot]="form"
+  (mousedown)="keepFocus($event)"
+>
   @if (editing()) {
   <div class="rte-dialog__field">
     <span class="rte-dialog__label" [id]="ids().url + '-label'"

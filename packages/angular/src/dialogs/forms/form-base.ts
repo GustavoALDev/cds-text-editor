@@ -20,6 +20,21 @@ export abstract class RteDialogFormBase {
     return fieldError(field, this.labels());
   }
 
+  /**
+   * `mousedown` nos botões do rodapé não move o foco: o `blur` do campo o
+   * marcaria como tocado, o erro em linha deslocaria o botão e o clique se
+   * perderia (Firefox). O envio já marca todos e foca o primeiro inválido.
+   */
+  protected keepFocus(event: MouseEvent): void {
+    const target = event.target;
+    if (
+      target instanceof Element &&
+      target.closest('.rte-dialog__actions button')
+    ) {
+      event.preventDefault();
+    }
+  }
+
   protected cancel(): void {
     this.controller().cancel('cancelled');
   }
