@@ -499,6 +499,12 @@
       border-color: CanvasText;
     }
 
+    /* A dica não é texto inaplicável: o GrayText do --rte-text-muted fica abaixo de 4,5:1 sobre
+     * Canvas nos motores que não forçam as cores (WebKit). */
+    .rte-editor .rte-dialog__hint {
+      color: CanvasText;
+    }
+
     .rte-editor .rte-pending-selection {
       color: HighlightText;
       background-color: Highlight;

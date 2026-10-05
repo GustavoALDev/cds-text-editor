@@ -83,3 +83,60 @@ export async function cancelDialog(dialog: Locator): Promise<void> {
     .last()
     .click();
 }
+
+/** Controle do *chunk* dos diálogos (`dialogsChunk`). */
+export interface DialogsChunk {
+  /** URL do *chunk* (vazia até ele ser pedido). */
+  readonly url: string;
+  /** Resolve com a URL quando o *chunk* é pedido (prefetch ou pedido). */
+  readonly requested: Promise<string>;
+  /** Segura a resposta do *chunk* até a função devolvida ser chamada. */
+  hold(): () => void;
+  /** Aborta o pedido do *chunk* (falha de rede). */
+  abort(): void;
+}
+
+/**
+ * Intercepta os `.js` da página (antes do `gotoApp`): busca a resposta e
+ * marca como *chunk* dos diálogos o arquivo que contém `rte-dialog__form`
+ * (pré-voo 16); esse é segurado (`hold`) ou abortado (`abort`), os outros
+ * seguem intactos.
+ */
+export async function dialogsChunk(page: Page): Promise<DialogsChunk> {
+  let mode: 'pass' | 'hold' | 'abort' = 'pass';
+  let gate: Promise<void> = Promise.resolve();
+  let url = '';
+  let seen: (url: string) => void = () => undefined;
+  const requested = new Promise<string>((resolve) => (seen = resolve));
+  await page.route('**/*.js', async (route) => {
+    const response = await route.fetch();
+    const body = await response.text();
+    if (!body.includes('rte-dialog__form')) {
+      await route.fulfill({ response, body });
+      return;
+    }
+    url = route.request().url();
+    seen(url);
+    if (mode === 'abort') {
+      await route.abort('failed');
+      return;
+    }
+    await gate;
+    await route.fulfill({ response, body });
+  });
+  return {
+    get url() {
+      return url;
+    },
+    requested,
+    hold() {
+      mode = 'hold';
+      let release: () => void = () => undefined;
+      gate = new Promise<void>((resolve) => (release = resolve));
+      return () => release();
+    },
+    abort() {
+      mode = 'abort';
+    },
+  };
+}
