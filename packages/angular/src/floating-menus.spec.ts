@@ -378,9 +378,11 @@ describe('quando aparece e quando oculta (R4, R10)', () => {
     inLink(editor)();
     await settle(fixture);
     expect(openKinds(el)).toEqual(['link']);
+    expect(document.activeElement).toBe(editor.view.dom);
     image(editor)();
     await settle(fixture);
     expect(openKinds(el)).toEqual(['image']);
+    expect(document.activeElement).toBe(editor.view.dom);
     expect(
       menu(el, 'image')
         .querySelector('[aria-label="Align left"]')
@@ -389,11 +391,13 @@ describe('quando aparece e quando oculta (R4, R10)', () => {
     inCell(editor)();
     await settle(fixture);
     expect(openKinds(el)).toEqual(['table']);
+    expect(document.activeElement).toBe(editor.view.dom);
     // reposicionar
     window.dispatchEvent(new Event('resize'));
     await nextFrame();
     await settle(fixture);
     expect(openKinds(el)).toEqual(['table']);
+    expect(document.activeElement).toBe(editor.view.dom);
     // ocultar
     selectText(editor, 'depois', 1);
     await settle(fixture);
@@ -741,6 +745,34 @@ describe('dismiss', () => {
 });
 
 describe('configuração (R11)', () => {
+  it('floatingMenus: false com o foco no menu de link → foco no editável, sem editorBlur/touch', async () => {
+    const { fixture, host, el, editor } = await setup();
+    await focusAnd(fixture, editor, inLink(editor));
+    expect(floatingOf(fixture).focusActive()).toBe(true);
+    await settle(fixture);
+    expect(menu(el, 'link').contains(document.activeElement)).toBe(true);
+    host.floating.set(false);
+    await settle(fixture);
+    await nextFrame();
+    await settle(fixture);
+    expect(el.querySelector('rte-floating-menus')).toBeNull();
+    expect(document.activeElement).toBe(editor.view.dom);
+    expect(host.blurs).toBe(0);
+    expect(host.touches).toBe(0);
+  });
+
+  it('desligar o tipo visível com o foco no editável → oculto', async () => {
+    const { fixture, host, el, editor } = await setup();
+    await focusAnd(fixture, editor, bold(editor));
+    expect(openKinds(el)).toEqual(['text']);
+    host.floating.set({ text: false });
+    await settle(fixture);
+    expect(el.querySelector('.rte-floating--text')).toBeNull();
+    expect(openKinds(el)).toEqual([]);
+    expect(document.activeElement).toBe(editor.view.dom);
+    expect(host.blurs).toBe(0);
+  });
+
   it('floatingMenus: false → sem rte-floating-menus; { table: false } → 3; ao vivo sem recriar', async () => {
     const ready = vi.fn();
     const { fixture, host, el, cmp } = await setup((h) =>

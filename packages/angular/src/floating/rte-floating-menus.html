@@ -1,3 +1,20 @@
+<ng-template #iconTpl let-name>
+  <svg
+    class="rte-icon"
+    aria-hidden="true"
+    focusable="false"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    @for (d of icon(name); track $index) {
+    <path [attr.d]="d" />
+    }
+  </svg>
+</ng-template>
 @for (kind of kinds(); track kind) {
 <div
   #floating
@@ -24,21 +41,7 @@
     [class.rte-toolbar__button--pressed]="s.active"
     (mousedown)="$event.preventDefault()"
   >
-    <svg
-      class="rte-icon"
-      aria-hidden="true"
-      focusable="false"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      @for (d of icon(id); track $index) {
-      <path [attr.d]="d" />
-      }
-    </svg>
+    <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: id }" />
   </button>
   }
   <div
@@ -59,21 +62,7 @@
     [class.rte-toolbar__button--active]="link.active"
     (mousedown)="$event.preventDefault()"
   >
-    <svg
-      class="rte-icon"
-      aria-hidden="true"
-      focusable="false"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      @for (d of icon('link'); track $index) {
-      <path [attr.d]="d" />
-      }
-    </svg>
+    <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: 'link' }" />
   </button>
   } @case ('link') {
   <button
@@ -85,21 +74,7 @@
     [attr.title]="title(toolbarLabels().editLink, 'link')"
     (mousedown)="$event.preventDefault()"
   >
-    <svg
-      class="rte-icon"
-      aria-hidden="true"
-      focusable="false"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      @for (d of icon('link'); track $index) {
-      <path [attr.d]="d" />
-      }
-    </svg>
+    <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: 'link' }" />
   </button>
   <button
     type="button"
@@ -109,21 +84,9 @@
     [attr.title]="labels().removeLink"
     (mousedown)="$event.preventDefault()"
   >
-    <svg
-      class="rte-icon"
-      aria-hidden="true"
-      focusable="false"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      @for (d of icon('removeLink'); track $index) {
-      <path [attr.d]="d" />
-      }
-    </svg>
+    <ng-container
+      *ngTemplateOutlet="iconTpl; context: { $implicit: 'removeLink' }"
+    />
   </button>
   } @case ('table') { @for (op of tableOps; track op) {
   <button
@@ -134,21 +97,7 @@
     [attr.title]="toolbarLabels()[op]"
     (mousedown)="$event.preventDefault()"
   >
-    <svg
-      class="rte-icon"
-      aria-hidden="true"
-      focusable="false"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      @for (d of icon(op); track $index) {
-      <path [attr.d]="d" />
-      }
-    </svg>
+    <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: op }" />
   </button>
   }
   <button
@@ -160,21 +109,9 @@
     [attr.title]="labels().tableMore"
     (mousedown)="$event.preventDefault()"
   >
-    <svg
-      class="rte-icon"
-      aria-hidden="true"
-      focusable="false"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      @for (d of icon('tableMore'); track $index) {
-      <path [attr.d]="d" />
-      }
-    </svg>
+    <ng-container
+      *ngTemplateOutlet="iconTpl; context: { $implicit: 'tableMore' }"
+    />
   </button>
   } @case ('image') { @let align = imageAlign(); @for (a of imageAligns; track
   a[0]) {
@@ -188,21 +125,7 @@
     [class.rte-toolbar__button--pressed]="align === a[0]"
     (mousedown)="$event.preventDefault()"
   >
-    <svg
-      class="rte-icon"
-      aria-hidden="true"
-      focusable="false"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      @for (d of icon(a[2]); track $index) {
-      <path [attr.d]="d" />
-      }
-    </svg>
+    <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: a[2] }" />
   </button>
   }
   <button
@@ -213,21 +136,9 @@
     [attr.title]="labels().removeImage"
     (mousedown)="$event.preventDefault()"
   >
-    <svg
-      class="rte-icon"
-      aria-hidden="true"
-      focusable="false"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      @for (d of icon('removeImage'); track $index) {
-      <path [attr.d]="d" />
-      }
-    </svg>
+    <ng-container
+      *ngTemplateOutlet="iconTpl; context: { $implicit: 'removeImage' }"
+    />
   </button>
   } }
 </div>

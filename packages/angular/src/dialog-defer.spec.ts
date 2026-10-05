@@ -100,7 +100,9 @@ function modK(): KeyboardEvent {
 
 function linkButton(root: HTMLElement): HTMLButtonElement {
   const found = [
-    ...root.querySelectorAll<HTMLButtonElement>('.rte-toolbar__button'),
+    ...root.querySelectorAll<HTMLButtonElement>(
+      '.rte-toolbar .rte-toolbar__button',
+    ),
   ].find((b) => b.getAttribute('aria-label') === 'Link');
   if (!found) throw new Error('botão Link ausente');
   return found;

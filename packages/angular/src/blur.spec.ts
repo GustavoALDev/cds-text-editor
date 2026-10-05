@@ -113,7 +113,9 @@ function noNg0100(): void {
 
 function toolbarButton(el: HTMLElement, label: string): HTMLButtonElement {
   const found = [
-    ...el.querySelectorAll<HTMLButtonElement>('.rte-toolbar__button'),
+    ...el.querySelectorAll<HTMLButtonElement>(
+      '.rte-toolbar .rte-toolbar__button',
+    ),
   ].find((b) => b.getAttribute('aria-label') === label);
   if (!found) throw new Error(`botão ${label} ausente`);
   return found;

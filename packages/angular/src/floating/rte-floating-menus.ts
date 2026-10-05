@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   afterNextRender,
   afterRenderEffect,
@@ -21,13 +22,12 @@ import {
 } from '@angular/core';
 import type { RteLinkPolicy } from '@cds/rte-core';
 import type { Editor } from '@tiptap/core';
-import { NodeSelection } from '@tiptap/pm/state';
+import { NodeSelection, type Transaction } from '@tiptap/pm/state';
 import type { RteDialogKind } from '../dialogs/types';
 import type { RteFloatingMenuLabels, RteToolbarLabels } from '../labels/types';
 import { RTE_ICONS, type RteIconName } from '../toolbar/icons';
 import type { RteToolbarItemId } from '../toolbar/items';
 import { RteMenu } from '../toolbar/menu';
-import { positionFloating, type RteRect } from '../toolbar/position';
 import { RteRovingFocus, RteRovingItem } from '../toolbar/roving-focus';
 import {
   detectPlatform,
@@ -36,7 +36,9 @@ import {
   type RteShortcutTarget,
 } from '../toolbar/shortcuts';
 import type { RteToolbarState } from '../toolbar/state';
-import { clipAncestors, readFloatingAnchor, readVisibleArea } from './anchor';
+import { clipAncestors } from './anchor';
+import { bindFloatingListeners } from './listeners';
+import { placeFloatingMenu, RTE_FLOATING_MEASURING } from './place';
 import type { RteFloatingMenuKind } from './types';
 import {
   mapFloatingIdentity,
@@ -46,6 +48,7 @@ import {
   type RteFloatingContext,
   type RteFloatingIdentity,
 } from './visibility';
+import { RteViewportWatch } from './viewport-watch';
 
 const TEXT_MARKS = ['bold', 'italic', 'underline', 'strike', 'code'] as const;
 const TABLE_OPS = [
@@ -61,23 +64,11 @@ const IMAGE_ALIGNS = [
   ['full', 'imageAlignFull', 'imageAlignFull'],
 ] as const;
 
-const MEASURING = 'rte-floating--measuring';
-
 function sameContext(
   a: RteFloatingContext | null,
   b: RteFloatingContext | null,
 ): boolean {
   return sameFloatingIdentity(a?.identity ?? null, b?.identity ?? null);
-}
-
-/** Âncora encosta na área (intervalos fechados: cursor tem largura 0). */
-function touches(a: RteRect, b: RteRect): boolean {
-  return (
-    a.top <= b.bottom &&
-    a.bottom >= b.top &&
-    a.left <= b.right &&
-    a.right >= b.left
-  );
 }
 
 /**
@@ -92,7 +83,7 @@ function touches(a: RteRect, b: RteRect): boolean {
   templateUrl: './rte-floating-menus.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
-  imports: [RteRovingFocus, RteRovingItem],
+  imports: [RteRovingFocus, RteRovingItem, NgTemplateOutlet],
 })
 export class RteFloatingMenus {
   readonly editor = input.required<Editor>();
@@ -175,29 +166,23 @@ export class RteFloatingMenus {
   private shown: HTMLElement | null = null;
   private ancestors: HTMLElement[] | null = null;
   private readonly placed = new WeakMap<HTMLElement, string>();
-  private listening = false;
-  private frame: number | null = null;
   /** Dentro de `apply`/efeito: escritas de signal diretas, sem `ngZone.run`. */
   private applying = false;
   private dirty = false;
+  private placing = false;
+  private again = false;
 
-  private readonly onViewport = (event: Event): void => {
-    if (event.type === 'resize') this.ancestors = null;
-    const view = this.document.defaultView;
-    if (!view || this.frame !== null) return;
-    this.frame = view.requestAnimationFrame(() => {
-      this.frame = null;
-      this.applying = true;
+  private readonly watch = new RteViewportWatch(
+    this.document.defaultView,
+    this.ngZone,
+    () => (this.ancestors = null),
+    () => {
       this.dirty = false;
-      try {
-        this.apply();
-      } finally {
-        this.applying = false;
-      }
+      this.run(() => this.apply());
       // zone.js: uma volta da zona leva as escritas à detecção de mudanças
       if (this.dirty) this.ngZone.run(() => undefined);
-    });
-  };
+    },
+  );
 
   constructor() {
     afterNextRender(() => {
@@ -206,21 +191,29 @@ export class RteFloatingMenus {
 
     effect((onCleanup) => {
       const editor = this.editor();
-      untracked(() => onCleanup(this.bind(editor)));
+      untracked(() =>
+        onCleanup(
+          bindFloatingListeners({
+            editor,
+            host: this.host,
+            document: this.document,
+            ngZone: this.ngZone,
+            sink: {
+              focusInMenu: (v) => this.write(this.focusInMenu, v),
+              dragging: (v) => this.write(this.dragging, v),
+              composing: (v) => this.write(this.composing, v),
+              transaction: (tr) => this.remapDismissed(editor, tr),
+            },
+          }),
+        ),
+      );
     });
 
     // Tipo desligado ao vivo com o foco dentro (pré-voo 11): efeitos de
     // componente rodam antes do refresh do template, com o elemento no DOM.
     effect(() => {
       const kinds = this.kinds();
-      untracked(() => {
-        const active = this.document.activeElement;
-        const menu = active?.closest<HTMLElement>('.rte-floating');
-        const kind = menu?.getAttribute('data-rte-kind');
-        if (!menu || !this.host.contains(menu) || !kind) return;
-        if (kinds.includes(kind as RteFloatingMenuKind)) return;
-        this.run(() => this.focusEditable());
-      });
+      untracked(() => this.releaseFocus(kinds));
     });
 
     // Mostrar, medir e escrever num só passo (pré-voo 9).
@@ -235,7 +228,7 @@ export class RteFloatingMenus {
     });
 
     inject(DestroyRef).onDestroy(() => {
-      this.unlisten();
+      this.watch.stop();
       this.shown = null;
     });
   }
@@ -256,6 +249,20 @@ export class RteFloatingMenus {
     return true;
   }
 
+  /**
+   * Foco num `.rte-floating` deste host cujo tipo não está em `kinds` vai ao
+   * editável (M11, pré-voo 11), antes de o elemento sair do DOM. O
+   * `RteEditor` chama com `[]` quando todos os menus vão sair.
+   */
+  releaseFocus(kinds: readonly RteFloatingMenuKind[]): void {
+    const active = this.document.activeElement;
+    const menu = active?.closest<HTMLElement>('.rte-floating');
+    const kind = menu?.getAttribute('data-rte-kind');
+    if (!menu || !this.host.contains(menu) || !kind) return;
+    if (kinds.includes(kind as RteFloatingMenuKind)) return;
+    this.run(() => this.focusEditable());
+  }
+
   protected menuLabel(kind: RteFloatingMenuKind): string {
     return this.labels()[`${kind}Menu`];
   }
@@ -272,70 +279,14 @@ export class RteFloatingMenus {
     return this.toolbarLabels()[id as (typeof TEXT_MARKS)[number]];
   }
 
-  /** Ouvintes do editável e do documento (M20); devolve a limpeza. */
-  private bind(editor: Editor): () => void {
-    const dom = editor.view.dom;
-    const doc = this.document;
-    const host = this.host;
-    const inMenu = (target: EventTarget | null) =>
-      target instanceof Element &&
-      host.contains(target) &&
-      target.closest('.rte-floating') !== null;
-    const onFocusIn = (e: Event) =>
-      this.write(this.focusInMenu, inMenu(e.target));
-    // destino dentro do host: o `focusin` seguinte decide (sem piscar)
-    const onFocusOut = (e: Event) => {
-      const next = (e as FocusEvent).relatedTarget;
-      if (next instanceof Node && host.contains(next)) return;
-      this.write(this.focusInMenu, false);
-    };
-    const onPointerDown = (e: Event) => {
-      const p = e as PointerEvent;
-      if (p.button === 0 && p.isPrimary !== false)
-        this.write(this.dragging, true);
-    };
-    const onPointerUp = () => this.write(this.dragging, false);
-    const onCompositionStart = () => this.write(this.composing, true);
-    const onCompositionEnd = () => this.write(this.composing, false);
-    const onTransaction = ({
-      transaction,
-    }: {
-      transaction: {
-        docChanged: boolean;
-        mapping: Parameters<typeof mapFloatingIdentity>[1];
-      };
-    }) => {
-      const id = untracked(this.dismissed);
-      if (!id) return;
-      let next = transaction.docChanged
-        ? mapFloatingIdentity(id, transaction.mapping)
-        : id;
-      // a identidade mudou: o menu dispensado volta (M6)
-      const ctx = readFloatingContext(editor, untracked(this.kinds));
-      if (next && !sameFloatingIdentity(ctx?.identity ?? null, next))
-        next = null;
-      if (!sameFloatingIdentity(next, id)) this.write(this.dismissed, next);
-    };
-    this.ngZone.runOutsideAngular(() => {
-      host.addEventListener('focusin', onFocusIn);
-      host.addEventListener('focusout', onFocusOut);
-      dom.addEventListener('pointerdown', onPointerDown);
-      dom.addEventListener('compositionstart', onCompositionStart);
-      dom.addEventListener('compositionend', onCompositionEnd);
-      doc.addEventListener('pointerup', onPointerUp, true);
-      doc.addEventListener('pointercancel', onPointerUp, true);
-    });
-    editor.on('transaction', onTransaction);
-    return () => {
-      host.removeEventListener('focusin', onFocusIn);
-      host.removeEventListener('focusout', onFocusOut);
-      dom.removeEventListener('pointerdown', onPointerDown);
-      dom.removeEventListener('compositionstart', onCompositionStart);
-      dom.removeEventListener('compositionend', onCompositionEnd);
-      doc.removeEventListener('pointerup', onPointerUp, true);
-      doc.removeEventListener('pointercancel', onPointerUp, true);
-      editor.off('transaction', onTransaction);
-    };
+  /** Identidade dispensada mapeada; anulada quando o contexto muda (M6). */
+  private remapDismissed(editor: Editor, tr: Transaction): void {
+    const id = untracked(this.dismissed);
+    if (!id) return;
+    let next = tr.docChanged ? mapFloatingIdentity(id, tr.mapping) : id;
+    const ctx = readFloatingContext(editor, untracked(this.kinds));
+    if (next && !sameFloatingIdentity(ctx?.identity ?? null, next)) next = null;
+    this.write(this.dismissed, next);
   }
 
   /**
@@ -372,78 +323,83 @@ export class RteFloatingMenus {
     }
   }
 
-  /** Mostra, posiciona ou oculta conforme o candidato e a área visível. */
+  /**
+   * Mostra, posiciona ou oculta conforme o candidato e a área visível. Mover
+   * o foco ao ocultar dispara eventos síncronos; uma reentrada só marca
+   * `again`, e o passo roda mais uma vez no fim.
+   */
   private apply(): void {
+    if (this.placing) {
+      this.again = true;
+      return;
+    }
+    this.placing = true;
+    try {
+      this.again = false;
+      this.applyOnce();
+      if (this.again) {
+        this.again = false;
+        this.applyOnce();
+      }
+    } finally {
+      this.placing = false;
+    }
+  }
+
+  private applyOnce(): void {
     const kind = untracked(this.candidate);
     const editor = untracked(this.editor);
     if (!kind || editor.isDestroyed) {
       this.hide();
       this.write(this.clipped, false);
-      this.unlisten();
+      this.watch.stop();
       return;
     }
-    this.listen();
+    this.watch.start();
     const ctx = untracked(this.context);
     const el = this.elementOf(kind);
     const view = this.document.defaultView;
     if (!ctx || !el || !view) {
       this.hide();
+      this.write(this.clipped, false);
       return;
     }
-    const root = this.document.documentElement;
-    const viewport = {
-      width: root.clientWidth || view.innerWidth,
-      height: root.clientHeight || view.innerHeight,
-    };
-    this.ancestors ??= clipAncestors(editor.view.dom);
-    const visible = readVisibleArea(editor.view.dom, this.ancestors, viewport);
-    const anchor = readFloatingAnchor(editor, ctx);
-    if (!visible || !anchor || !touches(anchor, visible)) {
-      this.hide();
-      this.write(this.clipped, true);
-      return;
-    }
-    this.write(this.clipped, false);
-    if (this.shown !== el) {
-      this.hide();
-      el.classList.add(MEASURING);
-      el.showPopover();
-      this.shown = el;
-    }
-    const coarse =
-      (kind === 'text' || kind === 'link') &&
-      view.matchMedia?.('(pointer: coarse)').matches === true;
-    const p = positionFloating({
-      anchor,
-      visible,
-      menu: { width: el.offsetWidth, height: el.offsetHeight },
-      viewport,
-      prefer: coarse ? 'below' : 'above',
+    const result = placeFloatingMenu({
+      editor,
+      ctx,
+      el,
+      view,
+      ancestors: () => (this.ancestors ??= clipAncestors(editor.view.dom)),
+      placed: this.placed,
+      show: () => {
+        if (this.shown === el) return;
+        this.hide();
+        el.classList.add(RTE_FLOATING_MEASURING);
+        el.showPopover();
+        this.shown = el;
+      },
     });
-    const left = Math.round(p.left);
-    const top = Math.round(p.top);
-    const key = `${left},${top}`;
-    if (this.placed.get(el) !== key) {
-      this.placed.set(el, key);
-      el.style.setProperty('left', `${left}px`);
-      el.style.setProperty('top', `${top}px`);
-    }
-    el.classList.remove(MEASURING);
+    if (result === 'clipped') this.hide();
+    this.write(this.clipped, result === 'clipped');
   }
 
   /**
    * Oculta o menu mostrado: fecha antes o submenu e, com o foco dentro, leva
-   * o foco ao editável (M11); `disabled`/`hidden` já tiraram o foco (U18).
+   * o foco ao editável (M11). Depende da ordem das fases: em `disabled`/
+   * `hidden` o `afterRenderEffect` de fase `write` do `RteEditor` já tirou o
+   * foco do host (U18) antes desta fase `mixedReadWrite`, então aqui não há o
+   * que mover e o `touch` sai uma vez.
    */
   private hide(): void {
     const el = this.shown;
     if (!el) return;
     this.shown = null;
+    this.ancestors = null;
     for (const menu of untracked(this.menus)) {
       if (menu.isOpen()) menu.close('none');
     }
     if (el.contains(this.document.activeElement)) this.focusEditable();
-    el.classList.remove(MEASURING);
+    el.classList.remove(RTE_FLOATING_MEASURING);
     if (el.isConnected) el.hidePopover();
   }
 
@@ -461,29 +417,5 @@ export class RteFloatingMenus {
     const ref = untracked(this.elements)[index] as
       ElementRef<HTMLElement> | undefined;
     return ref?.nativeElement ?? null;
-  }
-
-  private listen(): void {
-    const view = this.document.defaultView;
-    if (!view || this.listening) return;
-    this.listening = true;
-    this.ancestors = null;
-    this.ngZone.runOutsideAngular(() => {
-      view.addEventListener('scroll', this.onViewport, {
-        capture: true,
-        passive: true,
-      });
-      view.addEventListener('resize', this.onViewport, { passive: true });
-    });
-  }
-
-  private unlisten(): void {
-    const view = this.document.defaultView;
-    if (view && this.frame !== null) view.cancelAnimationFrame(this.frame);
-    this.frame = null;
-    if (!view || !this.listening) return;
-    this.listening = false;
-    view.removeEventListener('scroll', this.onViewport, { capture: true });
-    view.removeEventListener('resize', this.onViewport);
   }
 }

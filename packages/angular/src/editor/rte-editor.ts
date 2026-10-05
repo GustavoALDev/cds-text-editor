@@ -504,6 +504,17 @@ export class RteEditor implements FormValueControl<string> {
       },
     });
 
+    // Todos os menus flutuantes saindo (`floatingMenus: false`) com o foco
+    // dentro: o `@if` destrói o componente antes do efeito dele sobre
+    // `kinds()`, então o foco vai ao editável daqui, antes do refresh (M11).
+    effect(() => {
+      const kinds = this.floatingKinds();
+      const editor = this.instance();
+      untracked(() => {
+        if (!kinds.length || !editor) this.floatingRef()?.releaseFocus([]);
+      });
+    });
+
     // G5: a troca de `toolbar` que tira a origem do DOM cancela (foco ao
     // editável, G4).
     afterRenderEffect({
