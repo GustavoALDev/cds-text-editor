@@ -1,3 +1,4 @@
+import type { Signal } from '@angular/core';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import * as api from '@cds/rte-angular';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
@@ -6,6 +7,8 @@ import type {
   RteFloatingMenuKind,
   RteFloatingMenuLabels,
   RteFloatingMenusConfig,
+  RteMediaChange,
+  RteMediaSession,
 } from '@cds/rte-angular';
 import * as i18n from '@cds/rte-angular/i18n';
 import * as testing from '@cds/rte-angular/testing';
@@ -36,6 +39,21 @@ describe('@cds/rte-angular', () => {
   it('RteDialogKind aceita os três tipos de mídia (05c1)', () => {
     expectTypeOf<RteDialogKind>().toEqualTypeOf<
       'link' | 'lang' | 'quoteAuthor' | 'table' | 'image' | 'video' | 'embed'
+    >();
+  });
+
+  it('exporta os tipos da sessão de mídia (05c1)', () => {
+    expectTypeOf<RteMediaChange>().toEqualTypeOf<{
+      readonly added: readonly string[];
+      readonly removed: readonly string[];
+    }>();
+    expectTypeOf<RteMediaSession>().toEqualTypeOf<{
+      readonly current: readonly string[];
+      readonly added: readonly string[];
+      readonly removed: readonly string[];
+    }>();
+    expectTypeOf<api.RteEditor['mediaSession']>().toEqualTypeOf<
+      Signal<RteMediaSession>
     >();
   });
 
