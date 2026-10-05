@@ -35,12 +35,12 @@ import { isRtl, RteRovingFocus, RteRovingItem } from './roving-focus';
 import {
   ariaKeyShortcuts,
   detectPlatform,
-  formatShortcut,
   RTE_TOOLBAR_SHORTCUTS,
+  shortcutTitle,
   type RtePlatform,
   type RteShortcutTarget,
 } from './shortcuts';
-import { createToolbarState, type RteItemState } from './state';
+import type { RteItemState, RteToolbarState } from './state';
 import {
   readTableMenuState,
   RTE_TABLE_OPS,
@@ -117,17 +117,11 @@ function tableOpOf(e: RteMenuEntry): RteTableOp {
   return (e.value === TABLE_CUSTOM ? 'insertTable' : e.value) as RteTableOp;
 }
 
-function sameIds(
-  a: readonly RteToolbarItemId[],
-  b: readonly RteToolbarItemId[],
-): boolean {
-  return a.length === b.length && a.every((id, i) => id === b[i]);
-}
-
 /**
  * Barra de ferramentas do `rte-editor` (spec 05b1, U2–U14), interna: grupos
  * de botões com foco itinerante (APG *toolbar*), menus em `popover` nativo e
- * estado lido uma vez por transação (U5). Sem editor ou não interativo, todos
+ * estado lido uma vez por transação (U5). O estado vem do `RteEditor`, o
+ * mesmo dos menus flutuantes (M15). Sem editor ou não interativo, todos
  * os botões ficam `disabled` nativos (U10).
  */
 @Component({
@@ -152,6 +146,8 @@ export class RteToolbar {
   /** Versão da ponte (sobe 1 por transação). */
   readonly version = input.required<Signal<number>>();
   readonly groups = input.required<readonly (readonly RteToolbarItemId[])[]>();
+  /** Estado dos itens, criado no `RteEditor` e compartilhado (M15). */
+  readonly state = input.required<RteToolbarState>();
   readonly interactive = input(false);
   readonly labels = input.required<RteToolbarLabels>();
   readonly calloutTitles = input.required<RteContentLabels['calloutTitles']>();
@@ -177,16 +173,6 @@ export class RteToolbar {
   protected readonly platform = signal<RtePlatform>('other');
   /** Direção do host (ícone do alinhamento sem atributo); relida ao focar. */
   private readonly rtl = signal(false);
-
-  private readonly ids = computed(() => this.groups().flat(), {
-    equal: sameIds,
-  });
-  protected readonly state = createToolbarState({
-    editor: this.editor,
-    version: computed(() => this.version()()),
-    items: this.ids,
-    interactive: this.interactive,
-  });
 
   /** Itens dos menus; mudam só com rótulos, paleta ou linguagens. */
   protected readonly entries: Signal<
@@ -347,10 +333,7 @@ export class RteToolbar {
     target: RteShortcutTarget | null,
     limited = false,
   ): string {
-    const shortcut = target ? RTE_TOOLBAR_SHORTCUTS[target] : undefined;
-    const base = shortcut
-      ? `${label} (${formatShortcut(shortcut, this.platform())})`
-      : label;
+    const base = shortcutTitle(label, target, this.platform());
     return limited ? `${base} — ${this.labels().spanLimit}` : base;
   }
 
@@ -426,13 +409,13 @@ export class RteToolbar {
    */
   protected run(id: RteToolbarItemId): void {
     const editor = this.canRun();
-    if (!editor || !this.state.item(id)().enabled) return;
+    if (!editor || !this.state().item(id)().enabled) return;
     runToolbarCommand(editor, id, null);
   }
 
   /** Botão de diálogo: pede ao dono que abra o diálogo do item (G11). */
   protected openFromItem(id: RteToolbarItemId, origin: HTMLElement): void {
-    if (!this.canRun() || !this.state.item(id)().enabled) return;
+    if (!this.canRun() || !this.state().item(id)().enabled) return;
     this.dialog.emit({ kind: id as RteDialogKind, origin });
   }
 
@@ -445,7 +428,7 @@ export class RteToolbar {
     const editor = this.canRun();
     if (!editor) return;
     const table = id === 'table' ? this.tableState(menu) : null;
-    if (!this.entryEnabled(id, e, this.state.item(id)(), table)) return;
+    if (!this.entryEnabled(id, e, this.state().item(id)(), table)) return;
     if (id === 'table' && e.value === TABLE_CUSTOM) {
       menu.close('trigger');
       this.dialog.emit({ kind: 'table', origin: trigger });

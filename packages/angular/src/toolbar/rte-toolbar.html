@@ -1,5 +1,5 @@
 @for (group of groups(); track $index; let last = $last) { @for (id of group;
-track id) { @let s = state.item(id)(); @let kind = kindOf(id); @if (kind ===
+track id) { @let s = state().item(id)(); @let kind = kindOf(id); @if (kind ===
 'menu') {
 <button
   #trigger

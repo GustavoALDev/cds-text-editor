@@ -44,11 +44,21 @@ import { RteDialogs } from '../dialogs/rte-dialogs';
 import { dialogTarget } from '../dialogs/target';
 import type { RteDialogKind } from '../dialogs/types';
 import { createRteUiExtension } from '../dialogs/ui-extension';
+import {
+  floatingItemIds,
+  resolveFloatingKinds,
+  sameKinds,
+} from '../floating/config';
+import type {
+  RteFloatingMenuKind,
+  RteFloatingMenusConfig,
+} from '../floating/types';
 import { mergeLabels, readLabelsSource } from '../labels/merge';
 import type { RteLabels, RteLabelsSource } from '../labels/types';
 import { pickToolbarConfig, resolveToolbarGroups } from '../toolbar/config';
 import type { RteToolbarConfig, RteToolbarItemId } from '../toolbar/items';
 import { RteToolbar } from '../toolbar/rte-toolbar';
+import { createToolbarState, type RteToolbarState } from '../toolbar/state';
 import { mergeTheme, sameTheme, themeKey } from '../theme/instance-theme';
 import {
   editableAttributes,
@@ -78,6 +88,13 @@ function sameGroups(
         group.every((id, j) => id === b[i]?.[j]),
     )
   );
+}
+
+function sameIds(
+  a: readonly RteToolbarItemId[],
+  b: readonly RteToolbarItemId[],
+): boolean {
+  return a.length === b.length && a.every((id, i) => id === b[i]);
 }
 
 function samePalette(
@@ -152,6 +169,8 @@ export class RteEditor implements FormValueControl<string> {
   readonly toolbar = input<RteToolbarConfig | undefined>(undefined);
   /** Tema: mesclado por chave sobre o de `provideRichText`; ao vivo (U15). */
   readonly theme = input<RteTheme | undefined>(undefined);
+  /** Menus flutuantes: entrada > `provideRichText` por chave; ao vivo (M17). */
+  readonly floatingMenus = input<RteFloatingMenusConfig | undefined>(undefined);
 
   // Saídas
   readonly editorReady = output<Editor>();
@@ -267,6 +286,40 @@ export class RteEditor implements FormValueControl<string> {
       ),
     { equal: sameGroups },
   );
+
+  private readonly floatingWarned = new Set<string>();
+  /** Tipos de menu flutuante ligados (M17), na ordem de prioridade. */
+  protected readonly floatingKinds: Signal<readonly RteFloatingMenuKind[]> =
+    computed(
+      () =>
+        resolveFloatingKinds(
+          this.floatingMenus(),
+          this.config.floatingMenus,
+          this.schema().features,
+          this.floatingWarned,
+        ),
+      { equal: sameKinds },
+    );
+
+  /**
+   * Estado único da barra e dos menus flutuantes (M15, pré-voo 1): união sem
+   * repetição dos itens da barra e dos do menu de texto, calculada uma vez
+   * por transação mesmo com `toolbar: false`.
+   */
+  protected readonly toolbarState: RteToolbarState = createToolbarState({
+    editor: this.instance,
+    version: this.bridge.version,
+    items: computed(
+      () => [
+        ...new Set([
+          ...this.toolbarGroups().flat(),
+          ...floatingItemIds(this.floatingKinds()),
+        ]),
+      ],
+      { equal: sameIds },
+    ),
+    interactive: this.interactive,
+  });
 
   /** Paleta do esquema; igual por valor (a criação não re-renderiza os menus). */
   protected readonly palette = computed(() => this.schema().palette, {

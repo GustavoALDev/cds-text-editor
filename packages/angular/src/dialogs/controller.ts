@@ -1,4 +1,10 @@
-import { isDevMode, signal, untracked, type Signal } from '@angular/core';
+import {
+  isDevMode,
+  signal,
+  untracked,
+  type Signal,
+  type WritableSignal,
+} from '@angular/core';
 import type { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { RteDialogMode, RteDialogTarget } from './target';
@@ -14,9 +20,33 @@ const DEFER_FAILED =
  */
 const busy = new WeakMap<Document, RteDialogController>();
 
+/** Espelho reativo de `busy` (pré-voo 3): um signal por documento. */
+const busySignals = new WeakMap<
+  Document,
+  { readonly flag: WritableSignal<boolean>; readonly view: Signal<boolean> }
+>();
+
+function busyEntry(doc: Document) {
+  let entry = busySignals.get(doc);
+  if (!entry) {
+    const flag = signal(busy.has(doc));
+    entry = { flag, view: flag.asReadonly() };
+    busySignals.set(doc, entry);
+  }
+  return entry;
+}
+
 /** `true` se algum editor do documento tem um pedido de diálogo em curso. */
 export function dialogBusy(doc: Document): boolean {
   return busy.has(doc);
+}
+
+/**
+ * {@link dialogBusy} como signal (o mesmo objeto por documento): sobe quando
+ * um editor do documento registra um pedido e desce quando ele termina.
+ */
+export function documentDialogBusy(doc: Document): Signal<boolean> {
+  return busyEntry(doc).view;
 }
 
 /** Pedido de diálogo aceito (G18): o alvo e o documento da abertura (G5). */
@@ -79,6 +109,7 @@ export class RteDialogController {
     const doc = editor.view.dom.ownerDocument;
     if (busy.has(doc)) return;
     busy.set(doc, this);
+    busyEntry(doc).flag.set(true);
     this.owner = doc;
     const { from, to } = target.range;
     if ((kind === 'link' || kind === 'lang') && from < to) {
@@ -160,7 +191,10 @@ export class RteDialogController {
   /** Encerra o pedido em curso e libera o documento (G6). */
   private clear(): void {
     this.current.set(null);
-    if (this.owner && busy.get(this.owner) === this) busy.delete(this.owner);
+    if (this.owner && busy.get(this.owner) === this) {
+      busy.delete(this.owner);
+      busyEntry(this.owner).flag.set(false);
+    }
     this.owner = null;
   }
 

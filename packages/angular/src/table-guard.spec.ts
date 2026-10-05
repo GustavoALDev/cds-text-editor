@@ -21,6 +21,7 @@ import {
   exceedsSpanLimit,
   readTableMenuState,
   readTableOpState,
+  tableGuardProbe,
   type RteGrowingTableOp,
 } from './toolbar/table-guard';
 
@@ -559,4 +560,16 @@ describe('propriedade: guarda ⇔ comando do Tiptap (R8)', () => {
       }
     }
   }, 120_000);
+});
+
+describe('tableGuardProbe (M16, pré-voo 16)', () => {
+  it('addRowAfter ensaia 1×; deleteRow não ensaia', () => {
+    const editor = createTestEditor(table([tr([td('a'), td('b')])]));
+    selectText(editor, 'a', 1);
+    tableGuardProbe.rehearsals = 0;
+    expect(readTableOpState(editor, 'addRowAfter').enabled).toBe(true);
+    expect(tableGuardProbe.rehearsals).toBe(1);
+    readTableOpState(editor, 'deleteRow');
+    expect(tableGuardProbe.rehearsals).toBe(1);
+  });
 });

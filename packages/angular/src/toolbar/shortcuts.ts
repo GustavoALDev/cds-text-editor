@@ -98,6 +98,19 @@ export function formatShortcut(
     .join('+');
 }
 
+/**
+ * Dica de um item (pré-voo 13): `rótulo (atalho)` na notação da plataforma,
+ * ou só o rótulo quando o alvo não tem atalho.
+ */
+export function shortcutTitle(
+  label: string,
+  target: RteShortcutTarget | null,
+  platform: RtePlatform,
+): string {
+  const shortcut = target ? RTE_TOOLBAR_SHORTCUTS[target] : undefined;
+  return shortcut ? `${label} (${formatShortcut(shortcut, platform)})` : label;
+}
+
 /** Valor de `aria-keyshortcuts`: `Control+Shift+Z` ou `Meta+Shift+Z`. */
 export function ariaKeyShortcuts(
   shortcut: string,

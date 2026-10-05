@@ -43,7 +43,9 @@ function canFocus(item: RteRovingItem): boolean {
  * último focado ou, sem ele (no início, depois que saiu do conjunto ou ficou
  * `disabled`), o primeiro focável; `←`/`→` circulares (invertidos em
  * `dir="rtl"`), `Home`/`End` nas pontas. Os itens são os `[rteRovingItem]`
- * descendentes.
+ * descendentes. Com `[rteRovingTabStop]="false"` (menus flutuantes, M11)
+ * nenhum item é parada de `Tab`: todos ficam `tabindex="-1"` e o grupo só é
+ * alcançado por `focusActive()`.
  */
 @Directive({
   selector: '[rteRovingFocus]',
@@ -55,6 +57,13 @@ function canFocus(item: RteRovingItem): boolean {
 export class RteRovingFocus {
   private readonly host =
     inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  /**
+   * @internal `false`: nenhum item com `tabindex="0"` (pré-voo 2). O nome do
+   * campo é o do atributo: o lint proíbe *alias* de entrada.
+   */
+  readonly rteRovingTabStop = input(true, { transform: booleanAttribute });
+  /** @internal O grupo tem parada de `Tab` (`rteRovingTabStop`). */
+  readonly tabStop: Signal<boolean> = this.rteRovingTabStop;
   private readonly contentItems = contentChildren(RteRovingItem, {
     descendants: true,
   });
@@ -141,10 +150,11 @@ export class RteRovingFocus {
     // A parada de Tab acompanha o foco já no `keydown`: um `Tab` antes do
     // render usaria o `tabindex` antigo (N9). A ligação de host grava os
     // mesmos valores no render seguinte.
+    const tabStop = this.tabStop();
     for (const item of items) {
       item.element.setAttribute(
         'tabindex',
-        item.element === target ? '0' : '-1',
+        tabStop && item.element === target ? '0' : '-1',
       );
     }
   }
@@ -183,6 +193,9 @@ export class RteRovingItem {
   readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly group = inject(RteRovingFocus);
   protected readonly tabIndex = computed(() =>
-    this.group.items()[this.group.activeIndex()] === this ? 0 : -1,
+    this.group.tabStop() &&
+    this.group.items()[this.group.activeIndex()] === this
+      ? 0
+      : -1,
   );
 }

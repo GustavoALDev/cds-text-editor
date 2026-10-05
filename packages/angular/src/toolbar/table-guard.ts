@@ -76,6 +76,12 @@ function isGrowing(op: RteTableOp): op is RteGrowingTableOp {
 }
 
 /**
+ * Sonda de teste (M16, pré-voo 16): quantos ensaios rodaram. Só conta em
+ * desenvolvimento (`ngDevMode` some no build de produção).
+ */
+export const tableGuardProbe = { rehearsals: 0 };
+
+/**
  * Ensaio (pré-voo 13): roda o comando do `prosemirror-tables` contra o estado
  * com um `dispatch` que só guarda a transação; nada é aplicado.
  */
@@ -83,6 +89,9 @@ function rehearse(
   state: EditorState,
   op: RteGrowingTableOp,
 ): Transaction | null {
+  if (typeof ngDevMode !== 'undefined' && ngDevMode) {
+    tableGuardProbe.rehearsals += 1;
+  }
   let captured: Transaction | null = null;
   GROWING[op](state, (tr) => {
     captured = tr;
