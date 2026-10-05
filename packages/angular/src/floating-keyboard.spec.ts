@@ -80,15 +80,23 @@ class Host {
       [value]="value"
       [options]="options"
       toolbar="full"
+      (editorBlur)="events = events + 1"
+      (editorFocus)="events = events + 1"
+      (touch)="events = events + 1"
     /><rte-editor
       class="b"
       [value]="value"
       [options]="options"
       toolbar="full"
+      (editorBlur)="events = events + 1"
+      (editorFocus)="events = events + 1"
+      (touch)="events = events + 1"
     />`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class TwoHosts {
+  /** `editorBlur`/`editorFocus`/`touch` das duas instâncias. */
+  events = 0;
   readonly value = DOC;
   readonly options = OPTIONS;
   readonly cmps = viewChildren(RteEditor);
@@ -260,6 +268,27 @@ describe('Alt+F10 (M12)', () => {
     expectQuiet(s);
   });
 
+  it('dentro do submenu More da tabela → barra e o submenu fecha (ruling 29)', async () => {
+    const s = await setup((h) => h.value.set(TABLE_DOC));
+    await focusAnd(s, () => selectText(s.editor, 'c1', 1));
+    expect(openKinds(s.el)).toEqual(['table']);
+    const m = menu(s.el, 'table');
+    m.querySelector<HTMLElement>(
+      '[aria-label="More table operations"]',
+    )?.click();
+    await settle(s.fixture);
+    const sub = m.querySelector<HTMLElement>('.rte-menu');
+    expect(sub).not.toBeNull();
+    if (!sub) return;
+    expect(isPopoverOpen(sub)).toBe(true);
+    expect(sub.contains(document.activeElement)).toBe(true);
+    const ev = altF10(document.activeElement as HTMLElement);
+    await settle(s.fixture);
+    expect(ev.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(firstToolbarItem(s.el));
+    expect(isPopoverOpen(sub)).toBe(false);
+  });
+
   it('dentro do menu sem barra → foco não muda', async () => {
     const s = await setup((h) => h.toolbar.set(false));
     await focusAnd(s, bold(s.editor));
@@ -279,6 +308,7 @@ describe('Alt+F10 (M12)', () => {
     altF10(s.editor.view.dom);
     await settle(s.fixture);
     expect(document.activeElement).toBe(firstToolbarItem(s.el));
+    expectQuiet(s);
     TestBed.resetTestingModule();
     const t = await setup((h) => h.toolbar.set(false));
     await focusAnd(t, caret(t.editor));
@@ -519,6 +549,7 @@ describe('focusFloatingMenu() (M12)', () => {
     const before = document.activeElement;
     expect(s.cmp.focusFloatingMenu()).toBe(false);
     expect(document.activeElement).toBe(before);
+    expectQuiet(s);
   });
 
   it('duas instâncias: A com menu, B.focusFloatingMenu() → false e o foco não vai a A (Review Focus 4)', async () => {
@@ -534,8 +565,11 @@ describe('focusFloatingMenu() (M12)', () => {
     const root = fixture.nativeElement as HTMLElement;
     const elA = root.querySelector('rte-editor.a') as HTMLElement;
     expect(openKinds(elA)).toEqual(['text']);
+    fixture.componentInstance.events = 0;
     expect(b?.focusFloatingMenu()).toBe(false);
+    await settle(fixture);
     expect(document.activeElement).toBe(editorA.view.dom);
     expect(menu(elA, 'text').contains(document.activeElement)).toBe(false);
+    expect(fixture.componentInstance.events).toBe(0);
   });
 });

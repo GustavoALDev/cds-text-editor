@@ -16,6 +16,7 @@ import {
   output,
   signal,
   untracked,
+  viewChild,
   viewChildren,
   ViewEncapsulation,
   type Signal,
@@ -121,6 +122,7 @@ export class RteFloatingMenus implements RteFloatingMenusApi {
   private readonly elements = viewChildren('floating', { read: ElementRef });
   private readonly rovings = viewChildren('floating', { read: RteRovingFocus });
   private readonly menus = viewChildren(RteMenu);
+  private readonly more = viewChild<RteMenu>('more');
 
   protected readonly textMarks = RTE_FLOATING_TEXT_MARKS;
   protected readonly tableOpIds = RTE_FLOATING_TABLE_OPS;
@@ -207,7 +209,7 @@ export class RteFloatingMenus implements RteFloatingMenusApi {
 
   /** Entradas do submenu "Mais", ensaiadas só com ele aberto (M16). */
   protected readonly moreOps = computed(() => {
-    if (!this.menus()[0]?.isOpen()) return null;
+    if (!this.more()?.isOpen()) return null;
     this.version()();
     return readTableStates(this.editor(), RTE_FLOATING_TABLE_MORE);
   });
@@ -452,6 +454,11 @@ export class RteFloatingMenus implements RteFloatingMenusApi {
         if (this.shown === el) return;
         this.hide();
         el.classList.add(RTE_FLOATING_MEASURING);
+        // medida sem o `left`/`top` da exibição anterior (largura
+        // shrink-to-fit limitada a `viewport − left`); oculto por `--measuring`
+        el.style.setProperty('left', '0px');
+        el.style.setProperty('top', '0px');
+        this.placed.delete(el);
         el.showPopover();
         this.shown = el;
       },

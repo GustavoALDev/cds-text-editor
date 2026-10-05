@@ -241,6 +241,36 @@ describe('área visível', () => {
       document.body.innerHTML = '';
     }
   });
+  it.each([
+    // [overflow de <html>, overflow de <body>, html entra?, body entra?]
+    // (longhands: o jsdom não expande o atalho `overflow`)
+    ['overflow-y:scroll', '', false, false],
+    ['', 'overflow-x:hidden', false, false],
+    ['overflow-x:hidden;overflow-y:hidden', 'overflow-y:auto', false, true],
+  ] as const)(
+    'html/body propagados à viewport ficam fora (I2): html "%s", body "%s"',
+    (htmlStyle, bodyStyle, withHtml, withBody) => {
+      const root = document.documentElement;
+      const body = document.body;
+      root.setAttribute('style', htmlStyle);
+      body.setAttribute('style', bodyStyle);
+      body.innerHTML =
+        '<div id="a" style="overflow-x:auto;overflow-y:auto"><div id="e"></div></div>';
+      try {
+        const a = document.getElementById('a') as HTMLElement;
+        const found = clipAncestors(
+          document.getElementById('e') as HTMLElement,
+        );
+        expect(found).toContain(a);
+        expect(found.includes(root)).toBe(withHtml);
+        expect(found.includes(body)).toBe(withBody);
+      } finally {
+        root.removeAttribute('style');
+        body.removeAttribute('style');
+        body.innerHTML = '';
+      }
+    },
+  );
   it('sem interseção: null', () => {
     const e = document.createElement('div');
     const restore = installGeometry({

@@ -26,12 +26,25 @@ export function intersectRect(a: RteRect, b: RteRect): RteRect | null {
 /** Vazio (jsdom sem valor computado) conta como `visible`. */
 const clips = (v: string) => v !== '' && v !== 'visible';
 
-/** Ancestrais com `overflow-x` ou `overflow-y` diferente de `visible`. */
+/**
+ * Ancestrais com `overflow-x` ou `overflow-y` diferente de `visible`. O
+ * `overflow` de `<html>` (e o de `<body>` quando o de `<html>` é `visible`) é
+ * propagado à viewport: o elemento não corta nada e o seu retângulo rola com a
+ * página, então fica fora (a viewport já entra em `readVisibleArea`).
+ */
 export function clipAncestors(el: HTMLElement): HTMLElement[] {
-  const view = el.ownerDocument.defaultView;
+  const doc = el.ownerDocument;
+  const view = doc.defaultView;
   const out: HTMLElement[] = [];
   if (!view) return out;
-  for (let p = el.parentElement; p; p = p.parentElement) {
+  const root = view.getComputedStyle(doc.documentElement);
+  const bodyPropagates = !clips(root.overflowX) && !clips(root.overflowY);
+  for (
+    let p = el.parentElement;
+    p && p !== doc.documentElement;
+    p = p.parentElement
+  ) {
+    if (p === doc.body && bodyPropagates) continue;
     const s = view.getComputedStyle(p);
     if (clips(s.overflowX) || clips(s.overflowY)) out.push(p);
   }

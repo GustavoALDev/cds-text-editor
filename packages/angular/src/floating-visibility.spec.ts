@@ -21,6 +21,13 @@ afterEach(() => {
   destroyTestEditors();
 });
 
+/** Valor presente (guarda de teste no lugar de `!`). */
+function must<T>(value: T | null | undefined): T {
+  expect(value ?? null).not.toBeNull();
+  if (value === null || value === undefined) throw new Error('valor ausente');
+  return value;
+}
+
 const X = 'https://x.com/';
 const IMG =
   '<figure class="rt-figure"><img src="https://x.com/a.png" alt="A"></figure>';
@@ -65,7 +72,7 @@ function selectCells(editor: Editor): void {
   });
   editor.view.dispatch(
     editor.state.tr.setSelection(
-      CellSelection.create(editor.state.doc, cells[0]!, cells[1]!),
+      CellSelection.create(editor.state.doc, must(cells[0]), must(cells[1])),
     ),
   );
   expect(editor.state.selection).toBeInstanceOf(CellSelection);
@@ -142,7 +149,7 @@ describe('readFloatingContext (M4, R3)', () => {
   it('NodeSelection de imagem → image com {pos, pos + nodeSize}', () => {
     const e = createTestEditor(`<p>a</p>${IMG}`);
     const pos = selectNode(e, 'rtImage');
-    const size = e.state.doc.nodeAt(pos)!.nodeSize;
+    const size = must(e.state.doc.nodeAt(pos)).nodeSize;
     expect(readFloatingContext(e, ALL)).toEqual({
       kind: 'image',
       identity: { kind: 'image', from: pos, to: pos + size },
@@ -159,7 +166,7 @@ describe('readFloatingContext (M4, R3)', () => {
   it('cursor em célula → table com a identidade da tabela', () => {
     const e = at(`<p>a</p>${table('<p>xy</p>')}`, 'xy', 1);
     const pos = posOf(e, 'table');
-    const size = e.state.doc.nodeAt(pos)!.nodeSize;
+    const size = must(e.state.doc.nodeAt(pos)).nodeSize;
     expect(readFloatingContext(e, ALL)).toEqual({
       kind: 'table',
       identity: { kind: 'table', from: pos, to: pos + size },
@@ -344,7 +351,10 @@ describe('identidade dispensada mapeada (M6, R4)', () => {
     for (const ch of 'abc') e.view.dispatch(e.state.tr.insertText(ch));
     expect(e.state.doc.textContent).toContain('xabcy');
     expect(
-      sameFloatingIdentity(readFloatingContext(e, ALL)!.identity, ref.current),
+      sameFloatingIdentity(
+        must(readFloatingContext(e, ALL)).identity,
+        ref.current,
+      ),
     ).toBe(true);
     expect(kindWith(e, ref.current)).toBeNull();
   });
@@ -352,17 +362,20 @@ describe('identidade dispensada mapeada (M6, R4)', () => {
   it('tabela: parágrafo inserido antes desloca a identidade, que segue igual', () => {
     const e = at(`<p>a</p>${table('<p>xy</p>')}`, 'xy', 1);
     const ref = dismissNow(e);
-    const before = ref.current!;
+    const before = must(ref.current);
     const { schema } = e.state;
     e.view.dispatch(
       e.state.tr.insert(
         0,
-        schema.nodes['paragraph']!.create(null, schema.text('novo')),
+        must(schema.nodes['paragraph']).create(null, schema.text('novo')),
       ),
     );
-    expect(ref.current!.from).toBeGreaterThan(before.from);
+    expect(must(ref.current).from).toBeGreaterThan(before.from);
     expect(
-      sameFloatingIdentity(readFloatingContext(e, ALL)!.identity, ref.current),
+      sameFloatingIdentity(
+        must(readFloatingContext(e, ALL)).identity,
+        ref.current,
+      ),
     ).toBe(true);
     expect(kindWith(e, ref.current)).toBeNull();
   });

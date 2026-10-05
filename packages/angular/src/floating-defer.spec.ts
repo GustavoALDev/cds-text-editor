@@ -218,7 +218,7 @@ describe('@defer dos menus flutuantes (M2, Tarefa 8b)', () => {
 });
 
 describe('gatilho do @defer dos menus (Playthrough)', () => {
-  /** Os dois gatilhos do bloco: `when floatingWanted()` e `prefetch when` com tipos. */
+  /** O gatilho do bloco (`when floatingWanted()`, um só) e os tipos ligados. */
   interface Triggers {
     floatingWanted(): boolean;
     floatingKinds(): readonly string[];
@@ -247,7 +247,7 @@ describe('gatilho do @defer dos menus (Playthrough)', () => {
 
   it('floatingMenus: false → o bloco fica no placeholder (chunk nunca pedido)', async () => {
     const { root, triggers } = await playthrough(false);
-    // Os dois gatilhos ficam falsos: o Angular nunca pede o chunk.
+    // O gatilho fica falso (e sem tipos): o Angular nunca pede o chunk.
     expect(triggers.floatingWanted()).toBe(false);
     expect(triggers.floatingKinds()).toEqual([]);
     expect(root.querySelector('rte-floating-menus')).toBeNull();

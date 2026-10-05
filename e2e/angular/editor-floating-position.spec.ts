@@ -301,6 +301,108 @@ for (const zone of [false, true]) {
       ).toBeLessThan(2);
     });
 
+    for (const [name, css] of [
+      ['html { height: 100%; overflow-y: scroll }', { html: 'scroll' }],
+      [
+        'html, body { height: 100% } body { overflow-x: hidden }',
+        { body: 'hidden' },
+      ],
+    ] as const) {
+      test(`overflow de html/body propagado à viewport não recorta (I2): ${name}`, async ({
+        page,
+      }) => {
+        // CSSOM (a CSP do app proíbe atributo `style`)
+        await page.evaluate((c) => {
+          const root = document.documentElement.style;
+          root.setProperty('height', '100%');
+          if ('html' in c) root.setProperty('overflow-y', c.html);
+          if ('body' in c) {
+            document.body.style.setProperty('height', '100%');
+            document.body.style.setProperty('overflow-x', c.body);
+          }
+        }, css);
+        // a página rola mais que uma tela: o retângulo de html/body sai da vista
+        await page
+          .locator('#after-floating')
+          .evaluate((el) => el.scrollIntoView({ block: 'end' }));
+        await centerScroller(page);
+        const vh = page.viewportSize()?.height ?? 0;
+        expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(
+          vh / 2,
+        );
+        await selectIn(page, ID, 'Segundo');
+        await expectFloating(page, ID, 'text');
+        await frames(page);
+        const menu = await floatingRect(page, ID, 'text');
+        const word = await wordRect(page, ID, 'p', 'Segundo');
+        expect(Math.abs(menu.bottom + GAP - word.top)).toBeLessThanOrEqual(1);
+      });
+    }
+
+    test('exibição nova mede sem o left da anterior: endereço longo depois de um curto à direita (m1)', async ({
+      page,
+    }) => {
+      const href = `https://example.com/${'b'.repeat(200)}`;
+      // Viewport de 760 px: o editor vai quase de borda a borda, então o menu
+      // do link curto (à direita, em `rtl`) deixa menos largura que a natural
+      // do menu do link longo. O longo fica na 2ª coluna (a partir de 300 px)
+      // de uma tabela: âncora longe das margens.
+      await page.setViewportSize({ width: 760, height: 720 });
+      await setDoc(
+        page,
+        '<p><a href="https://a.co/">xy</a></p><p>sem link</p>' +
+          '<table><colgroup><col style="width: 300px"><col style="width: 160px"></colgroup>' +
+          `<tbody><tr><td><p>a</p></td><td><p><a href="${href}">longo</a></p></td></tr></tbody></table>`,
+        'longo',
+      );
+      await centerScroller(page);
+      // `rtl` só nesta fase: o parágrafo encosta à direita e o menu do link
+      // curto fica perto da borda direita da viewport
+      await editorHost(page, ID).evaluate((host) =>
+        host.setAttribute('dir', 'rtl'),
+      );
+      await selectIn(page, ID, 'xy', 1, 1);
+      await expectFloating(page, ID, 'link');
+      await frames(page);
+      const vw = page.viewportSize()?.width ?? 0;
+      const short = await floatingRect(page, ID, 'link');
+      expect(short.left).toBeGreaterThan(vw / 2);
+      await selectIn(page, ID, 'sem link', 2, 2);
+      await expectFloating(page, ID, null);
+      await editorHost(page, ID).evaluate((host) => {
+        host.removeAttribute('dir');
+        const w = window as unknown as { __first: DOMRect[] };
+        w.__first = [];
+        const el = host.querySelector<HTMLElement>('.rte-floating--link');
+        el?.addEventListener('toggle', (e) => {
+          if ((e as ToggleEvent).newState === 'open')
+            w.__first.push(el.getBoundingClientRect().toJSON() as DOMRect);
+        });
+      });
+      await frames(page);
+      await selectIn(page, ID, 'longo', 2, 2);
+      await expectFloating(page, ID, 'link');
+      await frames(page);
+      const [first] = await page.evaluate(
+        () => (window as unknown as { __first: DOMRect[] }).__first,
+      );
+      const r = await floatingRect(page, ID, 'link');
+      const word = await wordRect(page, ID, 'p', 'longo');
+      const center = (word.left + word.right) / 2;
+      // a âncora está longe das margens: o menu centrado não encosta nelas
+      expect(center - r.width / 2).toBeGreaterThan(8);
+      expect(center + r.width / 2).toBeLessThan(vw - 8);
+      for (const box of [first, r]) {
+        if (!box) throw new Error('toggle não registrado');
+        // já no primeiro quadro: inteiro na viewport e centrado na âncora
+        expect(box.left).toBeGreaterThanOrEqual(8 - 0.5);
+        expect(box.right).toBeLessThanOrEqual(vw - 8 + 0.5);
+        expect(
+          Math.abs((box.left + box.right) / 2 - center),
+        ).toBeLessThanOrEqual(1);
+      }
+    });
+
     test('link com href de 2000 caracteres: endereço com reticências, menu na viewport', async ({
       page,
     }) => {

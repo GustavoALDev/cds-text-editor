@@ -312,6 +312,8 @@ test('N25 (R14): 0 violações de CSP ao mostrar, posicionar, rolar, executar e 
   // Ruling 28 do ADR 0007: o desvio do Chromium (`style-src-attr`) só na carga.
   await settlePage(page);
   const load = await page.evaluate(() => window.__violations.splice(0));
+  // a partir daqui, nenhum `<style>` novo: a posição é só por CSSOM (D16)
+  await page.evaluate(() => window.__styleAdds.splice(0));
   expect(
     load.filter(
       (v) => !(browserName === 'chromium' && v.directive === 'style-src-attr'),
@@ -356,9 +358,7 @@ test('N25 (R14): 0 violações de CSP ao mostrar, posicionar, rolar, executar e 
   await expectFloating(page, ID, null);
   await settlePage(page);
   expect(await page.evaluate(() => window.__violations)).toEqual([]);
-  expect(await page.evaluate(() => window.__styleAdds.length)).toBeLessThan(
-    1000,
-  );
+  expect(await page.evaluate(() => window.__styleAdds)).toEqual([]);
 });
 
 for (const zone of [false, true]) {

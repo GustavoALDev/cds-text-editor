@@ -105,6 +105,12 @@ describe('resolveFloatingKinds', () => {
     run('x', undefined, ALL, warned);
     expect(warn).toHaveBeenCalledTimes(1);
   });
+
+  it('camada inválida é ignorada sozinha; a válida vale (m2)', () => {
+    expect(run('x', { table: false })).toEqual(['image', 'link', 'text']);
+    expect(run({ link: false }, null)).toEqual(['image', 'text', 'table']);
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('sameKinds', () => {

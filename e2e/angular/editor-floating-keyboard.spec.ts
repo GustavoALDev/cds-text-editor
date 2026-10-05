@@ -137,8 +137,8 @@ for (const zone of [false, true]) {
     test('Tab e Shift+Tab: página → barra → editável → página, com o menu visível, sem parada nele', async ({
       page,
     }) => {
-      // Documento sem a tabela larga do fixture: o `tableWrapper` com rolagem
-      // horizontal é um ponto de parada de `Tab` do Chromium, alheio ao menu.
+      // Documento curto, só com o texto do menu (a tabela larga e o `Tab` têm
+      // um caso próprio abaixo, ruling 10).
       await loadDoc(page, ID, '<p>abcdef</p>');
       const editable = editableOf(page, ID);
       await page.locator('#before-floating').focus();
@@ -170,6 +170,17 @@ for (const zone of [false, true]) {
       await focusOutsideMenus(page);
       await page.keyboard.press('Shift+Tab');
       await expect(page.locator('#before-floating')).toBeFocused();
+    });
+
+    test('Shift+Tab do editável com o menu visível vai à barra, sem parar no menu (m6)', async ({
+      page,
+    }) => {
+      await selectIn(page, ID, 'Segundo');
+      await expectFloating(page, ID, 'text');
+      await page.keyboard.press('Shift+Tab');
+      expect(await focusedLabel(page)).toBe(FIRST);
+      await focusOutsideMenus(page);
+      expect(await touched(page)).toBe(false);
     });
 
     test('Alt+F10: do editável com menu vai ao menu; do menu à barra; sem menu, à barra', async ({

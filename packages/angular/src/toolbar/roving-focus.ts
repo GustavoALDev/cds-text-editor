@@ -176,7 +176,8 @@ function step(
 }
 
 /**
- * Item do foco itinerante: `tabindex` `0` no ativo, `-1` nos outros. Recebe
+ * Item do foco itinerante: `tabindex` `0` no ativo quando o grupo tem parada
+ * de `Tab` (`tabStop`), `-1` nos outros (e em todos sem parada). Recebe
  * o `[disabled]` do elemento como entrada (signal) e o repassa ao atributo
  * nativo, para o grupo reagir quando o item é habilitado ou desabilitado.
  */

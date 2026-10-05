@@ -50,7 +50,8 @@ function toLayer(config: unknown): Layer | undefined | typeof INVALID {
 
 /**
  * Tipos de menu ligados (M17): a entrada vence o provider por chave; sem
- * nenhum dos dois, todos ligados. Chave não booleana é ignorada. Tipo cujo
+ * nenhum dos dois, todos ligados. Chave não booleana é ignorada; camada
+ * inválida é ignorada (aviso único), sem descartar a outra. Tipo cujo
  * recurso está desligado fica fora. Ordem de `RTE_FLOATING_KINDS`.
  */
 export function resolveFloatingKinds(
@@ -61,18 +62,19 @@ export function resolveFloatingKinds(
 ): readonly RteFloatingMenuKind[] {
   const inst = toLayer(instance);
   const prov = toLayer(provider);
-  let layers: [Layer, Layer];
-  if (inst === INVALID || prov === INVALID) {
-    if (isDevMode() && !warned.has('floatingMenus')) {
-      warned.add('floatingMenus');
-      console.warn(
-        '[rte-editor] floatingMenus inválido; usando todos ligados.',
-      );
-    }
-    layers = [{}, {}];
-  } else {
-    layers = [inst ?? {}, prov ?? {}];
+  if (
+    (inst === INVALID || prov === INVALID) &&
+    isDevMode() &&
+    !warned.has('floatingMenus')
+  ) {
+    warned.add('floatingMenus');
+    console.warn('[rte-editor] floatingMenus inválido; usando todos ligados.');
   }
+  // camada inválida conta como ausente; a outra continua valendo
+  const layers: [Layer, Layer] = [
+    inst === INVALID ? {} : (inst ?? {}),
+    prov === INVALID ? {} : (prov ?? {}),
+  ];
   return RTE_FLOATING_KINDS.filter((kind) => {
     const feature = RTE_FLOATING_FEATURE[kind];
     if (feature !== null && !features.includes(feature)) return false;

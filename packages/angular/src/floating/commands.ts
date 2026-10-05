@@ -137,14 +137,22 @@ export function floatingHref(
   return typeof href === 'string' ? normalizeHref(href, policy) : null;
 }
 
-/** {@link floatingHref} do link sob a seleção; `null` sem editor. */
+/**
+ * {@link floatingHref} do link sob a seleção; `null` sem editor. A marca é
+ * lida no intervalo de `dialogTarget` (o mesmo do contexto `link`), não em
+ * `$head.marks()`, que na borda inicial olha o texto antes do link.
+ */
 export function linkHrefAt(
   editor: Editor,
   policy: Partial<RteLinkPolicy> | undefined,
 ): string | null {
   if (editor.isDestroyed) return null;
-  const href: unknown = editor.getAttributes('link')['href'];
-  return floatingHref(href, policy);
+  const target = dialogTarget(editor, 'link');
+  if (target?.mode !== 'edit') return null;
+  const mark = editor.state.doc
+    .nodeAt(target.range.from)
+    ?.marks.find((m) => m.type.name === 'link');
+  return floatingHref(mark?.attrs['href'], policy);
 }
 
 /** Cliques dos itens dos menus flutuantes (M13, M14, M16). */

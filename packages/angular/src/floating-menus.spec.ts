@@ -141,6 +141,9 @@ class FormHost {
   readonly cmp = viewChild.required(RteEditor);
 }
 
+/** Sonda da medição do menu (m1): `left`/`top` no momento da leitura. */
+let measured: string[] = [];
+
 /** Ancestral com `overflow: auto` fingido e seu retângulo. */
 let clip: Element | null = null;
 let clipRect: RteRect = { top: 0, left: 0, right: 1000, bottom: 800 };
@@ -155,6 +158,7 @@ beforeEach(() => {
   restoreDialog = installDialogShim();
   restorePopover = installPopoverShim();
   clip = null;
+  measured = [];
   clipRect = { top: 0, left: 0, right: 1000, bottom: 800 };
   const rectOf = (el: Element): RteRect | null => {
     if (el.classList.contains('rte-floating')) return null;
@@ -166,7 +170,13 @@ beforeEach(() => {
     viewport: VIEWPORT,
     rects: rectOf,
     size: (el) => {
-      if (el.classList.contains('rte-floating')) return MENU;
+      if (el.classList.contains('rte-floating')) {
+        const { style } = el as HTMLElement;
+        measured.push(
+          `${style.getPropertyValue('left')},${style.getPropertyValue('top')}`,
+        );
+        return MENU;
+      }
       const r = rectOf(el) ?? BLOCK;
       return { width: r.right - r.left, height: r.bottom - r.top };
     },
@@ -546,6 +556,23 @@ describe('posição (R5)', () => {
     expect(m.classList.contains('rte-floating--measuring')).toBe(false);
   });
 
+  it('nova exibição mede com left/top zerados, não os da exibição anterior (m1)', async () => {
+    const { fixture, el, editor } = await setup();
+    await focusAnd(fixture, editor, bold(editor));
+    const m = menu(el, 'text');
+    const first = m.style.getPropertyValue('left');
+    expect(first).not.toBe('0px');
+    selectText(editor, 'depois', 1);
+    await settle(fixture);
+    expect(openKinds(el)).toEqual([]);
+    measured = [];
+    selectText(editor, 'depois');
+    await settle(fixture);
+    expect(openKinds(el)).toEqual(['text']);
+    expect(measured[0]).toBe('0px,0px');
+    expect(m.style.getPropertyValue('left')).not.toBe('0px');
+  });
+
   it('pointer: coarse → texto abaixo da âncora', async () => {
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
@@ -782,6 +809,21 @@ describe('configuração (R11)', () => {
     expect(openKinds(el)).toEqual([]);
     expect(document.activeElement).toBe(editor.view.dom);
     expect(host.blurs).toBe(0);
+  });
+
+  it('features sem media/tables → sem menus de imagem e de tabela (m6)', async () => {
+    const { el } = await setup((h) => {
+      (h as { options: unknown }).options = {
+        features: { media: false, tables: false },
+      };
+      h.value.set('<p>abc</p>');
+    });
+    expect(menus(el).map((m) => m.getAttribute('data-rte-kind'))).toEqual([
+      'link',
+      'text',
+    ]);
+    expect(el.querySelector('.rte-floating--image')).toBeNull();
+    expect(el.querySelector('.rte-floating--table')).toBeNull();
   });
 
   it('floatingMenus: false → sem rte-floating-menus; { table: false } → 3; ao vivo sem recriar', async () => {
@@ -1076,6 +1118,25 @@ describe('link (R9)', () => {
     expect(a?.getAttribute('tabindex')).toBe('-1');
     expect(a?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
   });
+
+  it.each([
+    ['borda inicial', 1],
+    ['dentro', 2],
+    ['borda final', 4],
+  ])(
+    'endereço com o cursor na %s de um link no meio do parágrafo (I1)',
+    async (_where, offset) => {
+      const s = await setup((h) =>
+        h.value.set('<p>x<a href="https://x.com/">abc</a>y</p>'),
+      );
+      await focusAnd(s.fixture, s.editor, () =>
+        selectText(s.editor, 'xabcy', offset),
+      );
+      expect(openKinds(s.el)).toEqual(['link']);
+      const a = menu(s.el, 'link').querySelector('a.rte-floating__link');
+      expect(a?.getAttribute('href')).toBe('https://x.com/');
+    },
+  );
 
   it('marca com href rejeitado (transação direta) → sem <a>, Editar e Remover presentes', async () => {
     const s = await setup((h) => h.value.set('<p>abc</p>'));
