@@ -270,6 +270,13 @@
     padding: 0 calc(0.375rem * var(--rte-density));
     overflow: hidden;
     color: var(--rte-primary);
+    white-space: nowrap;
+  }
+
+  /* O texto solto de um contêiner flex não recebe reticências: o endereço fica num `span`. */
+  .rte-editor .rte-floating__address {
+    min-inline-size: 0;
+    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }

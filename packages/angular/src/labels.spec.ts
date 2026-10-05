@@ -737,13 +737,14 @@ describe('rótulos dos menus flutuantes ao vivo (R13)', () => {
           ? { width: 200, height: 40 }
           : { width: 300, height: 100 },
     });
+    let restoreCoords: (() => void) | undefined;
     try {
       const fixture = TestBed.createComponent(LiveFloatingHost);
       fixture.autoDetectChanges();
       await settle(fixture);
       const host = fixture.componentInstance;
       const editor = (host.cmp()[0] as RteEditor).editor() as Editor;
-      const restoreCoords = fakeCoords(editor, (pos) => ({
+      restoreCoords = fakeCoords(editor, (pos) => ({
         top: 200,
         bottom: 220,
         left: 100 + pos * 2,
@@ -767,8 +768,8 @@ describe('rótulos dos menus flutuantes ao vivo (R13)', () => {
         edit: menu
           .querySelector('button[aria-haspopup="dialog"]')
           ?.getAttribute('aria-label'),
-        remove: [...menu.querySelectorAll('button')]
-          .at(-1)
+        remove: menu
+          .querySelector('button:not([aria-haspopup])')
           ?.getAttribute('aria-label'),
         address: menu
           .querySelector('.rte-floating__link')
@@ -793,9 +794,9 @@ describe('rótulos dos menus flutuantes ao vivo (R13)', () => {
       expect(transactions).toBe(0);
       expect(editor.state.doc).toBe(doc);
       expect(host.writes).toBe(0);
-      restoreCoords();
     } finally {
       TestBed.resetTestingModule();
+      restoreCoords?.();
       restoreGeometry();
       restorePopover();
     }

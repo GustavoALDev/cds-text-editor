@@ -75,7 +75,8 @@
     [href]="address"
     [attr.title]="labels().openLink"
     (mousedown)="$event.preventDefault()"
-    >{{ address }}<ng-container
+    ><span class="rte-floating__address">{{ address }}</span
+    ><ng-container
       *ngTemplateOutlet="iconTpl; context: { $implicit: 'openLink' }"
   /></a>
   }

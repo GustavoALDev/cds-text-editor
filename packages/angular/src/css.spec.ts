@@ -928,12 +928,22 @@ describe('editor.css: menus flutuantes (spec 05b2b, M18)', () => {
     for (const [prop, value] of [
       ['max-inline-size', '20rem'],
       ['overflow', 'hidden'],
-      ['text-overflow', 'ellipsis'],
-      ['white-space', 'nowrap'],
       ['color', 'var(--rte-primary)'],
       ['min-block-size', '24px'],
     ])
       expect(decls).toContainEqual(expect.objectContaining({ prop, value }));
+    expect(decls).not.toContainEqual(
+      expect.objectContaining({ prop: 'text-overflow' }),
+    );
+    // As reticências ficam no `span` do endereço (filho de um contêiner flex).
+    expect(declsEndingWith('.rte-floating__address')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ prop: 'text-overflow', value: 'ellipsis' }),
+        expect.objectContaining({ prop: 'overflow', value: 'hidden' }),
+        expect.objectContaining({ prop: 'white-space', value: 'nowrap' }),
+        expect.objectContaining({ prop: 'min-inline-size', value: '0' }),
+      ]),
+    );
     expect(declsEndingWith('.rte-floating__link:focus-visible')).toContainEqual(
       expect.objectContaining({
         prop: 'outline',
