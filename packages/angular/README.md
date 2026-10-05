@@ -129,19 +129,54 @@ A barra é o primeiro filho da moldura do `rte-editor` (`role="toolbar"`). Prior
 
 Presets (`RTE_TOOLBAR_PRESETS`, congelados; `·` separa grupos):
 
-- `minimal`: `undo redo · bold italic · bulletList orderedList`
-- `article` (padrão): `undo redo · blockType · bold italic underline strike · textColor highlight · bulletList orderedList taskList · align · blockquote codeBlock horizontalRule · table · clearFormatting`
-- `full`: o `article` mais `code superscript subscript` (marcas), `indent outdent` (listas), `codeLanguage` (blocos) e o grupo `callout pullquote readAlso` antes de `clearFormatting`
+- `minimal`: `undo redo · bold italic link · bulletList orderedList`
+- `article` (padrão): `undo redo · blockType · bold italic underline strike link · textColor highlight · bulletList orderedList taskList · align · blockquote codeBlock horizontalRule · table · clearFormatting`
+- `full`: o `article` mais `code superscript subscript lang` (marcas; `lang` depois de `subscript`), `indent outdent` (listas), `codeLanguage` (blocos) e o grupo `callout pullquote quoteAuthor readAlso` antes de `clearFormatting`
 
-Grupos próprios são listas de ids (`RteToolbarItemId`) na ordem de exibição; id desconhecido ou repetido é ignorado com aviso em modo de desenvolvimento. `features` desligado esconde o item correspondente: `colors` (`textColor`, `highlight`), `tasks` (`taskList`), `code` (`codeBlock`, `codeLanguage`, que também some sem `codeLanguages`), `tables` (`table`) e `newsBlocks` (`callout`, `pullquote`, `readAlso`); grupo vazio some.
+Grupos próprios são listas de ids (`RteToolbarItemId`) na ordem de exibição; id desconhecido ou repetido é ignorado com aviso em modo de desenvolvimento. `features` desligado esconde o item correspondente: `colors` (`textColor`, `highlight`), `tasks` (`taskList`), `code` (`codeBlock`, `codeLanguage`, que também some sem `codeLanguages`), `tables` (`table`) e `newsBlocks` (`callout`, `pullquote`, `quoteAuthor`, `lang`, `readAlso`); `link` está sempre disponível; grupo vazio some.
 
 **Teclado.** A barra é uma parada de `Tab` (foco itinerante: `←`/`→` com volta circular, invertidas em `dir="rtl"`; `Home`/`End`); itens inaplicáveis ficam focáveis com `aria-disabled`. `Alt+F10` no editável, ou `focusToolbar()` no componente, leva o foco ao item ativo; `Shift+Tab` a partir do editável também chega à barra; `Escape` devolve o foco ao editável com a seleção intacta. Os menus (`blockType`, cores, `align`, `codeLanguage`, `table`, `callout`) seguem o padrão _menu button_: `Enter`/`Espaço`/`↓` abrem no primeiro item, `↑` no último; `Escape` fecha e volta ao botão; `Tab` fecha e vai ao editável. Clicar fora de um menu aberto o fecha e devolve o foco ao botão.
 
-**Atalhos** (`Ctrl`, ou `⌘` no Mac; a dica de cada botão mostra o atalho na notação da plataforma): `B`, `I`, `U`, `Shift+S` (tachado), `E` (código), `.` (sobrescrito), `,` (subscrito), `Shift+8`, `Shift+7` e `Shift+9` (listas com marcadores, numerada e de tarefas), `Shift+B` (citação), `Alt+C` (bloco de código), `Alt+0`, `Alt+2`, `Alt+3` e `Alt+4` (parágrafo e títulos), `Shift+L`, `Shift+E`, `Shift+R` e `Shift+J` (alinhamento), `Z` e `Shift+Z`.
+**Atalhos** (`Ctrl`, ou `⌘` no Mac; a dica de cada botão mostra o atalho na notação da plataforma): `B`, `I`, `U`, `Shift+S` (tachado), `E` (código), `.` (sobrescrito), `,` (subscrito), `Shift+8`, `Shift+7` e `Shift+9` (listas com marcadores, numerada e de tarefas), `Shift+B` (citação), `Alt+C` (bloco de código), `Alt+0`, `Alt+2`, `Alt+3` e `Alt+4` (parágrafo e títulos), `Shift+L`, `Shift+E`, `Shift+R` e `Shift+J` (alinhamento), `K` (link, abre o diálogo), `Z` e `Shift+Z`.
 
 **Tabela.** Operações que passariam de 100 em `colspan`/`rowspan` ficam `aria-disabled`, com o motivo no `title`. Limitação: chamadas diretas à API do Tiptap (`editor.commands.*`) não passam pela guarda (ADR 0004).
 
 **Estados e acessibilidade.** Sem editor (SSR, antes da criação), `disabled` ou `readonly`, todos os botões ficam `disabled` nativos, no mesmo leiaute. Alvos de toque ≥ 24 × 24 px; pressionado e marcado são distinguíveis sem cor e em `forced-colors`. Os rótulos vêm da seção `toolbar` de `RteLabels` (pt-BR, en e es em `/i18n`). A direção da barra vem do atributo `dir` (`closest('[dir]')`); direção só por CSS, sem `dir`, não é detectada.
+
+## Diálogos
+
+Os itens `link`, `lang` e `quoteAuthor` e a entrada "Inserir tabela…" do menu `table` (`insertTableCustom`) abrem um `<dialog>` nativo **modal** (`showModal()`), último filho do `rte-editor`, com o título em `h2.rte-dialog__title` (`aria-labelledby`). Os formulários são Signal Forms; os textos vêm da seção `dialogs` de `RteLabels` (trocar o idioma com o diálogo aberto atualiza os textos sem perder o digitado). Fecha com `Escape`, "Cancelar" ou aplicação; clicar no fundo não fecha. Só um diálogo por vez. Se o documento mudar por fora, ou o editor ficar `disabled`/`readonly`/`hidden` ou for destruído, o diálogo fecha como cancelamento e nada é aplicado. Abrir e fechar não emitem `editorBlur`/`editorFocus`/`touch`, mas `Tab` depois do último controle leva o foco à interface do navegador (a lib não prende o foco) e isso conta como saída: o campo fica `touched`.
+
+**Carga sob demanda (`@defer`).** Os formulários ficam num _chunk_ separado (`fesm2022/cds-rte-angular-rte-dialogs-<hash>.mjs`), carregado por `@defer (when ...; prefetch on idle)`: ele é buscado quando o navegador está ocioso, e o primeiro pedido espera a chegada se ainda for preciso. O _bundler_ do consumidor precisa manter `import()` dinâmico (o padrão do Angular CLI). Se o _chunk_ falhar, o pedido é descartado com aviso em desenvolvimento e `openDialog` passa a devolver `false` até recarregar a página.
+
+**`Mod-K`** (`Ctrl+K`, ou `⌘K`) abre o diálogo de link com o foco no editável, só quando aplicável (senão a tecla segue para o navegador).
+
+**`openDialog(kind)`** (método do componente; devolve `boolean`, `true` = pedido aceito, o diálogo abre assim que o _chunk_ chegar):
+
+| `kind`        | Aplicável quando                                                                                          | Recurso      |
+| ------------- | --------------------------------------------------------------------------------------------------------- | ------------ |
+| `link`        | fora de bloco de código e de `code`; seleção de texto, cursor/seleção num link, ou cursor onde cabe texto | sempre       |
+| `lang`        | fora de bloco de código; seleção não vazia ou cursor num trecho de idioma                                 | `newsBlocks` |
+| `quoteAuthor` | cursor dentro de uma citação em destaque (`pullquote`)                                                    | `newsBlocks` |
+| `table`       | fora de tabela                                                                                            | `tables`     |
+
+Devolve `false` quando não há editor, não é editável (`disabled`/`readonly`/`hidden`), o recurso está desligado, o caso é inaplicável, outro diálogo está aberto (em qualquer instância da página) ou os diálogos falharam ao carregar. Funciona com `toolbar: false`. O foco volta à origem (o item da barra, ou o elemento focado no host) ao cancelar e ao editável ao aplicar.
+
+**Link.** A URL passa por `normalizeHref` com a **mesma política de links** que criou o editor (`linkPolicy` da instância > `provideRichText` > padrão); URL recusada mostra erro e o que é gravado é o `href` canônico. "Abrir em nova aba" só aparece com `target: 'preserve'`. Modos: inserir (cursor vazio: URL e Texto), aplicar (seleção de texto), editar (dentro de um link; com "Remover") e remover.
+
+**Idioma.** Lista `RTE_DIALOG_LANGUAGES` (`en es fr de it pt la ja zh ru ar he`, congelada) e "Outro…" com código BCP 47 validado pela regra `span[lang]` do esquema; direção "Padrão", `ltr` ou `rtl` (`ar` e `he` sugerem `rtl`). **Autor da citação:** Autor e Cargo, opcionais (até 200 caracteres). **Tabela:** Linhas 1–100 (padrão 3), Colunas 1–20 (padrão 3), "Linha de cabeçalho" (marcada) e "Coluna de cabeçalho"; os `th` ganham `scope`.
+
+**Seleção pendente.** Com o diálogo aberto o navegador esconde a seleção; o intervalo-alvo recebe a classe `.rte-pending-selection` (decoração, fora do histórico e do valor). O `editor.css` a estiliza com `--rte-primary-subtle`.
+
+**Classes (API pública, BEM).** `.rte-dialog`, `.rte-dialog__form`, `.rte-dialog__field`, `.rte-dialog__label`, `.rte-dialog__hint`, `.rte-dialog__error`, `.rte-dialog__actions` (com `.rte-dialog__remove`, "Cancelar" e `.rte-dialog__apply`); o item ativo da barra usa `.rte-toolbar__button--active`. O CSS usa só `--rte-*`, nenhum atributo `style` (CSP estrita), alvos >= 24 px e borda `CanvasText` em `forced-colors`.
+
+**Rolagem.** A lib não trava a rolagem da página por trás do modal. Se quiser, no CSS do consumidor:
+
+```css
+:root:has(.rte-dialog[open]) {
+  overflow: hidden;
+}
+```
 
 ## Tema por instância
 
@@ -157,7 +192,7 @@ O tema é mesclado por chave (instância > `provideRichText`) e aplicado ao host
 
 ## Rótulos e idioma
 
-`RteLabels` = `content` + `slash` + `editor` + `errors` + `toolbar`. A fonte é um objeto parcial **ou uma função** (lida dentro de `computed`, então pode ler signals). Prioridade: entrada `[labels]` > `provideRichText({ labels })` (também aninhado em rotas/componentes) > inglês. Pacotes completos em `@cds/rte-angular/i18n`: `RTE_LABELS_PT_BR`, `RTE_LABELS_EN`, `RTE_LABELS_ES`.
+`RteLabels` = `content` + `slash` + `editor` + `errors` + `toolbar` + `dialogs`. A fonte é um objeto parcial **ou uma função** (lida dentro de `computed`, então pode ler signals). Prioridade: entrada `[labels]` > `provideRichText({ labels })` (também aninhado em rotas/componentes) > inglês. Pacotes completos em `@cds/rte-angular/i18n`: `RTE_LABELS_PT_BR`, `RTE_LABELS_EN`, `RTE_LABELS_ES`.
 
 ```ts
 // Por instância: a entrada `labels` ligada a um signal.
@@ -200,6 +235,6 @@ Testado com `default-src 'self'; script-src 'self'; style-src 'self'` por cabeç
 
 ## O que vem depois
 
-05b2: menus flutuantes e diálogos (itens `link` e `lang`). 05c: mídia. 05d: busca e comandos `/` com interface, `updateOn`/adiamento da emissão com os números de desempenho, API final. Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
+05b2b: menus flutuantes (texto, link, tabela e imagem). 05c: mídia (diálogos de imagem, vídeo e _embed_ no mesmo `@defer`). 05d: busca e comandos `/` com interface, `updateOn`/adiamento da emissão com os números de desempenho, API final. Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
 
 Repositório: cds-text-editor (monorepo). Licença MIT.

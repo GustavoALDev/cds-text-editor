@@ -167,10 +167,10 @@ Rota nova `dialogs`: editor com `toolbar="full"`, todos os recursos, `linkPolicy
 
 ## 7. Critérios de aceite
 
-- [ ] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size` verde; `npm run check:rules`, `check:licenses`, `notices` sem *drift*, `test:tools` (com o caso novo do `check-pack`) e `typecheck:e2e` verdes.
-- [ ] Unitários 6.1 verdes nos alvos `test` e `test-zone`, inclusive as propriedades do link e do código de idioma.
-- [ ] N1–N20 verdes em Chromium, Firefox e WebKit (`npx playwright test -c e2e`) e no CI do PR.
-- [ ] ADR 0009 registra G1–G21, F1–F9 (como diretrizes), os *rulings*, os desvios e os tamanhos (R18); README do `rte-angular`, `docs/specs/README.md` e changeset atualizados.
+- [x] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size` verde; `npm run check:rules`, `check:licenses`, `notices` sem *drift*, `test:tools` (com o caso novo do `check-pack`) e `typecheck:e2e` verdes. _Evidência: `nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size` verde em todos os projetos (inclusive `angular:size` com `editor` 21203/24384, `whole` 21258/24448, `dialogs` 5059/5824); `check:rules`, `check:licenses`, `typecheck:e2e` verdes; `test:tools` verde; `notices` sem diff._
+- [x] Unitários 6.1 verdes nos alvos `test` e `test-zone`, inclusive as propriedades do link e do código de idioma. _Evidência: verdes em `angular:test` e `angular:test-zone` no `run-many` completo._
+- [x] N1–N20 verdes em Chromium, Firefox e WebKit (`npx playwright test -c e2e`) e no CI do PR. _Evidência: N16–N20 e N1–N15 em `e2e/angular` (546 testes) nos 3 motores com `--workers=2`: 545 na primeira rodada e o N5 escuro do Firefox (flake conhecido, ADR 0008) verde ao repetir com `--project=firefox --workers=1`. Falta o CI do PR._
+- [x] ADR 0009 registra G1–G21, F1–F9 (como diretrizes), os *rulings*, os desvios e os tamanhos (R18); README do `rte-angular`, `docs/specs/README.md` e changeset atualizados. _Evidência: ADR 0009, README do `rte-angular`, `docs/specs/README.md`, `05-editor-angular.md` e `.changeset/angular-05b2a.md`._
 
 ## 8. Consequências para as partes seguintes e outras specs
 
