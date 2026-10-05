@@ -178,6 +178,25 @@ Devolve `false` quando não há editor, não é editável (`disabled`/`readonly`
 }
 ```
 
+## Menus flutuantes
+
+Quatro menus contextuais aparecem junto ao conteúdo, sem tirar o foco do editável: **texto** (seleção de texto não vazia: `bold italic underline strike code` e `link`, os mesmos itens, estados e atalhos da barra; `link` abre o diálogo), **link** (cursor num link: o endereço, que abre em nova aba com `rel="noopener noreferrer"`, "Editar link" e "Remover link"), **tabela** (cursor ou células selecionadas: inserir linha abaixo, inserir coluna depois, excluir linha, excluir coluna e um menu "Mais operações de tabela" com as demais) e **imagem** (imagem selecionada: alinhar à esquerda, centro, direita ou largura total, e "Remover imagem"). Prioridade quando mais de um se aplica: imagem > link > texto > tabela. `Ctrl+A` não mostra o menu de texto; vídeo e _embed_ não têm menu nesta versão (05c).
+
+**Configuração.** `floatingMenus` na entrada e em `provideRichText({ floatingMenus })`: `boolean` (vale para os quatro) ou `Partial<Record<'text' | 'link' | 'table' | 'image', boolean>>`; objetos mesclam por chave (entrada > _provider_), ausente = ligado. Imagem exige o recurso `media` e tabela o `tables`. Mudar ao vivo vale sem recriar o editor e sem emitir valor.
+
+```html
+<rte-editor [floatingMenus]="{ table: false }" />
+<rte-editor [floatingMenus]="false" />
+```
+
+**Quando aparecem.** Só com o foco no editável ou no próprio menu (foco na barra, num menu da barra ou fora do host oculta); ficam ocultos em `disabled`, `readonly` e `hidden`, durante o arrasto do ponteiro (aparecem no `pointerup`), durante a composição de IME, com qualquer `<dialog>` do editor aberto e quando a âncora sai da área visível do editor (contêiner com rolagem); voltam sozinhos quando a condição some. Aparecer, trocar de tipo, reposicionar e ocultar nunca mudam o foco, e os itens não são parada de `Tab`. Posição: acima da âncora, centrado, a 8 px; vira para baixo se não couber (e prefere baixo em texto e link com `pointer: coarse`); `overlay` no topo da parte visível quando a âncora é mais alta que a área. Os menus são carregados sob demanda (`@defer`, _chunk_ `fesm2022/cds-rte-angular-rte-floating-menus-<hash>.mjs`) logo depois da criação do editor; se o _chunk_ falhar, o editor segue sem eles (aviso em desenvolvimento).
+
+**Teclado.** `Escape` no editável oculta o menu visível; ele só volta quando a seleção muda de contexto. `Alt+F10` no editável foca o item ativo do menu visível e, sem menu, a barra; dentro do menu, `Alt+F10` leva à barra. O método `focusFloatingMenu(): boolean` faz o mesmo que o `Alt+F10` (devolve `false` sem mover o foco quando não há menu visível), para plataformas em que `F10` é capturado. Dentro do menu: `←`/`→` (invertidas em `rtl`), `Home`/`End`; `Escape`, `Tab` e `Shift+Tab` devolvem o foco ao editável com a seleção intacta.
+
+**Tabela.** `addRowAfter` e `addColumnAfter` (e as do submenu) seguem a guarda de `colspan`/`rowspan` > 100 da barra: ficam `aria-disabled` com o motivo no `title` e não alteram o documento.
+
+**Rótulos e classes.** Seção `floating` de `RteLabels` (pt-BR, en e es), `labels.toolbar` para os itens que já existem na barra. Classes públicas (BEM): `.rte-floating` (`popover="manual"`, `role="toolbar"`), `.rte-floating--text|--link|--table|--image`, `.rte-floating--measuring` (transitória), `.rte-floating__link` e `.rte-floating__address` (o endereço do link); os itens reaproveitam `.rte-toolbar__button` e `.rte-toolbar__separator`. O CSS usa só `--rte-*` e nenhum atributo `style` (a posição vai por CSSOM). Limitações: sem menus em `readonly`; WebKit: em testes, a seleção de células por arrasto sintético é feita por `setCellSelection`.
+
 ## Tema por instância
 
 ```ts
@@ -235,6 +254,6 @@ Testado com `default-src 'self'; script-src 'self'; style-src 'self'` por cabeç
 
 ## O que vem depois
 
-05b2b: menus flutuantes (texto, link, tabela e imagem). 05c: mídia (diálogos de imagem, vídeo e _embed_ no mesmo `@defer`). 05d: busca e comandos `/` com interface, `updateOn`/adiamento da emissão com os números de desempenho, API final. Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
+05c: mídia (diálogos de imagem, vídeo e _embed_ no mesmo `@defer`; "Detalhes da imagem…" e menus de vídeo e _embed_ nos menus flutuantes). 05d: busca e comandos `/` com interface, `updateOn`/adiamento da emissão com os números de desempenho, API final. Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
 
 Repositório: cds-text-editor (monorepo). Licença MIT.

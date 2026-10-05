@@ -141,10 +141,10 @@ Rota nova `floating`: editor com `toolbar="full"`, todos os recursos, fixture co
 
 ## 7. Critérios de aceite
 
-- [ ] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size` verde; `npm run check:rules`, `check:licenses`, `notices` sem *drift*, `test:tools` e `typecheck:e2e` verdes.
-- [ ] Unitários 6.1 verdes nos alvos `test` e `test-zone`, inclusive a propriedade de `positionFloating`.
-- [ ] N1–N26 verdes em Chromium, Firefox e WebKit (`npx playwright test -c e2e`) e no CI do PR.
-- [ ] ADR 0010 registra M1–M21, F1–F9 (como diretrizes, com os refinamentos da §3.2), os *rulings*, os desvios (inclusive M14 e a M5 sobre F2), os números do N26 e os tamanhos (R18); README do `rte-angular`, `CLAUDE.md`, `docs/specs/README.md`, `05-editor-angular.md` e changeset atualizados.
+- [x] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size --parallel=1` verde; `npm run check:rules`, `check:licenses`, `notices` sem *drift*, `test:tools` (84/84) e `typecheck:e2e` verdes (2026-10-05, Tarefa 11).
+- [x] Unitários 6.1 verdes nos alvos `test` e `test-zone` (990 em cada), inclusive a propriedade de `positionFloating` (`floating-position.spec.ts`).
+- [x] (parcial: falta o CI do PR) N1–N26 verdes em Chromium, Firefox e WebKit: `npx playwright test -c e2e` inteiro, `--workers=2`, 1200 passed, 31 skipped, 2 falhas intermitentes por carga (Firefox `editor-csp` N5 e WebKit `core/editor-tasks` E4) que passam isoladas (6/6 e 6/6).
+- [x] ADR 0010 (`docs/decisions/0010-menus-flutuantes.md`) registra M1–M21, F1–F9 (como diretrizes, com os refinamentos da §3.2), os *rulings*, os desvios (inclusive M14 e a M5 sobre F2), os números do N26 e os tamanhos (R18); README do `rte-angular`, `CLAUDE.md`, `docs/specs/README.md`, `05-editor-angular.md` e changeset atualizados.
 
 ## 8. Consequências para as partes seguintes e outras specs
 
