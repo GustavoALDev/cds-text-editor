@@ -19,7 +19,7 @@ const HTML =
  * requisição (imagens, mídia e embeds) é abortada. Antes de qualquer script da
  * página, define a sentinela `window.__xss` (conta em `window.__xssCalls`;
  * `alert`, `confirm` e `prompt` passam por ela) e grava cada
- * `securitypolicyviolation` em `window.__violations`.
+ * `securitypolicyviolation` em `window.__sanitizerViolations`.
  */
 export async function loadSanitizerPage(page: Page): Promise<void> {
   await page.addInitScript(() => {
@@ -39,9 +39,11 @@ export async function loadSanitizerPage(page: Page): Promise<void> {
       window.__xss();
       return null;
     };
-    window.__violations = [];
+    window.__sanitizerViolations = [];
     document.addEventListener('securitypolicyviolation', (e) => {
-      window.__violations.push(`${e.effectiveDirective} ${e.blockedURI}`);
+      window.__sanitizerViolations.push(
+        `${e.effectiveDirective} ${e.blockedURI}`,
+      );
     });
   });
   const headers = { 'content-security-policy': CSP };
@@ -72,7 +74,7 @@ export async function loadSanitizerPage(page: Page): Promise<void> {
 /** Violações de `script-src*` gravadas até agora na página. */
 export function scriptViolations(page: Page): Promise<string[]> {
   return page.evaluate(() =>
-    window.__violations.filter((v) => v.startsWith('script-src')),
+    window.__sanitizerViolations.filter((v) => v.startsWith('script-src')),
   );
 }
 

@@ -43,6 +43,11 @@ function contentStaticPage() {
 
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self'";
 
+// Rota `render-tt` (spec 06, pré-voo 15): a CSP do app + *Trusted Types*. `angular` é a política
+// do Angular e `angular#unsafe-bypass` a do `bypassSecurityTrustHtml` do `RteContent`.
+const CSP_TT = `${CSP}; require-trusted-types-for 'script'; trusted-types angular angular#unsafe-bypass`;
+const TT_PATH = /^(\/zone)?\/render-tt\/?$/;
+
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -79,7 +84,6 @@ function resolvePath(pathname) {
 }
 
 const server = createServer((req, res) => {
-  res.setHeader('Content-Security-Policy', CSP);
   res.setHeader('Cache-Control', 'no-store');
   let pathname;
   try {
@@ -88,6 +92,10 @@ const server = createServer((req, res) => {
     res.writeHead(400).end();
     return;
   }
+  res.setHeader(
+    'Content-Security-Policy',
+    TT_PATH.test(pathname) ? CSP_TT : CSP,
+  );
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405).end();
     return;

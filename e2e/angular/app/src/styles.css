@@ -48,3 +48,22 @@ section {
   overflow: auto;
   border: 1px solid #888;
 }
+
+/* Rotas `render*` (spec 06, §6.2): cabeçalho fixo do `render/artigo` e espaçador alto. */
+.e2e-spacer--tall {
+  height: 200vh;
+}
+
+.e2e-render-header {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: 64px;
+  background: #ddd;
+  z-index: 1;
+}
+
+.e2e-render--article {
+  --rte-scroll-margin: 72px;
+  padding-block-start: 64px;
+}

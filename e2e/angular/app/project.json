@@ -14,7 +14,8 @@
         "^production",
         "{workspaceRoot}/packages/theme/src/theme.css",
         "{workspaceRoot}/packages/core/styles/content.css",
-        "{workspaceRoot}/packages/angular/styles/editor.css"
+        "{workspaceRoot}/packages/angular/styles/editor.css",
+        "{workspaceRoot}/fixtures/content/all-features.html"
       ],
       "outputs": ["{options.outputPath}"],
       "options": {
@@ -50,7 +51,8 @@
         "^production",
         "{workspaceRoot}/packages/theme/src/theme.css",
         "{workspaceRoot}/packages/core/styles/content.css",
-        "{workspaceRoot}/packages/angular/styles/editor.css"
+        "{workspaceRoot}/packages/angular/styles/editor.css",
+        "{workspaceRoot}/fixtures/content/all-features.html"
       ],
       "outputs": ["{options.outputPath}"],
       "options": {

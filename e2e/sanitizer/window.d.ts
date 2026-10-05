@@ -13,6 +13,6 @@ declare global {
     /** Chamadas a `__xss`. */
     __xssCalls: number;
     /** `${effectiveDirective} ${blockedURI}` de cada `securitypolicyviolation`. */
-    __violations: string[];
+    __sanitizerViolations: string[];
   }
 }

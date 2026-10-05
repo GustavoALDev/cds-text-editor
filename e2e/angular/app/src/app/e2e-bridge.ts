@@ -30,6 +30,9 @@ export type RteE2eId =
   | 'dialogs-api'
   | 'floating'
   | 'floating-alt';
+/** Exibições da rota `render` que os testes leem (`data-testid` igual ao id). */
+export type RteE2eRenderId =
+  'render-main' | 'render-wide' | 'render-input' | 'render-keep';
 export type RteE2eToggle = 'disabled' | 'readonly' | 'hidden' | 'show';
 export type RteE2eLang = 'en' | 'pt-BR' | 'es';
 
@@ -56,6 +59,18 @@ export interface RteE2eHandle {
   setFloatingMenus?(config: unknown): void;
   /** `focusFloatingMenu()` do editor (página `floating`). */
   focusFloatingMenu?(): boolean;
+}
+
+/** O que a página `render` registra para uma exibição. */
+export interface RteE2eRenderHandle {
+  renderedHtml(): string;
+  error(): { code: string; limit: number } | null;
+}
+
+/** Um caso de `probeRender` com problema. */
+export interface RteE2eProbeResult {
+  index: number;
+  problems: string[];
 }
 
 /** `window.rteE2e`: só o que os testes leem (spec 05a, §6.2; sem `ng.getComponent`). */
@@ -91,6 +106,17 @@ export interface RteE2eApi {
   watchToolbar(id: RteE2eId): void;
   /** Mutações na barra desde o `watchToolbar(id)`. */
   toolbarMutations(id: RteE2eId): number;
+  /** HTML exibido (antes da H6) pela exibição `id` da rota `render`. */
+  renderedHtml(id: RteE2eRenderId): string;
+  /** `error()` da exibição `id`. */
+  renderError(id: RteE2eRenderId): { code: string; limit: number } | null;
+  /** Define a entrada de `render-input` e roda a detecção de mudanças. */
+  setRenderInput(html: string, mode?: 'sanitize' | 'trusted'): void;
+  /** Para cada HTML: exibe em `render-input` e devolve só os casos com código executável no DOM. */
+  probeRender(
+    htmls: readonly string[],
+    mode?: 'sanitize' | 'trusted',
+  ): RteE2eProbeResult[];
   readonly readyAt: Partial<Record<RteE2eId, number>>;
   readonly toggledAt: number | null;
 }
@@ -111,10 +137,13 @@ export class E2eBridge {
   readonly hidden = signal(false);
   readonly show = signal(true);
   readonly lang = signal<RteE2eLang>('en');
+  readonly renderInput = signal('');
+  readonly renderMode = signal<'sanitize' | 'trusted'>('sanitize');
   readonly readyAt: Partial<Record<RteE2eId, number>> = {};
   toggledAt: number | null = null;
 
   private readonly handles = new Map<RteE2eId, RteE2eHandle>();
+  private readonly renders = new Map<RteE2eRenderId, RteE2eRenderHandle>();
 
   /** Registra o editor `id` da página até ela ser destruída. */
   register(id: RteE2eId, handle: RteE2eHandle): void {
@@ -122,6 +151,21 @@ export class E2eBridge {
     inject(DestroyRef).onDestroy(() => {
       if (this.handles.get(id) === handle) this.handles.delete(id);
     });
+  }
+
+  /** Registra a exibição `id` da rota `render` até ela ser destruída. */
+  registerRender(id: RteE2eRenderId, handle: RteE2eRenderHandle): void {
+    this.renders.set(id, handle);
+    inject(DestroyRef).onDestroy(() => {
+      if (this.renders.get(id) === handle) this.renders.delete(id);
+    });
+  }
+
+  render(id: RteE2eRenderId): RteE2eRenderHandle {
+    const handle = this.renders.get(id);
+    if (!handle)
+      throw new Error(`rteE2e: exibição '${id}' fora da rota atual.`);
+    return handle;
   }
 
   /** Marca o `editorReady` do editor `id` (N8). */
@@ -170,6 +214,38 @@ export class E2eBridge {
     this.toggledAt = performance.now();
     this[name].update((v) => !v);
   }
+}
+
+const URL_ATTRS = [
+  'href',
+  'src',
+  'poster',
+  'action',
+  'formaction',
+  'xlink:href',
+];
+const BAD_SCHEME = /^(javascript|data|vbscript):/i;
+
+/** Código executável no DOM exibido: `script`, `on*`, `srcdoc` e URLs `javascript:`/`data:`/`vbscript:`. */
+function scanForCode(root: Element): string[] {
+  const problems: string[] = [];
+  for (const el of [root, ...Array.from(root.querySelectorAll('*'))]) {
+    const tag = el.localName;
+    if (tag === 'script') problems.push('<script>');
+    for (const attr of Array.from(el.attributes)) {
+      const name = attr.name.toLowerCase();
+      if (name.startsWith('on')) problems.push(`<${tag}> ${name}`);
+      else if (name === 'srcdoc') problems.push(`<${tag}> srcdoc`);
+      else if (
+        URL_ATTRS.includes(name) &&
+        // Esquema com espaços e controles ignorados, como o navegador ao resolver a URL.
+        // eslint-disable-next-line no-control-regex
+        BAD_SCHEME.test(attr.value.replace(/[\u0000-\u0020]/g, ''))
+      )
+        problems.push(`<${tag}> ${name}=${attr.value.slice(0, 40)}`);
+    }
+  }
+  return problems;
 }
 
 /** Liga `window.rteE2e` depois do primeiro render, só no navegador. */
@@ -282,6 +358,27 @@ export function installE2eBridge(): void {
         count(entry, entry.observer.takeRecords());
         return { total: entry.total, style: entry.style };
       },
+      renderedHtml: (id) => run(() => bridge.render(id).renderedHtml()),
+      renderError: (id) => run(() => bridge.render(id).error()),
+      setRenderInput: (html, mode = 'sanitize') =>
+        run(() => {
+          bridge.renderMode.set(mode);
+          bridge.renderInput.set(html);
+          appRef.tick();
+        }),
+      probeRender: (htmls, mode = 'sanitize') =>
+        run(() => {
+          const results: RteE2eProbeResult[] = [];
+          bridge.renderMode.set(mode);
+          htmls.forEach((html, index) => {
+            bridge.renderInput.set(html);
+            appRef.tick();
+            const host = doc.querySelector('[data-testid="render-input"]');
+            const problems = host ? scanForCode(host) : ['sem render-input'];
+            if (problems.length > 0) results.push({ index, problems });
+          });
+          return results;
+        }),
       zoneTurns: () => turns,
       readyAt: bridge.readyAt,
       get toggledAt() {

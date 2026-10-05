@@ -36,4 +36,17 @@ export const routes: Routes = [
     path: 'floating',
     loadComponent: () => import('./pages/floating').then((m) => m.FloatingPage),
   },
+  {
+    path: 'render',
+    loadComponent: () => import('./pages/render').then((m) => m.RenderPage),
+  },
+  {
+    path: 'render/artigo',
+    data: { article: true },
+    loadComponent: () => import('./pages/render').then((m) => m.RenderPage),
+  },
+  {
+    path: 'render-tt',
+    loadComponent: () => import('./pages/render').then((m) => m.RenderPage),
+  },
 ];
