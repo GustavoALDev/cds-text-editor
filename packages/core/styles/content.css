@@ -167,12 +167,13 @@
   }
 
   .rte-content .rt-task > label > input {
+    position: relative;
     flex: none;
-    font: inherit; /* o UA põe `line-height: normal` nos controles; `1lh` precisa do herdado */
-    inline-size: 1em;
-    block-size: 1em;
     margin: 0;
-    margin-block-start: calc((1lh - 1em) / 2);
+    /* Tamanho nativo (igual ao da edição); o centro vai à meia linha pelo próprio tamanho. */
+    font: inherit; /* o UA muda fonte e `line-height` dos controles; `1lh` precisa dos herdados (o checkbox nativo não muda de tamanho) */
+    inset-block-start: 0.5lh;
+    translate: 0 -50%;
     accent-color: var(--rte-primary);
   }
 

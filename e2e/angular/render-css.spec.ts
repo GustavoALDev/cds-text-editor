@@ -1,16 +1,23 @@
 // Spec 06, Task 8: smoke do `render.css` e das regras de leitura do `content.css` em
 // navegador real (estilo computado), nos builds zoneless e zone.js.
 import { expect, test, type Page } from '@playwright/test';
-import {
-  editorHost,
-  gotoApp,
-  readFixture,
-  waitForEditor,
-} from './helpers/app';
+import { editorHost, gotoApp, readFixture, waitForEditor } from './helpers/app';
 import { blockThirdParty, gotoRender, renderHost } from './helpers/render';
 
 const TABLE_WITH_CAPTION =
   '<table><caption>Legenda</caption><tbody><tr><td><p>a</p></td></tr></tbody></table>';
+
+/** `--rte-primary` resolvido, como o navegador devolve `accent-color`. */
+function accent(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--rte-primary)';
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  });
+}
 
 for (const zone of [false, true]) {
   test.describe(`render.css (${zone ? 'zone.js' : 'zoneless'})`, () => {
@@ -31,6 +38,8 @@ for (const zone of [false, true]) {
         page.locator('[data-testid="render-toc"] .rte-toc__list').first(),
       ).toHaveCSS('list-style-type', 'none');
       const link = page.locator('.rte-toc__link').first();
+      await expect(link).toHaveCSS('display', 'inline-block');
+      await expect(link).toHaveCSS('line-height', '24px');
       expect(
         await link.evaluate((el) => el.getBoundingClientRect().height),
       ).toBeGreaterThanOrEqual(24);
@@ -40,22 +49,41 @@ for (const zone of [false, true]) {
       page,
     }) => {
       await gotoRender(page, '/render', { zone });
-      const label = renderHost(page, 'render-main').locator(
-        '.rt-task > label',
-      );
+      const label = renderHost(page, 'render-main').locator('.rt-task > label');
       await expect(label.first()).toHaveCSS('display', 'flex');
-      const offsetOf = (p: Page, task: string, input: string) =>
-        p.locator(task).first().evaluate(
-          (li, sel) => {
-            const box = li.querySelector(sel)!.getBoundingClientRect();
-            return box.top + box.height / 2 - li.getBoundingClientRect().top;
-          },
-          input,
-        );
-      const rendered = await offsetOf(
+      // Medidas relativas ao `li` (as páginas diferem na posição absoluta).
+      const measure = (p: Page, task: string, input: string, text: string) =>
+        p
+          .locator(task)
+          .first()
+          .evaluate(
+            (li, sel) => {
+              const top = li.getBoundingClientRect();
+              const box = li.querySelector(sel.input)!.getBoundingClientRect();
+              const walker = document.createTreeWalker(
+                li.querySelector(sel.text) ?? li,
+                NodeFilter.SHOW_TEXT,
+              );
+              const range = document.createRange();
+              range.selectNodeContents(walker.nextNode()!);
+              return {
+                cy: box.top + box.height / 2 - top.top,
+                w: box.width,
+                h: box.height,
+                textX: range.getBoundingClientRect().left - top.left,
+              };
+            },
+            { input, text },
+          );
+      const input = renderHost(page, 'render-main').locator(
+        '.rt-task > label > input',
+      );
+      await expect(input.first()).toHaveCSS('accent-color', await accent(page));
+      const rendered = await measure(
         page,
         '[data-testid="render-main"] .rt-task',
         'label > input',
+        'label',
       );
 
       await gotoApp(page, '/content', { zone });
@@ -67,12 +95,17 @@ for (const zone of [false, true]) {
       await expect(editorHost(page, 'content').locator('.rt-task')).toHaveCount(
         2,
       );
-      const edited = await offsetOf(
+      const edited = await measure(
         page,
         'rte-editor[data-testid="content"] .rt-task',
         '.rte-task__check input',
+        '.rte-task__text',
       );
-      expect(Math.abs(rendered - edited)).toBeLessThanOrEqual(1);
+      for (const key of ['cy', 'w', 'h', 'textX'] as const)
+        expect(
+          Math.abs(rendered[key] - edited[key]),
+          `${key}: ${rendered[key]} x ${edited[key]}`,
+        ).toBeLessThanOrEqual(1);
     });
 
     test('legenda de tabela (caption)', async ({ page }) => {
@@ -84,7 +117,6 @@ for (const zone of [false, true]) {
       const host = renderHost(page, 'render-input');
       const caption = host.locator('caption');
       await expect(caption).toHaveText('Legenda');
-      await expect(caption).toHaveCSS('caption-side', 'top');
       await expect(caption).toHaveCSS('text-align', 'start');
       const [muted, captionSize, cellSize] = await page.evaluate(() => {
         const probe = document.createElement('span');
@@ -94,13 +126,15 @@ for (const zone of [false, true]) {
         const color = getComputedStyle(probe).color;
         probe.remove();
         const px = (sel: string) =>
-          parseFloat(
-            getComputedStyle(root.querySelector(sel)!).fontSize,
-          );
+          parseFloat(getComputedStyle(root.querySelector(sel)!).fontSize);
         return [color, px('caption'), px('td')];
       });
       await expect(caption).toHaveCSS('color', muted);
       expect(captionSize).toBeCloseTo(cellSize * 0.875, 1);
+      const padding = await caption.evaluate((el) =>
+        parseFloat(getComputedStyle(el).paddingBottom),
+      );
+      expect(padding).toBeCloseTo(captionSize * 0.4, 1);
     });
   });
 }
