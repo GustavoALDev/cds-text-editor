@@ -18,6 +18,7 @@ import type { RteImageAlign } from '@cds/rte-core/extensions';
 import type { RteDialogLabels } from '../labels/types';
 import type { RteDialogController, RteDialogRequest } from './controller';
 import type { RteMediaRules } from './media-rules';
+import { RteEmbedForm } from './forms/embed-form';
 import { RteImageForm } from './forms/image-form';
 import { RteLangForm } from './forms/lang-form';
 import { RteLinkForm } from './forms/link-form';
@@ -44,6 +45,7 @@ let nextInstance = 0;
     RteTableForm,
     RteImageForm,
     RteVideoForm,
+    RteEmbedForm,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
@@ -89,6 +91,8 @@ export class RteDialogs {
         return req.mode === 'edit' ? l.imageEditTitle : l.imageInsertTitle;
       case 'video':
         return req.mode === 'edit' ? l.videoEditTitle : l.videoInsertTitle;
+      case 'embed':
+        return req.mode === 'edit' ? l.embedEditTitle : l.embedInsertTitle;
       default:
         return '';
     }

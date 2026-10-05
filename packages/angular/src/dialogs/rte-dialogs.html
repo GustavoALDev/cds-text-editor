@@ -52,5 +52,13 @@
     [idPrefix]="prefix"
     [rules]="mediaRules()"
   />
+  } @case ('embed') {
+  <rte-embed-form
+    [request]="req"
+    [controller]="controller()"
+    [labels]="labels()"
+    [idPrefix]="prefix"
+    [providers]="embedProviders()"
+  />
   } } }
 </dialog>

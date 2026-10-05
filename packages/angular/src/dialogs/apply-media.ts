@@ -21,6 +21,8 @@ export type MediaChain = ChainedCommands & {
   setImageSize(size: { width: number }): MediaChain;
   setVideo(attrs: RteVideoAttrs): MediaChain;
   updateVideo(attrs: Partial<RteVideoAttrs>): MediaChain;
+  setEmbed(url: string, options: { caption: string }): MediaChain;
+  updateEmbed(attrs: { caption: string }): MediaChain;
 };
 
 /** Valores do diálogo de imagem já canônicos (o `src` pela regra, V4). */
@@ -120,6 +122,25 @@ export function applyVideo(
   }
   return runMedia(editor, (c) =>
     (c.setNodeSelection(req.range.from) as MediaChain).updateVideo(attrs),
+  );
+}
+
+/**
+ * *Embed* (V5, pré-voo 8). Inserir: `setEmbed` com a URL de página aparada
+ * (o core monta o `src` pelos provedores ativos e deixa o *embed*
+ * selecionado). Editar: só a legenda (`updateEmbed`) no nó da abertura.
+ */
+export function applyEmbed(
+  editor: Editor,
+  req: RteDialogRequest,
+  v: { url: string; caption: string },
+): boolean {
+  const { caption } = v;
+  if (req.mode !== 'edit') {
+    return runMedia(editor, (c) => c.setEmbed(v.url.trim(), { caption }));
+  }
+  return runMedia(editor, (c) =>
+    (c.setNodeSelection(req.range.from) as MediaChain).updateEmbed({ caption }),
   );
 }
 
