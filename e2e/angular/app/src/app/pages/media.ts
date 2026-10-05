@@ -34,15 +34,19 @@ const LABELS: Record<RteE2eLang, RteLabelsInput> = {
 };
 
 /**
- * Documento inicial do `media` (N25–N31): imagem com `alt`, imagem sem `alt`,
- * vídeo WebM com uma faixa de legenda, o *embed* do YouTube que `toEmbed`
- * produz e um parágrafo final. WebM + `.vtt` (sem MP4, ruling 6 do ADR 0011).
+ * Documento inicial do `media` (N25-N31): imagem com `alt`, imagem decorativa
+ * (`alt=""`: o HTML canônico não distingue "sem `alt`"), vídeo WebM com uma
+ * faixa de legenda, o *embed* do YouTube que `toEmbed` produz e um parágrafo
+ * final. WebM + `.vtt` (sem MP4, ruling 6 do ADR 0011). Forma canônica de
+ * `getRteHtml`, menos o `style="aspect-ratio: 16 / 9"` que o core acrescenta
+ * ao `iframe` na saída: um atributo `style` no HTML carregado violaria a CSP
+ * estrita (`style-src-attr`); o N30 confere a ida e volta sem ele.
  */
 export const MEDIA_FIXTURE =
   '<p>Mídia</p>' +
-  '<figure class="rt-figure rt-figure--center"><img src="/e2e.png" alt="Imagem de teste"></figure>' +
-  '<figure class="rt-figure rt-figure--center"><img src="/e2e.png"></figure>' +
-  '<figure class="rt-figure rt-figure--video"><video src="/e2e.webm" controls preload="metadata" playsinline><track kind="captions" src="/e2e.vtt" srclang="pt-BR" label="Português"></video></figure>' +
+  '<figure class="rt-figure rt-figure--center"><img src="/e2e.png" alt="Imagem de teste" loading="lazy" decoding="async"></figure>' +
+  '<figure class="rt-figure rt-figure--center"><img src="/e2e.png" alt="" loading="lazy" decoding="async"></figure>' +
+  '<figure class="rt-figure rt-figure--video"><video src="/e2e.webm" controls="" preload="metadata" playsinline=""><track kind="captions" src="/e2e.vtt" srclang="pt-BR" label="Português"></video></figure>' +
   '<figure class="rt-embed rt-embed--youtube" data-rt-provider="youtube"><iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" title="YouTube" width="560" height="315" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; fullscreen; picture-in-picture" allowfullscreen="" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox"></iframe></figure>' +
   '<p>Fim</p>';
 

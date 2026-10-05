@@ -219,6 +219,15 @@ function restoreFocus(origin: HTMLElement | null, editor: Editor | null): void {
     origin.isConnected &&
     origin !== editor?.view.dom &&
     !(origin as HTMLButtonElement).disabled;
-  if (usable) origin.focus();
-  else editor?.commands.focus();
+  if (usable) {
+    origin.focus();
+    return;
+  }
+  if (!editor) return;
+  editor.commands.focus();
+  // O `close()` nativo do `<dialog>` já pode ter devolvido o foco ao editável:
+  // o `focus()` do Tiptap então não faz nada, e o Firefox (que põe o cursor no
+  // início ao focar) vence a seleção de nó (vídeo, *embed*, imagem) quando o
+  // ProseMirror lê o DOM. `view.focus()` regrava a seleção no DOM já.
+  if (editor.view.hasFocus()) editor.view.focus();
 }
