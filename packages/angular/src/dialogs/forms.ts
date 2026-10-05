@@ -3,9 +3,11 @@ import {
   min,
   required,
   validate,
+  type FieldTree,
   type SchemaPath,
   type ValidationError,
 } from '@angular/forms/signals';
+import { normalizeAttribute, type RteAttrRule } from '@cds/rte-core';
 import type { RteDialogLabels } from '../labels/types';
 
 function numberOf(error: ValidationError, key: string): number {
@@ -65,6 +67,44 @@ export function integerInRange(
     const v = value();
     return v !== null && !Number.isNaN(v) && !Number.isInteger(v)
       ? error
+      : undefined;
+  });
+}
+
+/** Erro visível do campo: só depois de tocado (ou de um envio) (G8). */
+export function fieldError<T>(
+  field: FieldTree<T>,
+  labels: RteDialogLabels,
+): string | null {
+  const state = field();
+  return state.touched() && state.invalid()
+    ? dialogErrorText(state.errors(), labels)
+    : null;
+}
+
+/** Foca o primeiro campo inválido, na ordem fixa dos campos (G8). */
+export function focusFirstInvalid(fields: readonly FieldTree<unknown>[]): void {
+  fields
+    .find((f) => f().invalid())?.()
+    .focusBoundControl();
+}
+
+/**
+ * Código de idioma conforme a regra `span[lang]` do esquema (G14), a mesma do
+ * `setLang`: vazio passa (o `required` cuida disso); regra nula ou código
+ * recusado → `rteLangCode`. `when` desliga a checagem (ex.: idioma da lista).
+ */
+export function langCodeValidator(
+  path: SchemaPath<string>,
+  rule: () => RteAttrRule | null,
+  when?: () => boolean,
+): void {
+  validate(path, ({ value }) => {
+    const code = value();
+    if (code === '' || (when && !when())) return undefined;
+    const r = rule();
+    return r === null || normalizeAttribute(r, code) === null
+      ? { kind: 'rteLangCode' }
       : undefined;
   });
 }

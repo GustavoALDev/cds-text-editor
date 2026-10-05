@@ -1,0 +1,72 @@
+<form class="rte-dialog__form" [formRoot]="form">
+  @let urlError = error(form.url);
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().url"
+      >{{ labels().linkUrl }}</label
+    >
+    <input
+      class="rte-dialog__input"
+      type="text"
+      inputmode="url"
+      autocomplete="url"
+      spellcheck="false"
+      [id]="ids().url"
+      [formField]="form.url"
+      [attr.aria-invalid]="urlError ? 'true' : null"
+      [attr.aria-describedby]="
+          ids().url + '-hint' + (urlError ? ' ' + ids().url + '-error' : '')
+        "
+    />
+    <p class="rte-dialog__hint" [id]="ids().url + '-hint'">
+      {{ labels().linkUrlHint }}
+    </p>
+    @if (urlError) {
+    <p class="rte-dialog__error" [id]="ids().url + '-error'">{{ urlError }}</p>
+    }
+  </div>
+  @if (request().mode === 'insert') { @let textError = error(form.text);
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().text"
+      >{{ labels().linkText }}</label
+    >
+    <input
+      class="rte-dialog__input"
+      type="text"
+      [id]="ids().text"
+      [formField]="form.text"
+      [attr.aria-invalid]="textError ? 'true' : null"
+      [attr.aria-describedby]="textError ? ids().text + '-error' : null"
+    />
+    @if (textError) {
+    <p class="rte-dialog__error" [id]="ids().text + '-error'">
+      {{ textError }}
+    </p>
+    }
+  </div>
+  } @if (newTabShown()) {
+  <div class="rte-dialog__field">
+    <input
+      class="rte-dialog__checkbox"
+      type="checkbox"
+      [id]="ids().newTab"
+      [formField]="form.newTab"
+    />
+    <label class="rte-dialog__label" [for]="ids().newTab"
+      >{{ labels().linkNewTab }}</label
+    >
+  </div>
+  }
+  <div class="rte-dialog__actions">
+    @if (request().mode === 'edit') {
+    <button type="button" class="rte-dialog__remove" (click)="remove()">
+      {{ labels().linkRemove }}
+    </button>
+    }
+    <button type="button" class="rte-dialog__cancel" (click)="cancel()">
+      {{ labels().cancel }}
+    </button>
+    <button type="submit" class="rte-dialog__apply">
+      {{ labels().apply }}
+    </button>
+  </div>
+</form>
