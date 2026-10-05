@@ -124,6 +124,49 @@ export function mergeElements(a: Elements, b: Elements): Elements {
   return out;
 }
 
+/**
+ * Confere cada `ensureTokens`: o atributo-alvo tem regra `tokens`, os tokens
+ * garantidos estão em `values` e cabem no `maxLength` junto de qualquer valor
+ * canônico. Sem isso o `sanitizeAttributes` perderia o token em silêncio (um
+ * `noopener` a menos). Lança `Error`. Interno: não exportado pelo `index.ts`.
+ */
+export function assertEnsureTokens(elements: Elements): void {
+  for (const [tag, spec] of Object.entries(elements)) {
+    for (const ensure of spec.ensureTokens ?? []) {
+      const { attribute, tokens } = ensure;
+      const attr = Object.hasOwn(spec.attributes, attribute)
+        ? spec.attributes[attribute]
+        : undefined;
+      const rule = attr?.rule;
+      if (rule?.kind !== 'tokens') {
+        throw new Error(
+          `Esquema: ensureTokens de <${tag}> aponta para "${attribute}", que não tem regra tokens.`,
+        );
+      }
+      for (const token of tokens) {
+        if (!rule.values.includes(token)) {
+          throw new Error(
+            `Esquema: ensureTokens de <${tag}> garante "${token}", fora dos valores de "${attribute}".`,
+          );
+        }
+      }
+      // Pior caso do `sanitizeAttributes`: o valor atual (canônico ou o
+      // `default`), o separador e os tokens garantidos.
+      const current = Math.max(
+        rule.values.join(rule.separator).length,
+        attr?.default?.length ?? 0,
+      );
+      const worst =
+        current + rule.separator.length + tokens.join(rule.separator).length;
+      if (worst > rule.maxLength) {
+        throw new Error(
+          `Esquema: ensureTokens de <${tag}> pode passar do maxLength de "${attribute}".`,
+        );
+      }
+    }
+  }
+}
+
 /** Valida os provedores (mesmo validador do `toEmbed`) e devolve a união dos hosts normalizados. */
 function checkProviders(providers: readonly RteEmbedProvider[]): string[] {
   const ids = new Set<string>();
@@ -227,6 +270,8 @@ export function getHtmlSchema(
     if (tags.length > 0) byFeature[id] = tags;
     elements = mergeElements(elements, own);
   }
+
+  assertEnsureTokens(elements);
 
   return deepFreeze({
     version: 1,
