@@ -92,5 +92,10 @@ declare global {
       iframes: Set<Element>;
       iframeLoads: number;
     };
+    /** L5 (R12): o primeiro `h2` de `render-main` antes da troca de idioma. */
+    __renderH2?: Element | null;
+    /** L6: marcador que só sobrevive sem recarga, e o primeiro `iframe` antes dos cliques. */
+    __renderMarker?: string;
+    __renderIframe?: Element | null;
   }
 }

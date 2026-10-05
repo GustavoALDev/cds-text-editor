@@ -54,6 +54,11 @@ section {
   height: 200vh;
 }
 
+/* A página dá ao conteúdo o fundo do tema (claro e escuro), como um site faria (L5, R11). */
+.e2e-render {
+  background-color: var(--rte-surface);
+}
+
 .e2e-render-header {
   position: fixed;
   inset-block-start: 0;

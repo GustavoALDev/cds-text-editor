@@ -17,16 +17,26 @@ export async function gotoRender(
   options: { zone?: boolean } = {},
 ): Promise<void> {
   await gotoApp(page, path, options);
-  // A rota é carregada sob demanda: espera a exibição do fixture registrar-se na ponte.
+  await waitForRender(page);
+}
+
+/**
+ * Espera a exibição do fixture registrar-se na ponte (a rota é carregada sob demanda);
+ * também depois de um `reload`.
+ */
+export async function waitForRender(page: Page): Promise<void> {
   await expect
-    .poll(() =>
-      page.evaluate(() => {
-        try {
-          return window.rteE2e?.renderedHtml('render-main').length > 0;
-        } catch {
-          return false;
-        }
-      }),
+    .poll(
+      () =>
+        page.evaluate(() => {
+          try {
+            return window.rteE2e?.renderedHtml('render-main').length > 0;
+          } catch {
+            return false;
+          }
+        }),
+      // Depois de um `reload` com emulação o Firefox às vezes passa dos 5 s padrão.
+      { timeout: 15_000 },
     )
     .toBe(true);
 }

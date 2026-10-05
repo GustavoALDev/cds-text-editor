@@ -12,6 +12,7 @@
   }
 
   .rte-content .rte-table-scroll:focus-visible,
+  .rte-content a:focus-visible,
   .rte-toc__link:focus-visible {
     outline: var(--rte-focus-width) solid var(--rte-focus);
     outline-offset: 2px;
@@ -36,6 +37,7 @@
 
   @media (forced-colors: active) {
     .rte-content .rte-table-scroll:focus-visible,
+    .rte-content a:focus-visible,
     .rte-toc__link:focus-visible {
       outline-color: Highlight;
     }

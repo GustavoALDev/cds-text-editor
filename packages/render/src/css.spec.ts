@@ -140,6 +140,8 @@ describe('render.css', () => {
     for (const s of [
       '.rte-content .rte-table-scroll:focus-visible',
       '.rte-toc__link:focus-visible',
+      // Ruling 13 (R11): links do conteúdo com o mesmo anel (o padrão do navegador é 1 px).
+      '.rte-content a:focus-visible',
     ])
       expect(value(s, 'outline')).toBe(
         'var(--rte-focus-width) solid var(--rte-focus)',
@@ -154,7 +156,7 @@ describe('render.css', () => {
     expect(value('.rte-toc__link', 'min-block-size')).toBe('24px');
   });
 
-  it('há bloco forced-colors com Highlight nos dois focos', () => {
+  it('há bloco forced-colors com Highlight nos focos', () => {
     const selectors = rules()
       .filter(inForcedColors)
       .flatMap((r) => r.selectors);
@@ -162,6 +164,7 @@ describe('render.css', () => {
       expect.arrayContaining([
         '.rte-content .rte-table-scroll:focus-visible',
         '.rte-toc__link:focus-visible',
+        '.rte-content a:focus-visible',
       ]),
     );
   });

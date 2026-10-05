@@ -94,6 +94,91 @@ describe('RteContent: rolador de tabela (H7, R6)', () => {
     expect(attrs(a!)).toEqual(NONE);
   });
 
+  describe('Home/End no rolador marcado (R6, L5)', () => {
+    const KEYS = { Home: 36, End: 35 } as const;
+
+    function press(
+      target: Element,
+      key: keyof typeof KEYS,
+      init: KeyboardEventInit = {},
+    ): KeyboardEvent {
+      const event = new KeyboardEvent('keydown', {
+        key,
+        keyCode: KEYS[key],
+        bubbles: true,
+        cancelable: true,
+        ...init,
+      });
+      target.dispatchEvent(event);
+      return event;
+    }
+
+    /** `scrollLeft` controlável (o jsdom não rola). */
+    function trackScroll(el: HTMLElement, start = 0): { value: number } {
+      const state = { value: start };
+      Object.defineProperty(el, 'scrollLeft', {
+        configurable: true,
+        get: () => state.value,
+        set: (v: number) => {
+          state.value = v;
+        },
+      });
+      return state;
+    }
+
+    it('End leva ao fim e Home ao início, sem rolar a página', async () => {
+      const fixture = await renderHost(Host);
+      const [a] = scrollers(fixture);
+      ro.trigger(new Map([[a!, WIDE]]));
+      const scroll = trackScroll(a!, 40);
+      const end = press(a!, 'End');
+      expect(scroll.value).toBe(500);
+      expect(end.defaultPrevented).toBe(true);
+      const home = press(a!, 'Home');
+      expect(scroll.value).toBe(0);
+      expect(home.defaultPrevented).toBe(true);
+    });
+
+    it('em rtl o fim fica no negativo', async () => {
+      const fixture = await renderHost(Host);
+      const [a] = scrollers(fixture);
+      ro.trigger(new Map([[a!, WIDE]]));
+      a!.style.direction = 'rtl';
+      const scroll = trackScroll(a!);
+      press(a!, 'End');
+      expect(scroll.value).toBe(-500);
+      press(a!, 'Home');
+      expect(scroll.value).toBe(0);
+    });
+
+    it('não age em rolador desmarcado, com modificador ou vindo de dentro', async () => {
+      const fixture = await renderHost(Host);
+      const [a, b] = scrollers(fixture);
+      ro.trigger(new Map([[a!, WIDE]]));
+      const scrollA = trackScroll(a!, 40);
+      const scrollB = trackScroll(b!, 0);
+      expect(press(b!, 'End').defaultPrevented).toBe(false);
+      expect(scrollB.value).toBe(0);
+      for (const mod of ['ctrlKey', 'metaKey', 'altKey', 'shiftKey'])
+        expect(press(a!, 'End', { [mod]: true }).defaultPrevented).toBe(false);
+      expect(press(a!.querySelector('td')!, 'End').defaultPrevented).toBe(
+        false,
+      );
+      expect(scrollA.value).toBe(40);
+    });
+
+    it('depois do destroy a tecla não é tratada', async () => {
+      const fixture = await renderHost(Host);
+      const [a] = scrollers(fixture);
+      ro.trigger(new Map([[a!, WIDE]]));
+      fixture.destroy();
+      // O nó guarda os atributos antigos; o evento ainda sobe pela árvore desligada.
+      const scroll = trackScroll(a!, 40);
+      expect(press(a!, 'End').defaultPrevented).toBe(false);
+      expect(scroll.value).toBe(40);
+    });
+  });
+
   it('mudança de tamanho só da table reavalia o rolador', async () => {
     const fixture = await renderHost(Host);
     const [a] = scrollers(fixture);
