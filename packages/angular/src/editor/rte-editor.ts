@@ -693,25 +693,50 @@ export class RteEditor implements FormValueControl<string> {
     );
   }
 
-  /** `Alt+F10` no editável leva o foco à barra (U3). */
+  /**
+   * Teclado do host (U3, M6, M12; pré-voo 10). `Escape` no editável dispensa
+   * o menu flutuante visível (só então consome a tecla). `Alt+F10` no
+   * editável foca o menu flutuante visível ou, sem ele, a barra; dentro de
+   * um `.rte-floating`, a barra.
+   */
   protected onHostKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented) return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const inEditable = this.mount().nativeElement.contains(target);
+    if (event.key === 'Escape') {
+      if (inEditable && untracked(this.floatingRef)?.dismiss()) {
+        event.preventDefault();
+      }
+      return;
+    }
     if (
       event.key !== 'F10' ||
       !event.altKey ||
       event.ctrlKey ||
       event.metaKey ||
-      event.shiftKey ||
-      event.defaultPrevented
+      event.shiftKey
     )
       return;
-    const target = event.target;
-    if (
-      !(target instanceof Node) ||
-      !this.mount().nativeElement.contains(target)
-    )
+    if (inEditable) {
+      event.preventDefault();
+      if (!this.focusFloatingMenu()) this.focusToolbar();
       return;
-    event.preventDefault();
-    this.focusToolbar();
+    }
+    const floating = target.closest('.rte-floating');
+    if (floating && this.host.contains(floating)) {
+      event.preventDefault();
+      this.focusToolbar();
+    }
+  }
+
+  /**
+   * Foca o item ativo do menu flutuante visível (M12); `false` (sem mover o
+   * foco) sem editor, não editável ou sem menu visível.
+   */
+  focusFloatingMenu(): boolean {
+    if (!untracked(this.interactive)) return false;
+    return untracked(this.floatingRef)?.focusActive() ?? false;
   }
 
   /** Leva o foco ao item ativo da barra (U3); sem barra ou sem editor, nada. */

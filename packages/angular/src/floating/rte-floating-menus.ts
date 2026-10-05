@@ -83,6 +83,7 @@ function sameContext(
   templateUrl: './rte-floating-menus.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
+  host: { '(keydown)': 'onMenuKeydown($event)' },
   imports: [
     RteRovingFocus,
     RteRovingItem,
@@ -326,6 +327,23 @@ export class RteFloatingMenus {
 
   protected markLabel(id: RteToolbarItemId): string {
     return this.toolbarLabels()[id as (typeof RTE_FLOATING_TEXT_MARKS)[number]];
+  }
+
+  /**
+   * `Escape`, `Tab` e `Shift+Tab` num menu devolvem o foco ao editável com a
+   * seleção intacta; o menu continua visível (M12). O submenu consome os seus.
+   */
+  protected onMenuKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey) return;
+    if (event.metaKey || (event.key !== 'Escape' && event.key !== 'Tab')) {
+      return;
+    }
+    const target = event.target as Element | null;
+    if (!target?.closest?.('.rte-floating') || target.closest('.rte-menu')) {
+      return;
+    }
+    event.preventDefault();
+    this.run(() => this.focusEditable());
   }
 
   /** `Tab` saiu do submenu: o foco volta ao editável. */
