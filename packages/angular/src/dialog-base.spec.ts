@@ -287,6 +287,55 @@ describe('base do diálogo (R3)', () => {
     ).toHaveLength(1);
   });
 
+  it('duas instâncias antes do chunk: A e B pedem no mesmo tique → B false (G6)', async () => {
+    const fixture = TestBed.createComponent(TwoHosts);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const [a, b] = fixture.componentInstance.cmps();
+    if (!a || !b) throw new Error('instâncias ausentes');
+    inQuote(a.editor() as Editor);
+    inQuote(b.editor() as Editor);
+    expect(a.openDialog('quoteAuthor')).toBe(true);
+    expect(b.openDialog('quoteAuthor')).toBe(false);
+    const dialog = await waitForDialog(fixture);
+    action(dialog, 'Cancel').click();
+    await settle(fixture);
+    // encerrado o pedido de A, B pode abrir
+    expect(b.openDialog('quoteAuthor')).toBe(true);
+    await waitForDialog(fixture);
+  });
+
+  it('hidden: openDialog → false e nenhum modal', async () => {
+    const { fixture, cmp, editor } = await setup((h) => h.hidden.set(true));
+    inQuote(editor);
+    expect(cmp.openDialog('quoteAuthor')).toBe(false);
+    await settle(fixture);
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.rte-dialog[open]'),
+    ).toBeNull();
+  });
+
+  it('close atrasado do diálogo anterior não cancela o novo', async () => {
+    const { fixture, cmp, editor } = await setup();
+    inQuote(editor);
+    cmp.openDialog('quoteAuthor');
+    const dialog = await waitForDialog(fixture);
+    action(dialog, 'Cancel').click();
+    await settle(fixture);
+    inQuote(editor);
+    expect(cmp.openDialog('quoteAuthor')).toBe(true);
+    await waitForDialog(fixture);
+    // no navegador o `close` do fechamento anterior chega numa tarefa
+    dialog.dispatchEvent(new Event('close'));
+    await settle(fixture);
+    expect(dialog.open).toBe(true);
+    expect(cmp.openDialog('quoteAuthor')).toBe(false);
+    type(field(dialog, 'Author'), 'Ana');
+    action(dialog, 'Apply').click();
+    await settle(fixture);
+    expect(getRteHtml(editor)).toContain('<cite>Ana</cite>');
+  });
+
   it.each(['cancel', 'escape'] as const)(
     '%s fecha sem transação de documento',
     async (how) => {

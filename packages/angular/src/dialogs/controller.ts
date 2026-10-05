@@ -8,6 +8,17 @@ import { setPendingSelection } from './ui-extension';
 const DEFER_FAILED =
   '[rte-editor] não foi possível carregar os diálogos; o pedido foi descartado.';
 
+/**
+ * Controlador com pedido em curso por documento (G6): recusa um segundo
+ * pedido mesmo antes de qualquer `<dialog>` aberto (o *chunk* ainda chegando).
+ */
+const busy = new WeakMap<Document, RteDialogController>();
+
+/** `true` se algum editor do documento tem um pedido de diálogo em curso. */
+export function dialogBusy(doc: Document): boolean {
+  return busy.has(doc);
+}
+
 /** Pedido de diálogo aceito (G18): o alvo e o documento da abertura (G5). */
 export interface RteDialogRequest {
   readonly id: number;
@@ -37,6 +48,8 @@ export class RteDialogController {
   private readonly broken = signal(false);
   private view: RteDialogView | null = null;
   private nextId = 1;
+  /** Documento em que o pedido em curso foi registrado (G6). */
+  private owner: Document | null = null;
   /** Fechando por aplicação/cancelamento: o `close` desse fechamento é ignorado. */
   private settling = false;
   private disposed = false;
@@ -52,7 +65,10 @@ export class RteDialogController {
     this.editor = o.editor;
   }
 
-  /** Grava o pedido; `link`/`lang` com intervalo ganham a seleção pendente. */
+  /**
+   * Grava o pedido (um por documento, G6); `link`/`lang` com intervalo ganham
+   * a seleção pendente.
+   */
   open(
     kind: RteDialogKind,
     target: RteDialogTarget,
@@ -60,6 +76,10 @@ export class RteDialogController {
   ): void {
     const editor = untracked(this.editor);
     if (this.disposed || !editor || editor.isDestroyed) return;
+    const doc = editor.view.dom.ownerDocument;
+    if (busy.has(doc)) return;
+    busy.set(doc, this);
+    this.owner = doc;
     const { from, to } = target.range;
     if ((kind === 'link' || kind === 'lang') && from < to) {
       setPendingSelection(editor, { from, to });
@@ -102,7 +122,7 @@ export class RteDialogController {
       setPendingSelection(editor, null);
       return run(editor);
     } finally {
-      this.current.set(null);
+      this.clear();
       this.settling = false;
     }
   }
@@ -121,7 +141,7 @@ export class RteDialogController {
       const editor = untracked(this.editor);
       const alive = !!editor && !editor.isDestroyed;
       if (alive) setPendingSelection(editor, null);
-      this.current.set(null);
+      this.clear();
       if (reason === 'cancelled' && !this.disposed) {
         restoreFocus(req.origin, alive ? editor : null);
       }
@@ -135,6 +155,13 @@ export class RteDialogController {
     this.broken.set(true);
     if (isDevMode()) console.warn(DEFER_FAILED);
     this.cancel('cancelled');
+  }
+
+  /** Encerra o pedido em curso e libera o documento (G6). */
+  private clear(): void {
+    this.current.set(null);
+    if (this.owner && busy.get(this.owner) === this) busy.delete(this.owner);
+    this.owner = null;
   }
 
   /** Destruição do editor: fecha sem mover o foco e recusa pedidos novos. */

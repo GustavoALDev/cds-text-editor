@@ -113,3 +113,31 @@ export async function waitForDialog(
   }
   throw new Error('waitForDialog: nenhum .rte-dialog[open]');
 }
+
+/** Campo do diálogo pelo texto do `<label for>`. */
+export function dialogField(
+  dialog: HTMLElement,
+  label: string,
+): HTMLInputElement {
+  const found = [
+    ...dialog.querySelectorAll<HTMLLabelElement>('.rte-dialog__label'),
+  ].find((l) => l.textContent?.trim() === label);
+  const input = found?.htmlFor
+    ? dialog.ownerDocument.getElementById(found.htmlFor)
+    : null;
+  if (!input) throw new Error(`campo ${label} ausente`);
+  return input as HTMLInputElement;
+}
+
+/** Digita `value` no campo (evento `input`, como o navegador). */
+export function typeInto(input: HTMLInputElement, value: string): void {
+  input.value = value;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+/** Marca/desmarca uma caixa (evento `change`, como o clique do navegador). */
+export function setChecked(input: HTMLInputElement, checked: boolean): void {
+  input.checked = checked;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+}

@@ -38,7 +38,7 @@ import { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { RTE_CONFIG, RTE_LABELS, type RteEditorConfig } from '../config';
-import { RteDialogController } from '../dialogs/controller';
+import { dialogBusy, RteDialogController } from '../dialogs/controller';
 import { RteDeferFailed } from '../dialogs/defer-failed';
 import { RteDialogs } from '../dialogs/rte-dialogs';
 import { dialogTarget } from '../dialogs/target';
@@ -641,8 +641,8 @@ export class RteEditor implements FormValueControl<string> {
 
   /**
    * Abre um diálogo (G18). `true` = pedido aceito (o diálogo abre quando o
-   * chunk chegar); `false` = sem editor, não editável, recurso desligado,
-   * inaplicável ou outro diálogo aberto (em qualquer editor da página).
+   * chunk chegar); `false` = sem editor, não editável, oculto, recurso desligado,
+   * inaplicável ou outro pedido em curso (em qualquer editor do documento).
    */
   openDialog(kind: RteDialogKind): boolean {
     return this.ngZone.run(() => this.requestDialog(kind, null));
@@ -657,8 +657,10 @@ export class RteEditor implements FormValueControl<string> {
     if (!editor || editor.isDestroyed || this.destroyed) return false;
     if (
       !untracked(this.interactive) ||
+      untracked(this.hidden) ||
       untracked(this.dialogs.failed) ||
       untracked(this.dialogs.request) ||
+      dialogBusy(this.host.ownerDocument) ||
       this.host.ownerDocument.querySelector('dialog.rte-dialog[open]')
     ) {
       return false;
