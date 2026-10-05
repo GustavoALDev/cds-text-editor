@@ -30,7 +30,8 @@ import {
   RTE_LABELS_PT_BR,
 } from '@cds/rte-angular/i18n';
 import type { Editor } from '@tiptap/core';
-import { describe, expect, it } from 'vitest';
+import { NodeSelection } from '@tiptap/pm/state';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   dialogField,
   installDialogShim,
@@ -694,6 +695,262 @@ describe('rótulos dos diálogos ao vivo (R16)', () => {
       restorePopover();
       restoreDialog();
     }
+  });
+});
+
+// G19 (spec 05c1, V14): os diálogos de mídia trocam todos os textos ao vivo.
+
+const MEDIA_IMAGE_DOC =
+  '<p>ab</p><figure class="rt-figure rt-figure--center"><img src="/a.png" alt="A" width="800" height="600" loading="lazy" decoding="async"></figure><p>cd</p>';
+
+@Component({
+  selector: 'rte-test-live-media',
+  imports: [RteEditor],
+  template: `<rte-editor
+    [value]="value()"
+    [labels]="labels()"
+    toolbar="full"
+    (valueChange)="writes = writes + 1"
+  />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class LiveMediaHost {
+  readonly value = signal('<p></p>');
+  readonly lang = signal<keyof typeof PACKS>('en');
+  readonly labels = signal<RteLabelsSource | undefined>(
+    () => PACKS[this.lang()],
+  );
+  writes = 0;
+  readonly cmp = viewChildren(RteEditor);
+}
+
+/** Textos visíveis do diálogo, na ordem do documento. */
+function dialogTexts(dialog: HTMLDialogElement): string[] {
+  return [
+    ...dialog.querySelectorAll(
+      '.rte-dialog__title, .rte-dialog__label, .rte-dialog__hint, .rte-dialog__error, .rte-dialog__subtitle, .rte-dialog__legend, button, option',
+    ),
+  ].map((el) => el.textContent?.trim() ?? '');
+}
+
+describe('rótulos dos diálogos de mídia ao vivo (G19)', () => {
+  interface Live {
+    fixture: ReturnType<typeof TestBed.createComponent<LiveMediaHost>>;
+    host: LiveMediaHost;
+    cmp: RteEditor;
+    editor: Editor;
+  }
+
+  async function setup(doc: string): Promise<Live> {
+    const fixture = TestBed.createComponent(LiveMediaHost);
+    const host = fixture.componentInstance;
+    host.value.set(doc);
+    fixture.autoDetectChanges();
+    await settle(fixture);
+    const cmp = host.cmp()[0] as RteEditor;
+    return { fixture, host, cmp, editor: cmp.editor() as Editor };
+  }
+
+  /**
+   * Abre `kind`, deixa `fill` digitar e mostrar um erro, troca para pt-BR e
+   * devolve o diálogo; confere que nada foi aplicado nem emitido.
+   */
+  async function switchWhileOpen(
+    live: Live,
+    kind: 'image' | 'video' | 'embed',
+    fill: (dialog: HTMLDialogElement) => Promise<void>,
+  ): Promise<HTMLDialogElement> {
+    const { fixture, host, cmp, editor } = live;
+    let transactions = 0;
+    editor.on('transaction', ({ transaction }) => {
+      if (transaction.docChanged) transactions++;
+    });
+    const doc = editor.state.doc;
+    host.writes = 0;
+    expect(cmp.openDialog(kind)).toBe(true);
+    const dialog = await waitForDialog(fixture);
+    await fill(dialog);
+    dialog.querySelector<HTMLButtonElement>('.rte-dialog__apply')?.click();
+    await settle(fixture);
+    expect(dialog.open).toBe(true);
+    expect(dialog.querySelector('.rte-dialog__error')).not.toBeNull();
+
+    host.lang.set('pt-BR');
+    await settle(fixture);
+    expect(dialog.open).toBe(true);
+    expect(transactions).toBe(0);
+    expect(editor.state.doc).toBe(doc);
+    expect(host.writes).toBe(0);
+    return dialog;
+  }
+
+  let restoreDialog: () => void;
+  let restorePopover: () => void;
+  beforeEach(() => {
+    restoreDialog = installDialogShim();
+    restorePopover = installPopoverShim();
+  });
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    restorePopover();
+    restoreDialog();
+  });
+
+  it('imagem (editar) com erro visível: título, rótulos, dicas, erro, alinhamentos e ações em pt-BR; valores intactos', async () => {
+    const live = await setup(MEDIA_IMAGE_DOC);
+    let found = -1;
+    live.editor.state.doc.descendants((node, pos) => {
+      if (found < 0 && node.type.name === 'rtImage') found = pos;
+      return found < 0;
+    });
+    live.editor.view.dispatch(
+      live.editor.state.tr.setSelection(
+        NodeSelection.create(live.editor.state.doc, found),
+      ),
+    );
+    let src!: HTMLInputElement;
+    let alt!: HTMLInputElement;
+    let width!: HTMLInputElement;
+    const dialog = await switchWhileOpen(live, 'image', async (d) => {
+      src = dialogField(d, 'Image address (URL)');
+      alt = dialogField(d, 'Alternative text');
+      width = dialogField(d, 'Width (px)');
+      typeInto(src, 'javascript:x');
+      typeInto(alt, 'Uma foto');
+      typeInto(width, '640');
+    });
+
+    expect(dialogTexts(dialog)).toEqual([
+      'Detalhes da imagem',
+      'Endereço da imagem (URL)',
+      'Use https://… ou um caminho que comece com /.',
+      'Endereço não aceito. Use https:// ou um caminho que comece com /, num host permitido.',
+      'Texto alternativo',
+      'Descreva o que a imagem mostra. Marque "Imagem decorativa" só se ela não acrescentar informação.',
+      'Imagem decorativa',
+      'Legenda',
+      'Crédito',
+      'Alinhamento',
+      'Alinhar à esquerda',
+      'Centralizar',
+      'Alinhar à direita',
+      'Largura total',
+      'Largura (px)',
+      'Deixe vazio para o tamanho natural.',
+      'Remover',
+      'Cancelar',
+      'Aplicar',
+    ]);
+    expect(dialogField(dialog, 'Endereço da imagem (URL)')).toBe(src);
+    expect(dialogField(dialog, 'Texto alternativo')).toBe(alt);
+    expect(src.value).toBe('javascript:x');
+    expect(alt.value).toBe('Uma foto');
+    expect(width.value).toBe('640');
+  });
+
+  it('vídeo (inserir) com 3 faixas e um erro visível: legendas Faixa 1…3, "Remover faixa 2" e erro em pt-BR; valores intactos', async () => {
+    const live = await setup('<p></p>');
+    let inputs: HTMLInputElement[] = [];
+    const dialog = await switchWhileOpen(live, 'video', async (d) => {
+      typeInto(dialogField(d, 'Video address (URL)'), '/v.webm');
+      typeInto(dialogField(d, 'Caption'), 'Aula');
+      for (let i = 0; i < 3; i++) {
+        d.querySelector<HTMLButtonElement>('.rte-dialog__track-add')?.click();
+        await settle(live.fixture);
+      }
+      const sets = [
+        ...d.querySelectorAll<HTMLFieldSetElement>('.rte-dialog__fieldset'),
+      ];
+      expect(sets).toHaveLength(3);
+      // Faixa 2 sem rótulo: o único erro visível.
+      const values = [
+        ['/1.vtt', 'en', 'English'],
+        ['/2.vtt', 'es', ''],
+        ['/3.vtt', 'fr', 'Français'],
+      ];
+      sets.forEach((set, i) => {
+        const fields = [
+          ...set.querySelectorAll<HTMLInputElement>('input.rte-dialog__input'),
+        ];
+        fields.forEach((input, j) => typeInto(input, values[i]![j]!));
+      });
+      await settle(live.fixture);
+      inputs = [...d.querySelectorAll<HTMLInputElement>('input')];
+    });
+    const before = inputs.map((i) =>
+      i.type === 'checkbox' ? i.checked : i.value,
+    );
+
+    const track = (n: number) => [
+      `Faixa ${n}`,
+      'Tipo',
+      'Legendas para surdos (falas e sons)',
+      'Legendas (tradução)',
+      'Endereço da faixa (.vtt)',
+      'Código do idioma (BCP 47)',
+      'Rótulo',
+      ...(n === 2 ? ['Preencha este campo.'] : []),
+      'Padrão',
+      `Remover faixa ${n}`,
+    ];
+    expect(dialogTexts(dialog)).toEqual([
+      'Inserir vídeo',
+      'Endereço do vídeo (URL)',
+      'Use https://… ou um caminho que comece com /.',
+      'Endereço da imagem de capa (opcional)',
+      'Legenda (abaixo do vídeo)',
+      'Faixas de texto',
+      ...track(1),
+      ...track(2),
+      ...track(3),
+      'Acrescentar faixa',
+      'Cancelar',
+      'Aplicar',
+    ]);
+    expect(
+      [...dialog.querySelectorAll('.rte-dialog__legend')].map((l) =>
+        l.textContent?.trim(),
+      ),
+    ).toEqual(['Faixa 1', 'Faixa 2', 'Faixa 3']);
+    expect(
+      [
+        ...dialog.querySelectorAll('.rte-dialog__track-remove'),
+      ][1]?.textContent?.trim(),
+    ).toBe('Remover faixa 2');
+    // Os mesmos elementos, com os mesmos valores.
+    expect([...dialog.querySelectorAll<HTMLInputElement>('input')]).toEqual(
+      inputs,
+    );
+    expect(
+      inputs.map((i) => (i.type === 'checkbox' ? i.checked : i.value)),
+    ).toEqual(before);
+    expect(before).toContain('/v.webm');
+    expect(before).toContain('Français');
+  });
+
+  it('embed (inserir) com erro visível: título, rótulos, dica com provedores, erro e ações em pt-BR; valores intactos', async () => {
+    const live = await setup('<p></p>');
+    let url!: HTMLInputElement;
+    let caption!: HTMLInputElement;
+    const dialog = await switchWhileOpen(live, 'embed', async (d) => {
+      url = dialogField(d, 'Page address (URL)');
+      caption = dialogField(d, 'Caption');
+      typeInto(url, 'https://example.com/x');
+      typeInto(caption, 'Um vídeo');
+    });
+
+    expect(dialogTexts(dialog)).toEqual([
+      'Inserir conteúdo incorporado',
+      'Endereço da página (URL)',
+      'Aceitos: YouTube, Vimeo, Spotify.',
+      'Nenhum provedor ativo reconhece este endereço.',
+      'Legenda',
+      'Cancelar',
+      'Aplicar',
+    ]);
+    expect(dialogField(dialog, 'Endereço da página (URL)')).toBe(url);
+    expect(url.value).toBe('https://example.com/x');
+    expect(caption.value).toBe('Um vídeo');
   });
 });
 

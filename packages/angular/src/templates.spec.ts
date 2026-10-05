@@ -16,6 +16,17 @@ function listFiles(dir: string): string[] {
     .filter((f) => !f.includes('/node_modules/'));
 }
 
+/** Templates dos formulários de diálogo (spec 05c1, `src/dialogs/forms/`). */
+const MEDIA_FORM_TEMPLATES = [
+  'src/dialogs/forms/embed-form.html',
+  'src/dialogs/forms/image-form.html',
+  'src/dialogs/forms/lang-form.html',
+  'src/dialogs/forms/link-form.html',
+  'src/dialogs/forms/quote-form.html',
+  'src/dialogs/forms/table-form.html',
+  'src/dialogs/forms/video-form.html',
+];
+
 function packagePath(file: string): string {
   return relative(PACKAGE_DIR, file).replaceAll('\\', '/');
 }
@@ -58,6 +69,10 @@ describe('templates do pacote (R15)', () => {
     // Os templates dos menus flutuantes (spec 05b2b) também.
     expect(templates.map(packagePath)).toContain(
       'src/floating/rte-floating-menus.html',
+    );
+    // Os formulários dos diálogos (spec 05c1) também, inclusive os de mídia.
+    expect(templates.map(packagePath)).toEqual(
+      expect.arrayContaining(MEDIA_FORM_TEMPLATES),
     );
     const found = templates.flatMap((f) =>
       findLiteralText(readFileSync(f, 'utf8'), packagePath(f)),
@@ -102,6 +117,9 @@ describe('sem ligação de estilo (R16, CSP)', () => {
     expect(templates.map(packagePath)).toContain(
       'src/floating/rte-floating-menus.html',
     );
+    expect(templates.map(packagePath)).toEqual(
+      expect.arrayContaining(MEDIA_FORM_TEMPLATES),
+    );
     const bad = templates
       .filter((f) => STYLE_BINDING.test(readFileSync(f, 'utf8')))
       .map(packagePath);
@@ -114,6 +132,13 @@ describe('sem ligação de estilo (R16, CSP)', () => {
       'utf8',
     );
     expect(html).not.toMatch(/\sstyle\s*=/);
+  });
+
+  it('os templates dos formulários de diálogo não têm atributo style', () => {
+    const bad = MEDIA_FORM_TEMPLATES.filter((f) =>
+      /\sstyle\s*=/.test(readFileSync(join(PACKAGE_DIR, f), 'utf8')),
+    );
+    expect(bad).toEqual([]);
   });
 
   const HOST_STYLE =
