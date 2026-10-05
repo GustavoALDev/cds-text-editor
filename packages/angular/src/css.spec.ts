@@ -987,3 +987,110 @@ describe('editor.css: menus flutuantes (spec 05b2b, M18)', () => {
     expect(moving).toEqual([]);
   });
 });
+
+describe('editor.css: mídia (spec 05c1, V11, V15)', () => {
+  const rulesEnding = (cls: string): Rule[] =>
+    styleRules().filter((r) =>
+      r.selectors.some((s) => new RegExp(`\\.${cls}$`).test(s.trim())),
+    );
+  const declsOf = (rules: Rule[]): Declaration[] =>
+    rules.flatMap((r) => declarations(r));
+
+  it.each([
+    'rte-dialog__fieldset',
+    'rte-dialog__legend',
+    'rte-dialog__readonly',
+    'rte-dialog__tracks',
+    'rte-dialog__subtitle',
+    'rte-dialog__track-add',
+    'rte-dialog__track-remove',
+  ])('%s: regra em rte.components sob .rte-editor', (cls) => {
+    const rules = rulesEnding(cls);
+    expect(rules.length).toBeGreaterThan(0);
+    for (const r of rules) {
+      expect(layerOf(r)).toBe('rte.components');
+      expect(
+        r.selectors.every((s) => s.trim().startsWith('.rte-editor ')),
+      ).toBe(true);
+    }
+  });
+
+  it('o fieldset tem borda, raio e grade em tokens', () => {
+    const decls = declsOf(rulesEnding('rte-dialog__fieldset'));
+    expect(decls).toContainEqual(
+      expect.objectContaining({
+        prop: 'border',
+        value: '1px solid var(--rte-border)',
+      }),
+    );
+    expect(decls).toContainEqual(
+      expect.objectContaining({
+        prop: 'border-radius',
+        value: 'var(--rte-radius)',
+      }),
+    );
+    expect(decls).toContainEqual(
+      expect.objectContaining({ prop: 'display', value: 'grid' }),
+    );
+  });
+
+  it('a legenda tem o peso do rótulo e o texto de leitura usa --rte-text-muted', () => {
+    expect(declsOf(rulesEnding('rte-dialog__legend'))).toContainEqual(
+      expect.objectContaining({ prop: 'font-weight', value: '500' }),
+    );
+    const readonly = declsOf(rulesEnding('rte-dialog__readonly'));
+    expect(readonly).toContainEqual(
+      expect.objectContaining({ prop: 'overflow-wrap', value: 'anywhere' }),
+    );
+    expect(readonly).toContainEqual(
+      expect.objectContaining({
+        prop: 'color',
+        value: 'var(--rte-text-muted)',
+      }),
+    );
+  });
+
+  it('os botões de faixa têm alvo de pelo menos 24 px', () => {
+    for (const cls of ['rte-dialog__track-add', 'rte-dialog__track-remove']) {
+      const decls = declsOf(rulesEnding(cls));
+      expect(
+        decls.some(
+          (d) => d.prop === 'min-block-size' && d.value.includes('24px'),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it('pointer-events: none no vídeo e no iframe só com o editável (V11)', () => {
+    const withNone = styleRules().filter((r) =>
+      declarations(r).some(
+        (d) => d.prop === 'pointer-events' && d.value === 'none',
+      ),
+    );
+    const media = withNone.filter((r) =>
+      r.selectors.some((s) => /rt-figure--video|rt-embed/.test(s)),
+    );
+    expect(media.length).toBeGreaterThan(0);
+    for (const r of media)
+      for (const s of r.selectors)
+        expect(s).toContain(".rte-content[contenteditable='true']");
+    const content = readFileSync(CONTENT_CSS_FILE, 'utf8');
+    expect(content).not.toMatch(/pointer-events/);
+  });
+
+  it('forced-colors: .rte-dialog__fieldset { border-color: CanvasText }', () => {
+    const rules: Rule[] = [];
+    root.walkAtRules('media', (at) => {
+      if (/forced-colors:\s*active/.test(at.params))
+        at.walkRules((r) => void rules.push(r));
+    });
+    const fieldset = rules.filter((r) =>
+      r.selectors.some((s) => s.trim().endsWith('.rte-dialog__fieldset')),
+    );
+    expect(
+      declsOf(fieldset).some(
+        (d) => d.prop === 'border-color' && d.value === 'CanvasText',
+      ),
+    ).toBe(true);
+  });
+});

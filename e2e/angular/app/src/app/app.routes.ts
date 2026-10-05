@@ -36,4 +36,8 @@ export const routes: Routes = [
     path: 'floating',
     loadComponent: () => import('./pages/floating').then((m) => m.FloatingPage),
   },
+  {
+    path: 'media',
+    loadComponent: () => import('./pages/media').then((m) => m.MediaPage),
+  },
 ];

@@ -43,6 +43,16 @@ function contentStaticPage() {
 
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self'";
 
+// Rota `media` (spec 05c1, V16): além da CSP estrita, os provedores de embed e o
+// host de teste de `mediaHosts` (desvio da V16 registrado no ADR 0011).
+const MEDIA_HOST = 'https://media.example.test';
+const MEDIA_CSP = `${CSP}; img-src 'self' ${MEDIA_HOST}; media-src 'self' ${MEDIA_HOST}; frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://open.spotify.com`;
+
+/** CSP da resposta do documento: a da rota `media` só em `/media` e `/zone/media`. */
+function cspFor(pathname) {
+  return /^(?:\/zone)?\/media\/?$/.test(pathname) ? MEDIA_CSP : CSP;
+}
+
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -53,6 +63,8 @@ const TYPES = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.txt': 'text/plain; charset=utf-8',
+  '.vtt': 'text/vtt; charset=utf-8',
+  '.webm': 'video/webm',
 };
 
 function fileOf(base, rel) {
@@ -79,7 +91,6 @@ function resolvePath(pathname) {
 }
 
 const server = createServer((req, res) => {
-  res.setHeader('Content-Security-Policy', CSP);
   res.setHeader('Cache-Control', 'no-store');
   let pathname;
   try {
@@ -88,6 +99,7 @@ const server = createServer((req, res) => {
     res.writeHead(400).end();
     return;
   }
+  res.setHeader('Content-Security-Policy', cspFor(pathname));
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405).end();
     return;

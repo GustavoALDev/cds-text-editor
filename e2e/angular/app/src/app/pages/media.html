@@ -1,0 +1,50 @@
+<button id="before-media" type="button">before</button>
+<section>
+  <rte-editor
+    #main
+    data-testid="media"
+    ariaLabel="Media editor"
+    toolbar="full"
+    [options]="mainOptions"
+    [labels]="labels"
+    [theme]="mainTheme"
+    [formField]="f.body"
+    (mediaChange)="onChange($event)"
+    (editorReady)="bridge.ready('media')"
+  />
+  <button
+    type="button"
+    data-testid="media-external-load"
+    (click)="loadExternal()"
+  >
+    external
+  </button>
+  <output data-testid="media-last-change">{{ json(lastChange()) }}</output>
+  <output data-testid="media-change-count">{{ changeCount() }}</output>
+  <pre data-testid="media-session">{{ json(main.mediaSession()) }}</pre>
+</section>
+<button id="after-media" type="button">after</button>
+<section>
+  @for (kind of kinds; track kind) {
+  <button
+    type="button"
+    [attr.data-testid]="'media-open-' + kind"
+    [attr.data-result]="results()[kind] ?? null"
+    (click)="open(kind)"
+  >
+    {{ kind }}
+  </button>
+  }
+  <rte-editor
+    #alt
+    data-testid="media-alt"
+    ariaLabel="Second media editor"
+    [toolbar]="false"
+    [options]="altOptions"
+    [labels]="labels"
+    [theme]="altTheme"
+    [floatingMenus]="altMenus"
+    [(value)]="altValue"
+    (editorReady)="bridge.ready('media-alt')"
+  />
+</section>
