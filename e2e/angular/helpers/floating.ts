@@ -77,3 +77,63 @@ export async function floatingRect(
     el.getBoundingClientRect().toJSON(),
   )) as DOMRect;
 }
+
+/** Retângulo (viewport) de `word` dentro do primeiro `block` do editável que a contém. */
+export async function wordRect(
+  page: Page,
+  id: RteE2eId,
+  block: string,
+  word: string,
+): Promise<{
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}> {
+  const target = editorHost(page, id)
+    .locator('.ProseMirror')
+    .locator(block, { hasText: word })
+    .first();
+  return target.evaluate((el, word) => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const i = (n.textContent ?? '').indexOf(word);
+      if (i < 0) continue;
+      const r = document.createRange();
+      r.setStart(n, i);
+      r.setEnd(n, i + word.length);
+      const b = r.getBoundingClientRect();
+      return {
+        x: b.x,
+        y: b.y,
+        width: b.width,
+        height: b.height,
+        top: b.top,
+        bottom: b.bottom,
+        left: b.left,
+        right: b.right,
+      };
+    }
+    throw new Error('palavra ausente');
+  }, word);
+}
+
+/** Rola o contêiner da página `floating` (e a página) para o editor ficar na viewport. */
+export async function centerScroller(page: Page): Promise<void> {
+  await page
+    .locator('.e2e-floating-scroller')
+    .evaluate((el) => el.scrollIntoView({ block: 'center' }));
+}
+
+/** O foco está dentro de um `.rte-floating` do editor `id`. */
+export function focusInMenu(page: Page, id: RteE2eId): Promise<boolean> {
+  return editorHost(page, id).evaluate(
+    (host) =>
+      !!document.activeElement?.closest('.rte-floating') &&
+      host.contains(document.activeElement),
+  );
+}

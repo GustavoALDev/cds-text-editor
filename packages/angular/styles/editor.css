@@ -274,7 +274,7 @@
     max-inline-size: 20rem;
     padding: 0 calc(0.375rem * var(--rte-density));
     overflow: hidden;
-    color: var(--rte-primary);
+    color: var(--rte-primary-text);
     white-space: nowrap;
   }
 

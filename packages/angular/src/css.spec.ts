@@ -934,12 +934,12 @@ describe('editor.css: menus flutuantes (spec 05b2b, M18)', () => {
     );
   });
 
-  it('o endereço do link trunca com reticências, em --rte-primary, alvo ≥ 24 px e foco visível', () => {
+  it('o endereço do link trunca com reticências, em --rte-primary-text (contraste de texto no escuro), alvo ≥ 24 px e foco visível', () => {
     const decls = declsEndingWith('.rte-floating__link');
     for (const [prop, value] of [
       ['max-inline-size', '20rem'],
       ['overflow', 'hidden'],
-      ['color', 'var(--rte-primary)'],
+      ['color', 'var(--rte-primary-text)'],
       ['min-block-size', '24px'],
     ])
       expect(decls).toContainEqual(expect.objectContaining({ prop, value }));
