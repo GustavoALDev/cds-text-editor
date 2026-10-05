@@ -9,12 +9,17 @@ import { describe, expect, it } from 'vitest';
 describe('@cds/rte-angular', () => {
   it('exporta só a API pública do entry .', () => {
     expect(Object.keys(api).sort()).toEqual([
+      'RTE_DIALOG_LANGUAGES',
       'RTE_LABELS',
       'RTE_LABELS_EN',
       'RTE_TOOLBAR_PRESETS',
       'RteEditor',
       'provideRichText',
     ]);
+  });
+
+  it('RTE_DIALOG_LANGUAGES é congelado', () => {
+    expect(Object.isFrozen(api.RTE_DIALOG_LANGUAGES)).toBe(true);
   });
 
   it('o /i18n exporta os três pacotes de rótulos', () => {

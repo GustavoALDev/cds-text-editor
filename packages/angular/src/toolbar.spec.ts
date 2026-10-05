@@ -571,7 +571,7 @@ describe('comandos (U4)', () => {
     await settle(fixture);
     const items = [...menu.querySelectorAll<HTMLElement>('.rte-menu__item')];
     expect(items[0]?.getAttribute('role')).toBe('menuitem');
-    expect(items[0]?.textContent?.trim()).toBe('Insert table');
+    expect(items[0]?.textContent?.trim()).toBe('Insert table 3 × 3');
     expect(items[0]?.hasAttribute('aria-disabled')).toBe(false);
     // fora de tabela, as operações ficam inaplicáveis
     expect(items[1]?.getAttribute('aria-disabled')).toBe('true');

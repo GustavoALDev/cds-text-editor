@@ -117,7 +117,7 @@ test.describe('N11: guarda de tabela, cores e recursos', () => {
       'aria-disabled',
       'true',
     );
-    await expect(menuItem(menu, 'Insert table')).toHaveAttribute(
+    await expect(menuItem(menu, 'Insert table 3 × 3')).toHaveAttribute(
       'aria-disabled',
       'true',
     );

@@ -219,7 +219,7 @@ export const CASES: Case[] = [
   },
   {
     button: 'Table',
-    item: 'Insert table',
+    item: 'Insert table 3 × 3',
     doc: P,
     select: ['ab', 2],
     expected:

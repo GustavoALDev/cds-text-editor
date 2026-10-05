@@ -2,7 +2,9 @@ import type {
   RteContentLabels,
   RteSlashLabels,
 } from '@cds/rte-core/extensions';
+import { RTE_DIALOG_LANGUAGES } from '../dialogs/types';
 import type {
+  RteDialogLabels,
   RteLabels,
   RteLabelsInput,
   RteLabelsSource,
@@ -166,6 +168,41 @@ function mergeToolbar(
   return out as unknown as RteToolbarLabels;
 }
 
+function mergeDialogs(base: RteDialogLabels, given: unknown): RteDialogLabels {
+  if (!isBag(given)) return base;
+  const out: Record<string, unknown> = { ...base };
+  for (const key of Object.keys(base)) {
+    if (
+      key === 'languageNames' ||
+      key === 'errorRange' ||
+      key === 'errorMaxLength'
+    )
+      continue;
+    const value = own(given, key);
+    if (typeof value === 'string') out[key] = value;
+  }
+  const range = own(given, 'errorRange');
+  if (typeof range === 'function')
+    out['errorRange'] = guard(
+      range as (min: number, max: number) => unknown,
+      base.errorRange,
+    );
+  const maxLength = own(given, 'errorMaxLength');
+  if (typeof maxLength === 'function')
+    out['errorMaxLength'] = guard(
+      maxLength as (max: number) => unknown,
+      base.errorMaxLength,
+    );
+  const names: Record<string, string> = { ...base.languageNames };
+  const givenNames = own(given, 'languageNames');
+  for (const code of RTE_DIALOG_LANGUAGES) {
+    const value = own(givenNames, code);
+    if (typeof value === 'string') names[code] = value;
+  }
+  out['languageNames'] = names;
+  return out as unknown as RteDialogLabels;
+}
+
 /**
  * Mescla a entrada sobre `base` por seção e por chave: só chaves próprias com
  * o tipo esperado. Sem entrada, devolve `base` (o mesmo objeto).
@@ -195,6 +232,10 @@ export function mergeLabels(
     toolbar: safely(
       () => mergeToolbar(base.toolbar, own(input, 'toolbar')),
       base.toolbar,
+    ),
+    dialogs: safely(
+      () => mergeDialogs(base.dialogs, own(input, 'dialogs')),
+      base.dialogs,
     ),
   };
 }

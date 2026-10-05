@@ -18,6 +18,7 @@ import {
 import {
   provideRichText,
   RteEditor,
+  RTE_DIALOG_LANGUAGES,
   RTE_LABELS_EN as EN_FROM_ROOT,
   type RteLabels,
   type RteLabelsInput,
@@ -161,6 +162,66 @@ describe('pacotes de rótulos', () => {
 
   it('o /i18n reexporta o RTE_LABELS_EN do entry .', () => {
     expect(RTE_LABELS_EN).toBe(EN_FROM_ROOT);
+  });
+});
+
+describe('rótulos dos diálogos', () => {
+  const packs = [
+    ['en', RTE_LABELS_EN],
+    ['pt-BR', RTE_LABELS_PT_BR],
+    ['es', RTE_LABELS_ES],
+  ] as const;
+
+  it('dialogs: funções e languageNames nos três pacotes', () => {
+    for (const [, pack] of packs) {
+      const d = pack.dialogs;
+      expect(d.errorRange(1, 100)).toContain('1');
+      expect(d.errorRange(1, 100)).toContain('100');
+      expect(d.errorMaxLength(200)).toContain('200');
+      expect(Object.keys(d.languageNames).sort()).toEqual(
+        [...RTE_DIALOG_LANGUAGES].sort(),
+      );
+      for (const text of strings(d)) expect(text).not.toBe('');
+    }
+  });
+
+  it('dialogs: cópia da tabela', () => {
+    expect(RTE_LABELS_EN.dialogs.linkNewTab).toBe('Open in a new tab');
+    expect(RTE_LABELS_EN.toolbar.insertTable).toBe('Insert table 3 × 3');
+    expect(RTE_LABELS_EN.toolbar.insertTableCustom).toBe('Insert table…');
+    expect(RTE_LABELS_PT_BR.toolbar.insertTable).toBe('Inserir tabela 3 × 3');
+    expect(RTE_LABELS_PT_BR.toolbar.quoteAuthor).toBe('Autor da citação');
+    expect(RTE_LABELS_ES.dialogs.languageNames['he']).toBe('Hebreo');
+    expect(RTE_LABELS_ES.toolbar.editLink).toBe('Editar enlace');
+    expect(RTE_LABELS_EN.dialogs.errorRange(1, 20)).toBe(
+      'Enter a whole number from 1 to 20.',
+    );
+  });
+
+  it('mergeLabels mescla dialogs por chave e protege as funções', () => {
+    const merged = mergeLabels(RTE_LABELS_EN, {
+      dialogs: {
+        apply: 'OK',
+        languageNames: { fr: 'Français' },
+        errorRange: () => {
+          throw 1;
+        },
+      },
+    });
+    expect(merged.dialogs.apply).toBe('OK');
+    expect(merged.dialogs.languageNames['fr']).toBe('Français');
+    expect(merged.dialogs.languageNames['de']).toBe('German');
+    expect(merged.dialogs.errorRange(1, 20)).toBe(
+      'Enter a whole number from 1 to 20.',
+    );
+  });
+
+  it('mergeLabels ignora tipos errados e chaves fora de RTE_DIALOG_LANGUAGES', () => {
+    const merged = mergeLabels(RTE_LABELS_EN, {
+      dialogs: { apply: 1, languageNames: { xx: 'X' } },
+    } as unknown as RteLabelsInput);
+    expect(merged.dialogs.apply).toBe('Apply');
+    expect(Object.hasOwn(merged.dialogs.languageNames, 'xx')).toBe(false);
   });
 });
 
