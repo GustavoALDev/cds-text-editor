@@ -28,4 +28,8 @@ export const routes: Routes = [
     path: 'toolbar',
     loadComponent: () => import('./pages/toolbar').then((m) => m.ToolbarPage),
   },
+  {
+    path: 'dialogs',
+    loadComponent: () => import('./pages/dialogs').then((m) => m.DialogsPage),
+  },
 ];

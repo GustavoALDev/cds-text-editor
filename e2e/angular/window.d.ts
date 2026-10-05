@@ -11,7 +11,9 @@ export type RteE2eId =
   | 'toolbar'
   | 'toolbar-alt'
   | 'toolbar-scroll'
-  | 'toolbar-nofeat';
+  | 'toolbar-nofeat'
+  | 'dialogs'
+  | 'dialogs-api';
 
 /** `RteToolbarConfig` do `@cds/rte-angular` (sem importar o pacote Angular aqui). */
 export type RteE2eToolbarConfig =
@@ -42,6 +44,8 @@ declare global {
         id: RteE2eId,
         theme: import('@cds/rte-theme').RteTheme | undefined,
       ): void;
+      /** `openDialog(kind)` do editor `id` (G18); o retorno da API. */
+      openDialog(id: RteE2eId, kind: string): boolean;
       /** `applyRteTheme` num elemento qualquer (referência do N12). */
       applyTheme(
         element: HTMLElement,
