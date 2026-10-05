@@ -8,9 +8,15 @@ import {
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import { RteEditor } from '@cds/rte-angular';
-import { getRteHtml } from '@cds/rte-core/extensions';
-import type { Editor } from '@tiptap/core';
+import {
+  createEditorExtensions,
+  getRteHtml,
+  getSlashMenuState,
+} from '@cds/rte-core/extensions';
+import { Editor } from '@tiptap/core';
+import { Plugin } from '@tiptap/pm/state';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createFloatingEscapeExtension } from './floating/escape-extension';
 import { selectText } from './testing-support/editors';
 import { fakeCoords, installGeometry } from './testing-support/geometry';
 import { installPopoverShim, isPopoverOpen } from './testing-support/popover';
@@ -25,7 +31,10 @@ const DOC =
   '<p>Texto <strong>negrito</strong> e <a href="https://example.com/">exemplo</a> fim</p>' +
   '<p>um <code>codigo</code> dois</p><p>depois</p>';
 
-const OPTIONS = { features: { code: true } };
+const TABLE_DOC =
+  '<p>antes</p><table><tbody><tr><td><p>c1</p></td><td><p>c2</p></td></tr></tbody></table>';
+
+const OPTIONS = { features: { code: true, tables: true } };
 
 const VIEWPORT = { width: 1000, height: 800 };
 const EDITABLE: RteRect = { top: 100, left: 100, right: 900, bottom: 700 };
@@ -42,7 +51,7 @@ const coords = (pos: number): RteRect => ({
   selector: 'rte-test-floating-keys',
   imports: [RteEditor],
   template: `<rte-editor
-    [value]="value"
+    [value]="value()"
     [options]="options"
     [toolbar]="toolbar()"
     [readonly]="readonly()"
@@ -53,7 +62,7 @@ const coords = (pos: number): RteRect => ({
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class Host {
-  readonly value = DOC;
+  readonly value = signal(DOC);
   readonly options = OPTIONS;
   readonly toolbar = signal<RteToolbarConfig>('full');
   readonly readonly = signal(false);
@@ -151,6 +160,22 @@ function expectQuiet(s: Setup): void {
   expect([s.host.blurs, s.host.focuses, s.host.touches]).toEqual([0, 0, 0]);
 }
 
+/** `keyCode` de cada tecla usada, como o navegador preenche (o ProseMirror lê). */
+const KEY_CODES: Readonly<Record<string, number>> = {
+  Tab: 9,
+  Enter: 13,
+  Escape: 27,
+  End: 35,
+  Home: 36,
+  ArrowLeft: 37,
+  ArrowRight: 39,
+  F10: 121,
+};
+
+/**
+ * Despacha um `keydown` como o navegador, com `keyCode`: o `captureKeyDown`
+ * do ProseMirror roda de verdade (e consome todo `Escape` do editável).
+ */
 function key(
   target: EventTarget,
   name: string,
@@ -162,6 +187,9 @@ function key(
     cancelable: true,
     ...init,
   });
+  const code = KEY_CODES[name];
+  if (code === undefined) throw new Error(`keyCode de ${name} ausente`);
+  Object.defineProperty(event, 'keyCode', { value: code });
   target.dispatchEvent(event);
   return event;
 }
@@ -343,50 +371,129 @@ describe('Tab e Shift+Tab dentro do menu (M12)', () => {
 });
 
 describe('Escape no editável (M6)', () => {
-  it('com menu → oculto e consumido; sem menu → intocado; nova identidade → volta', async () => {
+  it('com menu → oculto e consumido; sem menu → nada a mais (o ProseMirror consome); nova identidade → volta', async () => {
     const s = await setup();
     await focusAnd(s, bold(s.editor));
     const esc = key(s.editor.view.dom, 'Escape');
     await settle(s.fixture);
     expect(esc.defaultPrevented).toBe(true);
     expect(openKinds(s.el)).toEqual([]);
+    // Sem menu: o `captureKeyDown` do ProseMirror consome todo `Escape` do
+    // editável; o menu flutuante não faz nada a mais (desvio da letra da M6).
     const again = key(s.editor.view.dom, 'Escape');
-    expect(again.defaultPrevented).toBe(false);
+    await settle(s.fixture);
+    expect(again.defaultPrevented).toBe(true);
+    expect(openKinds(s.el)).toEqual([]);
     selectText(s.editor, 'Texto');
     await settle(s.fixture);
     expect(openKinds(s.el)).toEqual(['text']);
     expectQuiet(s);
   });
 
-  it('o ProseMirror consome todo Escape do editável (captureKeyDown): o menu ainda é dispensado', async () => {
+  it('com modificador (Shift+Escape) → o menu continua', async () => {
     const s = await setup();
     await focusAnd(s, bold(s.editor));
-    const pm = (e: Event) => e.preventDefault();
-    s.editor.view.dom.addEventListener('keydown', pm);
-    try {
-      key(s.editor.view.dom, 'Escape');
-      await settle(s.fixture);
-    } finally {
-      s.editor.view.dom.removeEventListener('keydown', pm);
-    }
+    key(s.editor.view.dom, 'Escape', { shiftKey: true });
+    await settle(s.fixture);
+    expect(openKinds(s.el)).toEqual(['text']);
+  });
+
+  it.each([
+    ['document', (): EventTarget => document],
+    [
+      'o próprio rte-editor (registrado depois da construção)',
+      (el: HTMLElement): EventTarget => el,
+    ],
+  ])(
+    'Escape já consumido por ouvinte de captura em %s → menu continua (Review Focus 5)',
+    async (_where, pick) => {
+      const s = await setup();
+      await focusAnd(s, bold(s.editor));
+      const target = pick(s.el);
+      const consume = (e: Event) => e.preventDefault();
+      target.addEventListener('keydown', consume, { capture: true });
+      try {
+        key(s.editor.view.dom, 'Escape');
+        await settle(s.fixture);
+      } finally {
+        target.removeEventListener('keydown', consume, { capture: true });
+      }
+      expect(openKinds(s.el)).toEqual(['text']);
+      expectQuiet(s);
+    },
+  );
+
+  it('Escape tratado por um atalho do editor (camada acima, como o menu /) → só a camada fecha; o segundo dispensa o menu', async () => {
+    const s = await setup((h) => h.value.set(TABLE_DOC));
+    await focusAnd(s, () => selectText(s.editor, 'c1', 1));
+    expect(openKinds(s.el)).toEqual(['table']);
+    // Camada com `Escape` próprio num `handleKeyDown` (como o keymap do `/`
+    // do core), à frente dos plugins do editor.
+    let layerOpen = true;
+    s.editor.registerPlugin(
+      new Plugin({
+        props: {
+          handleKeyDown: (_view, e) => {
+            if (e.key !== 'Escape' || !layerOpen) return false;
+            layerOpen = false;
+            return true;
+          },
+        },
+      }),
+      (plugin, plugins) => [plugin, ...plugins],
+    );
+    const first = key(s.editor.view.dom, 'Escape');
+    await settle(s.fixture);
+    expect(first.defaultPrevented).toBe(true);
+    expect(layerOpen).toBe(false);
+    expect(openKinds(s.el)).toEqual(['table']);
+    key(s.editor.view.dom, 'Escape');
+    await settle(s.fixture);
     expect(openKinds(s.el)).toEqual([]);
     expectQuiet(s);
   });
+});
 
-  it('Escape já consumido (ouvinte de captura) → menu continua (Review Focus 5)', async () => {
-    const s = await setup();
-    await focusAnd(s, bold(s.editor));
-    const consume = (e: Event) => e.preventDefault();
-    // num ancestral: a captura chega antes da do host
-    document.addEventListener('keydown', consume, { capture: true });
-    try {
-      key(s.editor.view.dom, 'Escape');
-      await settle(s.fixture);
-    } finally {
-      document.removeEventListener('keydown', consume, { capture: true });
+describe('createFloatingEscapeExtension com o menu / real do core', () => {
+  const editors: Editor[] = [];
+  afterEach(() => {
+    for (const e of editors.splice(0)) {
+      e.view.dom.parentElement?.remove();
+      e.destroy();
     }
-    expect(openKinds(s.el)).toEqual(['text']);
-    expectQuiet(s);
+  });
+
+  it('Escape com o / aberto fecha só o /; o segundo chama dismiss; com modificador, não', () => {
+    const dismiss = vi.fn(() => true);
+    const element = document.createElement('div');
+    document.body.appendChild(element);
+    const editor = new Editor({
+      element,
+      extensions: [
+        ...createEditorExtensions({ features: { slashCommands: true } }),
+        createFloatingEscapeExtension(dismiss),
+      ],
+      content: '<p></p>',
+    });
+    editors.push(editor);
+    const view = editor.view;
+    editor.commands.setTextSelection(1);
+    const { from, to } = view.state.selection;
+    const deflt = () => view.state.tr.insertText('/', from, to);
+    const handled = view.someProp('handleTextInput', (f) =>
+      f(view, from, to, '/', deflt),
+    );
+    if (!handled) view.dispatch(deflt());
+    expect(getSlashMenuState(editor).open).toBe(true);
+    const first = key(view.dom, 'Escape');
+    expect(first.defaultPrevented).toBe(true);
+    expect(getSlashMenuState(editor).open).toBe(false);
+    expect(dismiss).not.toHaveBeenCalled();
+    key(view.dom, 'Escape', { ctrlKey: true });
+    expect(dismiss).not.toHaveBeenCalled();
+    const second = key(view.dom, 'Escape');
+    expect(second.defaultPrevented).toBe(true);
+    expect(dismiss).toHaveBeenCalledTimes(1);
   });
 });
 

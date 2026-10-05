@@ -217,9 +217,23 @@ for (const zone of [false, true]) {
       for (const [label, cls] of aligns) {
         await pickImage(page);
         await expectFloating(page, ID, 'image');
+        if (label === 'Center') {
+          // a imagem do fixture já é centralizada: outro alinhamento antes
+          await floatingItem(
+            floatingMenu(page, ID, 'image'),
+            'Align left',
+          ).click();
+          await expect
+            .poll(() => rteHtml(page, ID))
+            .toContain('rt-figure--left');
+          await expectFloating(page, ID, 'image');
+        }
         const item = floatingItem(floatingMenu(page, ID, 'image'), label);
         await item.click();
         await expect.poll(() => rteHtml(page, ID)).toContain(cls);
+        if (label === 'Center') {
+          expect(await rteHtml(page, ID)).not.toContain('rt-figure--left');
+        }
         await expect(item).toHaveAttribute('aria-pressed', 'true');
         // a seleção continua na imagem: o menu segue visível
         await expectFloating(page, ID, 'image');
@@ -245,6 +259,7 @@ for (const zone of [false, true]) {
       await undoTo(page, base);
 
       await pickImage(page);
+      await expectFloating(page, ID, 'image');
       await page.keyboard.press('Alt+F10');
       await arrowToButton(page, 'Remove image');
       await page.keyboard.press('Enter');

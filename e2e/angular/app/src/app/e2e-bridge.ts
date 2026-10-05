@@ -190,16 +190,18 @@ export function installE2eBridge(): void {
     >();
     let turns = 0;
     zone.onMicrotaskEmpty.subscribe(() => turns++);
-    const watchedFloating = new Map<
-      RteE2eId,
-      { observer: MutationObserver; total: number; style: number }
-    >();
-    const drainFloating = (entry: {
+    interface FloatingEntry {
       observer: MutationObserver;
       total: number;
       style: number;
-    }): void => {
-      for (const record of entry.observer.takeRecords()) {
+    }
+    const watchedFloating = new Map<RteE2eId, FloatingEntry>();
+    /** Soma os registros: todos em `total`, os de `style` também em `style`. */
+    const count = (
+      entry: Omit<FloatingEntry, 'observer'>,
+      records: readonly MutationRecord[],
+    ): void => {
+      for (const record of records) {
         entry.total++;
         if (record.type === 'attributes' && record.attributeName === 'style')
           entry.style++;
@@ -260,17 +262,8 @@ export function installE2eBridge(): void {
         );
         if (!menus) throw new Error(`rteE2e: editor '${id}' sem menus.`);
         watchedFloating.get(id)?.observer.disconnect();
-        const entry = {
-          observer: new MutationObserver((records) => {
-            for (const record of records) {
-              entry.total++;
-              if (
-                record.type === 'attributes' &&
-                record.attributeName === 'style'
-              )
-                entry.style++;
-            }
-          }),
+        const entry: FloatingEntry = {
+          observer: new MutationObserver((records) => count(entry, records)),
           total: 0,
           style: 0,
         };
@@ -285,7 +278,8 @@ export function installE2eBridge(): void {
       floatingMutations: (id) => {
         const entry = watchedFloating.get(id);
         if (!entry) throw new Error(`rteE2e: '${id}' sem watchFloating.`);
-        drainFloating(entry);
+        // registros ainda na fila do observador também contam
+        count(entry, entry.observer.takeRecords());
         return { total: entry.total, style: entry.style };
       },
       zoneTurns: () => turns,

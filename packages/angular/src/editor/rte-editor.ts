@@ -48,6 +48,7 @@ import { RteDialogs } from '../dialogs/rte-dialogs';
 import { dialogTarget } from '../dialogs/target';
 import type { RteDialogKind } from '../dialogs/types';
 import { createRteUiExtension } from '../dialogs/ui-extension';
+import { createFloatingEscapeExtension } from '../floating/escape-extension';
 import {
   floatingItemIds,
   resolveFloatingKinds,
@@ -304,8 +305,6 @@ export class RteEditor implements FormValueControl<string> {
   );
 
   private readonly floatingWarned = new Set<string>();
-  /** Teclas já consumidas antes do ProseMirror (fase de captura do host). */
-  private readonly consumedEarly = new WeakSet<Event>();
   /** Tipos de menu flutuante ligados (M17), na ordem de prioridade. */
   protected readonly floatingKinds: Signal<readonly RteFloatingMenuKind[]> =
     computed(
@@ -601,6 +600,12 @@ export class RteEditor implements FormValueControl<string> {
             }),
           ),
           createRteUiExtension({ openLink: () => this.openDialog('link') }),
+          // `Escape` no editável (M6): o último `handleKeyDown` do ProseMirror.
+          createFloatingEscapeExtension(() =>
+            this.ngZone.run(
+              () => untracked(this.floatingRef)?.dismiss() ?? false,
+            ),
+          ),
         ];
         const element = this.mount().nativeElement;
         const content = this.value() || '';
@@ -636,15 +641,7 @@ export class RteEditor implements FormValueControl<string> {
       if (focus) this.focus(focus);
     });
 
-    // O ProseMirror consome todo `Escape` do editável (`captureKeyDown`): só
-    // o que já vinha consumido na captura (antes dele) vale como consumido.
-    const markConsumed = (event: Event): void => {
-      if (event.defaultPrevented) this.consumedEarly.add(event);
-    };
-    host.addEventListener('keydown', markConsumed, true);
-
     inject(DestroyRef).onDestroy(() => {
-      host.removeEventListener('keydown', markConsumed, true);
       const editor = untracked(this.instance);
       this.dialogs.dispose();
       this.destroyed = true;
@@ -721,28 +718,16 @@ export class RteEditor implements FormValueControl<string> {
   }
 
   /**
-   * Teclado do host (U3, M6, M12; pré-voo 10). `Escape` no editável dispensa
-   * o menu flutuante visível (só então consome a tecla). `Alt+F10` no
-   * editável foca o menu flutuante visível ou, sem ele, a barra; dentro de
-   * um `.rte-floating`, a barra.
+   * Teclado do host (U3, M12; pré-voo 10). `Alt+F10` no editável foca o menu
+   * flutuante visível ou, sem ele, a barra; dentro de um `.rte-floating`, a
+   * barra. O `Escape` do editável (M6) é tratado dentro do ProseMirror
+   * (`createFloatingEscapeExtension`), depois dos atalhos do editor.
    */
   protected onHostKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented) return;
     const target = event.target;
     if (!(target instanceof Element)) return;
     const inEditable = this.mount().nativeElement.contains(target);
-    // `Escape` no editável já vem consumido pelo ProseMirror (ver o ouvinte de captura).
-    if (
-      event.key === 'Escape' && inEditable
-        ? this.consumedEarly.has(event)
-        : event.defaultPrevented
-    )
-      return;
-    if (event.key === 'Escape') {
-      if (inEditable && untracked(this.floatingRef)?.dismiss()) {
-        event.preventDefault();
-      }
-      return;
-    }
     if (
       event.key !== 'F10' ||
       !event.altKey ||

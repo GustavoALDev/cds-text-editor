@@ -137,6 +137,11 @@ for (const zone of [false, true]) {
       if (browserName === 'webkit') {
         // O arrasto sintético do Playwright no WebKit não chega ao
         // `prosemirror-tables` (fica seleção de texto): usa o comando.
+        test.info().annotations.push({
+          type: 'webkit-cell-selection',
+          description:
+            'WebKit: CellSelection pelo comando setCellSelection, não por arrasto real (o arrasto sintético vira seleção de texto); ver e2e/README.md e ADR 0010.',
+        });
         await editorHost(page, ID).evaluate((host) => {
           const editor = window.rteE2e.getRteEditor(host);
           const cells: number[] = [];
@@ -180,6 +185,8 @@ for (const zone of [false, true]) {
       // digitar na mesma célula não traz o menu de volta
       await page.keyboard.type('xy');
       await expect.poll(() => rteHtml(page, ID)).toContain('Axy1');
+      // deixa a reavaliação por quadro rodar antes de afirmar a ausência
+      await frames(page);
       await expectFloating(page, ID, null);
       // outra tabela: identidade nova (rolada para a área visível do contêiner)
       await editableOf(page, ID)
