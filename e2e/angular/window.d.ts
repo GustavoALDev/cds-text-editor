@@ -84,5 +84,13 @@ declare global {
     __xssCalls: number;
     /** `<style>` acrescentados ao documento desde o início da página. */
     __styleAdds: string[];
+    /** Pré-voo da H10 (`helpers/render.ts`, `watchServerNodes`): nós do servidor em `render-main`. */
+    __h10?: {
+      h2: Element | null;
+      iframe: Element | null;
+      scroller: Element | null;
+      iframes: Set<Element>;
+      iframeLoads: number;
+    };
   }
 }

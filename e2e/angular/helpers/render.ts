@@ -46,3 +46,68 @@ export async function blockThirdParty(context: BrowserContext): Promise<void> {
     (route) => route.fulfill({ status: 204, body: '' }),
   );
 }
+
+/** Resultado do pré-voo da H10: identidade dos nós do servidor depois da hidratação. */
+export interface H10Measure {
+  /** `===` entre o nó criado pelo *parser* e o atual (primeiro `h2`, `iframe`, rolador). */
+  sameNodes: { h2: boolean; iframe: boolean; scroller: boolean };
+  /** `iframe` que entraram em `render-main` além dos do *parser* (re-inserção). */
+  iframeReloads: number;
+  /** Eventos `load` de `iframe` em `render-main` (informativo: `loading="lazy"` e CSP). */
+  iframeLoads: number;
+}
+
+/**
+ * Antes de qualquer script: guarda o primeiro `h2`, o primeiro `iframe` e o primeiro
+ * `.rte-table-scroll` de `render-main` assim que o *parser* os cria, todo `iframe` que
+ * entrar nele (por identidade) e os seus eventos `load` (pré-voo 19 do plano da spec 06).
+ */
+export async function watchServerNodes(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    if (window.__h10) return;
+    const state = (window.__h10 = {
+      h2: null as Element | null,
+      iframe: null as Element | null,
+      scroller: null as Element | null,
+      iframes: new Set<Element>(),
+      iframeLoads: 0,
+    });
+    const main = () => document.querySelector('[data-testid="render-main"]');
+    new MutationObserver(() => {
+      const root = main();
+      if (!root) return;
+      state.h2 ??= root.querySelector('h2');
+      state.iframe ??= root.querySelector('iframe');
+      state.scroller ??= root.querySelector('.rte-table-scroll');
+      for (const f of root.querySelectorAll('iframe')) state.iframes.add(f);
+    }).observe(document, { childList: true, subtree: true });
+    document.addEventListener(
+      'load',
+      (e) => {
+        if (e.target instanceof HTMLIFrameElement && main()?.contains(e.target))
+          state.iframeLoads++;
+      },
+      true,
+    );
+  });
+}
+
+/** Mede a H10 (chamar depois de `watchServerNodes` + `gotoRender`). */
+export function measureH10(page: Page): Promise<H10Measure> {
+  return page.evaluate(() => {
+    const s = window.__h10!;
+    const root = document.querySelector('[data-testid="render-main"]')!;
+    const iframes = root.querySelectorAll('iframe').length;
+    return {
+      sameNodes: {
+        h2: s.h2 !== null && s.h2 === root.querySelector('h2'),
+        iframe: s.iframe !== null && s.iframe === root.querySelector('iframe'),
+        scroller:
+          s.scroller !== null &&
+          s.scroller === root.querySelector('.rte-table-scroll'),
+      },
+      iframeReloads: s.iframes.size - iframes,
+      iframeLoads: s.iframeLoads,
+    };
+  });
+}
