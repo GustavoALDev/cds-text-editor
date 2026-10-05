@@ -97,11 +97,19 @@ function textContext(editor: Editor): RteFloatingContext | null {
   return applicable ? context('text', from, to) : null;
 }
 
-/** Cursor, seleção ou `CellSelection` dentro de tabela; identidade da tabela. */
+/**
+ * Cursor dentro de tabela, `CellSelection` ou `NodeSelection` de outro nó
+ * dentro de tabela (M4); seleção de texto não vazia numa célula não conta.
+ * Identidade: a tabela.
+ */
 function tableContext(editor: Editor): RteFloatingContext | null {
   const state = editor.state;
   const { selection } = state;
-  if (!isInTable(state) && !(selection instanceof CellSelection)) return null;
+  const applies =
+    selection instanceof CellSelection ||
+    ((selection.empty || selection instanceof NodeSelection) &&
+      isInTable(state));
+  if (!applies) return null;
   const table = findTable(selection.$from);
   return table
     ? context('table', table.pos, table.pos + table.node.nodeSize)

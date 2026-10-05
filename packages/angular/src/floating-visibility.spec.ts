@@ -1,7 +1,6 @@
-import type { Editor } from '@tiptap/core';
-import { NodeSelection } from '@tiptap/pm/state';
+import { Editor, Node } from '@tiptap/core';
+import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { CellSelection } from '@tiptap/pm/tables';
-import type { Mappable } from '@tiptap/pm/transform';
 import { RTE_FLOATING_KINDS, type RteFloatingMenuKind } from './floating/types';
 import {
   mapFloatingIdentity,
@@ -200,11 +199,48 @@ describe('readFloatingContext (M4, R3)', () => {
     expect(kindOf(e, ['image', 'link', 'text'])).toBeNull();
   });
 
-  it('kinds sem text → seleção vira null (fora de tabela) ou table (célula)', () => {
+  it('kinds sem text → seleção de texto é null (fora de tabela e na célula)', () => {
     expect(
       kindOf(at('<p>abc</p>', 'b'), ['image', 'link', 'table']),
     ).toBeNull();
-    expect(kindOf(at(table('<p>xy</p>'), 'x'), ['table'])).toBe('table');
+    expect(kindOf(at(table('<p>xy</p>'), 'x'), ['table'])).toBeNull();
+  });
+
+  it('seleção só de espaços numa célula → null (não é table)', () => {
+    const e = at(table('<p>xy</p>'), 'xy', 1);
+    e.view.dispatch(e.state.tr.insertText('   '));
+    selectText(e, 'x   y', 1, 4);
+    expect(kindOf(e)).toBeNull();
+  });
+
+  it('seleção em bloco de código numa célula → null (não é table)', () => {
+    expect(kindOf(at(table('<pre><code>xy</code></pre>'), 'x'))).toBeNull();
+  });
+
+  it('seleção sem link nem marca aplicável → null', () => {
+    const e = new Editor({
+      element: document.createElement('div'),
+      extensions: [
+        Node.create({ name: 'doc', topNode: true, content: 'block+' }),
+        Node.create({
+          name: 'paragraph',
+          group: 'block',
+          content: 'inline*',
+          parseHTML: () => [{ tag: 'p' }],
+          renderHTML: () => ['p', 0],
+        }),
+        Node.create({ name: 'text', group: 'inline' }),
+      ],
+      content: '<p>abc</p>',
+    });
+    try {
+      e.view.dispatch(
+        e.state.tr.setSelection(TextSelection.create(e.state.doc, 2, 3)),
+      );
+      expect(kindOf(e)).toBeNull();
+    } finally {
+      e.destroy();
+    }
   });
 
   it('kinds sem link → cursor no link é null', () => {
@@ -291,10 +327,7 @@ function dismissNow(editor: Editor): { current: RteFloatingIdentity | null } {
   expect(ref.current).not.toBeNull();
   editor.on('transaction', ({ transaction }) => {
     if (ref.current && transaction.docChanged) {
-      ref.current = mapFloatingIdentity(
-        ref.current,
-        transaction.mapping as Mappable,
-      );
+      ref.current = mapFloatingIdentity(ref.current, transaction.mapping);
     }
   });
   return ref;
