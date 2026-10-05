@@ -4,11 +4,11 @@
 
 > **Atualização (2026-10-04).** Esta spec foi escrita antes do core existir e era grande demais para um ciclo só. Foi revista contra o que o core (03a–03c, ADRs 0003–0005) e o tema (02, ADR 0002) entregam de fato e contra o Angular 22.2.1 instalado, e **dividida em ciclos** (spec → plano → implementação → verificação; quatro partes, a 05b depois repartida em duas), nesta ordem:
 > - **05a** — [componente, formulários e base](05a-componente-e-formularios.md) (decisões D1–D26; escrita);
-> - **05b** — barra de ferramentas, menus flutuantes, diálogos e tema por instância, por sua vez dividida (2026-10-04) em **05b1** — [barra de ferramentas, tema por instância e CSS de conteúdo](05b1-barra-de-ferramentas-e-tema.md) (decisões U1–U20; escrita) — e **05b2** — menus flutuantes e diálogos;
+> - **05b** — barra de ferramentas, menus flutuantes, diálogos e tema por instância, por sua vez dividida (2026-10-04) em **05b1** — [barra de ferramentas, tema por instância e CSS de conteúdo](05b1-barra-de-ferramentas-e-tema.md) (decisões U1–U20; escrita) — e **05b2** — menus flutuantes e diálogos, também dividida (2026-10-04) em **05b2a** — [diálogos, link, idioma, autor da citação e tabela](05b2a-dialogos-link-e-idioma.md) (decisões G1–G21; escrita) — e **05b2b** — menus flutuantes (diretrizes F1–F9 no Apêndice A da 05b2a);
 > - **05c** — mídia, upload e rascunho;
 > - **05d** — menu `/`, busca, contadores e fechamento da API.
 >
-> As partes 05b2–05d são escritas quando chegar a vez delas, no formato da 05a, a partir do escopo da seção 5. Onde esta spec e uma parte divergem, vale a parte. O "mapa dos 134 testes do modelo" deixa de valer (o modelo foi perdido); o `size-limit` é substituído pelo orçamento por cenário do repositório (`tools/check-size.mjs`).
+> As partes 05b2b–05d são escritas quando chegar a vez delas, no formato da 05a, a partir do escopo da seção 5. Onde esta spec e uma parte divergem, vale a parte. O "mapa dos 134 testes do modelo" deixa de valer (o modelo foi perdido); o `size-limit` é substituído pelo orçamento por cenário do repositório (`tools/check-size.mjs`).
 
 ## 1. Objetivo
 
@@ -48,7 +48,7 @@ Entradas vinculantes dos ADRs 0002, 0004 e 0005 e da 03c §8, com a parte respon
 | `Tab` sai da tabela e do editor (decisão 34); nota do `Tab` do Firefox nas tarefas (decisão 33) | 05a (teclado), 05b1 (toolbar) |
 | `maxLength` do schema → `charLimit` por função; `maxLength` nativo não mede a string HTML; contagem pela regra do C5 | 05a |
 | `placeholder` por função e transação só de *meta* na troca de idioma | 05a |
-| Guarda de `colspan`/`rowspan` > 100 nas operações de tabela; "criar linha" pela toolbar (o `Tab` não cria) | 05b1 (toolbar), 05b2 (menu flutuante de tabela) |
+| Guarda de `colspan`/`rowspan` > 100 nas operações de tabela; "criar linha" pela toolbar (o `Tab` não cria) | 05b1 (toolbar), 05b2b (menu flutuante de tabela) |
 | Aparência dos blocos `rt-*` num CSS de conteúdo único para editor e página (spec 06, R3) | 05b1 (`@cds/rte-core/styles/content.css`) |
 | `onUiItem` abre os diálogos de imagem, vídeo e embed (o *callback* do core é síncrono e engolido se lançar: o diálogo é aberto de forma assíncrona pela UI) | 05c (diálogos), 05d (ligação) |
 | Combobox no editável a partir de `getSlashMenuState`, listbox em `view.coordsAtPos(range.from)`; `bulletList`/`orderedList` não alternam | 05d |
@@ -65,11 +65,13 @@ Escrita: [05a-componente-e-formularios.md](05a-componente-e-formularios.md). Com
 ### 05b — Barra de ferramentas, menus flutuantes, diálogos e tema · depende de 05a
 Dividida em duas partes (2026-10-04), por ser grande demais para um plano só:
 - **05b1** — escrita: [05b1-barra-de-ferramentas-e-tema.md](05b1-barra-de-ferramentas-e-tema.md). Toolbar com presets/grupos, foco itinerante e menus em `popover` nativo (implementação própria, sem `@angular/aria`), ícones SVG internos (Lucide, ISC, incorporados), todos os comandos sem diálogo, guarda de tabela > 100 por ensaio, "0 re-render" medido por `MutationObserver`, estados do editor na barra, tema por instância por `applyRteTheme` (grafo `angular` → `theme`), `content.css` `rt-*` no `@cds/rte-core` (compartilhado com a spec 06, cores da paleta no escuro) e a correção do `blur` (`afterRenderEffect`). ADR 0008.
-- **05b2** — depende de 05b1: menus flutuantes de texto selecionado, link (abrir/editar/remover), tabela (mesma guarda) e imagem (alinhamento; detalhes da imagem ficam na 05c), começando ocultos (lição 13); diálogos em `<dialog>` nativo dentro do host com formulários em Signal Forms (link com a política do core, idioma, autor/cargo da citação, detalhes de tabela) e `@defer`; itens `link`/`lang` na barra e nos presets; seção `dialogs` dos rótulos; axe e teclado completo nos 3 motores.
+- **05b2** — depende de 05b1. Dividida (2026-10-04) em duas partes, por passar de ~10 tarefas e porque o "Editar" do menu flutuante de link depende do diálogo de link:
+  - **05b2a** — escrita: [05b2a-dialogos-link-e-idioma.md](05b2a-dialogos-link-e-idioma.md). Base de diálogos em `<dialog>` nativo modal dentro do host (`showModal()`, sem *focus trap* próprio, sem *light dismiss*, cancelamento seguro se o documento mudar por fora), carregada por `@defer (when …; prefetch on idle)`; formulários em Signal Forms (`@publicApi`); diálogos de link (inserir/aplicar/editar/remover, validação por `normalizeHref` com a política mesclada do editor), idioma (`rtLang`, regra do esquema), autor/cargo da citação (`updatePullquote`) e tabela nova (linhas, colunas, cabeçalhos; legenda fora, o core a descarta); itens `link`/`lang`/`quoteAuthor` e entrada `insertTableCustom`; `Mod-K`; seleção pendente visível; `openDialog()`; seção `dialogs` dos rótulos; axe e teclado nos 3 motores. ADR 0009.
+  - **05b2b** — depende de 05b2a: menus flutuantes de texto selecionado, link (abrir/editar/remover), tabela (mesma guarda U14) e imagem (alinhamento; detalhes da imagem ficam na 05c), começando ocultos (lição 13), em `popover="manual"` dentro do host com a posição da U7 generalizada, sem roubar o foco, `Alt+F10` com prioridade para o menu visível e configuração `floatingMenus`. Diretrizes F1–F9 já decididas no Apêndice A da 05b2a.
 
 Escopo original da 05b, repartido acima: Toolbar `role="toolbar"` com *roving tabindex* (decidir no início: `@angular/aria` 22.2.x, estável no npm, contra implementação própria atrás de abstração interna), presets `minimal | article | full` e configuração por grupos/itens/ordem, com `features` desligando o item junto com a extensão; ícones SVG internos; menus flutuantes de texto e de imagem começando ocultos (lição 13); diálogos em `<dialog>` nativo com *focus trap* e formulários internos em Signal Forms (link com política do core, idioma, autor da citação, variante da caixa, cores da paleta, detalhes de tabela); operações de tabela com a guarda > 100; desfazer/refazer; contadores de re-render da toolbar (0 botões re-renderizados quando o estado ativo não muda); tema por instância (`[theme]`, `provideRichText({ theme })`, `data-rte-mode`) compatível com a CSP da 05a; CSS de conteúdo `rt-*` compartilhado com a spec 06; `@defer` para os diálogos; axe e teclado completo nos 3 motores.
 
-### 05c — Mídia, upload e rascunho · depende de 05b2
+### 05c — Mídia, upload e rascunho · depende de 05b2b
 `RteUploadAdapter` (`uploadImage`, `uploadVideo?`, `registerExternal?`, `onMediaRemoved?`) e `httpUploadAdapter({ endpoint, fieldName, headers, withCredentials, mapResponse })` com progresso e **cancelamento real** (`AbortSignal`), sem depender de interceptors do host (lição 3); diálogos de imagem, vídeo (faixas de legenda) e embed (provedores do core), detalhes da imagem (`alt` obrigatório ou "decorativa", legenda, crédito, tamanho sem arrasto por `setImageSize`, WCAG 2.5.7); colar e soltar arquivos; localizar a mídia inserida pelo `src` (lição 14); `mediaChange` (URLs adicionadas/removidas na sessão) e `uploadError`; validadores `rteImagesHaveAlt` e `rteUploadsFinished`; rascunho (`draftKey`, `DraftStorage` do core, aviso em `beforeunload`), `isDirty`/`markSaved()`.
 
 ### 05d — Menu `/`, busca, contadores e fechamento · depende de 05c
@@ -77,7 +79,7 @@ Libera `search` e `slashCommands` (fim do D1 da 05a). Menu `/` como combobox + l
 
 ## 6. Critérios de aceite da spec 05 (soma das partes)
 
-- [ ] 05a, 05b1, 05b2, 05c e 05d concluídas, cada uma com seu ADR e seus critérios.
+- [ ] 05a, 05b1, 05b2a, 05b2b, 05c e 05d concluídas, cada uma com seu ADR e seus critérios.
 - [ ] Os 3 modos de uso funcionam em navegador real: `[formField]`, `formControlName`/`ngModel` e `[(value)]`.
 - [ ] Todos os recursos do plano 2.1 acessíveis pela UI, sem Tailwind, com o CSS do pacote e a CSP estrita.
 - [ ] Suíte verde zoneless e com zone.js; E2E verde em Chromium, Firefox e WebKit.
