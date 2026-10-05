@@ -1,4 +1,9 @@
-import { parseSrcset } from '@cds/rte-core';
+import {
+  normalizeAttribute,
+  parseSrcset,
+  type RteAttrRule,
+  type RteHtmlSchema,
+} from '@cds/rte-core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
 
@@ -30,6 +35,12 @@ export const EMPTY_MEDIA_SESSION: RteMediaSession = Object.freeze({
  */
 export const mediaTrackerProbe = { visited: 0 };
 
+function countVisit(): void {
+  if (typeof ngDevMode !== 'undefined' && ngDevMode) {
+    mediaTrackerProbe.visited += 1;
+  }
+}
+
 /** Ordem por unidade de código: determinística em qualquer motor (Ruling 16). */
 const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -37,47 +48,108 @@ function frozenSorted(values: Iterable<string>): readonly string[] {
   return Object.freeze([...new Set(values)].sort(byCodeUnit));
 }
 
-function pushUrl(out: string[], value: unknown): void {
-  if (typeof value === 'string' && value !== '') out.push(value);
+/**
+ * Regras do esquema que o `renderHTML` do core aplica aos endereços de mídia
+ * (V13: a sessão conta os endereços **canônicos** que o HTML escreve).
+ */
+export interface RteMediaUrlRules {
+  readonly imageSrc: RteAttrRule;
+  readonly imageSrcset: RteAttrRule;
+  readonly videoSrc: RteAttrRule;
+  readonly videoPoster: RteAttrRule;
+  readonly trackKind: RteAttrRule;
+  readonly trackSrc: RteAttrRule;
+  readonly trackLang: RteAttrRule;
+}
+
+/** Regras do esquema; `null` sem o recurso `media` (não há nós de mídia). */
+export function readMediaUrlRules(
+  schema: RteHtmlSchema,
+): RteMediaUrlRules | null {
+  const rule = (tag: string, attr: string): RteAttrRule | null =>
+    schema.elements[tag]?.attributes[attr]?.rule ?? null;
+  const rules = {
+    imageSrc: rule('img', 'src'),
+    imageSrcset: rule('img', 'srcset'),
+    videoSrc: rule('video', 'src'),
+    videoPoster: rule('video', 'poster'),
+    trackKind: rule('track', 'kind'),
+    trackSrc: rule('track', 'src'),
+    trackLang: rule('track', 'srclang'),
+  };
+  return Object.values(rules).every((r) => r !== null)
+    ? (rules as RteMediaUrlRules)
+    : null;
+}
+
+/** Forma canônica pela regra, como o `byRule` do core (texto ou inteiro). */
+function byRule(rule: RteAttrRule, value: unknown): string | null {
+  if (typeof value === 'number' && Number.isInteger(value)) {
+    return normalizeAttribute(rule, String(value));
+  }
+  return typeof value === 'string' ? normalizeAttribute(rule, value) : null;
+}
+
+function pushUrl(out: string[], rule: RteAttrRule, value: unknown): void {
+  const url = byRule(rule, value);
+  if (url) out.push(url);
 }
 
 /**
- * Endereços de mídia de um nó (V13): `img[src]`, cada URL do `srcset`,
- * `video[src]`, `video[poster]` e `track[src]`; *embeds* ficam de fora. Com
+ * Endereços de mídia de um nó (V13), na forma canônica que o `renderHTML` do
+ * core escreve: `img[src]`, cada URL do `srcset`, `video[src]`,
+ * `video[poster]` e `track[src]` das faixas que ele renderiza; valor que a
+ * regra recusa não é escrito e não conta. *Embeds* ficam de fora. Com
  * repetição (contagem de referências).
  */
-export function mediaUrlsOf(node: ProseMirrorNode): readonly string[] {
-  const attrs = node.attrs as Record<string, unknown>;
+export function mediaUrlsOf(
+  node: ProseMirrorNode,
+  rules: RteMediaUrlRules | null,
+): readonly string[] {
   const out: string[] = [];
+  if (!rules) return out;
+  const attrs = node.attrs as Record<string, unknown>;
   if (node.type.name === 'rtImage') {
-    pushUrl(out, attrs['src']);
-    const srcset = attrs['srcset'];
-    if (typeof srcset === 'string') {
-      for (const candidate of parseSrcset(srcset) ?? []) {
-        pushUrl(out, candidate.url);
-      }
+    pushUrl(out, rules.imageSrc, attrs['src']);
+    const srcset = byRule(rules.imageSrcset, attrs['srcset']);
+    for (const candidate of srcset ? (parseSrcset(srcset) ?? []) : []) {
+      if (candidate.url) out.push(candidate.url);
     }
   } else if (node.type.name === 'rtVideo') {
-    pushUrl(out, attrs['src']);
-    pushUrl(out, attrs['poster']);
+    pushUrl(out, rules.videoSrc, attrs['src']);
+    pushUrl(out, rules.videoPoster, attrs['poster']);
     const tracks = attrs['tracks'];
     if (Array.isArray(tracks)) {
-      for (const track of tracks as unknown[]) {
-        pushUrl(out, (track as { src?: unknown } | null)?.src);
+      for (const item of tracks as unknown[]) {
+        if (item === null || typeof item !== 'object') continue;
+        const track = item as Record<string, unknown>;
+        // As mesmas faixas que o core renderiza (as inválidas são descartadas).
+        const kind =
+          track['kind'] === undefined || track['kind'] === null
+            ? 'subtitles'
+            : byRule(rules.trackKind, track['kind']);
+        const src = byRule(rules.trackSrc, track['src']);
+        const lang = byRule(rules.trackLang, track['srclang']);
+        if (kind !== null && src && lang !== null) out.push(src);
       }
     }
   }
   return out;
 }
 
+/** `alt` ausente na sessão (V7): `null` ou valor que o core não lê como texto. */
 const isMissingAlt = (node: ProseMirrorNode) =>
-  node.type.name === 'rtImage' && node.attrs['alt'] === null;
+  node.type.name === 'rtImage' && typeof node.attrs['alt'] !== 'string';
 
-/** Recontagem completa: endereço → número de referências no documento. */
-export function countMedia(doc: ProseMirrorNode): Map<string, number> {
+/** Recontagem completa: endereço canônico → número de referências. */
+export function countMedia(
+  doc: ProseMirrorNode,
+  rules: RteMediaUrlRules | null,
+): Map<string, number> {
   const counts = new Map<string, number>();
   doc.descendants((node) => {
-    for (const url of mediaUrlsOf(node)) {
+    countVisit();
+    for (const url of mediaUrlsOf(node, rules)) {
       counts.set(url, (counts.get(url) ?? 0) + 1);
     }
   });
@@ -120,14 +192,17 @@ export class RteMediaTracker {
   /** Presença de cada endereço tocado antes do lote em curso. */
   private touched = new Map<string, boolean>();
 
-  constructor(doc: ProseMirrorNode) {
+  constructor(
+    doc: ProseMirrorNode,
+    private readonly rules: RteMediaUrlRules | null,
+  ) {
     this.reset(doc);
   }
 
   /** Nova base (criação ou carga externa, D9), sem delta. */
   reset(doc: ProseMirrorNode): void {
     this.doc = doc;
-    this.counts = countMedia(doc);
+    this.counts = countMedia(doc, this.rules);
     this.base = new Set(this.counts.keys());
     this.seen = new Set();
     this.missing = countMissingAlt(doc);
@@ -185,11 +260,9 @@ export class RteMediaTracker {
   }
 
   private bump(node: ProseMirrorNode, sign: 1 | -1): void {
-    if (typeof ngDevMode !== 'undefined' && ngDevMode) {
-      mediaTrackerProbe.visited += 1;
-    }
+    countVisit();
     if (isMissingAlt(node)) this.missing += sign;
-    for (const url of mediaUrlsOf(node)) {
+    for (const url of mediaUrlsOf(node, this.rules)) {
       const count = this.counts.get(url) ?? 0;
       if (!this.touched.has(url)) this.touched.set(url, count > 0);
       const next = count + sign;
@@ -239,7 +312,7 @@ export class RteMediaTracker {
 
   /** Lote que não parte do documento conhecido: recontagem completa. */
   private recount(doc: ProseMirrorNode): void {
-    const next = countMedia(doc);
+    const next = countMedia(doc, this.rules);
     for (const url of new Set([...this.counts.keys(), ...next.keys()])) {
       if (!this.touched.has(url)) this.touched.set(url, this.counts.has(url));
     }

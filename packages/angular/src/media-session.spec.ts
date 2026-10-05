@@ -12,6 +12,8 @@ import {
   type RteMediaChange,
   type RteMediaSession,
 } from '@cds/rte-angular';
+import { getHtmlSchema, parseSrcset } from '@cds/rte-core';
+import { getRteHtml } from '@cds/rte-core/extensions';
 import type { Editor, JSONContent } from '@tiptap/core';
 import { closeHistory } from '@tiptap/pm/history';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
@@ -29,6 +31,7 @@ import {
   countMedia,
   mediaTrackerProbe,
   mediaUrlsOf,
+  readMediaUrlRules,
   sameMediaSession,
 } from './editor/media-session';
 import { validDoc } from './testing-support/core-docs';
@@ -36,7 +39,7 @@ import {
   createTestEditor,
   destroyTestEditors,
 } from './testing-support/editors';
-import { fcOptions } from './testing-support/media-urls';
+import { FC_RUNS, fcOptions } from './testing-support/media-urls';
 import { settle } from './testing-support/render';
 import { RTE_TEST_MODE } from './testing-support/test-mode';
 
@@ -294,6 +297,43 @@ describe('sessão de mídia: tabela (R9)', () => {
     });
   });
 
+  it('endereço com espaço nas pontas conta pelo canônico: sem delta', async () => {
+    const s = await setup(`<p>a</p>${IMG('/a.png')}`);
+    const before = s.host.cmp().mediaSession();
+    selectNode(s.editor, 'rtImage');
+    expect(
+      s.editor.commands.updateAttributes('rtImage', { src: ' /a.png	' }),
+    ).toBe(true);
+    expect(
+      s.editor.state.doc.nodeAt(nodePos(s.editor.state.doc, 'rtImage'))?.attrs[
+        'src'
+      ],
+    ).toBe(' /a.png	');
+    expect(s.host.changes).toEqual([]);
+    expect(s.host.cmp().mediaSession()).toEqual(before);
+    expect(s.host.cmp().mediaSession().removed).toEqual([]);
+  });
+
+  it('endereço que a regra recusa (javascript:) não conta', async () => {
+    const s = await setup(`<p>a</p>${IMG('/a.png')}`);
+    const { state } = s.editor;
+    const pos = nodePos(state.doc, 'rtImage');
+    const node = state.doc.nodeAt(pos);
+    s.editor.view.dispatch(
+      state.tr.setNodeMarkup(pos, undefined, {
+        ...node?.attrs,
+        src: 'javascript:alert(1)',
+      }),
+    );
+    expect(s.host.cmp().mediaSession()).toEqual({
+      current: [],
+      added: [],
+      removed: ['/a.png'],
+    });
+    expect(s.host.changes).toEqual([{ added: [], removed: ['/a.png'] }]);
+    expect(s.host.log).toEqual(['ready', 'value', 'media']);
+  });
+
   it('Review Focus 4: appendTransaction que desfaz a inserção → lote líquido vazio', async () => {
     const s = await setup();
     s.editor.registerPlugin(
@@ -327,24 +367,39 @@ describe('sessão de mídia: tabela (R9)', () => {
 describe('sessão de mídia: zona e detecção de mudanças (V17, R13)', () => {
   it('transação sem delta não chama NgZone.run do rastreador', async () => {
     const s = await setup(`<p>ab</p>${IMG('/a.png')}`);
-    // Conta só as entradas na zona feitas pelo ouvinte de transação do
-    // editor; as do próprio Angular (agendamento do `tick`) ficam de fora.
+    // Conta só as entradas externas na zona durante o comando síncrono; as
+    // aninhadas (o agendamento do `tick` do zone.js ao sair da zona) não.
     const zone = TestBed.inject(NgZone);
     const run = zone.run.bind(zone);
-    let fromEditor = 0;
+    let armed = false;
+    let depth = 0;
+    let runs = 0;
     vi.spyOn(zone, 'run').mockImplementation(
       <T>(fn: (...a: unknown[]) => T) => {
-        if (/onTransaction/.test(new Error().stack ?? '')) fromEditor += 1;
-        return run(fn);
+        if (armed && depth === 0) runs += 1;
+        depth += 1;
+        try {
+          return run(fn);
+        } finally {
+          depth -= 1;
+        }
       },
     );
-    caretInFirstText(s.editor);
-    expect(fromEditor).toBe(0); // só seleção
-    s.editor.commands.insertContent('x');
-    expect(fromEditor).toBe(1); // só o `value`
-    fromEditor = 0;
-    s.editor.commands.setImage({ src: '/n.png', alt: 'N' });
-    expect(fromEditor).toBe(2); // `value` + `mediaChange`
+    const count = (command: () => void): number => {
+      runs = 0;
+      armed = true;
+      try {
+        command();
+      } finally {
+        armed = false;
+      }
+      return runs;
+    };
+    expect(count(() => caretInFirstText(s.editor))).toBe(0); // só seleção
+    expect(count(() => s.editor.commands.insertContent('x'))).toBe(1); // `value`
+    expect(
+      count(() => s.editor.commands.setImage({ src: '/n.png', alt: 'N' })),
+    ).toBe(2); // `value` + `mediaChange`
     await settle(s.fixture);
     expect(s.host.changes).toEqual([{ added: ['/n.png'], removed: [] }]);
     noNg010x(s.error);
@@ -352,7 +407,9 @@ describe('sessão de mídia: zona e detecção de mudanças (V17, R13)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Propriedade: incremental = recontagem
+// Propriedade: incremental = endereços do HTML canônico
+
+type AttrKey = 'src' | 'srcset' | 'alt' | 'poster';
 
 type Cmd =
   | {
@@ -372,12 +429,27 @@ type Cmd =
       poster: string | null;
       tracks: readonly string[];
     }
-  | { op: 'attrStep'; n: number; key: 'src' | 'alt'; value: string | null }
+  | {
+      op: 'attrStep';
+      n: number;
+      type: 'rtImage' | 'rtVideo';
+      key: AttrKey;
+      value: string | null;
+    }
   | { op: 'bold'; a: number; b: number }
+  | {
+      op: 'wrap';
+      onMedia: boolean;
+      n: number;
+      kind: 'blockquote' | 'bulletList';
+    }
+  | { op: 'lift'; onMedia: boolean; n: number }
+  | { op: 'setContent'; doc: JSONContent }
   | { op: 'undo' }
   | { op: 'redo' }
   | { op: 'insertHtml'; at: number; html: string };
 
+/** Válidos, com espaço/TAB nas pontas (o canônico apara) e recusados. */
 const url = fc.constantFrom(
   '/a.png',
   '/b.png',
@@ -385,7 +457,14 @@ const url = fc.constantFrom(
   '/d.webm',
   '/t.vtt',
   'https://x.test/e.png',
+  ' /a.png',
+  '\t/b.png ',
+  '\n/c.png\t',
+  'javascript:alert(1)',
+  'data:image/png;base64,AAAA',
+  '',
 );
+const srcset = fc.tuple(url, url).map(([a, b]) => `${a} 1x, ${b} 2x`);
 
 const cmdArb: fc.Arbitrary<Cmd> = fc.oneof(
   fc.record({
@@ -393,10 +472,7 @@ const cmdArb: fc.Arbitrary<Cmd> = fc.oneof(
     at: fc.nat(),
     src: url,
     alt: fc.option(fc.constantFrom('A', ''), { nil: null }),
-    srcset: fc.option(
-      fc.tuple(url, url).map(([a, b]) => `${a} 1x, ${b} 2x`),
-      { nil: null },
-    ),
+    srcset: fc.option(srcset, { nil: null }),
   }),
   fc.record({ op: fc.constant('updateImage' as const), n: fc.nat(), src: url }),
   fc.record({ op: fc.constant('deleteMedia' as const), n: fc.nat() }),
@@ -412,33 +488,67 @@ const cmdArb: fc.Arbitrary<Cmd> = fc.oneof(
     poster: fc.option(url, { nil: null }),
     tracks: fc.array(url, { maxLength: 3 }),
   }),
-  // `AttrStep` (mapa vazio com `pos`), inclusive `alt: null`
+  // `AttrStep` (mapa vazio com `pos`) com valores crus: inclusive recusados,
+  // com espaço nas pontas e `alt: null`
   fc.oneof(
     fc.record({
       op: fc.constant('attrStep' as const),
       n: fc.nat(),
+      type: fc.constant('rtImage' as const),
       key: fc.constant('src' as const),
       value: url,
     }),
     fc.record({
       op: fc.constant('attrStep' as const),
       n: fc.nat(),
+      type: fc.constant('rtImage' as const),
+      key: fc.constant('srcset' as const),
+      value: fc.option(srcset, { nil: null }),
+    }),
+    fc.record({
+      op: fc.constant('attrStep' as const),
+      n: fc.nat(),
+      type: fc.constant('rtImage' as const),
       key: fc.constant('alt' as const),
       value: fc.option(fc.constant('A'), { nil: null }),
+    }),
+    fc.record({
+      op: fc.constant('attrStep' as const),
+      n: fc.nat(),
+      type: fc.constant('rtVideo' as const),
+      key: fc.constantFrom('src' as const, 'poster' as const),
+      value: fc.option(url, { nil: null }),
     }),
   ),
   // passos de marca (mapa vazio com `from`/`to`)
   fc.record({ op: fc.constant('bold' as const), a: fc.nat(), b: fc.nat() }),
+  // `ReplaceAroundStep` (envolver e levantar), sobre texto ou mídia
+  fc.record({
+    op: fc.constant('wrap' as const),
+    onMedia: fc.boolean(),
+    n: fc.nat(),
+    kind: fc.constantFrom('blockquote' as const, 'bulletList' as const),
+  }),
+  fc.record({
+    op: fc.constant('lift' as const),
+    onMedia: fc.boolean(),
+    n: fc.nat(),
+  }),
+  // troca do documento inteiro no meio da sequência
+  fc.record({
+    op: fc.constant('setContent' as const),
+    doc: validDoc as fc.Arbitrary<JSONContent>,
+  }),
   fc.constant({ op: 'undo' as const }),
   fc.constant({ op: 'redo' as const }),
   fc.record({
     op: fc.constant('insertHtml' as const),
     at: fc.nat(),
     html: fc
-      .tuple(url, url)
+      .tuple(url, url, url)
       .map(
-        ([a, b]) =>
-          `<p>t</p>${IMG(a)}<figure class="rt-figure rt-figure--video"><video src="${b}" controls=""></video></figure>`,
+        ([a, b, c]) =>
+          `<p>t</p>${IMG(a, ` srcset="${b} 2x"`)}<figure class="rt-figure rt-figure--video"><video src="${b}" poster="${c}" controls=""><track kind="captions" src="${c}" srclang="en" label="E"></video></figure>`,
       ),
   }),
 );
@@ -451,13 +561,26 @@ function caretAt(editor: Editor, at: number): void {
   );
 }
 
-function mediaPositions(doc: ProseMirrorNode): number[] {
+function positionsOf(doc: ProseMirrorNode, types: readonly string[]) {
   const out: number[] = [];
   doc.descendants((node, pos) => {
-    if (['rtImage', 'rtVideo', 'rtEmbed'].includes(node.type.name))
-      out.push(pos);
+    if (types.includes(node.type.name)) out.push(pos);
   });
   return out;
+}
+
+const MEDIA_TYPES = ['rtImage', 'rtVideo', 'rtEmbed'];
+
+/** Seleciona a `n`-ésima mídia (`NodeSelection`); `false` se não houver. */
+function selectMedia(editor: Editor, n: number, types = MEDIA_TYPES): boolean {
+  const { state } = editor;
+  const all = positionsOf(state.doc, types);
+  if (!all.length) return false;
+  const pos = all[n % all.length] as number;
+  editor.view.dispatch(
+    state.tr.setSelection(NodeSelection.create(state.doc, pos)),
+  );
+  return true;
 }
 
 function run(editor: Editor, cmd: Cmd): void {
@@ -471,29 +594,14 @@ function run(editor: Editor, cmd: Cmd): void {
         srcset: cmd.srcset,
       });
       return;
-    case 'updateImage': {
-      const images: number[] = [];
-      state.doc.descendants((node, pos) => {
-        if (node.type.name === 'rtImage') images.push(pos);
-      });
-      if (!images.length) return;
-      const pos = images[cmd.n % images.length] as number;
-      editor.view.dispatch(
-        state.tr.setSelection(NodeSelection.create(state.doc, pos)),
-      );
-      editor.commands.updateImage({ src: cmd.src });
+    case 'updateImage':
+      if (selectMedia(editor, cmd.n, ['rtImage'])) {
+        editor.commands.updateImage({ src: cmd.src });
+      }
       return;
-    }
-    case 'deleteMedia': {
-      const all = mediaPositions(state.doc);
-      if (!all.length) return;
-      const pos = all[cmd.n % all.length] as number;
-      editor.view.dispatch(
-        state.tr.setSelection(NodeSelection.create(state.doc, pos)),
-      );
-      editor.commands.deleteSelection();
+    case 'deleteMedia':
+      if (selectMedia(editor, cmd.n)) editor.commands.deleteSelection();
       return;
-    }
     case 'deleteRange': {
       const size = state.doc.content.size + 1;
       const a = cmd.a % size;
@@ -505,10 +613,11 @@ function run(editor: Editor, cmd: Cmd): void {
         });
       } catch (e) {
         // intervalo que o ProseMirror não sabe apagar (`TransformError`, sem
-        // tipo exportado): nada é despachado
+        // tipo exportado): nada foi despachado; a execução é descartada
         if (!(e instanceof Error) || e.constructor.name !== 'TransformError') {
           throw e;
         }
+        fc.pre(false);
       }
       return;
     }
@@ -526,12 +635,9 @@ function run(editor: Editor, cmd: Cmd): void {
       });
       return;
     case 'attrStep': {
-      const images: number[] = [];
-      state.doc.descendants((node, pos) => {
-        if (node.type.name === 'rtImage') images.push(pos);
-      });
-      if (!images.length) return;
-      const pos = images[cmd.n % images.length] as number;
+      const all = positionsOf(state.doc, [cmd.type]);
+      if (!all.length) return;
+      const pos = all[cmd.n % all.length] as number;
       editor.view.dispatch(state.tr.setNodeAttribute(pos, cmd.key, cmd.value));
       return;
     }
@@ -546,6 +652,18 @@ function run(editor: Editor, cmd: Cmd): void {
       );
       return;
     }
+    case 'wrap':
+      if (!cmd.onMedia || !selectMedia(editor, cmd.n)) caretAt(editor, cmd.n);
+      if (cmd.kind === 'blockquote') editor.commands.wrapIn('blockquote');
+      else editor.commands.toggleBulletList();
+      return;
+    case 'lift':
+      if (!cmd.onMedia || !selectMedia(editor, cmd.n)) caretAt(editor, cmd.n);
+      editor.commands.lift('blockquote');
+      return;
+    case 'setContent':
+      editor.commands.setContent(cmd.doc);
+      return;
     case 'undo':
       editor.commands.undo();
       return;
@@ -562,6 +680,31 @@ function run(editor: Editor, cmd: Cmd): void {
 const sorted = (xs: Iterable<string>) =>
   [...new Set(xs)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 
+/**
+ * Oráculo independente do rastreador: os endereços que o HTML canônico
+ * (`getRteHtml`) escreve em `img[src]`, `img[srcset]`, `video[src]`,
+ * `video[poster]` e `track[src]`.
+ */
+function urlsInHtml(html: string): string[] {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const out: string[] = [];
+  const attr = (selector: string, name: string) =>
+    doc.querySelectorAll(selector).forEach((el) => {
+      const value = el.getAttribute(name);
+      if (value) out.push(value);
+    });
+  attr('img[src]', 'src');
+  attr('video[src]', 'src');
+  attr('video[poster]', 'poster');
+  attr('track[src]', 'src');
+  doc.querySelectorAll('img[srcset]').forEach((el) => {
+    for (const c of parseSrcset(el.getAttribute('srcset') ?? '') ?? []) {
+      out.push(c.url);
+    }
+  });
+  return sorted(out);
+}
+
 function missingAltOf(doc: ProseMirrorNode): number {
   let n = 0;
   doc.descendants((node) => {
@@ -570,52 +713,79 @@ function missingAltOf(doc: ProseMirrorNode): number {
   return n;
 }
 
+const RULES = readMediaUrlRules(getHtmlSchema({}));
+
 describe('sessão de mídia: propriedade (R9)', () => {
-  it('incremental = recontagem completa depois de cada transação', () => {
-    fc.assert(
-      fc.property(
-        validDoc,
-        fc.array(cmdArb, { minLength: 1, maxLength: 12 }),
-        (json, cmds) => {
-          destroyTestEditors();
-          const editor = createTestEditor('');
-          editor.commands.setContent(json, { emitUpdate: false });
-          const tracker = new RteMediaTracker(editor.state.doc);
-          const base = new Set(countMedia(editor.state.doc).keys());
-          const seen = new Set<string>();
-          let previous = sorted(base);
-          let deltas: ReturnType<RteMediaTracker['apply']>[] = [];
-          editor.on('transaction', ({ transaction, appendedTransactions }) => {
-            deltas.push(tracker.apply([transaction, ...appendedTransactions]));
-          });
-          for (const cmd of cmds) {
-            deltas = [];
-            run(editor, cmd);
-            const current = sorted(countMedia(editor.state.doc).keys());
-            for (const u of current) seen.add(u);
-            const session = tracker.session();
-            expect(session.current).toEqual(current);
-            expect(session.added).toEqual(current.filter((u) => !base.has(u)));
-            expect(session.removed).toEqual(
-              sorted([...base, ...seen]).filter((u) => !current.includes(u)),
+  it('as regras de URL vêm do esquema', () => {
+    expect(RULES).not.toBeNull();
+  });
+
+  it(
+    'incremental = endereços do HTML canônico depois de cada transação',
+    () => {
+      fc.assert(
+        fc.property(
+          validDoc,
+          fc.array(cmdArb, { minLength: 1, maxLength: 12 }),
+          (json, cmds) => {
+            destroyTestEditors();
+            const editor = createTestEditor('');
+            editor.commands.setContent(json, { emitUpdate: false });
+            const tracker = new RteMediaTracker(editor.state.doc, RULES);
+            const base = new Set(urlsInHtml(getRteHtml(editor)));
+            expect(sorted(countMedia(editor.state.doc, RULES).keys())).toEqual(
+              sorted(base),
             );
-            expect(tracker.missingAlt()).toBe(missingAltOf(editor.state.doc));
-            // o delta líquido de todas as transações do comando
-            const added = current.filter((u) => !previous.includes(u));
-            const removed = previous.filter((u) => !current.includes(u));
-            const emitted = deltas.filter((d) => d !== null);
-            if (!added.length && !removed.length) expect(emitted).toEqual([]);
-            else {
-              expect(emitted).toHaveLength(1);
-              expect(emitted[0]).toEqual({ added, removed });
+            const seen = new Set<string>();
+            let previous = sorted(base);
+            let html = getRteHtml(editor);
+            let deltas: ReturnType<RteMediaTracker['apply']>[] = [];
+            editor.on(
+              'transaction',
+              ({ transaction, appendedTransactions }) => {
+                const delta = tracker.apply([
+                  transaction,
+                  ...appendedTransactions,
+                ]);
+                const next = getRteHtml(editor);
+                // todo delta não nulo vem numa transação que muda o `value`
+                if (delta) expect(next).not.toBe(html);
+                html = next;
+                deltas.push(delta);
+              },
+            );
+            for (const cmd of cmds) {
+              deltas = [];
+              run(editor, cmd);
+              const current = urlsInHtml(getRteHtml(editor));
+              for (const u of current) seen.add(u);
+              const session = tracker.session();
+              expect(session.current).toEqual(current);
+              expect(session.added).toEqual(
+                current.filter((u) => !base.has(u)),
+              );
+              expect(session.removed).toEqual(
+                sorted([...base, ...seen]).filter((u) => !current.includes(u)),
+              );
+              expect(tracker.missingAlt()).toBe(missingAltOf(editor.state.doc));
+              // o delta líquido de todas as transações do comando
+              const added = current.filter((u) => !previous.includes(u));
+              const removed = previous.filter((u) => !current.includes(u));
+              const emitted = deltas.filter((d) => d !== null);
+              if (!added.length && !removed.length) expect(emitted).toEqual([]);
+              else {
+                expect(emitted).toHaveLength(1);
+                expect(emitted[0]).toEqual({ added, removed });
+              }
+              previous = current;
             }
-            previous = current;
-          }
-        },
-      ),
-      fcOptions(),
-    );
-  }, 120_000);
+          },
+        ),
+        fcOptions(),
+      );
+    },
+    120_000 * Math.max(1, FC_RUNS / 100),
+  );
 
   it('mediaUrlsOf ignora embeds; sameMediaSession compara conteúdo', () => {
     const editor = createTestEditor('<p>x</p>');
@@ -626,7 +796,7 @@ describe('sessão de mídia: propriedade (R9)', () => {
       if (node.type.name === 'rtEmbed') embed = node;
     });
     expect(embed).not.toBeNull();
-    expect(mediaUrlsOf(embed as unknown as ProseMirrorNode)).toEqual([]);
+    expect(mediaUrlsOf(embed as unknown as ProseMirrorNode, RULES)).toEqual([]);
     expect(
       sameMediaSession(
         { current: ['/a'], added: [], removed: [] },
@@ -660,29 +830,57 @@ describe('sessão de mídia: incremental (pré-voo 12 e 17)', () => {
     return { type: 'doc', content };
   }
 
-  function visitedFor(images: boolean): number {
+  /** Editor, rastreador e a posição do texto do parágrafo `p1000`. */
+  function big(images: boolean) {
     const editor = createTestEditor('');
     editor.commands.setContent(bigDoc(images), { emitUpdate: false });
-    expect(countMedia(editor.state.doc).size).toBe(images ? 200 : 0);
-    const tracker = new RteMediaTracker(editor.state.doc);
-    // o parágrafo `p1000`
+    expect(countMedia(editor.state.doc, RULES).size).toBe(images ? 200 : 0);
+    const tracker = new RteMediaTracker(editor.state.doc, RULES);
     let at = -1;
     editor.state.doc.descendants((node, pos) => {
       if (at >= 0) return false;
       if (node.isTextblock && node.textContent === 'p1000') at = pos + 1;
       return false;
     });
-    const tr: Transaction = editor.state.tr.insertText('z', at);
-    mediaTrackerProbe.visited = 0;
-    expect(tracker.apply([tr])).toBeNull();
-    return mediaTrackerProbe.visited;
+    return { editor, tracker, at };
   }
 
-  it('visited independe do número de mídias', () => {
-    const withImages = visitedFor(true);
-    const without = visitedFor(false);
-    expect(withImages).toBeGreaterThan(0);
-    expect(withImages).toBe(without);
-    expect(withImages).toBeLessThan(10);
+  function probe(tracker: RteMediaTracker, tr: Transaction) {
+    mediaTrackerProbe.visited = 0;
+    const delta = tracker.apply([tr]);
+    return { delta, visited: mediaTrackerProbe.visited };
+  }
+
+  it('visited independe do número de mídias (inserir e apagar texto)', () => {
+    const results = [true, false].map((images) => {
+      const { editor, tracker, at } = big(images);
+      const insertTr = editor.state.tr.insertText('z', at);
+      const insert = probe(tracker, insertTr);
+      editor.view.dispatch(insertTr);
+      tracker.reset(editor.state.doc);
+      const del = probe(tracker, editor.state.tr.delete(at, at + 1));
+      expect(insert.delta).toBeNull();
+      expect(del.delta).toBeNull();
+      return [insert.visited, del.visited];
+    });
+    const [withImages, without] = results as [number[], number[]];
+    expect(withImages[0]).toBeGreaterThan(0);
+    expect(withImages[1]).toBeGreaterThan(0);
+    expect(withImages).toEqual(without);
+    expect(Math.max(...withImages)).toBeLessThan(10);
+  });
+
+  it('apagar uma imagem visita só a vizinhança', () => {
+    const { editor, tracker, at } = big(true);
+    // a imagem `/i1000.png` vem logo depois do parágrafo `p1000`
+    const pos = at - 1 + editor.state.doc.resolve(at).parent.nodeSize;
+    expect(editor.state.doc.nodeAt(pos)?.attrs['src']).toBe('/i1000.png');
+    const { delta, visited } = probe(
+      tracker,
+      editor.state.tr.delete(pos, pos + 1),
+    );
+    expect(delta).toEqual({ added: [], removed: ['/i1000.png'] });
+    expect(visited).toBeGreaterThan(0);
+    expect(visited).toBeLessThan(10);
   });
 });

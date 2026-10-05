@@ -83,6 +83,7 @@ import { buildEditorOptions, mergeEditorConfig } from './options';
 import {
   EMPTY_MEDIA_SESSION,
   RteMediaTracker,
+  readMediaUrlRules,
   sameMediaSession,
   type RteMediaChange,
   type RteMediaSession,
@@ -490,15 +491,18 @@ export class RteEditor implements FormValueControl<string> {
       if (this.loading) return;
       const media = this.media;
       const delta = media?.apply([transaction, ...appendedTransactions]);
+      let emitted = false;
       if (editor.state.doc !== this.lastDoc) {
         this.lastDoc = editor.state.doc;
         const html = readValue(editor);
         if (html !== this.lastValue) {
           this.lastValue = html;
+          emitted = true;
           zone.run(() => this.value.set(html));
         }
       }
-      if (!media || !delta) return;
+      // Só junto de um `value` (V13; endereços canônicos: não há delta sem ele).
+      if (!media || !delta || !emitted) return;
       zone.run(() => {
         this.mediaState.set(media.session());
         this.mediaChange.emit(delta);
@@ -709,7 +713,8 @@ export class RteEditor implements FormValueControl<string> {
       });
       this.lastDoc = editor.state.doc;
       this.lastValue = readValue(editor);
-      this.media = new RteMediaTracker(editor.state.doc);
+      const rules = readMediaUrlRules(untracked(this.schema));
+      this.media = new RteMediaTracker(editor.state.doc, rules);
       this.mediaState.set(this.media.session());
       editor.on('transaction', onTransaction);
       this.instance.set(editor);
