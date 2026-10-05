@@ -6,7 +6,7 @@
  * SVG originais foram convertidos em caminhos (`d`) equivalentes, para que o
  * desenho use só `<path [attr.d]>` (viewBox 24, traço 2, desenhado pelo
  * template). Os ícones `chevron-down`, `check`, `code` e `italic` derivam do
- * Feather (MIT, Cole Bemis); o texto dessa licença está em
+ * Feather (MIT, Cole Bemis), assim como `link`; o texto dessa licença está em
  * THIRD-PARTY-NOTICES.md.
  *
  * ISC License
@@ -61,6 +61,18 @@ export const RTE_ICONS: Readonly<Record<RteIconName, readonly string[]>> =
       'm4 5 8 8',
       'm12 5-8 8',
       'M20 19h-4c0-1.5.44-2 1.5-2.5S20 15.33 20 14c0-.47-.17-.93-.48-1.29a2.11 2.11 0 0 0-2.62-.44c-.42.24-.74.62-.9 1.07',
+    ],
+    link: [
+      'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71',
+      'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
+    ],
+    lang: [
+      'm5 8 6 6',
+      'm4 14 6-6 2-3',
+      'M2 5h12',
+      'M7 2h1',
+      'm22 22-5-10-5 10',
+      'M14 18h6',
     ],
     textColor: ['M4 20h16', 'm6 16 6-12 6 12', 'M8 12h8'],
     highlight: [
@@ -119,6 +131,11 @@ export const RTE_ICONS: Readonly<Record<RteIconName, readonly string[]>> =
     pullquote: [
       'M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z',
       'M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z',
+    ],
+    quoteAuthor: [
+      'M11.5 15H7a4 4 0 0 0-4 4v2',
+      'M21.378 16.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z',
+      'M14 7A4 4 0 0 1 6 7A4 4 0 0 1 14 7Z',
     ],
     readAlso: [
       'M15 18h-5',

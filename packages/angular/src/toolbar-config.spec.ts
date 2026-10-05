@@ -52,13 +52,13 @@ describe('RTE_TOOLBAR_PRESETS', () => {
     expect(RTE_TOOLBAR_PRESETS).toEqual({
       minimal: [
         ['undo', 'redo'],
-        ['bold', 'italic'],
+        ['bold', 'italic', 'link'],
         ['bulletList', 'orderedList'],
       ],
       article: [
         ['undo', 'redo'],
         ['blockType'],
-        ['bold', 'italic', 'underline', 'strike'],
+        ['bold', 'italic', 'underline', 'strike', 'link'],
         ['textColor', 'highlight'],
         ['bulletList', 'orderedList', 'taskList'],
         ['align'],
@@ -74,16 +74,18 @@ describe('RTE_TOOLBAR_PRESETS', () => {
           'italic',
           'underline',
           'strike',
+          'link',
           'code',
           'superscript',
           'subscript',
+          'lang',
         ],
         ['textColor', 'highlight'],
         ['bulletList', 'orderedList', 'taskList', 'indent', 'outdent'],
         ['align'],
         ['blockquote', 'codeBlock', 'codeLanguage', 'horizontalRule'],
         ['table'],
-        ['callout', 'pullquote', 'readAlso'],
+        ['callout', 'pullquote', 'quoteAuthor', 'readAlso'],
         ['clearFormatting'],
       ],
     });
@@ -132,9 +134,11 @@ describe('resolveToolbarGroups', () => {
       'italic',
       'underline',
       'strike',
+      'link',
       'code',
       'superscript',
       'subscript',
+      'lang',
     ]);
     expect(full[4]).toEqual([
       'bulletList',
@@ -144,7 +148,12 @@ describe('resolveToolbarGroups', () => {
       'outdent',
     ]);
     expect(full[6]).toContain('codeLanguage');
-    expect(full[full.length - 2]).toEqual(['callout', 'pullquote', 'readAlso']);
+    expect(full[full.length - 2]).toEqual([
+      'callout',
+      'pullquote',
+      'quoteAuthor',
+      'readAlso',
+    ]);
     expect(full[full.length - 1]).toEqual(['clearFormatting']);
   });
 
@@ -206,7 +215,11 @@ describe('resolveToolbarGroups', () => {
     ['tasks', 'tasks', ['taskList']],
     ['code', 'code', ['codeBlock', 'codeLanguage']],
     ['tables', 'tables', ['table']],
-    ['newsBlocks', 'newsBlocks', ['callout', 'pullquote', 'readAlso']],
+    [
+      'newsBlocks',
+      'newsBlocks',
+      ['callout', 'pullquote', 'quoteAuthor', 'readAlso', 'lang'],
+    ],
   ];
   it.each(gated)(
     'recurso %s desligado remove exatamente os seus itens',
@@ -225,6 +238,15 @@ describe('resolveToolbarGroups', () => {
     for (const [, feature, items] of gated)
       for (const id of items)
         expect(RTE_TOOLBAR_ITEMS[id].feature).toBe(feature);
+  });
+
+  it('newsBlocks desligado remove lang e quoteAuthor e mantém link', () => {
+    const features = ALL.filter((f) => f !== 'newsBlocks');
+    const out = resolveToolbarGroups('full', ctx({ features })).flat();
+    expect(out).not.toContain('lang');
+    expect(out).not.toContain('quoteAuthor');
+    expect(out).toContain('link');
+    expect(RTE_TOOLBAR_ITEMS.link).toEqual({ kind: 'dialog', feature: null });
   });
 
   it('sem codeLanguages remove codeLanguage', () => {

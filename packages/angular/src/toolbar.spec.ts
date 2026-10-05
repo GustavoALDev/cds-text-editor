@@ -9,6 +9,7 @@ import {
   type Provider,
 } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { getHtmlSchema } from '@cds/rte-core';
 import { RTE_CODE_LANGUAGES } from '@cds/rte-core/code-languages';
 import { getRteHtml } from '@cds/rte-core/extensions';
@@ -27,6 +28,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { selectText } from './testing-support/editors';
 import { installPopoverShim } from './testing-support/popover';
 import { RTE_ICONS } from './toolbar/icons';
+import { RteToolbar } from './toolbar/rte-toolbar';
 import { renderHost, settle } from './testing-support/render';
 
 // Spec 05b1, Tarefa 6: a barra dentro do `rte-editor` (U2–U5, U8–U11, U13,
@@ -93,6 +95,7 @@ const ARTICLE_LABELS = [
   'Italic',
   'Underline',
   'Strikethrough',
+  'Link',
   'Text color',
   'Highlight',
   'Bulleted list',
@@ -293,6 +296,7 @@ describe('estrutura (U2, U8, U9)', () => {
       'Redo',
       'Bold',
       'Italic',
+      'Link',
       'Bulleted list',
       'Numbered list',
     ]);
@@ -573,8 +577,9 @@ describe('comandos (U4)', () => {
     expect(items[0]?.getAttribute('role')).toBe('menuitem');
     expect(items[0]?.textContent?.trim()).toBe('Insert table 3 × 3');
     expect(items[0]?.hasAttribute('aria-disabled')).toBe(false);
+    expect(items[1]?.textContent?.trim()).toBe('Insert table…');
     // fora de tabela, as operações ficam inaplicáveis
-    expect(items[1]?.getAttribute('aria-disabled')).toBe('true');
+    expect(items[2]?.getAttribute('aria-disabled')).toBe('true');
     items[0]?.click();
     await settle(fixture);
     expect(getRteHtml(editorOf(el))).toContain('<table');
@@ -688,7 +693,7 @@ describe('troca ao vivo (R2)', () => {
     const editor = editorOf(el);
     host.toolbar.set('minimal');
     await settle(fixture);
-    expect(buttons(el)).toHaveLength(6);
+    expect(buttons(el)).toHaveLength(7);
     expect(editorOf(el)).toBe(editor);
     expect(host.ready).toHaveLength(1);
     expect(host.changes).toBe(0);
@@ -783,5 +788,183 @@ describe('Review Focus', () => {
     await settle(fixture);
     expect(ta.getAttribute('aria-expanded')).toBe('false');
     expect(tb.getAttribute('aria-expanded')).toBe('true');
+  });
+});
+
+describe('itens de diálogo (G11, G16, G17)', () => {
+  const LINKED = '<p><a href="https://a.example/">ab</a></p>';
+
+  function toolbarCmp(fixture: ComponentFixture<Host>): RteToolbar {
+    return fixture.debugElement.query(By.directive(RteToolbar))
+      .componentInstance as RteToolbar;
+  }
+
+  it('article e full: ordem dos rótulos com os itens novos', async () => {
+    const { el, fixture, host } = await setup();
+    expect(buttons(el).map((b) => b.getAttribute('aria-label'))).toEqual(
+      ARTICLE_LABELS,
+    );
+    host.toolbar.set('full');
+    host.options.set({ codeLanguages: RTE_CODE_LANGUAGES });
+    await settle(fixture);
+    const names = buttons(el).map((b) => b.getAttribute('aria-label'));
+    expect(names.slice(names.indexOf('Strikethrough'))).toEqual([
+      'Strikethrough',
+      'Link',
+      'Inline code',
+      'Superscript',
+      'Subscript',
+      'Language',
+      'Text color',
+      'Highlight',
+      'Bulleted list',
+      'Numbered list',
+      'Task list',
+      'Increase indent',
+      'Decrease indent',
+      'Alignment',
+      'Quote',
+      'Code block',
+      'Horizontal line',
+      'Table',
+      'Callout box',
+      'Pull quote',
+      'Quote author',
+      '"Read also" box',
+      'Clear formatting',
+    ]);
+  });
+
+  it('botão Link: popup de diálogo, sem aria-pressed, dica e atalho', async () => {
+    const { el } = await setup();
+    const link = button(el, 'Link');
+    expect(link.getAttribute('aria-haspopup')).toBe('dialog');
+    expect(link.hasAttribute('aria-pressed')).toBe(false);
+    expect(link.getAttribute('title')).toBe('Link (Ctrl+K)');
+    expect(link.getAttribute('aria-keyshortcuts')).toBe('Control+K');
+    expect(link.classList.contains('rte-toolbar__button--active')).toBe(false);
+  });
+
+  it('dentro de link: Edit link e classe --active', async () => {
+    const { el, fixture } = await setup((h) => h.value.set(LINKED));
+    selectText(editorOf(el), 'ab', 1);
+    await settle(fixture);
+    const link = button(el, 'Edit link');
+    expect(link.classList.contains('rte-toolbar__button--active')).toBe(true);
+    expect(link.getAttribute('title')).toBe('Edit link (Ctrl+K)');
+  });
+
+  it('clique em Link emite dialog { kind: link, origin: botão }', async () => {
+    const { el, fixture } = await setup();
+    const spy = vi.fn();
+    toolbarCmp(fixture).dialog.subscribe(spy);
+    selectText(editorOf(el), 'ab', 1);
+    await settle(fixture);
+    const link = button(el, 'Link');
+    link.click();
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith({ kind: 'link', origin: link });
+  });
+
+  it('item inaplicável não emite', async () => {
+    const { el, fixture } = await setup((h) => h.toolbar.set('full'));
+    const spy = vi.fn();
+    toolbarCmp(fixture).dialog.subscribe(spy);
+    selectText(editorOf(el), 'ab', 1);
+    await settle(fixture);
+    const lang = button(el, 'Language');
+    expect(lang.getAttribute('aria-disabled')).toBe('true');
+    lang.click();
+    button(el, 'Quote author').click();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('Language habilitado com seleção emite kind lang', async () => {
+    const { el, fixture } = await setup((h) => h.toolbar.set('full'));
+    const spy = vi.fn();
+    toolbarCmp(fixture).dialog.subscribe(spy);
+    selectText(editorOf(el), 'ab');
+    await settle(fixture);
+    const lang = button(el, 'Language');
+    expect(lang.getAttribute('aria-haspopup')).toBe('dialog');
+    lang.click();
+    expect(spy).toHaveBeenCalledWith({ kind: 'lang', origin: lang });
+  });
+
+  it('Quote author no pullquote emite kind quoteAuthor', async () => {
+    const { el, fixture } = await setup((h) => {
+      h.toolbar.set('full');
+      h.value.set(
+        '<figure class="rt-pullquote"><blockquote><p>ab</p></blockquote></figure>',
+      );
+    });
+    const spy = vi.fn();
+    toolbarCmp(fixture).dialog.subscribe(spy);
+    selectText(editorOf(el), 'ab', 1);
+    await settle(fixture);
+    const author = button(el, 'Quote author');
+    author.click();
+    expect(spy).toHaveBeenCalledWith({ kind: 'quoteAuthor', origin: author });
+  });
+
+  it('menu Table: Insert table 3 × 3, Insert table… (popup de diálogo) e as demais', async () => {
+    const { el, fixture } = await setup();
+    const menu = openMenu(button(el, 'Table'));
+    await settle(fixture);
+    const items = [...menu.querySelectorAll<HTMLElement>('.rte-menu__item')];
+    expect(items.slice(0, 3).map((i) => i.textContent?.trim())).toEqual([
+      'Insert table 3 × 3',
+      'Insert table…',
+      'Insert row above',
+    ]);
+    expect(items[1]?.getAttribute('role')).toBe('menuitem');
+    expect(items[1]?.getAttribute('aria-haspopup')).toBe('dialog');
+    expect(items[1]?.hasAttribute('aria-disabled')).toBe(false);
+  });
+
+  it('Insert table… fica desabilitado dentro de tabela e não emite', async () => {
+    const { el, fixture } = await setup((h) =>
+      h.value.set('<table><tbody><tr><td><p>ab</p></td></tr></tbody></table>'),
+    );
+    const spy = vi.fn();
+    toolbarCmp(fixture).dialog.subscribe(spy);
+    selectText(editorOf(el), 'ab', 1);
+    await settle(fixture);
+    const menu = openMenu(button(el, 'Table'));
+    await settle(fixture);
+    const item = [
+      ...menu.querySelectorAll<HTMLElement>('.rte-menu__item'),
+    ].find((i) => i.textContent?.trim() === 'Insert table…');
+    expect(item?.getAttribute('aria-disabled')).toBe('true');
+    item?.click();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('escolher Insert table… fecha o menu, foca o gatilho e emite table', async () => {
+    const { el, fixture } = await setup();
+    const spy = vi.fn();
+    toolbarCmp(fixture).dialog.subscribe(spy);
+    const trigger = button(el, 'Table');
+    const menu = openMenu(trigger);
+    await settle(fixture);
+    const item = [
+      ...menu.querySelectorAll<HTMLElement>('.rte-menu__item'),
+    ].find((i) => i.textContent?.trim() === 'Insert table…');
+    item?.click();
+    await settle(fixture);
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(trigger);
+    expect(spy).toHaveBeenCalledWith({ kind: 'table', origin: trigger });
+  });
+
+  it('newsBlocks desligado: sem Language nem Quote author, com Link', async () => {
+    const { el } = await setup((h) => {
+      h.toolbar.set('full');
+      h.options.set({ features: { newsBlocks: false } });
+    });
+    const names = buttons(el).map((b) => b.getAttribute('aria-label'));
+    expect(names).not.toContain('Language');
+    expect(names).not.toContain('Quote author');
+    expect(names).toContain('Link');
   });
 });

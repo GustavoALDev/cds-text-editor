@@ -429,6 +429,135 @@ describe('createToolbarState (U5, R6)', () => {
   });
 });
 
+describe('itens de diálogo (G11)', () => {
+  const LINK = '<p>x<a href="https://a.example/">ab</a>cd</p>';
+  const LANG = '<p>x<span lang="pt">ab</span>cd</p>';
+  const PULL =
+    '<figure class="rt-pullquote"><blockquote><p>ab</p></blockquote></figure>';
+
+  it('link: habilitado em parágrafo (cursor e seleção), inativo', () => {
+    expect(stateOf('<p>abcd</p>', ['abcd', 1], 'link')).toEqual({
+      active: false,
+      enabled: true,
+      value: null,
+    });
+    expect(stateOf('<p>abcd</p>', ['bc'], 'link').enabled).toBe(true);
+  });
+
+  it('link: desabilitado em bloco de código; ativo dentro de link', () => {
+    expect(stateOf('<pre><code>ab</code></pre>', ['ab', 1], 'link')).toEqual({
+      active: false,
+      enabled: false,
+      value: null,
+    });
+    expect(stateOf(LINK, ['ab', 1], 'link')).toEqual({
+      active: true,
+      enabled: true,
+      value: null,
+    });
+  });
+
+  it('lang: desabilitado com cursor fora de idioma; habilitado com seleção; ativo dentro de span[lang]', () => {
+    expect(stateOf('<p>abcd</p>', ['abcd', 1], 'lang').enabled).toBe(false);
+    expect(stateOf('<p>abcd</p>', ['bc'], 'lang')).toEqual({
+      active: false,
+      enabled: true,
+      value: null,
+    });
+    expect(stateOf(LANG, ['ab', 1], 'lang')).toEqual({
+      active: true,
+      enabled: true,
+      value: null,
+    });
+  });
+
+  it('quoteAuthor: habilitado só em rt-pullquote, nunca ativo', () => {
+    expect(stateOf('<p>ab</p>', ['ab', 1], 'quoteAuthor').enabled).toBe(false);
+    expect(stateOf(PULL, ['ab', 1], 'quoteAuthor')).toEqual({
+      active: false,
+      enabled: true,
+      value: null,
+    });
+  });
+});
+
+@Component({
+  selector: 'rte-test-observed-full-toolbar',
+  imports: [RteEditor],
+  template: `<rte-editor [value]="value" toolbar="full" />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class ObservedFullHost {
+  readonly value =
+    '<p><strong>abcd <a href="https://a.example/">link</a></strong></p>';
+}
+
+describe('MutationObserver na barra full com os itens de diálogo', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  function type(editor: Editor, text: string): void {
+    const { view } = editor;
+    const { from, to } = view.state.selection;
+    const deflt = () => view.state.tr.insertText(text, from, to);
+    const handled = view.someProp('handleTextInput', (f) =>
+      f(view, from, to, text, deflt),
+    );
+    if (!handled) view.dispatch(deflt());
+  }
+
+  async function setupObserved() {
+    const fixture = await renderHost(ObservedFullHost);
+    const el = fixture.nativeElement as HTMLElement;
+    const editor = getRteEditor(
+      el.querySelector('rte-editor') as Element,
+    ) as Editor;
+    const toolbar = el.querySelector('.rte-toolbar') as HTMLElement;
+    selectText(editor, 'abcd', 1);
+    type(editor, 'x'); // undo habilitado antes de observar
+    await settle(fixture);
+    const records: MutationRecord[] = [];
+    const observer = new MutationObserver((list) => records.push(...list));
+    observer.observe(toolbar, {
+      subtree: true,
+      attributes: true,
+      childList: true,
+      characterData: true,
+    });
+    const flush = async () => {
+      await settle(fixture);
+      records.push(...observer.takeRecords());
+    };
+    return { editor, toolbar, records, flush, observer };
+  }
+
+  it('20 teclas num parágrafo com a barra full → 0 mutações', async () => {
+    const { editor, records, flush, observer } = await setupObserved();
+    for (let i = 0; i < 20; i += 1) {
+      type(editor, 'y');
+      await flush();
+    }
+    observer.disconnect();
+    expect(records).toEqual([]);
+  });
+
+  it('cursor entrando num link → mutações só no botão link', async () => {
+    const { editor, toolbar, records, flush, observer } = await setupObserved();
+    selectText(editor, 'link', 1);
+    await flush();
+    observer.disconnect();
+    expect(records.length).toBeGreaterThan(0);
+    const link = toolbar.querySelector('[aria-label="Edit link"]');
+    expect(link).not.toBeNull();
+    for (const record of records) {
+      expect(record.target).toBe(link);
+      expect(record.type).toBe('attributes');
+    }
+    expect(new Set(records.map((r) => r.attributeName))).toEqual(
+      new Set(['aria-label', 'title', 'class']),
+    );
+  });
+});
+
 @Component({
   selector: 'rte-test-observed-toolbar',
   imports: [RteEditor],

@@ -396,6 +396,7 @@ describe('editor.css: barra, menus e amostras (spec 05b1)', () => {
     'rte-toolbar',
     'rte-toolbar__button',
     'rte-toolbar__button--pressed',
+    'rte-toolbar__button--active',
     'rte-toolbar__button--menu',
     'rte-toolbar__separator',
     'rte-menu',
@@ -489,6 +490,23 @@ describe('editor.css: barra, menus e amostras (spec 05b1)', () => {
     },
   );
 
+  it('ativo (diálogo): fundo --rte-primary-subtle e borda --rte-primary-border', () => {
+    const decls = declsOf(rulesWith('rte-toolbar__button--active'));
+    expect(
+      decls.some(
+        (d) =>
+          d.prop === 'background-color' &&
+          d.value === 'var(--rte-primary-subtle)',
+      ),
+    ).toBe(true);
+    expect(
+      decls.some(
+        (d) =>
+          d.prop === 'border-color' && d.value === 'var(--rte-primary-border)',
+      ),
+    ).toBe(true);
+  });
+
   it('pressionado: fundo --rte-primary-subtle e borda --rte-primary-border', () => {
     const decls = declsOf(rulesWith('rte-toolbar__button--pressed'));
     expect(
@@ -562,6 +580,7 @@ describe('editor.css: barra, menus e amostras (spec 05b1)', () => {
       .map((r) => `${r.selector}{${declarations(r).map((d) => d.value)}}`)
       .join('\n');
     expect(text).toMatch(/rte-toolbar__button--pressed[^{]*\{[^}]*Highlight/);
+    expect(text).toMatch(/rte-toolbar__button--active[^{]*\{[^}]*Highlight/);
     expect(text).toMatch(/rte-menu__item--checked[^{]*\{[^}]*Highlight/);
   });
 
@@ -582,7 +601,7 @@ describe('editor.css: barra, menus e amostras (spec 05b1)', () => {
     for (const selector of selectors) {
       expect(selector).toContain("[aria-disabled='true']");
       const own = selector.includes('rte-toolbar__button')
-        ? 'rte-toolbar__button--pressed'
+        ? 'rte-toolbar__button--pressed,.rte-toolbar__button--active'
         : 'rte-menu__item--checked';
       expect(selector.replace(/\s+/g, '')).toContain(`:not(.${own})`);
     }

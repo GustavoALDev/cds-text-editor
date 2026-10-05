@@ -2,6 +2,7 @@
 track id) { @let s = state.item(id)(); @let kind = kindOf(id); @if (kind ===
 'menu') {
 <button
+  #trigger
   type="button"
   class="rte-toolbar__button rte-toolbar__button--menu"
   rteRovingItem
@@ -66,12 +67,13 @@ track id) { @let s = state.item(id)(); @let kind = kindOf(id); @if (kind ===
     class="rte-menu__item"
     tabindex="-1"
     [attr.role]="e.role"
+    [attr.aria-haspopup]="e.value === 'insertTableCustom' ? 'dialog' : null"
     [attr.aria-checked]="e.role === 'menuitemradio' ? on : null"
     [class.rte-menu__item--checked]="on"
     [attr.aria-disabled]="enabled ? null : 'true'"
     [attr.title]="title(e.label, e.shortcut, limited)"
     [attr.aria-keyshortcuts]="keyShortcuts(e.shortcut)"
-    (click)="choose(menu, id, e)"
+    (click)="choose(menu, id, e, trigger)"
   >
     @if (e.palette) {
     <span
@@ -117,6 +119,37 @@ track id) { @let s = state.item(id)(); @let kind = kindOf(id); @if (kind ===
   </button>
   }
 </div>
+} @else if (kind === 'dialog') { @let name = dialogLabel(id, s.active);
+<button
+  type="button"
+  class="rte-toolbar__button"
+  rteRovingItem
+  aria-haspopup="dialog"
+  [disabled]="!interactive()"
+  [attr.aria-label]="name"
+  [attr.title]="title(name, id)"
+  [attr.aria-keyshortcuts]="keyShortcuts(id)"
+  [attr.aria-disabled]="ariaDisabled(s.enabled)"
+  [class.rte-toolbar__button--active]="s.active"
+  (mousedown)="$event.preventDefault()"
+  (click)="openFromItem(id, $any($event.currentTarget))"
+>
+  <svg
+    class="rte-icon"
+    aria-hidden="true"
+    focusable="false"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    @for (d of icon(itemIcon(id, s.value)); track $index) {
+    <path [attr.d]="d" />
+    }
+  </svg>
+</button>
 } @else {
 <button
   type="button"

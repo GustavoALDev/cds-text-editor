@@ -124,6 +124,12 @@
     border-color: var(--rte-primary-border);
   }
 
+  .rte-editor .rte-toolbar__button--active {
+    color: var(--rte-primary-text);
+    background-color: var(--rte-primary-subtle);
+    border-color: var(--rte-primary-border);
+  }
+
   .rte-editor .rte-toolbar__button--menu {
     padding-inline-end: calc(0.25rem * var(--rte-density));
   }
@@ -312,6 +318,7 @@
      * Highlight/HighlightText de motores emulados fica abaixo de 4,5:1) e o
      * Highlight na borda. */
     .rte-editor .rte-toolbar__button--pressed,
+    .rte-editor .rte-toolbar__button--active,
     .rte-editor .rte-menu__item--checked {
       color: Canvas;
       background-color: CanvasText;
@@ -322,7 +329,8 @@
      * fundo CanvasText do par invertido perderia o contraste. */
     .rte-editor
       .rte-toolbar__button[aria-disabled='true']:not(
-        .rte-toolbar__button--pressed
+        .rte-toolbar__button--pressed,
+        .rte-toolbar__button--active
       ),
     .rte-editor
       .rte-menu__item[aria-disabled='true']:not(.rte-menu__item--checked) {

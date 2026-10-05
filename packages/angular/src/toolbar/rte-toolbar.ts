@@ -21,6 +21,7 @@ import type { RteHtmlSchema } from '@cds/rte-core';
 import type { RteCodeLanguage } from '@cds/rte-core/code-languages';
 import type { RteContentLabels } from '@cds/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
+import type { RteDialogKind } from '../dialogs/types';
 import type { RteToolbarLabels } from '../labels/types';
 import { runToolbarCommand } from './commands';
 import { RTE_ICONS, type RteIconName } from './icons';
@@ -72,6 +73,15 @@ type RteMenuId =
 
 type TableMenuState = Readonly<Record<RteTableOp, RteTableOpState>>;
 
+/** Pedido de diálogo da barra: o tipo e o elemento que o pediu (devolve o foco). */
+export interface RteToolbarDialogRequest {
+  readonly kind: RteDialogKind;
+  readonly origin: HTMLElement;
+}
+
+/** Entrada do menu de tabela que abre o diálogo em vez de rodar um comando. */
+const TABLE_CUSTOM = 'insertTableCustom';
+
 const ALIGNS = [
   ['left', 'alignLeft'],
   ['center', 'alignCenter'],
@@ -100,6 +110,11 @@ function entry(
     shortcut: null,
     ...more,
   };
+}
+
+/** Operação de tabela que decide o estado da entrada ('Inserir tabela…' = `insertTable`). */
+function tableOpOf(e: RteMenuEntry): RteTableOp {
+  return (e.value === TABLE_CUSTOM ? 'insertTable' : e.value) as RteTableOp;
 }
 
 function sameIds(
@@ -147,6 +162,8 @@ export class RteToolbar {
   readonly escape = output<void>();
   /** `Tab` saiu de um menu: o dono leva o foco ao editável (U6). */
   readonly tabOut = output<void>();
+  /** Item de diálogo ou 'Inserir tabela…': o dono abre o diálogo (G11). */
+  readonly dialog = output<RteToolbarDialogRequest>();
 
   private readonly host =
     inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -206,7 +223,12 @@ export class RteToolbar {
         entry('plain', l.plainText),
         ...this.codeLanguages().map((c) => entry(c.id, c.name)),
       ],
-      table: RTE_TABLE_OPS.map((op) => entry(op, l[op], { role: 'menuitem' })),
+      table: RTE_TABLE_OPS.flatMap((op) => [
+        entry(op, l[op], { role: 'menuitem' }),
+        ...(op === 'insertTable'
+          ? [entry(TABLE_CUSTOM, l.insertTableCustom, { role: 'menuitem' })]
+          : []),
+      ]),
       callout: [
         ...CALLOUT_VARIANTS.map((v) => entry(v, titles[v])),
         entry('remove', l.removeCallout, { role: 'menuitem' }),
@@ -278,6 +300,14 @@ export class RteToolbar {
 
   protected label(id: RteToolbarItemId): string {
     return this.labels()[id] as string;
+  }
+
+  /** Nome do botão de diálogo: 'Editar …' quando já há link/idioma sob a seleção. */
+  protected dialogLabel(id: RteToolbarItemId, active: boolean): string {
+    const l = this.labels();
+    if (active && id === 'link') return l.editLink;
+    if (active && id === 'lang') return l.editLang;
+    return this.label(id);
   }
 
   /**
@@ -359,7 +389,7 @@ export class RteToolbar {
     table: TableMenuState | null,
     e: RteMenuEntry,
   ): boolean {
-    return table?.[e.value as RteTableOp]?.spanLimited ?? false;
+    return table?.[tableOpOf(e)]?.spanLimited ?? false;
   }
 
   /** Item de menu aplicável (a tabela consulta os ensaios). */
@@ -370,7 +400,7 @@ export class RteToolbar {
     table: TableMenuState | null,
   ): boolean {
     if (!item.enabled) return false;
-    if (id === 'table') return table?.[e.value as RteTableOp]?.enabled ?? false;
+    if (id === 'table') return table?.[tableOpOf(e)]?.enabled ?? false;
     if (id === 'callout' && e.value === 'remove') return item.value !== null;
     return true;
   }
@@ -400,11 +430,27 @@ export class RteToolbar {
     runToolbarCommand(editor, id, null);
   }
 
-  protected choose(menu: RteMenu, id: RteToolbarItemId, e: RteMenuEntry): void {
+  /** Botão de diálogo: pede ao dono que abra o diálogo do item (G11). */
+  protected openFromItem(id: RteToolbarItemId, origin: HTMLElement): void {
+    if (!this.canRun() || !this.state.item(id)().enabled) return;
+    this.dialog.emit({ kind: id as RteDialogKind, origin });
+  }
+
+  protected choose(
+    menu: RteMenu,
+    id: RteToolbarItemId,
+    e: RteMenuEntry,
+    trigger: HTMLElement,
+  ): void {
     const editor = this.canRun();
     if (!editor) return;
     const table = id === 'table' ? this.tableState(menu) : null;
     if (!this.entryEnabled(id, e, this.state.item(id)(), table)) return;
+    if (id === 'table' && e.value === TABLE_CUSTOM) {
+      menu.close('trigger');
+      this.dialog.emit({ kind: 'table', origin: trigger });
+      return;
+    }
     menu.close('none');
     runToolbarCommand(editor, id, e.value);
   }

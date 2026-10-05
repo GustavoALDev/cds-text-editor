@@ -445,10 +445,21 @@ describe('runToolbarCommand (R5)', () => {
     }
   });
 
-  it('cobre todo item da barra', () => {
+  it('cobre todo item da barra que roda comando (os de diálogo não rodam)', () => {
     const covered = new Set(CASES.map((c) => c.id));
-    expect([...covered].sort()).toEqual(Object.keys(RTE_TOOLBAR_ITEMS).sort());
+    const ids = (Object.keys(RTE_TOOLBAR_ITEMS) as RteToolbarItemId[]).filter(
+      (id) => RTE_TOOLBAR_ITEMS[id].kind !== 'dialog',
+    );
+    expect([...covered].sort()).toEqual(ids.sort());
   });
+
+  it.each(['link', 'lang', 'quoteAuthor'] as const)(
+    'item de diálogo %s não roda comando',
+    (id) => {
+      const editor = createTestEditor('<p>ab</p>');
+      expect(runToolbarCommand(editor, id, null)).toBe(false);
+    },
+  );
 
   it('cobre todo valor dos menus', () => {
     const values = (id: RteToolbarItemId) =>

@@ -4,6 +4,7 @@ import type { Editor } from '@tiptap/core';
 import type { Mark, Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { EditorState } from '@tiptap/pm/state';
 import { isInTable } from '@tiptap/pm/tables';
+import { dialogTarget } from '../dialogs/target';
 import { calloutVariantAt, canShiftListItem } from './commands';
 import type { RteToolbarItemId } from './items';
 import { RTE_INSERT_TABLE } from './table-guard';
@@ -242,6 +243,18 @@ export function readItemState(
         value,
       );
     }
+    case 'link':
+      return itemState(
+        editor.isActive('link'),
+        dialogTarget(editor, 'link') !== null,
+      );
+    case 'lang':
+      return itemState(
+        editor.isActive('rtLang'),
+        dialogTarget(editor, 'lang') !== null,
+      );
+    case 'quoteAuthor':
+      return itemState(false, dialogTarget(editor, 'quoteAuthor') !== null);
     case 'pullquote': {
       const active = editor.isActive('rtPullquote');
       return itemState(
