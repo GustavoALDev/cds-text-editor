@@ -5,9 +5,9 @@
   (close)="onClose()"
 >
   <h2 class="rte-dialog__title" [id]="ids.title">{{ title() }}</h2>
-  @switch (active()?.kind) { @case ('link') {
+  @if (active(); as req) { @switch (req.kind) { @case ('link') {
   <rte-link-form
-    [request]="active()!"
+    [request]="req"
     [controller]="controller()"
     [labels]="labels()"
     [idPrefix]="prefix"
@@ -15,7 +15,7 @@
   />
   } @case ('lang') {
   <rte-lang-form
-    [request]="active()!"
+    [request]="req"
     [controller]="controller()"
     [labels]="labels()"
     [idPrefix]="prefix"
@@ -23,17 +23,17 @@
   />
   } @case ('quoteAuthor') {
   <rte-quote-form
-    [request]="active()!"
+    [request]="req"
     [controller]="controller()"
     [labels]="labels()"
     [idPrefix]="prefix"
   />
   } @case ('table') {
   <rte-table-form
-    [request]="active()!"
+    [request]="req"
     [controller]="controller()"
     [labels]="labels()"
     [idPrefix]="prefix"
   />
-  } }
+  } } }
 </dialog>

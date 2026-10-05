@@ -3,7 +3,6 @@ import {
   Component,
   computed,
   effect,
-  input,
   signal,
   untracked,
   ViewEncapsulation,
@@ -14,10 +13,10 @@ import {
   FormRoot,
   type FieldTree,
 } from '@angular/forms/signals';
-import type { RteDialogLabels } from '../../labels/types';
 import { applyTable } from '../apply';
-import type { RteDialogController, RteDialogRequest } from '../controller';
-import { fieldError, focusFirstInvalid, integerInRange } from '../forms';
+import type { RteDialogRequest } from '../controller';
+import { RteDialogFormBase } from './form-base';
+import { focusFirstInvalid, integerInRange } from '../form-helpers';
 
 /** Limites da tabela nova (G16). */
 const TABLE_ROWS_MAX = 100;
@@ -46,12 +45,7 @@ const TABLE_INITIAL: Readonly<TableModel> = Object.freeze({
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
 })
-export class RteTableForm {
-  readonly request = input.required<RteDialogRequest>();
-  readonly controller = input.required<RteDialogController>();
-  readonly labels = input.required<RteDialogLabels>();
-  readonly idPrefix = input.required<string>();
-
+export class RteTableForm extends RteDialogFormBase {
   protected readonly ids = computed(() => ({
     rows: `${this.idPrefix()}-table-rows`,
     cols: `${this.idPrefix()}-table-cols`,
@@ -78,19 +72,12 @@ export class RteTableForm {
   );
 
   constructor() {
+    super();
     // Pedido novo: valores iniciais no formulário antes do render.
     effect(() => {
       this.request();
       untracked(() => this.form().reset({ ...TABLE_INITIAL }));
     });
-  }
-
-  protected error(field: FieldTree<unknown>): string | null {
-    return fieldError(field, this.labels());
-  }
-
-  protected cancel(): void {
-    this.controller().cancel('cancelled');
   }
 
   private apply(): void {

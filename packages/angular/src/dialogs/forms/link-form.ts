@@ -17,10 +17,10 @@ import {
   type FieldTree,
 } from '@angular/forms/signals';
 import { normalizeHref, type RteLinkPolicy } from '@cds/rte-core';
-import type { RteDialogLabels } from '../../labels/types';
 import { applyLink, linkTargetPreserved, removeLink } from '../apply';
-import type { RteDialogController, RteDialogRequest } from '../controller';
-import { fieldError, focusFirstInvalid } from '../forms';
+import type { RteDialogRequest } from '../controller';
+import { RteDialogFormBase } from './form-base';
+import { focusFirstInvalid } from '../form-helpers';
 import { markAttrs } from './request-attrs';
 
 interface LinkModel {
@@ -48,11 +48,7 @@ function linkValues(req: RteDialogRequest): LinkModel {
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
 })
-export class RteLinkForm {
-  readonly request = input.required<RteDialogRequest>();
-  readonly controller = input.required<RteDialogController>();
-  readonly labels = input.required<RteDialogLabels>();
-  readonly idPrefix = input.required<string>();
+export class RteLinkForm extends RteDialogFormBase {
   readonly linkPolicy = input<Partial<RteLinkPolicy> | undefined>(undefined);
 
   protected readonly ids = computed(() => ({
@@ -96,19 +92,12 @@ export class RteLinkForm {
   );
 
   constructor() {
+    super();
     // Pedido novo: valores atuais no formulário antes do render.
     effect(() => {
       const req = this.request();
       untracked(() => this.form().reset(linkValues(req)));
     });
-  }
-
-  protected error(field: FieldTree<unknown>): string | null {
-    return fieldError(field, this.labels());
-  }
-
-  protected cancel(): void {
-    this.controller().cancel('cancelled');
   }
 
   protected remove(): void {

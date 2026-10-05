@@ -16,10 +16,10 @@ import {
   type FieldTree,
 } from '@angular/forms/signals';
 import type { RteAttrRule } from '@cds/rte-core';
-import type { RteDialogLabels } from '../../labels/types';
 import { applyLang, removeLang } from '../apply';
-import type { RteDialogController, RteDialogRequest } from '../controller';
-import { fieldError, focusFirstInvalid, langCodeValidator } from '../forms';
+import type { RteDialogRequest } from '../controller';
+import { RteDialogFormBase } from './form-base';
+import { focusFirstInvalid, langCodeValidator } from '../form-helpers';
 import { RTE_DIALOG_LANGUAGES } from '../types';
 import { markAttrs } from './request-attrs';
 
@@ -59,11 +59,7 @@ function langValues(req: RteDialogRequest): LangModel {
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
 })
-export class RteLangForm {
-  readonly request = input.required<RteDialogRequest>();
-  readonly controller = input.required<RteDialogController>();
-  readonly labels = input.required<RteDialogLabels>();
-  readonly idPrefix = input.required<string>();
+export class RteLangForm extends RteDialogFormBase {
   readonly langRule = input<RteAttrRule | null>(null);
 
   protected readonly ids = computed(() => ({
@@ -106,6 +102,7 @@ export class RteLangForm {
   );
 
   constructor() {
+    super();
     // Pedido novo: valores atuais no formulário antes do render.
     effect(() => {
       const req = this.request();
@@ -114,14 +111,6 @@ export class RteLangForm {
         this.form().reset(langValues(req));
       });
     });
-  }
-
-  protected error(field: FieldTree<unknown>): string | null {
-    return fieldError(field, this.labels());
-  }
-
-  protected cancel(): void {
-    this.controller().cancel('cancelled');
   }
 
   /** Idioma escolhido: `ar`/`he` sugerem `rtl`; os demais desfazem a sugestão. */

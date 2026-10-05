@@ -3,7 +3,6 @@ import {
   Component,
   computed,
   effect,
-  input,
   signal,
   untracked,
   ViewEncapsulation,
@@ -15,10 +14,10 @@ import {
   maxLength,
   type FieldTree,
 } from '@angular/forms/signals';
-import type { RteDialogLabels } from '../../labels/types';
 import { applyQuote } from '../apply';
-import type { RteDialogController, RteDialogRequest } from '../controller';
-import { fieldError, focusFirstInvalid } from '../forms';
+import type { RteDialogRequest } from '../controller';
+import { RteDialogFormBase } from './form-base';
+import { focusFirstInvalid } from '../form-helpers';
 
 /** Tamanho máximo de autor e cargo (G15; limite só da interface). */
 const QUOTE_MAX = 200;
@@ -51,12 +50,7 @@ function quoteValues(req: RteDialogRequest): QuoteModel {
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
 })
-export class RteQuoteForm {
-  readonly request = input.required<RteDialogRequest>();
-  readonly controller = input.required<RteDialogController>();
-  readonly labels = input.required<RteDialogLabels>();
-  readonly idPrefix = input.required<string>();
-
+export class RteQuoteForm extends RteDialogFormBase {
   protected readonly ids = computed(() => ({
     author: `${this.idPrefix()}-quote-author`,
     role: `${this.idPrefix()}-quote-role`,
@@ -81,19 +75,12 @@ export class RteQuoteForm {
   );
 
   constructor() {
+    super();
     // Pedido novo: valores atuais no formulário antes do render.
     effect(() => {
       const req = this.request();
       untracked(() => this.form().reset(quoteValues(req)));
     });
-  }
-
-  protected error(field: FieldTree<unknown>): string | null {
-    return fieldError(field, this.labels());
-  }
-
-  protected cancel(): void {
-    this.controller().cancel('cancelled');
   }
 
   private apply(): void {
