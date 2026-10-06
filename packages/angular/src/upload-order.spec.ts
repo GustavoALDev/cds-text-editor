@@ -14,7 +14,6 @@ import {
   addGesture,
   dispatchMeta,
   markersEditor,
-  mediaSrcs,
   uploadState,
 } from './testing-support/upload-markers';
 
@@ -74,6 +73,14 @@ const caseArb = fc.integer({ min: 1, max: 5 }).chain((n) =>
     point: fc.nat(),
     n: fc.constant(n),
     videos: fc.array(fc.boolean(), { minLength: n, maxLength: n }),
+    // `src` por arquivo: às vezes repetido no gesto (a ordem vem da legenda)
+    srcs: fc.oneof(
+      fc.constant(Array.from({ length: n }, (_, i) => i)),
+      fc.array(fc.integer({ min: 0, max: 1 }), {
+        minLength: n,
+        maxLength: n,
+      }),
+    ),
     // permutação das chegadas e o destino de cada arquivo
     order: fc.shuffledSubarray(
       Array.from({ length: n }, (_, i) => i),
@@ -152,6 +159,19 @@ function runEdit(editor: Editor, e: Exclude<Edit, { op: 'event' }>): void {
   }
 }
 
+/** Índices (legenda) das mídias do gesto, em ordem do documento. */
+function gestureIndices(doc: ProseMirrorNode): number[] {
+  const out: number[] = [];
+  doc.descendants((node) => {
+    if (SRC.test(String(node.attrs['src'] ?? ''))) {
+      out.push(Number(node.attrs['caption']));
+      return false;
+    }
+    return true;
+  });
+  return out;
+}
+
 /** Faixas `[from, to)` das mídias do gesto, em ordem do documento. */
 function gestureSpans(doc: ProseMirrorNode): [number, number][] {
   const out: [number, number][] = [];
@@ -164,14 +184,6 @@ function gestureSpans(doc: ProseMirrorNode): [number, number][] {
   });
   return out;
 }
-
-const emptyParagraphs = (doc: ProseMirrorNode) => {
-  let n = 0;
-  doc.descendants((node) => {
-    if (node.type.name === 'paragraph' && node.content.size === 0) n += 1;
-  });
-  return n;
-};
 
 /** Ids dos outros marcadores que estão num parágrafo vazio. */
 function inEmptyParagraph(editor: Editor, except: string): string[] {
@@ -195,7 +207,14 @@ describe('ordem do gesto: propriedade (R6, E11)', () => {
         fc.property(caseArb, (c) => {
           destroyTestEditors();
           const editor = markersEditor('');
-          editor.commands.setContent(c.doc, { emitUpdate: false });
+          // carga fora do histórico, como a carga externa do `RteEditor` (que
+          // ainda cancela os envios antes, Tarefa 6): desfazer não troca o
+          // documento inteiro por baixo dos marcadores
+          editor
+            .chain()
+            .setMeta('addToHistory', false)
+            .setContent(c.doc, { emitUpdate: false })
+            .run();
           caretAt(editor, c.point);
           const origin = editor.state.doc.resolve(editor.state.selection.to);
           const parent = origin.depth > 0 ? origin.node(-1) : null;
@@ -207,12 +226,21 @@ describe('ordem do gesto: propriedade (R6, E11)', () => {
             !!parent &&
             !!image &&
             parent.canReplaceWith(index, index + 1, image);
-          const emptyBefore = emptyParagraphs(editor.state.doc);
+          // o parágrafo de origem, seguido pelo mapeamento (as correções de
+          // tabela do core acrescentam parágrafos vazios: contar não serve)
+          let originInner = origin.pos;
+          let originGone = false;
           const markerTrs: Transaction[] = [];
-          editor.on('transaction', ({ transaction }) => {
+          editor.on('transaction', ({ transaction, appendedTransactions }) => {
             const meta = transaction.getMeta(RTE_UPLOAD_KEY) as
               RteUploadMeta | undefined;
             if (meta && !meta.placed) markerTrs.push(transaction);
+            // inclusive as transações acrescentadas (correção de tabelas)
+            for (const tr of [transaction, ...appendedTransactions]) {
+              const r = tr.mapping.mapResult(originInner, 1);
+              if (r.deleted) originGone = true;
+              originInner = r.pos;
+            }
           });
           const markers = addGesture(editor, c.n, { prefix: 'up-' });
           let edited = false;
@@ -228,18 +256,19 @@ describe('ordem do gesto: propriedade (R6, E11)', () => {
             }
             const guarded = inEmptyParagraph(editor, id);
             const video = c.videos[i] === true;
-            const src = `/up-${i}.${video ? 'webm' : 'png'}`;
+            const src = `/up-${c.srcs[i] ?? i}.${video ? 'webm' : 'png'}`;
+            const caption = String(i);
             const ok = video
               ? insertUploaded(editor, {
                   id,
                   type: 'video',
-                  attrs: { src },
+                  attrs: { src, caption },
                   select: c.selects[i] === true,
                 })
               : insertUploaded(editor, {
                   id,
                   type: 'image',
-                  attrs: { src, alt: null },
+                  attrs: { src, alt: null, caption },
                   select: c.selects[i] === true,
                 });
             expect(ok).toBe(true);
@@ -262,10 +291,7 @@ describe('ordem do gesto: propriedade (R6, E11)', () => {
           expect(uploadState(editor).markers).toEqual([]);
           expect(markerTrs.every((tr) => !tr.docChanged)).toBe(true);
           // ordem do gesto = ordem dos arquivos
-          const indices = mediaSrcs(editor.state.doc)
-            .map((src) => SRC.exec(src)?.[1])
-            .filter((x): x is string => x !== undefined)
-            .map(Number);
+          const indices = gestureIndices(editor.state.doc);
           expect(indices).toEqual([...indices].sort((a, b) => a - b));
           if (!edited) {
             expect(indices).toHaveLength(arrived);
@@ -276,7 +302,7 @@ describe('ordem do gesto: propriedade (R6, E11)', () => {
             }
             // Ruling 7: só sem edições, e com todos chegando
             if (arrived === c.n && originEmpty) {
-              expect(emptyParagraphs(editor.state.doc)).toBe(emptyBefore - 1);
+              expect(originGone).toBe(true);
             }
           }
         }),

@@ -471,6 +471,32 @@ describe('ordem do gesto (E11, R6)', () => {
     expect(mediaSrcs(editor.state.doc)).toEqual(['/a.png', '/c.png']);
   });
 
+  it('src repetido no gesto: a retomada não toma o nó de um irmão (início)', () => {
+    const editor = markersEditor('<p>abc</p>');
+    addGesture(editor, 3, { pos: 2 });
+    expect(arrive(editor, 'm3', '/s.png')).toBe(true);
+    expect(arrive(editor, 'm1', '/s.png')).toBe(true);
+    // desfazer o m1: o ponto da faixa dele é o início do nó do m3
+    editor.commands.undo();
+    const held = uploadState(editor).placed.filter((p) => p.from < p.to);
+    expect(held.map((p) => p.index)).toEqual([2]);
+    expect(arrive(editor, 'm2', '/b.png')).toBe(true);
+    expect(mediaSrcs(editor.state.doc)).toEqual(['/b.png', '/s.png']);
+  });
+
+  it('src repetido no gesto: a retomada não toma o nó de um irmão (fim)', () => {
+    const editor = markersEditor('<p>abc</p>');
+    addGesture(editor, 3, { pos: 2 });
+    expect(arrive(editor, 'm1', '/s.png')).toBe(true);
+    expect(arrive(editor, 'm3', '/s.png')).toBe(true);
+    // desfazer o m3: o ponto da faixa dele é o fim do nó do m1
+    editor.commands.undo();
+    const held = uploadState(editor).placed.filter((p) => p.from < p.to);
+    expect(held.map((p) => p.index)).toEqual([0]);
+    expect(arrive(editor, 'm2', '/b.png')).toBe(true);
+    expect(mediaSrcs(editor.state.doc)).toEqual(['/s.png', '/b.png']);
+  });
+
   it('Review Focus 4: mesmo src nos dois, seleção no segundo nó', () => {
     const editor = markersEditor('<p>abc</p>');
     addGesture(editor, 2, { pos: 2 });
