@@ -120,7 +120,7 @@ export interface RteE2eApi {
   /** `uploadFiles(files)` do editor `id`; os aceitos (E5). */
   uploadFiles(id: RteE2eId, files: File[]): number;
   cancelAllUploads(id: RteE2eId): void;
-  /** Troca o `[upload]` do editor `id` (Ruling 14). */
+  /** Troca o `[upload]` do editor `id` (Ruling 14), já aplicado ao voltar (`tick`). */
   setUpload(id: RteE2eId, mode: RteE2eUploadMode, query?: string): void;
   /** Passa a contar as mutações do `rte-floating-menus` do editor `id` (R16). */
   watchFloating(id: RteE2eId): void;
@@ -365,6 +365,11 @@ export function installE2eBridge(): void {
           const set = bridge.handle(id).setUpload;
           if (!set) throw new Error(`rteE2e: editor '${id}' sem [upload].`);
           set(mode, query);
+          // O `[upload]` só chega ao editor na detecção de mudanças; sem ela,
+          // um `uploadFiles` logo em seguida (outro `evaluate`, antes do
+          // agendador: visto no WebKit) usa a configuração anterior e a troca
+          // (E17) o aborta ou descarta em espera do chunk, sem `uploadError`.
+          appRef.tick();
         }),
       zoneTurns: () => turns,
       readyAt: bridge.readyAt,

@@ -784,6 +784,12 @@
     .rte-editor .rte-upload-marker {
       border-color: CanvasText;
     }
+
+    /* Na fila: --rte-text-muted fica abaixo de 4,5:1 sobre Canvas nos motores que não
+     * forçam as cores (WebKit), como a dica do diálogo. */
+    .rte-editor .rte-upload-marker--queued {
+      color: CanvasText;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
