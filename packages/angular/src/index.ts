@@ -25,6 +25,7 @@ export type {
   RteLabelsInput,
   RteLabelsSource,
   RteToolbarLabels,
+  RteUploadLabels,
 } from './labels/types';
 export { RteUploadError } from './upload/types';
 export type {

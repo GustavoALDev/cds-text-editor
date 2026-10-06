@@ -1174,3 +1174,222 @@ describe('rótulos de mídia (05c1)', () => {
     expect(merged.dialogs.embedUrlHint(['a', 'b'])).toBe('a|b');
   });
 });
+
+describe('rótulos do envio de arquivos (05c2a, E20)', () => {
+  const packs = [
+    ['en', RTE_LABELS_EN],
+    ['pt-BR', RTE_LABELS_PT_BR],
+    ['es', RTE_LABELS_ES],
+  ] as const;
+  const REASONS = [
+    'type',
+    'size',
+    'count',
+    'network',
+    'server',
+    'response',
+    'unavailable',
+  ] as const;
+
+  const COPY = {
+    en: {
+      region: 'Uploads',
+      progress: 'Uploading a.png',
+      queued: 'a.png (waiting)',
+      cancel: 'Cancel upload of a.png',
+      start1: 'Uploading 1 file.',
+      start3: 'Uploading 3 files.',
+      done: 'a.png uploaded.',
+      cancelled: 'Upload of a.png cancelled.',
+      error: {
+        type: 'Could not upload a.png: file type not accepted.',
+        size: 'Could not upload a.png: file too large.',
+        count: 'Could not upload a.png: too many files at once.',
+        network: 'Could not upload a.png: connection failed.',
+        server: 'Could not upload a.png: the server refused it.',
+        response: 'Could not upload a.png: invalid server response.',
+        unavailable: 'Could not upload a.png: the editor is not editable.',
+      },
+      mediaSource: 'Source',
+      mediaSourceFile: 'File',
+      mediaSourceUrl: 'Address (URL)',
+      imageFile: 'Image file',
+      videoFile: 'Video file',
+      fileHint: 'Accepted: PNG, JPEG. Up to 10 MB.',
+      errorFileRequired: 'Choose a file.',
+      errorFileType: 'This file type is not accepted.',
+      errorFileSize: 'The file is larger than 10 MB.',
+      pending1: 'Wait for 1 upload to finish.',
+      pending2: 'Wait for 2 uploads to finish.',
+      missingAlt1: '1 image has no alternative text.',
+      missingAlt2: '2 images have no alternative text.',
+    },
+    'pt-BR': {
+      region: 'Envios',
+      progress: 'Enviando a.png',
+      queued: 'a.png (na fila)',
+      cancel: 'Cancelar envio de a.png',
+      start1: 'Enviando 1 arquivo.',
+      start3: 'Enviando 3 arquivos.',
+      done: 'a.png enviado.',
+      cancelled: 'Envio de a.png cancelado.',
+      error: {
+        type: 'Não foi possível enviar a.png: tipo de arquivo não aceito.',
+        size: 'Não foi possível enviar a.png: arquivo grande demais.',
+        count: 'Não foi possível enviar a.png: arquivos demais de uma vez.',
+        network: 'Não foi possível enviar a.png: falha de conexão.',
+        server: 'Não foi possível enviar a.png: o servidor recusou.',
+        response:
+          'Não foi possível enviar a.png: resposta inválida do servidor.',
+        unavailable:
+          'Não foi possível enviar a.png: o editor não está editável.',
+      },
+      mediaSource: 'Origem',
+      mediaSourceFile: 'Arquivo',
+      mediaSourceUrl: 'Endereço (URL)',
+      imageFile: 'Arquivo de imagem',
+      videoFile: 'Arquivo de vídeo',
+      fileHint: 'Aceitos: PNG, JPEG. Até 10 MB.',
+      errorFileRequired: 'Escolha um arquivo.',
+      errorFileType: 'Este tipo de arquivo não é aceito.',
+      errorFileSize: 'O arquivo passa de 10 MB.',
+      pending1: 'Aguarde o fim de 1 envio.',
+      pending2: 'Aguarde o fim de 2 envios.',
+      missingAlt1: '1 imagem sem texto alternativo.',
+      missingAlt2: '2 imagens sem texto alternativo.',
+    },
+    es: {
+      region: 'Envíos',
+      progress: 'Enviando a.png',
+      queued: 'a.png (en cola)',
+      cancel: 'Cancelar envío de a.png',
+      start1: 'Enviando 1 archivo.',
+      start3: 'Enviando 3 archivos.',
+      done: 'a.png enviado.',
+      cancelled: 'Envío de a.png cancelado.',
+      error: {
+        type: 'No se pudo enviar a.png: tipo de archivo no aceptado.',
+        size: 'No se pudo enviar a.png: archivo demasiado grande.',
+        count: 'No se pudo enviar a.png: demasiados archivos a la vez.',
+        network: 'No se pudo enviar a.png: fallo de conexión.',
+        server: 'No se pudo enviar a.png: el servidor lo rechazó.',
+        response: 'No se pudo enviar a.png: respuesta del servidor no válida.',
+        unavailable: 'No se pudo enviar a.png: el editor no es editable.',
+      },
+      mediaSource: 'Origen',
+      mediaSourceFile: 'Archivo',
+      mediaSourceUrl: 'Dirección (URL)',
+      imageFile: 'Archivo de imagen',
+      videoFile: 'Archivo de vídeo',
+      fileHint: 'Se aceptan: PNG, JPEG. Hasta 10 MB.',
+      errorFileRequired: 'Elige un archivo.',
+      errorFileType: 'Este tipo de archivo no se acepta.',
+      errorFileSize: 'El archivo supera 10 MB.',
+      pending1: 'Espera a que termine 1 envío.',
+      pending2: 'Espera a que terminen 2 envíos.',
+      missingAlt1: '1 imagen sin texto alternativo.',
+      missingAlt2: '2 imágenes sin texto alternativo.',
+    },
+  } as const;
+
+  it('fixa o número de chaves das seções', () => {
+    for (const [name, pack] of packs) {
+      expect(Object.keys(pack.upload).length, name).toBe(8);
+      expect(Object.keys(pack.errors).length, name).toBe(5);
+      expect(Object.keys(pack.dialogs).length, name).toBe(82);
+    }
+  });
+
+  it('cada texto novo é igual ao da tabela, nos três idiomas', () => {
+    for (const [name, pack] of packs) {
+      const c = COPY[name];
+      const u = pack.upload;
+      expect(u.region, name).toBe(c.region);
+      expect(u.progress('a.png'), name).toBe(c.progress);
+      expect(u.queued('a.png'), name).toBe(c.queued);
+      expect(u.cancel('a.png'), name).toBe(c.cancel);
+      expect(u.announceStart(1), name).toBe(c.start1);
+      expect(u.announceStart(3), name).toBe(c.start3);
+      expect(u.announceDone('a.png'), name).toBe(c.done);
+      expect(u.announceCancelled('a.png'), name).toBe(c.cancelled);
+      for (const reason of REASONS)
+        expect(u.announceError('a.png', reason), `${name}.${reason}`).toBe(
+          c.error[reason],
+        );
+      const d = pack.dialogs;
+      expect(d.mediaSource, name).toBe(c.mediaSource);
+      expect(d.mediaSourceFile, name).toBe(c.mediaSourceFile);
+      expect(d.mediaSourceUrl, name).toBe(c.mediaSourceUrl);
+      expect(d.imageFile, name).toBe(c.imageFile);
+      expect(d.videoFile, name).toBe(c.videoFile);
+      expect(d.fileHint(['PNG', 'JPEG'], 10), name).toBe(c.fileHint);
+      expect(d.errorFileRequired, name).toBe(c.errorFileRequired);
+      expect(d.errorFileType, name).toBe(c.errorFileType);
+      expect(d.errorFileSize(10), name).toBe(c.errorFileSize);
+      expect(pack.errors.rteUploadsPending(1), name).toBe(c.pending1);
+      expect(pack.errors.rteUploadsPending(2), name).toBe(c.pending2);
+      expect(pack.errors.rteImagesMissingAlt(1), name).toBe(c.missingAlt1);
+      expect(pack.errors.rteImagesMissingAlt(2), name).toBe(c.missingAlt2);
+    }
+  });
+
+  it('literais do plano', () => {
+    expect(RTE_LABELS_EN.upload.cancel('a.png')).toBe('Cancel upload of a.png');
+    expect(RTE_LABELS_PT_BR.upload.announceStart(2)).toBe(
+      'Enviando 2 arquivos.',
+    );
+    expect(RTE_LABELS_ES.dialogs.fileHint(['PNG', 'JPEG'], 1)).toBe(
+      'Se aceptan: PNG, JPEG. Hasta 1 MB.',
+    );
+    expect(RTE_LABELS_PT_BR.errors.rteImagesMissingAlt(1)).toBe(
+      '1 imagem sem texto alternativo.',
+    );
+  });
+
+  it('mergeLabels protege as funções de upload e mescla region', () => {
+    const merged = mergeLabels(RTE_LABELS_EN, {
+      upload: {
+        cancel: () => 7 as never,
+        region: 'X',
+        progress: () => {
+          throw new Error('x');
+        },
+        announceStart: (c) => `n=${c}`,
+      },
+    });
+    expect(merged.upload.cancel('a')).toBe('Cancel upload of a');
+    expect(merged.upload.region).toBe('X');
+    expect(merged.upload.progress('a')).toBe('Uploading a');
+    expect(merged.upload.announceStart(2)).toBe('n=2');
+    expect(merged.upload.queued('a')).toBe('a (waiting)');
+  });
+
+  it('mergeLabels protege as funções novas de dialogs e errors', () => {
+    const merged = mergeLabels(RTE_LABELS_EN, {
+      dialogs: {
+        fileHint: () => 1 as never,
+        errorFileSize: (m) => `big ${m}`,
+        errorFileType: 'T',
+      },
+      errors: {
+        rteUploadsPending: () => {
+          throw new Error('x');
+        },
+        rteImagesMissingAlt: (c) => `alt ${c}`,
+      },
+    });
+    expect(merged.dialogs.fileHint(['A'], 2)).toBe('Accepted: A. Up to 2 MB.');
+    expect(merged.dialogs.errorFileSize(3)).toBe('big 3');
+    expect(merged.dialogs.errorFileType).toBe('T');
+    expect(merged.errors.rteUploadsPending(1)).toBe(
+      'Wait for 1 upload to finish.',
+    );
+    expect(merged.errors.rteImagesMissingAlt(4)).toBe('alt 4');
+  });
+
+  it('mergeLabels ignora upload que não é objeto', () => {
+    expect(mergeLabels(RTE_LABELS_EN, { upload: 1 as never }).upload).toBe(
+      RTE_LABELS_EN.upload,
+    );
+  });
+});

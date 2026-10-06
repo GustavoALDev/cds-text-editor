@@ -2,6 +2,7 @@ import type {
   RteContentLabels,
   RteSlashLabels,
 } from '@cds/rte-core/extensions';
+import type { RteUploadErrorReason } from '../upload/types';
 
 export interface RteEditorLabels {
   /** Nome acessível do editável sem `ariaLabel` nem `ariaLabelledBy`. */
@@ -12,6 +13,8 @@ export interface RteErrorLabels {
   rteRequired: string;
   rteMaxChars(error: { max: number; actual: number }): string;
   rteMaxWords(error: { max: number; actual: number }): string;
+  rteUploadsPending(count: number): string;
+  rteImagesMissingAlt(count: number): string;
 }
 
 export interface RteToolbarLabels {
@@ -158,6 +161,29 @@ export interface RteDialogLabels {
   embedCaption: string;
   errorMediaUrl: string;
   errorEmbedUrl: string;
+  /** `<legend>` da origem da mídia (arquivo ou endereço). */
+  mediaSource: string;
+  mediaSourceFile: string;
+  mediaSourceUrl: string;
+  imageFile: string;
+  videoFile: string;
+  fileHint(types: readonly string[], maxMegabytes: number): string;
+  errorFileRequired: string;
+  errorFileType: string;
+  errorFileSize(maxMegabytes: number): string;
+}
+
+export interface RteUploadLabels {
+  /** Nome acessível da bandeja de envios. */
+  region: string;
+  /** Nome acessível do `<progress>` do item. */
+  progress(name: string): string;
+  queued(name: string): string;
+  cancel(name: string): string;
+  announceStart(count: number): string;
+  announceDone(name: string): string;
+  announceCancelled(name: string): string;
+  announceError(name: string, reason: RteUploadErrorReason): string;
 }
 
 export interface RteFloatingMenuLabels {
@@ -192,6 +218,7 @@ export interface RteLabels {
   readonly toolbar: RteToolbarLabels;
   readonly dialogs: RteDialogLabels;
   readonly floating: RteFloatingMenuLabels;
+  readonly upload: RteUploadLabels;
 }
 
 export interface RteLabelsInput {
@@ -208,6 +235,7 @@ export interface RteLabelsInput {
     languageNames?: Readonly<Record<string, string>>;
   };
   floating?: Partial<RteFloatingMenuLabels>;
+  upload?: Partial<RteUploadLabels>;
 }
 
 /** Objeto parcial ou função lida dentro de `computed` (pode ler signals) (D15). */
