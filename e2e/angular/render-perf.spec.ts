@@ -36,9 +36,9 @@ test.describe('L7 desempenho e ticks', () => {
   }) => {
     test.setTimeout(180_000);
     const fixture = readFixture('all-features.html');
-    const document = fixture.repeat(Math.ceil(MIN_CHARS / fixture.length));
-    expect(document.length).toBeGreaterThanOrEqual(MIN_CHARS);
-    const words = document
+    const bigHtml = fixture.repeat(Math.ceil(MIN_CHARS / fixture.length));
+    expect(bigHtml.length).toBeGreaterThanOrEqual(MIN_CHARS);
+    const words = bigHtml
       .replace(/<[^>]*>/g, ' ')
       .split(/\s+/)
       .filter(Boolean).length;
@@ -60,7 +60,7 @@ test.describe('L7 desempenho e ticks', () => {
         }
         return result;
       },
-      { html: document, warmups: WARMUPS, runs: RUNS },
+      { html: bigHtml, warmups: WARMUPS, runs: RUNS },
     );
     expect(times).toHaveLength(RUNS);
     const rendered = await page.evaluate(
@@ -71,7 +71,7 @@ test.describe('L7 desempenho e ticks', () => {
       await page.evaluate(() => window.rteE2e.renderError('render-input')),
     ).toBeFalsy();
     const { median, p95 } = summarize(times);
-    const description = `${browserName}: mediana ${median.toFixed(0)} ms, p95 ${p95.toFixed(0)} ms (${RUNS} medições, ${WARMUPS} aquecimentos, ${document.length} caracteres, ~${words} palavras, ${rendered} caracteres exibidos)`;
+    const description = `${browserName}: mediana ${median.toFixed(0)} ms, p95 ${p95.toFixed(0)} ms (${RUNS} medições, ${WARMUPS} aquecimentos, ${bigHtml.length} caracteres, ~${words} palavras, ${rendered} caracteres exibidos)`;
     test.info().annotations.push({ type: 'R14', description });
     console.log(`R14 ${description}`);
     expect(median).toBeLessThan(5000);
