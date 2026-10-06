@@ -107,7 +107,8 @@ function findNodes(
  * faixa é retomada onde ele estiver: o ponto colapsado não serve de pista,
  * porque um trecho apagado que atravessa fins de bloco (`</p></li></ul>`)
  * colapsa longe de onde o nó volta. Outro nó com o mesmo `src` (outro
- * arquivo do gesto, uma colagem) nunca conta.
+ * arquivo do gesto, uma colagem) nunca conta; exceto uma cópia por arrasto
+ * (Alt+arrastar), que compartilha a instância (ruling 25).
  */
 function mapState(
   prev: RteUploadPluginState,

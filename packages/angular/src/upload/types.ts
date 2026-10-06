@@ -55,14 +55,14 @@ export type RteUploadErrorReason =
   'type' | 'size' | 'count' | 'network' | 'server' | 'response' | 'unavailable';
 
 /** Motivos que o adaptador pode dar (E4). */
-export type AdapterReason = 'network' | 'server' | 'response';
+export type RteUploadAdapterReason = 'network' | 'server' | 'response';
 
 /** Lançada pelo adaptador para dar o motivo da falha (E4). */
 export class RteUploadError extends Error {
   override readonly name = 'RteUploadError';
-  readonly reason: AdapterReason;
+  readonly reason: RteUploadAdapterReason;
 
-  constructor(reason: AdapterReason, options?: { cause?: unknown }) {
+  constructor(reason: RteUploadAdapterReason, options?: { cause?: unknown }) {
     super(`Falha no envio do arquivo: ${reason}`, options);
     this.reason = reason;
   }

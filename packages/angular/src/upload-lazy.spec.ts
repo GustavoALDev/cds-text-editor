@@ -33,6 +33,7 @@ import { RTE_UPLOAD_KEY } from './upload/markers';
   template: `<rte-editor
     [value]="value()"
     [upload]="upload()"
+    [readonly]="ro()"
     (valueChange)="log.push('value')"
     (uploadError)="errors.push($event)"
   />`,
@@ -41,6 +42,7 @@ import { RTE_UPLOAD_KEY } from './upload/markers';
 class Host {
   readonly value = signal('<p>ab</p>');
   readonly upload = signal<RteUploadConfig | null>(null);
+  readonly ro = signal(false);
   readonly log: string[] = [];
   readonly errors: RteUploadErrorEvent[] = [];
   readonly cmp = viewChild.required(RteEditor);
@@ -246,6 +248,30 @@ describe('carga sob demanda (Ruling 28)', () => {
     await drain(s);
     const [marker] = RTE_UPLOAD_KEY.getState(s.editor.state)?.markers ?? [];
     expect(marker?.pos).toBe(4);
+  });
+
+  it('somente leitura antes da carga chegar: os em espera viram unavailable, um anúncio', async () => {
+    const gated = gatedLoader();
+    const s = await setup({ loader: gated.loader });
+    s.editor.commands.focus('end');
+    expect(s.cmp.uploadFiles([png('a.png'), png('b.png')])).toBe(2);
+    s.host.ro.set(true);
+    await settle(s.fixture);
+    const before = uploadsOf(s.cmp).announcement()?.n ?? 0;
+    gated.release();
+    await drain(s);
+    expect(s.host.errors).toEqual([
+      { fileName: 'a.png', type: 'image', reason: 'unavailable' },
+      { fileName: 'b.png', type: 'image', reason: 'unavailable' },
+    ]);
+    expect(uploadsOf(s.cmp).announcement()).toMatchObject({
+      n: before + 1,
+      kind: 'error',
+      names: ['a.png', 'b.png'],
+    });
+    expect(s.adapter.calls).toEqual([]);
+    expect(s.cmp.uploads()).toEqual([]);
+    expect(markerIds(s.editor)).toEqual([]);
   });
 
   it('falha da carga: unavailable por arquivo e um anúncio; os gestos seguintes também', async () => {

@@ -202,7 +202,7 @@ export default [
             {
               group: ['@cds/rte-core/html'],
               message:
-                'O entry . não importa @cds/rte-core/html; medir texto é do /validators (spec 05a, R1).',
+                'O entry /upload não importa @cds/rte-core/html; medir texto é do /validators (spec 05a, R1).',
             },
             {
               group: ['@angular/*', '@cds/rte-angular', '@cds/rte-angular/*'],

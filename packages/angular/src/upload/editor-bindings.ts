@@ -7,7 +7,7 @@ import {
   type Signal,
 } from '@angular/core';
 import type { RteHtmlSchema } from '@cds/rte-core';
-import type { Editor } from '@tiptap/core';
+import type { Editor, Extension } from '@tiptap/core';
 import type { RteUploadLabels } from '../labels/types';
 import { announcementTexts } from './announce';
 import { createDialogUploads, type RteDialogUploads } from './dialog-port';
@@ -67,7 +67,7 @@ export class RteEditorUploads extends RteUploads {
   }
 
   /** Colar e soltar arquivos (E12, E13): no principal, Ruling 29. */
-  inputExtension() {
+  inputExtension(): Extension {
     return createUploadInputExtension(this);
   }
 

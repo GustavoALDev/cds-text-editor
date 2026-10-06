@@ -9,6 +9,7 @@ import type {
   RteFloatingMenusConfig,
   RteMediaChange,
   RteMediaSession,
+  RteUploadAdapterReason,
   RteUploadConfig,
   RteUploadErrorEvent,
   RteUploadStatus,
@@ -68,6 +69,7 @@ describe('@cds/rte-angular', () => {
     expect(e).toBeInstanceOf(Error);
     expect(e.name).toBe('RteUploadError');
     expect(e.reason).toBe('server');
+    expectTypeOf(e.reason).toEqualTypeOf<RteUploadAdapterReason>();
     expect(e.cause).toBe(1);
   });
 

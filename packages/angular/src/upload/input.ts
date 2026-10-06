@@ -17,7 +17,9 @@ function outsideFiles(view: EditorView, event: DragEvent): boolean {
 
 function allowDrop(view: EditorView, event: DragEvent): boolean {
   if (outsideFiles(view, event)) event.preventDefault();
-  // `false`: o `Dropcursor` e o resto do ProseMirror continuam
+  // Com `preventDefault`, o ProseMirror pula o seu próprio tratamento de
+  // dragover/dragenter; só o `Dropcursor` segue funcionando (usa
+  // `addEventListener`). Retorna `false` para não encerrar a cadeia.
   return false;
 }
 

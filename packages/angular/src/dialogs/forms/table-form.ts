@@ -20,6 +20,11 @@ import {
 } from '@angular/forms/signals';
 import { applyTable } from '../apply';
 import type { RteDialogRequest } from '../controller';
+import {
+  focusFirstInvalid,
+  integerError,
+  nonIntegerCheck,
+} from '../form-helpers';
 import { RteDialogFormBase } from './form-base';
 
 /**
@@ -39,11 +44,6 @@ function integerInRange(
   max(path, hi, { error });
   validate(path, nonIntegerCheck(error));
 }
-import {
-  focusFirstInvalid,
-  integerError,
-  nonIntegerCheck,
-} from '../form-helpers';
 
 /** Limites da tabela nova (G16). */
 const TABLE_ROWS_MAX = 100;

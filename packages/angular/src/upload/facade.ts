@@ -255,7 +255,21 @@ export class RteUploads implements RteUploadInput {
     this.host.zone.run(() => this.runtime.set(runtime));
     const pending = this.pending;
     this.pending = [];
-    for (const p of pending) runtime.manager.start(p.files, p.at, p.text);
+    const cfg = untracked(this.host.config);
+    if (cfg && (!this.host.canInsert() || !untracked(this.host.rules))) {
+      // Ficou somente leitura (ou sem mídia no esquema) durante a carga.
+      this.refuse(
+        pending.flatMap((p) =>
+          p.files.map((file) => ({
+            file,
+            type: validateUploadFile(file, cfg).type,
+            reason: 'unavailable' as const,
+          })),
+        ),
+      );
+    } else {
+      for (const p of pending) runtime.manager.start(p.files, p.at, p.text);
+    }
     this.syncWaiting();
   }
 

@@ -31,6 +31,7 @@ export { RteUploadError } from './upload/types';
 export type {
   RteUploadAdapter,
   RteUploadConfig,
+  RteUploadAdapterReason,
   RteUploadContext,
   RteUploadedImage,
   RteUploadedVideo,

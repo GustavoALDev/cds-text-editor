@@ -334,6 +334,20 @@ describe('foco quando o item focado sai sem cancelar (Ruling 31)', () => {
     expect(document.activeElement).toBe(s.editor.view.dom);
   });
 
+  it('o foco saiu da bandeja sem destino (relatedTarget nulo): o envio que termina não o puxa de volta', async () => {
+    const s = await setup();
+    await three(s);
+    const button = cancelButton(s.root, 0);
+    button.focus();
+    button.blur();
+    expect(document.activeElement).toBe(document.body);
+    await Promise.resolve();
+    s.adapter.resolve(0, { url: '/a.png' });
+    await drain(s.fixture);
+    expect(names(s.root)).toEqual(['b.png', 'c.png']);
+    expect(document.activeElement).toBe(document.body);
+  });
+
   it('sem foco na bandeja, um envio que termina não move o foco', async () => {
     const s = await setup();
     await three(s);

@@ -106,7 +106,16 @@ export class RteUploadTray {
   /** Saída para fora da bandeja; sem destino (remoção do botão), mantém. */
   protected onFocusOut(event: FocusEvent): void {
     const to = event.relatedTarget;
-    if (to instanceof Node && !this.host.contains(to)) this.focused = null;
+    if (to instanceof Node) {
+      if (!this.host.contains(to)) this.focused = null;
+      return;
+    }
+    // Sem destino: o foco foi para o nada (clique fora) ou o botão foi
+    // removido; só no segundo caso o nó deixa de estar conectado.
+    const from = event.target as Node;
+    queueMicrotask(() => {
+      if (from.isConnected) this.focused = null;
+    });
   }
 
   /**
