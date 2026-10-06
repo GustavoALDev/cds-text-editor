@@ -823,19 +823,25 @@ describe('editor.css: diálogos (spec 05b2a, G20)', () => {
     ).toBe(true);
   });
 
-  it('forced-colors: dica do diálogo em CanvasText (o GrayText do --rte-text-muted fica abaixo de 4,5:1)', () => {
-    const rules: Rule[] = [];
-    root.walkAtRules('media', (at) => {
-      if (/forced-colors:\s*active/.test(at.params))
-        at.walkRules((r) => void rules.push(r));
-    });
-    const hint = rules.filter((r) =>
-      r.selectors.some((s) => s.trim().endsWith('.rte-dialog__hint')),
-    );
-    expect(hint.flatMap((r) => declarations(r))).toContainEqual(
-      expect.objectContaining({ prop: 'color', value: 'CanvasText' }),
-    );
-  });
+  // A dica e a URL somente leitura (05c1, N31 no WebKit) não são texto
+  // inaplicável: em CanvasText, porque o GrayText do --rte-text-muted fica
+  // abaixo de 4,5:1 nos motores que não forçam as cores.
+  it.each(['.rte-dialog__hint', '.rte-dialog__readonly'])(
+    'forced-colors: %s do diálogo em CanvasText (o GrayText do --rte-text-muted fica abaixo de 4,5:1)',
+    (selector) => {
+      const rules: Rule[] = [];
+      root.walkAtRules('media', (at) => {
+        if (/forced-colors:\s*active/.test(at.params))
+          at.walkRules((r) => void rules.push(r));
+      });
+      const matched = rules.filter((r) =>
+        r.selectors.some((s) => s.trim().endsWith(selector)),
+      );
+      expect(matched.flatMap((r) => declarations(r))).toContainEqual(
+        expect.objectContaining({ prop: 'color', value: 'CanvasText' }),
+      );
+    },
+  );
 
   it('sem animation/transition nas regras dos diálogos', () => {
     const moving = dialogRules()
