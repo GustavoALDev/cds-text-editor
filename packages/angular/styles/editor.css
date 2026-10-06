@@ -791,6 +791,14 @@
       transition: none;
       animation: none;
     }
+
+    /* Envio sem fração (E21): o <progress> indeterminado não anima. */
+    .rte-editor .rte-uploads__progress:indeterminate,
+    .rte-editor .rte-upload-marker__progress:indeterminate,
+    .rte-editor .rte-uploads__progress:indeterminate::-moz-progress-bar,
+    .rte-editor .rte-upload-marker__progress:indeterminate::-moz-progress-bar {
+      animation: none;
+    }
   }
 }
 

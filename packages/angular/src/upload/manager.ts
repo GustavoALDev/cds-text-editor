@@ -13,6 +13,7 @@ import {
   type RteUploadMeta,
 } from './markers';
 import { clampProgress, moved, RteFramePublisher } from './progress';
+import { createPreview, revokePreview } from './preview';
 import { readUploadedMedia, type RteUploadedAttrs } from './response';
 import { uploadReason } from './reason';
 import type {
@@ -240,7 +241,9 @@ export class RteUploadManager {
   ): Job {
     const name = displayName(file);
     const preview =
-      wantsPreview && type === 'image' ? this.createPreview(file) : null;
+      wantsPreview && type === 'image'
+        ? createPreview(this.host.view, file)
+        : null;
     return {
       id: `${this.prefix}${++this.seq}`,
       file,
@@ -258,20 +261,6 @@ export class RteUploadManager {
       settled: false,
       done: false,
     };
-  }
-
-  /** Miniatura local (E16): só no marcador; `null` sem `createObjectURL`. */
-  private createPreview(file: File): string | null {
-    const urls = this.urls();
-    return typeof urls?.createObjectURL === 'function'
-      ? urls.createObjectURL(file)
-      : null;
-  }
-
-  /** `URL` da janela do editor (*object URLs* da miniatura, E16). */
-  private urls(): typeof URL | null {
-    const view = this.host.view as (Window & { URL?: typeof URL }) | null;
-    return view?.URL ?? null;
   }
 
   /** Começa os da fila até 2 simultâneos (E11). */
@@ -397,7 +386,7 @@ export class RteUploadManager {
     const gone = new Set(jobs);
     for (const job of jobs) {
       job.done = true;
-      if (job.preview !== null) this.urls()?.revokeObjectURL(job.preview);
+      if (job.preview !== null) revokePreview(this.host.view, job.preview);
     }
     this.jobs = this.jobs.filter((j) => !gone.has(j));
     this.host.zone.run(() => {

@@ -20,6 +20,7 @@ import {
   createFakeUploadAdapter,
   type FakeUploadAdapter,
 } from './testing-support/fake-upload-adapter';
+import { installObjectUrlProbe } from './testing-support/object-url';
 import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
 import { whenUploadReady } from './testing-support/upload-runtime';
@@ -467,23 +468,7 @@ describe('marcador (E7, E16, pré-voo 7)', () => {
   });
 
   it('com preview: miniatura img[alt=""] só para imagem, revogada no fim', async () => {
-    const created: string[] = [];
-    const revoked: string[] = [];
-    // o gerenciador usa o `URL` da janela do editor (`defaultView`)
-    const url = (document.defaultView as Window & { URL: unknown }).URL as {
-      createObjectURL?: ((b: Blob) => string) | undefined;
-      revokeObjectURL?: ((u: string) => void) | undefined;
-    };
-    const original = {
-      create: url.createObjectURL,
-      revoke: url.revokeObjectURL,
-    };
-    url.createObjectURL = () => {
-      const u = `blob:test/${created.length}`;
-      created.push(u);
-      return u;
-    };
-    url.revokeObjectURL = (u: string) => void revoked.push(u);
+    const probe = installObjectUrlProbe();
     try {
       const s = await setup({ preview: true });
       const webm = new File(['v'], 'v.webm', { type: 'video/webm' });
@@ -494,13 +479,12 @@ describe('marcador (E7, E16, pré-voo 7)', () => {
       expect(preview?.getAttribute('alt')).toBe('');
       expect(preview?.getAttribute('src')).toBe('blob:test/0');
       expect(video?.querySelector('img')).toBeNull();
-      expect(created).toEqual(['blob:test/0']);
+      expect(probe.created).toEqual(['blob:test/0']);
       s.adapter.resolve(0, { url: '/a.png' });
       await drain(s.fixture);
-      expect(revoked).toEqual(['blob:test/0']);
+      expect(probe.revoked).toEqual(['blob:test/0']);
     } finally {
-      url.createObjectURL = original.create;
-      url.revokeObjectURL = original.revoke;
+      probe.restore();
     }
   });
 });

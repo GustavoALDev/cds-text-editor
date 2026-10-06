@@ -62,6 +62,17 @@ export function bigPngFile(name: string): PageFile {
   };
 }
 
+/** PNG de ~900 KB (abaixo do teto de 1 MiB do app): com `?slow=1` o progresso cresce aos poucos. */
+export function slowPngFile(name: string): PageFile {
+  const png = publicFile('e2e.png');
+  const padding = Buffer.alloc(900 * 1024 - png.length);
+  return {
+    name,
+    type: 'image/png',
+    base64: Buffer.concat([png, padding]).toString('base64'),
+  };
+}
+
 /** Uma entrada do `GET /__upload/log` do `serve.mjs`. */
 export interface UploadLogEntry {
   readonly id: string;
