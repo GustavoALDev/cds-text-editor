@@ -226,10 +226,10 @@ Rotas novas `upload` (CSP estrita) e `upload-preview` (CSP + `img-src 'self' blo
 
 ## 7. Critérios de aceite
 
-- [ ] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size --parallel=1` verde; `npm run check:rules`, `check:licenses`, `notices` sem *drift*, `test:tools` e `typecheck:e2e` verdes.
-- [ ] Unitários 6.1 verdes nos alvos `test` e `test-zone` (e `test` do core), inclusive as propriedades da R4 (validação), R6 (marcadores e ordem) e R11 (segurança).
-- [ ] N1–N38 verdes em Chromium, Firefox e WebKit (`npx playwright test -c e2e`) e no CI do PR.
-- [ ] ADR 0013 (`docs/decisions/0013-envio-de-arquivos.md`) registra E1–E25, H1–H10 (como diretrizes), os *rulings*, os desvios e os tamanhos (R16); README do `rte-angular`, `CLAUDE.md`, `docs/specs/README.md`, `05-editor-angular.md` e changesets atualizados.
+- [ ] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size --parallel=1` verde; `npm run check:rules`, `check:licenses`, `notices` sem *drift*, `test:tools` e `typecheck:e2e` verdes. **Evidência (parcial, T14):** `build`, `size` (todos os cenários dentro do orçamento) e `check:rules` verdes em `d7b8adb`+T14; o restante roda na verificação final (ruling 41), depois das correções da revisão final.
+- [ ] Unitários 6.1 verdes nos alvos `test` e `test-zone` (e `test` do core), inclusive as propriedades da R4 (validação), R6 (marcadores e ordem) e R11 (segurança). **Evidência:** `test`/`test-zone` 1536/1536 na T9b e suítes novas verdes nas T10–T13; totais finais e propriedades R4/R6/R11 (`upload-validate`, `upload-order`, `upload-security`) na verificação final.
+- [ ] N1–N38 verdes em Chromium, Firefox e WebKit (`npx playwright test -c e2e`) e no CI do PR. **Evidência: Chromium (N33–N38 `editor-media-chunk.spec.ts`, `editor-upload-{dialog,paste-drop,states,forms,a11y}.spec.ts`; N34, N35 e N37 já nos 3 motores nas tarefas); 3 motores na verificação final.**
+- [x] ADR 0013 (`docs/decisions/0013-envio-de-arquivos.md`) registra E1–E25, H1–H10 (como diretrizes), os *rulings*, os desvios e os tamanhos (R16); README do `rte-angular`, `CLAUDE.md`, `docs/specs/README.md`, `05-editor-angular.md` e changesets atualizados.
 
 ## 8. Consequências para as partes seguintes e outras specs
 
