@@ -121,6 +121,7 @@ export function insertUploaded(editor: Editor, o: RteUploadArrival): boolean {
           to: pos + node.nodeSize,
           typeName: found.typeName,
           src: found.src,
+          node,
         },
       };
       tr.setMeta(RTE_UPLOAD_KEY, meta);

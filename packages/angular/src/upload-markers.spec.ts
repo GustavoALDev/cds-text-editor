@@ -511,3 +511,28 @@ describe('ordem do gesto (E11, R6)', () => {
     expect(editor.state.selection.from).toBe(positions[1]);
   });
 });
+
+describe('ordem do gesto: regressões da propriedade', () => {
+  // FC_SEED=-617190640: a remoção da imagem (atrás do fim da lista) colapsa
+  // a faixa no início do trecho apagado, dentro do parágrafo; o desfazer
+  // devolve o nó depois de `</p></li></ul>`, longe desse ponto
+  it('apagar até o fim do documento e desfazer: a mídia volta a ordenar', () => {
+    const editor = markersEditor('<ul><li><p></p></li></ul>');
+    caret(editor, 3);
+    addGesture(editor, 3);
+    expect(arrive(editor, 'm1', '/s.png')).toBe(true);
+    // a figura não cabe no item: o core a põe depois da lista
+    expect(mediaPositions(editor.state.doc)).toEqual([6]);
+    caret(editor, 3);
+    editor.commands.insertContent('t');
+    editor.commands.deleteRange({ from: 4, to: 8 });
+    expect(mediaSrcs(editor.state.doc)).toEqual([]);
+    editor.commands.undo();
+    expect(mediaPositions(editor.state.doc)).toEqual([6]);
+    const held = uploadState(editor).placed.filter((p) => p.from < p.to);
+    expect(held.map((p) => [p.index, p.from])).toEqual([[0, 6]]);
+    expect(arrive(editor, 'm3', '/c.png')).toBe(true);
+    expect(arrive(editor, 'm2', '/b.png')).toBe(true);
+    expect(mediaSrcs(editor.state.doc)).toEqual(['/s.png', '/b.png', '/c.png']);
+  });
+});

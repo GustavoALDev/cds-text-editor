@@ -22,9 +22,11 @@ export interface RteUploadMarker {
 }
 
 /**
- * Mídia de um gesto já inserida (E11): faixa `[from, to)` do nó, mais o tipo
- * e o `src` para retomar a faixa quando o nó volta no mesmo ponto (desfazer e
- * refazer devolvem o nó sem que o mapeamento o acompanhe).
+ * Mídia de um gesto já inserida (E11): faixa `[from, to)` do nó, o tipo e o
+ * `src` (a faixa só vale se ainda contém esse nó) e o próprio nó, para
+ * retomar a faixa quando ele volta ao documento sem que o mapeamento o
+ * acompanhe (desfazer e refazer devolvem a **mesma instância**: os passos
+ * invertidos do histórico guardam fatias do documento anterior).
  */
 export interface RteUploadPlaced {
   readonly gesture: number;
@@ -33,6 +35,7 @@ export interface RteUploadPlaced {
   readonly to: number;
   readonly typeName: string;
   readonly src: string;
+  readonly node: ProseMirrorNode;
 }
 
 export interface RteUploadPluginState {
@@ -71,46 +74,45 @@ const isSame = (node: ProseMirrorNode | null | undefined, p: RteUploadPlaced) =>
   !!node && node.type.name === p.typeName && node.attrs['src'] === p.src;
 
 /**
- * Faixa da mídia `p` no ponto `at` do documento: o nó que começa **ou**
- * termina exatamente ali, com o mesmo tipo e `src`, se nenhuma outra mídia
- * registrada o ocupa (`held`: inícios já tomados; arquivos do mesmo gesto
- * podem ter o mesmo `src`); senão o ponto colapsado (a mídia conta como
- * apagada e não ordena nada).
+ * Posição, no documento, de cada nó procurado (a ocorrência mais perto do
+ * ponto de referência; um nó imutável pode aparecer mais de uma vez), fora
+ * dos inícios já tomados (`held`).
  */
-function reacquire(
+function findNodes(
   doc: ProseMirrorNode,
-  p: RteUploadPlaced,
-  at: number,
-  held: Set<number>,
-): RteUploadPlaced {
-  const after = doc.nodeAt(at);
-  if (after && isSame(after, p) && !held.has(at)) {
-    held.add(at);
-    return { ...p, from: at, to: at + after.nodeSize };
-  }
-  const before = doc.resolve(at).nodeBefore;
-  const start = before ? at - before.nodeSize : -1;
-  if (before && isSame(before, p) && !held.has(start)) {
-    held.add(start);
-    return { ...p, from: start, to: at };
-  }
-  return { ...p, from: at, to: at };
+  wanted: ReadonlyMap<ProseMirrorNode, number>,
+  held: ReadonlySet<number>,
+): Map<ProseMirrorNode, number> {
+  const found = new Map<ProseMirrorNode, number>();
+  doc.descendants((node, pos) => {
+    const near = wanted.get(node);
+    if (near === undefined) return !node.isLeaf;
+    const best = found.get(node);
+    if (
+      !held.has(pos) &&
+      (best === undefined || Math.abs(pos - near) < Math.abs(best - near))
+    ) {
+      found.set(node, pos);
+    }
+    return false;
+  });
+  return found;
 }
 
 /**
  * Marcadores e mídias inseridas: nunca descartados pelo mapeamento. A faixa
  * de uma mídia que deixa de conter o nó (apagado ou substituído) colapsa num
- * ponto; se um nó do mesmo tipo e `src` voltar **exatamente** nesse ponto
- * (refazer a chegada depois de desfazê-la, desfazer a substituição) e não
- * for de outra mídia registrada, a faixa é retomada; qualquer outro nó com o
- * mesmo `src` não conta. `reserved`: inícios tomados na mesma transação (a
- * mídia que chega).
+ * ponto; se **o mesmo nó** (a mesma instância) voltar ao documento (refazer
+ * a chegada depois de desfazê-la, desfazer a remoção ou a substituição), a
+ * faixa é retomada onde ele estiver: o ponto colapsado não serve de pista,
+ * porque um trecho apagado que atravessa fins de bloco (`</p></li></ul>`)
+ * colapsa longe de onde o nó volta. Outro nó com o mesmo `src` (outro
+ * arquivo do gesto, uma colagem) nunca conta.
  */
 function mapState(
   prev: RteUploadPluginState,
   mapping: Mapping,
   doc: ProseMirrorNode,
-  reserved: readonly number[],
 ): Pick<RteUploadPluginState, 'markers' | 'placed'> {
   const markers = prev.markers.map((m) => ({
     ...m,
@@ -118,7 +120,7 @@ function mapState(
     pos: mapping.map(m.pos, 1),
   }));
   // 1º as faixas que ainda contêm o nó; depois as retomadas, sem repetir nó
-  const held = new Set(reserved);
+  const held = new Set<number>();
   const kept = prev.placed.map((p) => {
     if (p.from >= p.to) return null;
     const from = mapping.map(p.from, 1);
@@ -127,11 +129,26 @@ function mapState(
     if (!node || !isSame(node, p) || from + node.nodeSize !== to) return null;
     if (held.has(from)) return null;
     held.add(from);
-    return { ...p, from, to };
+    // a instância pode mudar (atributos editados): a retomada busca a atual
+    return { ...p, from, to, node };
   });
-  const placed = prev.placed.map(
-    (p, i) => kept[i] ?? reacquire(doc, p, mapping.map(p.from, -1), held),
-  );
+  const points = prev.placed.map((p) => mapping.map(p.from, -1));
+  const wanted = new Map<ProseMirrorNode, number>();
+  prev.placed.forEach((p, i) => {
+    if (!kept[i]) wanted.set(p.node, points[i] as number);
+  });
+  const found = wanted.size ? findNodes(doc, wanted, held) : new Map();
+  const placed = prev.placed.map((p, i) => {
+    const k = kept[i];
+    if (k) return k;
+    const at = found.get(p.node);
+    if (at === undefined || held.has(at)) {
+      const point = points[i] as number;
+      return { ...p, from: point, to: point };
+    }
+    held.add(at);
+    return { ...p, from: at, to: at + p.node.nodeSize };
+  });
   return { markers, placed };
 }
 
@@ -168,14 +185,7 @@ export function createUploadMarkersPlugin(
         const meta = tr.getMeta(RTE_UPLOAD_KEY) as RteUploadMeta | undefined;
         if (!meta && (!tr.docChanged || !prev.markers.length)) return prev;
         const { markers, placed } = applyMeta(
-          tr.docChanged
-            ? mapState(
-                prev,
-                tr.mapping,
-                next.doc,
-                meta?.placed ? [meta.placed.from] : [],
-              )
-            : prev,
+          tr.docChanged ? mapState(prev, tr.mapping, next.doc) : prev,
           meta,
         );
         if (!markers.length) return EMPTY;
