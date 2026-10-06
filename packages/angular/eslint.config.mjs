@@ -188,6 +188,34 @@ export default [
     },
   },
   {
+    // E24/R1: o entry /upload não tem Angular em tempo de execução nem importa o
+    // principal (só `import type`). Repete o zone.js e o core/html (a última
+    // ocorrência da regra substitui as anteriores).
+    files: ['**/upload/src/**/*.ts'],
+    ignores: NOT_PUBLISHED,
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            ZONE_IMPORT,
+            {
+              group: ['@cds/rte-core/html'],
+              message:
+                'O entry . não importa @cds/rte-core/html; medir texto é do /validators (spec 05a, R1).',
+            },
+            {
+              group: ['@angular/*', '@cds/rte-angular', '@cds/rte-angular/*'],
+              allowTypeImports: true,
+              message:
+                'O entry /upload não importa valores de @angular/* nem do entry principal; só `import type` (spec 05c2a, E24).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.html'],
     // Override or add rules here
     rules: {},

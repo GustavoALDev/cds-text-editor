@@ -8,6 +8,7 @@ import { workspacePath } from './testing-support/workspace';
 
 const SRC_FILE = 'packages/angular/src/__guard__.ts';
 const SPEC_FILE = 'packages/angular/src/__guard__.spec.ts';
+const UPLOAD_FILE = 'packages/angular/upload/src/__guard__.ts';
 const VALIDATORS_FILE = 'packages/angular/validators/src/__guard__.ts';
 
 const eslint = new ESLint({
@@ -164,6 +165,23 @@ describe('guardas por lint (spec 05a, D25)', () => {
     const html =
       "import { htmlToText } from '@cds/rte-core/html';\nexport const t = htmlToText('');\n";
     expect(await ruleIds(html, file)).toContain('no-restricted-imports');
+  });
+
+  it.each([
+    "import { signal } from '@angular/core'; export const s = signal(1);",
+    "import { RteUploadError } from '@cds/rte-angular'; export const e = RteUploadError;",
+    "import { htmlToText } from '@cds/rte-core/html'; export const t = htmlToText('');",
+    "import 'zone.js';",
+  ])('o entry /upload recusa import de valor: %s', async (code) => {
+    expect(await ruleIds(code, UPLOAD_FILE)).toContain('no-restricted-imports');
+  });
+
+  it('o entry /upload aceita import type do principal e de @angular', async () => {
+    const code =
+      "import type { RteUploadAdapter } from '@cds/rte-angular'; import type { Signal } from '@angular/core'; export type T = [RteUploadAdapter, Signal<number>];";
+    expect(await ruleIds(code, UPLOAD_FILE)).not.toContain(
+      'no-restricted-imports',
+    );
   });
 
   it('specs ficam fora das guardas (document.body permitido)', async () => {

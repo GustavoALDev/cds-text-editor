@@ -111,15 +111,31 @@
         "rxjs/*",
         "tslib"
       ]
+    },
+    "upload": {
+      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-upload.mjs",
+      "exports": ["*"],
+      "external": [
+        "@angular/*",
+        "@tiptap/*",
+        "@cds/*",
+        "lowlight",
+        "highlight.js",
+        "highlight.js/*",
+        "rxjs",
+        "rxjs/*",
+        "tslib"
+      ]
     }
   },
   "budgets": {
-    "editor": 31104,
-    "whole": 31168,
+    "editor": 38144,
+    "whole": 38208,
     "dialogs": 6400,
     "media": 6976,
     "floating": 8576,
     "i18n": 5120,
-    "validators": 1344
+    "validators": 1344,
+    "upload": 1152
   }
 }

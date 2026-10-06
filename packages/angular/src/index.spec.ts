@@ -16,6 +16,8 @@ import type {
 import * as i18n from '@cds/rte-angular/i18n';
 import * as testing from '@cds/rte-angular/testing';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
+import * as upload from '@cds/rte-angular/upload';
+// eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import * as validators from '@cds/rte-angular/validators';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
@@ -113,5 +115,9 @@ describe('@cds/rte-angular', () => {
       'rteMaxWords',
       'rteRequired',
     ]);
+  });
+
+  it('o /upload exporta só httpUploadAdapter', () => {
+    expect(Object.keys(upload)).toEqual(['httpUploadAdapter']);
   });
 });
