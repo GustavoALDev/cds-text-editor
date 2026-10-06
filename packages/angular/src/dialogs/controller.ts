@@ -77,6 +77,7 @@ export class RteDialogController {
   private readonly current = signal<RteDialogRequest | null>(null);
   private readonly wanted = signal(false);
   private readonly broken = signal(false);
+  private readonly mediaBroken = signal(false);
   private view: RteDialogView | null = null;
   private nextId = 1;
   /** Documento em que o pedido em curso foi registrado (G6). */
@@ -91,6 +92,11 @@ export class RteDialogController {
   readonly requested: Signal<boolean> = this.wanted.asReadonly();
   /** O *chunk* falhou (`@error`, terminal; pré-voo 5). */
   readonly failed: Signal<boolean> = this.broken.asReadonly();
+  /**
+   * O *chunk* dos formulários de mídia falhou (05c2a E2, Ruling 1): terminal
+   * só para imagem, vídeo e *embed*; os outros diálogos seguem abrindo.
+   */
+  readonly mediaFailed: Signal<boolean> = this.mediaBroken.asReadonly();
 
   constructor(o: { editor: Signal<Editor | null> }) {
     this.editor = o.editor;
@@ -196,6 +202,17 @@ export class RteDialogController {
   /** `@error` do `@defer`: terminal; descarta o pedido (pré-voo 5). */
   fail(): void {
     this.broken.set(true);
+    if (isDevMode()) console.warn(DEFER_FAILED);
+    this.cancel('cancelled');
+  }
+
+  /**
+   * `@error` do `@defer` dos formulários de mídia (05c2a E2, Ruling 1):
+   * descarta o pedido como cancelamento (como a G7) e recusa só a mídia daí
+   * em diante.
+   */
+  failMedia(): void {
+    this.mediaBroken.set(true);
     if (isDevMode()) console.warn(DEFER_FAILED);
     this.cancel('cancelled');
   }

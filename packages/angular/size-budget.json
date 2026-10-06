@@ -48,6 +48,22 @@
         "tslib"
       ]
     },
+    "media": {
+      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-media-forms-*.mjs",
+      "exports": ["*"],
+      "externalChunks": true,
+      "external": [
+        "@angular/*",
+        "@tiptap/*",
+        "@cds/*",
+        "lowlight",
+        "highlight.js",
+        "highlight.js/*",
+        "rxjs",
+        "rxjs/*",
+        "tslib"
+      ]
+    },
     "floating": {
       "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-floating-menus-*.mjs",
       "exports": ["*"],
@@ -96,9 +112,10 @@
     }
   },
   "budgets": {
-    "editor": 30144,
-    "whole": 30208,
-    "dialogs": 11584,
+    "editor": 31168,
+    "whole": 31232,
+    "dialogs": 6336,
+    "media": 6784,
     "floating": 8576,
     "i18n": 4352,
     "validators": 1344

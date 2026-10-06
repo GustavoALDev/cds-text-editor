@@ -46,10 +46,15 @@ import {
   RteDialogController,
 } from '../dialogs/controller';
 import { RteDeferFailed } from '../dialogs/defer-failed';
+import { RTE_DIALOG_KIT } from '../dialogs/form-kit';
 import { readMediaRules, type RteMediaRules } from '../dialogs/media-rules';
 import { RteDialogs } from '../dialogs/rte-dialogs';
+// Só em `imports` e no bloco de pré-carga do template (05c2a E2): o
+// `@defer (when false; prefetch on idle)` nunca renderiza; o *chunk*
+// `rte-media-forms` chega em ocioso, sem cascata no primeiro diálogo de mídia.
+import { RteMediaForms } from '../dialogs/rte-media-forms';
 import { dialogTarget } from '../dialogs/target';
-import type { RteDialogKind } from '../dialogs/types';
+import { isMediaKind, type RteDialogKind } from '../dialogs/types';
 import { createRteUiExtension } from '../dialogs/ui-extension';
 import { createFloatingEscapeExtension } from '../floating/escape-extension';
 import {
@@ -147,8 +152,15 @@ function toCharLimit(value: number | undefined): number | null {
   selector: 'rte-editor',
   exportAs: 'rteEditor',
   templateUrl: './rte-editor.html',
-  // `RteDialogs` só aqui e no `@defer` do template (G7: senão o chunk some).
-  imports: [RteToolbar, RteFloatingMenus, RteDialogs, RteDeferFailed],
+  // `RteDialogs` e `RteMediaForms` só aqui e nos `@defer` do template (G7,
+  // 05c2a E2: senão o chunk some).
+  imports: [
+    RteToolbar,
+    RteFloatingMenus,
+    RteDialogs,
+    RteMediaForms,
+    RteDeferFailed,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   host: {
@@ -166,6 +178,13 @@ function toCharLimit(value: number | undefined): number | null {
   },
 })
 export class RteEditor implements FormValueControl<string> {
+  /**
+   * Âncora de *chunk* (05c2a E2, ruling 20 do ADR 0011): mantém no principal
+   * os auxiliares de formulário usados pelos *chunks* `rte-dialogs` e
+   * `rte-media-forms` (sem terceiro *chunk* compartilhado).
+   */
+  protected static readonly ɵdialogKit = RTE_DIALOG_KIT;
+
   // Contrato de controle (preenchido pelo [formField]; utilizável sem formulário)
   readonly value = model('');
   readonly disabled = input(false, { transform: booleanAttribute });
@@ -867,6 +886,7 @@ export class RteEditor implements FormValueControl<string> {
       !untracked(this.interactive) ||
       untracked(this.hidden) ||
       untracked(this.dialogs.failed) ||
+      (isMediaKind(kind) && untracked(this.dialogs.mediaFailed)) ||
       untracked(this.dialogs.request) ||
       dialogBusy(this.host.ownerDocument) ||
       this.host.ownerDocument.querySelector('dialog.rte-dialog[open]')

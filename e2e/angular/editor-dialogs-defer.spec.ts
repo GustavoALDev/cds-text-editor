@@ -21,7 +21,7 @@ import { rteHtml, selectIn, toolbarButton } from './helpers/toolbar';
 // N20 (spec 05b2a, R12, R14): os diálogos vêm de um `@defer (when
 // dialogRequested(); prefetch on idle)`, nos builds zoneless e `zone`. O HTML
 // pré-renderizado não tem `<dialog>`; o *chunk* (o `.js` com
-// `rte-dialog__form`, pré-voo 16) não está no HTML nem contém o editor e
+// `rte-link-form`, pré-voo 16 e 05c2a E2) não está no HTML nem contém o editor e
 // chega por *prefetch* ociosa; um `Ctrl+K` antes da chegada abre o diálogo
 // quando ela acontece; a falha do *chunk* cai no `@error` (terminal) sem
 // quebrar o editor; carregar, abrir, validar, aplicar e cancelar os quatro

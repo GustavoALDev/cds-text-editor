@@ -1,0 +1,27 @@
+@if (request(); as req) { @if (controller(); as ctl) { @if (labels(); as l) {
+@switch (req.kind) { @case ('image') { @if (alignNames(); as aligns) {
+<rte-image-form
+  [request]="req"
+  [controller]="ctl"
+  [labels]="l"
+  [idPrefix]="idPrefix()"
+  [rule]="mediaRules()?.imageSrc ?? null"
+  [alignNames]="aligns"
+/>
+} } @case ('video') {
+<rte-video-form
+  [request]="req"
+  [controller]="ctl"
+  [labels]="l"
+  [idPrefix]="idPrefix()"
+  [rules]="mediaRules()"
+/>
+} @case ('embed') {
+<rte-embed-form
+  [request]="req"
+  [controller]="ctl"
+  [labels]="l"
+  [idPrefix]="idPrefix()"
+  [providers]="embedProviders()"
+/>
+} } } } }

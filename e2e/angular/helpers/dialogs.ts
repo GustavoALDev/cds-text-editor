@@ -102,11 +102,15 @@ export interface DialogsChunk {
 
 /**
  * Intercepta os `.js` da página (antes do `gotoApp`): busca a resposta e
- * marca como *chunk* dos diálogos o arquivo que contém `rte-dialog__form`
- * (pré-voo 16); esse é segurado (`hold`) ou abortado (`abort`), os outros
- * seguem intactos.
+ * marca como o *chunk* procurado o arquivo que contém `marker`; esse é
+ * segurado (`hold`) ou abortado (`abort`). Os outros seguem para o próximo
+ * interceptador com `route.fallback()` (Ruling 4 da 05c2a: com dois
+ * interceptadores na página, um `fulfill` aqui engoliria o *chunk* do outro).
  */
-export async function dialogsChunk(page: Page): Promise<DialogsChunk> {
+async function chunkByMarker(
+  page: Page,
+  marker: string,
+): Promise<DialogsChunk> {
   let mode: 'pass' | 'hold' | 'abort' = 'pass';
   let gate: Promise<void> = Promise.resolve();
   let url = '';
@@ -115,8 +119,8 @@ export async function dialogsChunk(page: Page): Promise<DialogsChunk> {
   await page.route('**/*.js', async (route) => {
     const response = await route.fetch();
     const body = await response.text();
-    if (!body.includes('rte-dialog__form')) {
-      await route.fulfill({ response, body });
+    if (!body.includes(marker)) {
+      await route.fallback();
       return;
     }
     url = route.request().url();
@@ -143,4 +147,22 @@ export async function dialogsChunk(page: Page): Promise<DialogsChunk> {
       mode = 'abort';
     },
   };
+}
+
+/**
+ * *Chunk* dos diálogos de link, idioma, citação e tabela: o `.js` com
+ * `rte-link-form` (o `rte-dialog__form` está também no da mídia, 05c2a E2).
+ * O app compila a biblioteca do fonte: os nomes dos *chunks* não são os do
+ * `dist`, daí a marca no conteúdo.
+ */
+export function dialogsChunk(page: Page): Promise<DialogsChunk> {
+  return chunkByMarker(page, 'rte-link-form');
+}
+
+/**
+ * *Chunk* dos formulários de mídia (`RteMediaForms`, 05c2a E2): o `.js` com
+ * `rte-image-form`.
+ */
+export function mediaFormsChunk(page: Page): Promise<DialogsChunk> {
+  return chunkByMarker(page, 'rte-image-form');
 }
