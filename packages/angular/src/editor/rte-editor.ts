@@ -6,6 +6,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  DOCUMENT,
   effect,
   ElementRef,
   inject,
@@ -76,6 +77,15 @@ import type { RteToolbarConfig, RteToolbarItemId } from '../toolbar/items';
 import { RteToolbar } from '../toolbar/rte-toolbar';
 import { createToolbarState, type RteToolbarState } from '../toolbar/state';
 import { mergeTheme, sameTheme, themeKey } from '../theme/instance-theme';
+import { resolveUploadConfig } from '../upload/config';
+import { createRteUploadExtension } from '../upload/extension';
+import { RteUploadManager } from '../upload/manager';
+import { readUploadRules } from '../upload/response';
+import type {
+  RteUploadConfig,
+  RteUploadErrorEvent,
+  RteUploadStatus,
+} from '../upload/types';
 import {
   editableAttributes,
   presentText,
@@ -216,6 +226,8 @@ export class RteEditor implements FormValueControl<string> {
   readonly theme = input<RteTheme | undefined>(undefined);
   /** Menus flutuantes: entrada > `provideRichText` por chave; ao vivo (M17). */
   readonly floatingMenus = input<RteFloatingMenusConfig | undefined>(undefined);
+  /** Envio de arquivos: entrada > `provideRichText`; `null` desliga (E3). */
+  readonly upload = input<RteUploadConfig | null | undefined>(undefined);
 
   // Saídas
   readonly editorReady = output<Editor>();
@@ -223,6 +235,8 @@ export class RteEditor implements FormValueControl<string> {
   readonly editorBlur = output<void>();
   /** Delta por transação que muda o conjunto de endereços de mídia (V13). */
   readonly mediaChange = output<RteMediaChange>();
+  /** Falha de envio, uma por arquivo, dentro da zona (E15). */
+  readonly uploadError = output<RteUploadErrorEvent>();
 
   private readonly instance = signal<Editor | null>(null);
   private readonly host =
@@ -476,6 +490,34 @@ export class RteEditor implements FormValueControl<string> {
     () => this.schema().elements['span']?.attributes['lang']?.rule ?? null,
   );
 
+  /** Envio resolvido uma vez por objeto de configuração (E3). */
+  private readonly uploadConfig = computed(() => {
+    const own = this.upload();
+    return resolveUploadConfig(own === undefined ? this.config.upload : own);
+  });
+  /** Envios (E4, E10, E11, E17, E23); a lógica fica em `src/upload/`. */
+  private readonly uploadManager = new RteUploadManager({
+    editor: this.instance,
+    config: this.uploadConfig,
+    rules: computed(() => readUploadRules(this.schema())),
+    canInsert: () => untracked(this.interactive) && !untracked(this.hidden),
+    mustWait: () =>
+      untracked(this.dialogs.request) !== null ||
+      !!untracked(this.instance)?.view.composing,
+    zone: this.ngZone,
+    view: inject(DOCUMENT).defaultView,
+    emitError: (e) => this.uploadError.emit(e),
+  });
+  /** Envios em curso, na ordem do gesto (E18). */
+  readonly uploads: Signal<readonly RteUploadStatus[]> =
+    this.uploadManager.uploads;
+  readonly pendingUploads: Signal<number> = computed(
+    () => this.uploads().length,
+  );
+  private readonly missingAlt = signal(0);
+  /** Imagens com `alt: null` (E18), fora do portão do delta de URLs. */
+  readonly imagesMissingAlt: Signal<number> = this.missingAlt.asReadonly();
+
   constructor() {
     bindRteBridge(this, this.bridge);
 
@@ -496,6 +538,16 @@ export class RteEditor implements FormValueControl<string> {
         warned = true;
         console.warn(OPTIONS_IGNORED);
       }
+    });
+
+    // E17: outra configuração de envio aborta os envios; E10: o diálogo
+    // fechado libera as inserções adiadas.
+    effect(() => {
+      this.uploadConfig();
+      untracked(() => this.uploadManager.abortAll(true));
+    });
+    effect(() => {
+      if (!this.dialogs.request()) untracked(() => this.uploadManager.flush());
     });
 
     // Emissão síncrona (D8): só transações que mudam o documento fora de uma
@@ -532,6 +584,11 @@ export class RteEditor implements FormValueControl<string> {
           zone.run(() => this.value.set(html));
         }
       }
+      // E18: fora do portão abaixo (trocar `alt: null` não muda URL).
+      const missing = media?.missingAlt() ?? 0;
+      if (missing !== untracked(this.missingAlt)) {
+        zone.run(() => this.missingAlt.set(missing));
+      }
       // Só junto de um `value` (V13; endereços canônicos: não há delta sem ele).
       if (!media || !delta || !emitted) return;
       zone.run(() => {
@@ -552,6 +609,8 @@ export class RteEditor implements FormValueControl<string> {
       untracked(() => {
         const editor = this.instance();
         if (!editor || editor.isDestroyed || value === this.lastValue) return;
+        // E17: antes do `EditorState.create`, que reinicia os marcadores
+        this.uploadManager.abortAll(true);
         this.loading = true;
         try {
           editor
@@ -578,6 +637,7 @@ export class RteEditor implements FormValueControl<string> {
         this.lastValue = readValue(editor);
         this.media?.reset(editor.state.doc);
         if (this.media) this.mediaState.set(this.media.session());
+        this.missingAlt.set(this.media?.missingAlt() ?? 0);
       });
     });
 
@@ -712,6 +772,7 @@ export class RteEditor implements FormValueControl<string> {
             }),
           ),
           createRteUiExtension({ openLink: () => this.openDialog('link') }),
+          createRteUploadExtension(this.uploadManager),
           // `Escape` no editável (M6): o último `handleKeyDown` do ProseMirror.
           createFloatingEscapeExtension(() =>
             this.ngZone.run(
@@ -747,6 +808,7 @@ export class RteEditor implements FormValueControl<string> {
       const rules = readMediaUrlRules(untracked(this.schema));
       this.media = new RteMediaTracker(editor.state.doc, rules);
       this.mediaState.set(this.media.session());
+      this.missingAlt.set(this.media.missingAlt());
       editor.on('transaction', onTransaction);
       this.instance.set(editor);
       this.bridge.connect(editor);
@@ -758,6 +820,7 @@ export class RteEditor implements FormValueControl<string> {
 
     inject(DestroyRef).onDestroy(() => {
       const editor = untracked(this.instance);
+      this.uploadManager.dispose();
       this.dialogs.dispose();
       this.destroyed = true;
       this.pendingFocus = null;
@@ -930,6 +993,23 @@ export class RteEditor implements FormValueControl<string> {
     editor.commands.focus(null, {
       scrollIntoView: options?.preventScroll !== true,
     });
+  }
+
+  /** Envia na posição da seleção, como colar (E18); devolve os aceitos (E5). */
+  uploadFiles(files: Iterable<File>): number {
+    const editor = untracked(this.instance);
+    if (!editor || editor.isDestroyed) return 0;
+    return this.uploadManager.start([...files], editor.state.selection.to);
+  }
+
+  /** Cancela um envio (E8); `false` se o id não está em curso. */
+  cancelUpload(id: string): boolean {
+    return this.uploadManager.cancel(id);
+  }
+
+  /** Cancela todos os envios em curso (E8). */
+  cancelAllUploads(): void {
+    this.uploadManager.cancelAll();
   }
 
   private editableState(): RteEditableState {

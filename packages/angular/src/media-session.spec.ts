@@ -884,3 +884,46 @@ describe('sessão de mídia: incremental (pré-voo 12 e 17)', () => {
     expect(visited).toBeLessThan(10);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Spec 05c2a, Tarefa 6: `imagesMissingAlt` reativo fora do portão (E18, R13)
+
+const NO_ALT = (src: string) =>
+  `<figure class="rt-figure rt-figure--center"><img src="${src}"></figure>`;
+
+describe('imagesMissingAlt (E18)', () => {
+  it('0 antes do editorReady; contagem do documento na criação', async () => {
+    const fixture = TestBed.createComponent(RteEditor);
+    expect(fixture.componentInstance.imagesMissingAlt()).toBe(0);
+    fixture.destroy();
+
+    const s = await setup(`<p>ab</p>${NO_ALT('/a.png')}`);
+    expect(s.host.cmp().imagesMissingAlt()).toBe(1);
+  });
+
+  it('alt sem mudar a URL publica sem mediaChange; desfazer volta', async () => {
+    const s = await setup(`<p>ab</p>${NO_ALT('/a.png')}`);
+    const cmp = s.host.cmp();
+    selectNode(s.editor, 'rtImage');
+    newUndoStep(s.editor);
+    expect(s.editor.commands.updateImage({ alt: 'x' })).toBe(true);
+    await settle(s.fixture);
+    expect(cmp.imagesMissingAlt()).toBe(0);
+    expect(s.host.changes).toEqual([]);
+    expect(s.editor.commands.undo()).toBe(true);
+    await settle(s.fixture);
+    expect(cmp.imagesMissingAlt()).toBe(1);
+    expect(s.host.changes).toEqual([]);
+    noNg010x(s.error);
+  });
+
+  it('carga externa recalcula sem emitir', async () => {
+    const s = await setup('<p>ab</p>');
+    const cmp = s.host.cmp();
+    expect(cmp.imagesMissingAlt()).toBe(0);
+    s.host.value.set(`${NO_ALT('/a.png')}<p>x</p>${NO_ALT('/b.png')}`);
+    await settle(s.fixture);
+    expect(cmp.imagesMissingAlt()).toBe(2);
+    expect(s.host.log).toEqual(['ready']);
+  });
+});

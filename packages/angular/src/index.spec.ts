@@ -1,4 +1,4 @@
-import type { Signal } from '@angular/core';
+import type { InputSignal, OutputRef, Signal } from '@angular/core';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import * as api from '@cds/rte-angular';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
@@ -9,6 +9,9 @@ import type {
   RteFloatingMenusConfig,
   RteMediaChange,
   RteMediaSession,
+  RteUploadConfig,
+  RteUploadErrorEvent,
+  RteUploadStatus,
 } from '@cds/rte-angular';
 import * as i18n from '@cds/rte-angular/i18n';
 import * as testing from '@cds/rte-angular/testing';
@@ -64,6 +67,25 @@ describe('@cds/rte-angular', () => {
     expect(e.name).toBe('RteUploadError');
     expect(e.reason).toBe('server');
     expect(e.cause).toBe(1);
+  });
+
+  it('RteEditor ganha a API de envio (05c2a §4)', () => {
+    type E = api.RteEditor;
+    expectTypeOf<E['upload']>().toEqualTypeOf<
+      InputSignal<RteUploadConfig | null | undefined>
+    >();
+    expectTypeOf<E['uploadError']>().toExtend<OutputRef<RteUploadErrorEvent>>();
+    expectTypeOf<E['uploads']>().toEqualTypeOf<
+      Signal<readonly RteUploadStatus[]>
+    >();
+    expectTypeOf<E['pendingUploads']>().toEqualTypeOf<Signal<number>>();
+    expectTypeOf<E['imagesMissingAlt']>().toEqualTypeOf<Signal<number>>();
+    expectTypeOf<E['cancelUpload']>().toEqualTypeOf<(id: string) => boolean>();
+    expectTypeOf<E['cancelAllUploads']>().toEqualTypeOf<() => void>();
+    expectTypeOf<E['uploadFiles']>().toEqualTypeOf<
+      (files: Iterable<File>) => number
+    >();
+    expect(typeof api.RteEditor.prototype.uploadFiles).toBe('function');
   });
 
   it('RTE_DIALOG_LANGUAGES é congelado', () => {
