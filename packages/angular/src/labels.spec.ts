@@ -43,6 +43,8 @@ import { fakeCoords, installGeometry } from './testing-support/geometry';
 import { installPopoverShim, isPopoverOpen } from './testing-support/popover';
 import { mergeLabels, readLabelsSource } from './labels/merge';
 import { settle } from './testing-support/render';
+import { createFakeUploadAdapter } from './testing-support/fake-upload-adapter';
+import { whenUploadReady } from './testing-support/upload-runtime';
 
 function deepKeys(value: unknown, prefix = ''): string[] {
   if (value === null || typeof value !== 'object' || Array.isArray(value))
@@ -1391,5 +1393,51 @@ describe('rótulos do envio de arquivos (05c2a, E20)', () => {
     expect(mergeLabels(RTE_LABELS_EN, { upload: 1 as never }).upload).toBe(
       RTE_LABELS_EN.upload,
     );
+  });
+});
+
+@Component({
+  selector: 'rte-test-upload-labels',
+  imports: [RteEditor],
+  template: `<rte-editor [upload]="upload" [labels]="labels" />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class UploadLabelsHost {
+  readonly upload = { adapter: createFakeUploadAdapter() };
+  readonly labels: RteLabelsInput = {
+    upload: { region: 'Fila', announceStart: (c: number) => `n=${c}` },
+  };
+}
+
+describe('rótulos do envio na tela (E20, R14)', () => {
+  let restoreDialog: () => void;
+  beforeEach(() => {
+    restoreDialog = installDialogShim();
+  });
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    restoreDialog();
+  });
+
+  it('rótulos parciais do consumidor chegam à bandeja e à região; o resto vem do en', async () => {
+    const fixture = TestBed.createComponent(UploadLabelsHost);
+    fixture.autoDetectChanges();
+    await settle(fixture);
+    const cmp = fixture.debugElement.query(
+      (el) => el.componentInstance instanceof RteEditor,
+    ).componentInstance as RteEditor;
+    await whenUploadReady(cmp);
+    cmp.uploadFiles([new File(['x'], 'a.png', { type: 'image/png' })]);
+    await settle(fixture);
+    const root = fixture.nativeElement as HTMLElement;
+    expect(
+      root.querySelector('section.rte-uploads')?.getAttribute('aria-label'),
+    ).toBe('Fila');
+    expect(
+      root.querySelector('.rte-uploads__progress')?.getAttribute('aria-label'),
+    ).toBe('Uploading a.png');
+    expect(
+      root.querySelector('.rte-uploads__status')?.textContent?.trim(),
+    ).toBe('n=1');
   });
 });

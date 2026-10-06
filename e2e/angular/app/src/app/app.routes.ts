@@ -40,4 +40,15 @@ export const routes: Routes = [
     path: 'media',
     loadComponent: () => import('./pages/media').then((m) => m.MediaPage),
   },
+  // Envio de arquivos (spec 05c2a): providers de rota sob demanda.
+  {
+    path: 'upload',
+    loadChildren: () =>
+      import('./pages/upload.routes').then((m) => m.UPLOAD_ROUTES),
+  },
+  {
+    path: 'upload-preview',
+    loadChildren: () =>
+      import('./pages/upload.routes').then((m) => m.UPLOAD_PREVIEW_ROUTES),
+  },
 ];

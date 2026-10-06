@@ -33,7 +33,8 @@
       "forbiddenImports": ["@angular/forms"],
       "forbiddenContent": [
         "marcador de envio sem envio correspondente",
-        "rteUploadComposition"
+        "rteUploadComposition",
+        "rte-upload-marker__name"
       ]
     },
     "whole": {
@@ -54,7 +55,8 @@
       "forbiddenImports": ["@angular/forms"],
       "forbiddenContent": [
         "marcador de envio sem envio correspondente",
-        "rteUploadComposition"
+        "rteUploadComposition",
+        "rte-upload-marker__name"
       ]
     },
     "dialogs": {
@@ -176,6 +178,6 @@
     "i18n": 5120,
     "validators": 1344,
     "upload": 1152,
-    "upload-runtime": 5376
+    "upload-runtime": 7168
   }
 }

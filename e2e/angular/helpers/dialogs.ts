@@ -107,7 +107,7 @@ export interface DialogsChunk {
  * interceptador com `route.fallback()` (Ruling 4 da 05c2a: com dois
  * interceptadores na página, um `fulfill` aqui engoliria o *chunk* do outro).
  */
-async function chunkByMarker(
+export async function chunkByMarker(
   page: Page,
   marker: string,
 ): Promise<DialogsChunk> {

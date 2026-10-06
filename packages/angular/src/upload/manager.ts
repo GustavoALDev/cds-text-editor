@@ -6,7 +6,7 @@ import type {
   RteUploadHost,
   RteUploadSaid as Said,
 } from './host';
-import { createMarkerElement } from './marker-element';
+import { createMarkerElement, setMarkerProgress } from './marker-element';
 import {
   RTE_UPLOAD_KEY,
   uploadMetaTransaction,
@@ -39,6 +39,8 @@ interface Job {
   readonly adapter: RteUploadAdapter;
   readonly abort: AbortController;
   readonly element: HTMLElement;
+  /** *Object URL* da miniatura (E16), revogada ao encerrar. */
+  readonly preview: string | null;
   state: RteUploadStatus['state'];
   /** Último progresso recebido (`null` = indeterminado). */
   progress: number | null;
@@ -121,7 +123,9 @@ export class RteUploadManager {
         refused.push({ fileName: file.name, type: check.type, reason });
         refusedNames.push(displayName(file));
       } else {
-        added.push(this.createJob(doc, file, check.type, text, cfg.adapter));
+        added.push(
+          this.createJob(doc, file, check.type, text, cfg.adapter, cfg.preview),
+        );
       }
     });
     if (added.length) {
@@ -232,16 +236,21 @@ export class RteUploadManager {
     type: RteUploadType,
     text: RteUploadText | undefined,
     adapter: RteUploadAdapter,
+    wantsPreview: boolean,
   ): Job {
+    const name = displayName(file);
+    const preview =
+      wantsPreview && type === 'image' ? this.createPreview(file) : null;
     return {
       id: `${this.prefix}${++this.seq}`,
       file,
       type,
-      name: displayName(file),
+      name,
       text,
       adapter,
       abort: new AbortController(),
-      element: createMarkerElement(doc, type),
+      element: createMarkerElement(doc, type, name, preview),
+      preview,
       state: 'queued',
       progress: null,
       shown: null,
@@ -249,6 +258,20 @@ export class RteUploadManager {
       settled: false,
       done: false,
     };
+  }
+
+  /** Miniatura local (E16): só no marcador; `null` sem `createObjectURL`. */
+  private createPreview(file: File): string | null {
+    const urls = this.urls();
+    return typeof urls?.createObjectURL === 'function'
+      ? urls.createObjectURL(file)
+      : null;
+  }
+
+  /** `URL` da janela do editor (*object URLs* da miniatura, E16). */
+  private urls(): typeof URL | null {
+    const view = this.host.view as (Window & { URL?: typeof URL }) | null;
+    return view?.URL ?? null;
   }
 
   /** Começa os da fila até 2 simultâneos (E11). */
@@ -309,6 +332,7 @@ export class RteUploadManager {
         continue;
       }
       job.shown = job.progress;
+      setMarkerProgress(job.element, job.shown);
       changed = true;
     }
     if (changed) this.host.zone.run(() => this.publish());
@@ -371,7 +395,10 @@ export class RteUploadManager {
     error?: RteUploadErrorEvent,
   ): void {
     const gone = new Set(jobs);
-    for (const job of jobs) job.done = true;
+    for (const job of jobs) {
+      job.done = true;
+      if (job.preview !== null) this.urls()?.revokeObjectURL(job.preview);
+    }
     this.jobs = this.jobs.filter((j) => !gone.has(j));
     this.host.zone.run(() => {
       this.publish();

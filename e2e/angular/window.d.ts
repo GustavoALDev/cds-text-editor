@@ -18,7 +18,34 @@ export type RteE2eId =
   | 'floating-alt'
   | 'media'
   | 'media-alt'
-  | 'media-key';
+  | 'media-key'
+  | 'upload'
+  | 'upload-reactive'
+  | 'upload-template'
+  | 'upload-none';
+
+/** `RteUploadStatus` do `@cds/rte-angular` (spec 05c2a, E18). */
+export interface RteE2eUploadStatus {
+  readonly id: string;
+  readonly fileName: string;
+  readonly type: 'image' | 'video';
+  readonly state: 'queued' | 'uploading' | 'inserting';
+  readonly progress: number | null;
+}
+
+/** `RteUploadErrorEvent` do `@cds/rte-angular` (sem `cause`, que não atravessa a ponte). */
+export interface RteE2eUploadError {
+  readonly fileName: string;
+  readonly type: 'image' | 'video';
+  readonly reason:
+    | 'type'
+    | 'size'
+    | 'count'
+    | 'network'
+    | 'server'
+    | 'response'
+    | 'unavailable';
+}
 
 /** `RteToolbarConfig` do `@cds/rte-angular` (sem importar o pacote Angular aqui). */
 export type RteE2eToolbarConfig =
@@ -69,6 +96,20 @@ declare global {
       lastMediaChange(id: RteE2eId): RteE2eMediaChange | null;
       mediaChanges(id: RteE2eId): number;
       mediaSession(id: RteE2eId): RteE2eMediaSession;
+      uploads(id: RteE2eId): readonly RteE2eUploadStatus[];
+      pendingUploads(id: RteE2eId): number;
+      imagesMissingAlt(id: RteE2eId): number;
+      lastUploadError(id: RteE2eId): RteE2eUploadError | null;
+      uploadErrors(id: RteE2eId): readonly RteE2eUploadError[];
+      /** `uploadFiles(files)` do editor `id`; os aceitos (E5). */
+      uploadFiles(id: RteE2eId, files: File[]): number;
+      cancelAllUploads(id: RteE2eId): void;
+      /** Troca o `[upload]` do editor `id` (Ruling 14: `query` vai ao *endpoint*). */
+      setUpload(
+        id: RteE2eId,
+        mode: 'http' | 'none' | 'other',
+        query?: string,
+      ): void;
       watchFloating(id: RteE2eId): void;
       floatingMutations(id: RteE2eId): { total: number; style: number };
       zoneTurns(): number;

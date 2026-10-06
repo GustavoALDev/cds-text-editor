@@ -46,6 +46,20 @@ class SsrMediaHost {
     '<p>segredo</p><figure class="rt-figure rt-figure--center"><img src="/a.png" alt="A"></figure>';
 }
 
+/** Entrada `[upload]` (spec 05c2a, E8/R15): região de status vazia, sem bandeja. */
+@Component({
+  selector: 'rte-ssr-host',
+  imports: [RteEditor],
+  template: `<rte-editor [value]="secret" [upload]="upload" />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class SsrUploadHost {
+  readonly secret = '<p>segredo</p>';
+  readonly upload = {
+    adapter: { uploadImage: () => Promise.reject(new Error('servidor')) },
+  };
+}
+
 /**
  * O setup do builder inicia o TestBed (plataforma de navegador) em todo
  * arquivo, inclusive nos de ambiente `node`, e o `@angular/common` só aceita
@@ -288,7 +302,47 @@ describe('RteEditor no servidor (R12)', () => {
       );
       await new Promise((resolve) => setTimeout(resolve, 20));
       expect(html).toContain('class="rte-root rte-editor');
-      expect(html).not.toContain('rte-upload');
+      expect(html).not.toContain('rte-upload-marker');
+      expect(html).not.toMatch(/class="rte-uploads"|<section/);
+      expect(loader).not.toHaveBeenCalled();
+      expect(error).not.toHaveBeenCalled();
+    },
+  );
+  it(
+    'com [upload]: a região aria-live vazia está no HTML, sem bandeja nem marcador (E8, R15)',
+    { timeout: 30_000 },
+    async () => {
+      const error = vi.spyOn(console, 'error');
+      const loader = vi.fn(() => import('./upload/rte-upload'));
+      const html = await withServerDomAdapter(() =>
+        renderApplication(
+          (context) =>
+            bootstrapApplication(
+              SsrUploadHost,
+              {
+                providers: [
+                  provideZonelessChangeDetection(),
+                  provideServerRendering(),
+                  { provide: RTE_UPLOAD_LOADER, useValue: loader },
+                ],
+              },
+              context,
+            ),
+          {
+            document:
+              '<!doctype html><html><head></head><body><rte-ssr-host></rte-ssr-host></body></html>',
+            url: '/',
+          },
+        ),
+      );
+      const region =
+        /(<div[^>]*class="rte-uploads__status"[^>]*>)(.*?)<\/div>/s.exec(html);
+      expect(region).not.toBeNull();
+      expect(region?.[1]).toContain('aria-live="polite"');
+      expect(region?.[2]?.replace(/<!--.*?-->/gs, '').trim()).toBe('');
+      expect(html).not.toMatch(/class="rte-uploads"|<section/);
+      expect(html).not.toContain('rte-upload-marker');
+      expect(html).not.toContain('segredo');
       expect(loader).not.toHaveBeenCalled();
       expect(error).not.toHaveBeenCalled();
     },

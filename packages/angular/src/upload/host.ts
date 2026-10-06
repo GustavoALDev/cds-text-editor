@@ -50,6 +50,11 @@ export interface RteUploadHost {
   emitError(e: RteUploadErrorEvent): void;
   /** Último anúncio (E8), do gerenciador ou da falha de carga. */
   readonly announcement: Signal<RteUploadAnnouncement | null>;
+  /**
+   * Anúncios do turno atual, na ordem (E8): os do mesmo turno acumulam
+   * (início e recusa de um gesto); o primeiro de um turno novo substitui.
+   */
+  readonly announcements: Signal<readonly RteUploadAnnouncement[]>;
   announce(a: RteUploadSaid): void;
 }
 
@@ -71,8 +76,9 @@ export function createEditorUploadHost(o: {
   readonly zone: NgZone;
   emitError(e: RteUploadErrorEvent): void;
 }): RteUploadHost {
-  const said = signal<RteUploadAnnouncement | null>(null);
+  const said = signal<readonly RteUploadAnnouncement[]>([]);
   let n = 0;
+  let turn = false;
   return {
     editor: o.editor,
     config: computed(() => {
@@ -86,7 +92,17 @@ export function createEditorUploadHost(o: {
     zone: o.zone,
     view: inject(DOCUMENT).defaultView,
     emitError: (e) => o.emitError(e),
-    announcement: said.asReadonly(),
-    announce: (a) => said.set({ n: ++n, ...a }),
+    announcement: computed(() => said().at(-1) ?? null),
+    announcements: said.asReadonly(),
+    announce: (a) => {
+      const next: RteUploadAnnouncement = { n: ++n, ...a };
+      if (turn) {
+        said.update((list) => [...list, next]);
+        return;
+      }
+      turn = true;
+      queueMicrotask(() => (turn = false));
+      said.set([next]);
+    },
   };
 }

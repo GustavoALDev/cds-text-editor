@@ -1100,3 +1100,188 @@ describe('editor.css: mídia (spec 05c1, V11, V15)', () => {
     ).toBe(true);
   });
 });
+
+describe('editor.css: envio de arquivos (spec 05c2a, E21)', () => {
+  /** Regras cujo seletor termina na classe (com pseudo-elemento opcional). */
+  const rulesOf = (cls: string): Rule[] =>
+    styleRules().filter((r) =>
+      r.selectors.some((s) =>
+        new RegExp(`\\.${cls}(?:::?[\\w-]+)*$`).test(s.trim()),
+      ),
+    );
+  const outsideForced = (rules: Rule[]): Rule[] =>
+    rules.filter(
+      (r) =>
+        !enclosingAtRules(r).some(
+          (a) => a.name === 'media' && /forced-colors/.test(a.params),
+        ),
+    );
+  const declsOf = (rules: Rule[]): Declaration[] =>
+    rules.flatMap((r) => declarations(r));
+  const has = (cls: string, prop: string, value: string): boolean =>
+    declsOf(outsideForced(rulesOf(cls))).some(
+      (d) => d.prop === prop && d.value === value,
+    );
+  const forcedRules = (): Rule[] => {
+    const rules: Rule[] = [];
+    root.walkAtRules('media', (at) => {
+      if (/forced-colors:\s*active/.test(at.params))
+        at.walkRules((r) => void rules.push(r));
+    });
+    return rules;
+  };
+
+  const CLASSES = [
+    'rte-uploads',
+    'rte-uploads__list',
+    'rte-uploads__item',
+    'rte-uploads__name',
+    'rte-uploads__progress',
+    'rte-uploads__cancel',
+    'rte-uploads__status',
+    'rte-upload-marker',
+    'rte-upload-marker__name',
+    'rte-upload-marker__progress',
+    'rte-upload-marker__preview',
+    'rte-upload-marker--queued',
+    'rte-dialog__source',
+  ];
+
+  it.each(CLASSES)('%s: regras em rte.components, sob .rte-editor', (cls) => {
+    const rules = rulesOf(cls);
+    expect(rules.length).toBeGreaterThan(0);
+    for (const r of rules) {
+      expect(layerOf(r)).toBe('rte.components');
+      for (const s of r.selectors) expect(s.trim()).toMatch(/^\.rte-editor /);
+    }
+  });
+
+  it('nenhuma regra do envio no content.css (spec 06)', () => {
+    const content = readFileSync(CONTENT_CSS_FILE, 'utf8');
+    expect(content).not.toMatch(/rte-upload|rte-dialog__source/);
+  });
+
+  it('cores do envio só em --rte-* (CanvasText/Highlight em forced-colors), inclusive accent-color', () => {
+    const rules = CLASSES.flatMap(rulesOf);
+    for (const d of declsOf(rules)) {
+      if (!/color|^border|^background|^outline/.test(d.prop)) continue;
+      const forced = enclosingAtRules(d).some(
+        (a) => a.name === 'media' && /forced-colors/.test(a.params),
+      );
+      const colors = d.value
+        .split(/\s+/)
+        .filter((t) => !NON_COLOR_TOKEN.test(t));
+      for (const c of colors) {
+        if (forced)
+          expect(c, `${d.prop}: ${d.value}`).toMatch(
+            /^(?:CanvasText|Highlight|var\(--rte-[a-z0-9-]+\)|transparent)$/,
+          );
+        else expect(c, `${d.prop}: ${d.value}`).toMatch(COLOR_VALUE);
+      }
+    }
+  });
+
+  it('bandeja: borda superior --rte-border, lista sem marcadores, item em grade, nome que quebra', () => {
+    expect(
+      has('rte-uploads', 'border-block-start', '1px solid var(--rte-border)'),
+    ).toBe(true);
+    expect(has('rte-uploads__list', 'list-style', 'none')).toBe(true);
+    expect(has('rte-uploads__item', 'display', 'grid')).toBe(true);
+    expect(has('rte-uploads__name', 'overflow-wrap', 'anywhere')).toBe(true);
+  });
+
+  it('progresso: accent-color e barra em tokens, altura ≥ 8 px, borda legível', () => {
+    expect(
+      has('rte-uploads__progress', 'accent-color', 'var(--rte-primary-text)'),
+    ).toBe(true);
+    const decls = declsOf(outsideForced(rulesOf('rte-uploads__progress')));
+    expect(
+      decls.some((d) => d.prop === 'block-size' && /8px/.test(d.value)),
+    ).toBe(true);
+    expect(
+      decls.some(
+        (d) =>
+          d.prop === 'border' && d.value === '1px solid var(--rte-text-muted)',
+      ),
+    ).toBe(true);
+    // a barra preenchida dos três motores (sem o verde do UA com borda de autor)
+    const value = styleRules().filter((r) =>
+      r.selectors.some((s) => /progress-value$|progress-bar$/.test(s)),
+    );
+    expect(value.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('botão cancelar com alvo ≥ 24 × 24 px e foco visível', () => {
+    const decls = declsOf(outsideForced(rulesOf('rte-uploads__cancel')));
+    expect(
+      decls.some((d) => d.prop === 'min-inline-size' && d.value === '24px'),
+    ).toBe(true);
+    expect(
+      decls.some(
+        (d) => d.prop === 'min-block-size' && d.value.includes('24px'),
+      ),
+    ).toBe(true);
+    expect(
+      styleRules().some((r) =>
+        r.selectors.some((s) => /rte-uploads__cancel:focus-visible$/.test(s)),
+      ),
+    ).toBe(true);
+  });
+
+  it('região de status visualmente oculta (fora da tela, ainda no leitor)', () => {
+    expect(has('rte-uploads__status', 'position', 'absolute')).toBe(true);
+    expect(has('rte-uploads__status', 'clip-path', 'inset(50%)')).toBe(true);
+    expect(has('rte-uploads__status', 'overflow', 'hidden')).toBe(true);
+    expect(has('rte-uploads__status', 'display', 'none')).toBe(false);
+  });
+
+  it('marcador: inline-flex, borda tracejada, raio, sem seleção; miniatura contida; fila', () => {
+    expect(has('rte-upload-marker', 'display', 'inline-flex')).toBe(true);
+    expect(
+      has('rte-upload-marker', 'border', '1px dashed var(--rte-border)'),
+    ).toBe(true);
+    expect(has('rte-upload-marker', 'border-radius', 'var(--rte-radius)')).toBe(
+      true,
+    );
+    expect(has('rte-upload-marker', 'user-select', 'none')).toBe(true);
+    expect(has('rte-upload-marker__preview', 'object-fit', 'contain')).toBe(
+      true,
+    );
+    expect(
+      declsOf(rulesOf('rte-upload-marker__preview')).some(
+        (d) => d.prop === 'max-block-size' && /var\(--rte-/.test(d.value),
+      ),
+    ).toBe(true);
+    expect(
+      has('rte-upload-marker--queued', 'color', 'var(--rte-text-muted)'),
+    ).toBe(true);
+  });
+
+  it('origem do diálogo em linha com espaçamento', () => {
+    expect(has('rte-dialog__source', 'display', 'flex')).toBe(true);
+    expect(
+      declsOf(rulesOf('rte-dialog__source')).some((d) => d.prop === 'gap'),
+    ).toBe(true);
+  });
+
+  it('forced-colors: progresso em Highlight com borda CanvasText; marcador CanvasText', () => {
+    const forced = forcedRules();
+    const decls = (cls: string) =>
+      declsOf(
+        forced.filter((r) =>
+          r.selectors.some((s) => new RegExp(`\\.${cls}$`).test(s.trim())),
+        ),
+      );
+    expect(decls('rte-uploads__progress')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ prop: 'accent-color', value: 'Highlight' }),
+        expect.objectContaining({ prop: 'border-color', value: 'CanvasText' }),
+      ]),
+    );
+    expect(decls('rte-upload-marker')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ prop: 'border-color', value: 'CanvasText' }),
+      ]),
+    );
+  });
+});

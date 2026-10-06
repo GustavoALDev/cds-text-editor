@@ -77,7 +77,10 @@ import { RteToolbar } from '../toolbar/rte-toolbar';
 import { createToolbarState, type RteToolbarState } from '../toolbar/state';
 import { mergeTheme, sameTheme, themeKey } from '../theme/instance-theme';
 import { RteUploads } from '../upload/facade';
+import { announcementTexts } from '../upload/announce';
 import { createEditorUploadHost } from '../upload/host';
+// Só no `@defer` da bandeja: o mesmo módulo do carregador (*chunk* `rte-upload`).
+import { RteUploadTray } from '../upload/rte-upload';
 import type {
   RteUploadConfig,
   RteUploadErrorEvent,
@@ -166,13 +169,14 @@ function toCharLimit(value: number | undefined): number | null {
   selector: 'rte-editor',
   exportAs: 'rteEditor',
   templateUrl: './rte-editor.html',
-  // `RteDialogs` e `RteMediaForms` só aqui e nos `@defer` do template (G7,
-  // 05c2a E2: senão o chunk some).
+  // `RteDialogs`, `RteMediaForms` e `RteUploadTray` só aqui e nos `@defer`
+  // do template (G7, 05c2a E2 e Ruling 28: senão o chunk some).
   imports: [
     RteToolbar,
     RteFloatingMenus,
     RteDialogs,
     RteMediaForms,
+    RteUploadTray,
     RteDeferFailed,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -509,6 +513,11 @@ export class RteEditor implements FormValueControl<string> {
     this.uploadRuntime.uploads;
   readonly pendingUploads: Signal<number> = computed(
     () => this.uploads().length,
+  );
+  /** Textos da região `aria-live` (E8): um nó por anúncio do turno. */
+  protected readonly announcements = announcementTexts(
+    this.uploadHost,
+    () => this.resolvedLabels().upload,
   );
   private readonly missingAlt = signal(0);
   /** Imagens com `alt: null` (E18), fora do portão do delta de URLs. */

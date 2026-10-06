@@ -3,6 +3,12 @@ import { createUploadPlugins, RTE_UPLOAD_PLUGIN_KEYS } from './extension';
 import type { RteUploadHost } from './host';
 import { RteUploadManager } from './manager';
 
+/**
+ * A bandeja (E8) vem no mesmo *chunk*: o `@defer` do `RteEditor` a importa
+ * daqui, o mesmo módulo do `RTE_UPLOAD_LOADER` (um *chunk* só, Ruling 28).
+ */
+export { RteUploadTray } from './upload-tray';
+
 /** Envio montado num editor: o gerenciador e os *plugins* registrados. */
 export interface RteUploadRuntime {
   readonly manager: RteUploadManager;

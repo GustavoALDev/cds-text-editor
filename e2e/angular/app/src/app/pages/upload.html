@@ -1,0 +1,55 @@
+<section>
+  <rte-editor
+    #main
+    data-testid="upload"
+    ariaLabel="Upload editor"
+    toolbar="full"
+    [options]="options"
+    [labels]="labels()"
+    [upload]="configs().upload"
+    [formField]="f.body"
+    (uploadError)="onError('upload', $event)"
+    (editorReady)="bridge.ready('upload')"
+  />
+</section>
+<section>
+  <form [formGroup]="group">
+    <rte-editor
+      #reactive
+      data-testid="upload-reactive"
+      ariaLabel="Upload reactive"
+      [options]="options"
+      [labels]="labels()"
+      [upload]="configs()['upload-reactive']"
+      formControlName="body"
+      (uploadError)="onError('upload-reactive', $event)"
+      (editorReady)="bridge.ready('upload-reactive')"
+    />
+  </form>
+</section>
+<section>
+  <rte-editor
+    #template
+    data-testid="upload-template"
+    ariaLabel="Upload template"
+    [options]="options"
+    [labels]="labels()"
+    [upload]="configs()['upload-template']"
+    [(ngModel)]="templateValue"
+    (uploadError)="onError('upload-template', $event)"
+    (editorReady)="bridge.ready('upload-template')"
+  />
+</section>
+<section>
+  <rte-editor
+    #none
+    data-testid="upload-none"
+    ariaLabel="No upload"
+    [options]="options"
+    [labels]="labels()"
+    [upload]="null"
+    [(value)]="noneValue"
+    (uploadError)="onError('upload-none', $event)"
+    (editorReady)="bridge.ready('upload-none')"
+  />
+</section>
