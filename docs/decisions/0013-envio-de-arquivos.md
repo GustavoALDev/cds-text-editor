@@ -148,7 +148,25 @@ Evidência por spec (`e2e/angular/`; **Chromium** nas tarefas; **os 3 motores, z
 
 ## Revisão final
 
-Revisões por tarefa (spec ✅) com correções aceitas (T1, T3, T5, T6, T8, T10, T11). A revisão final da 05c2a (`96ddd3c..`) e a rodada completa nos 3 motores são registradas aqui quando concluídas (ruling 41). Menores adiados da onda das tarefas, para a onda final: guarda de conteúdo cobrir `marker-element`; gatilho de carga sem conferir `rules()`; ganchos de teste frágeis (`loaded` privado); caminho de `requestIdleCallback` só no Playwright; `focusout` da bandeja para área não focável (`relatedTarget` nulo) mantém `focused`; guardar todas as instâncias vistas por entrada (`markers.ts`) e teste do caminho de atualização do nó; `import` fora do topo em `table-form.ts`; tipo de retorno explícito em `inputExtension`; `dialog: Signal<unknown>` em `editor-bindings.ts`; `waitForTimeout` no N34; vírgula decimal pt-BR no MB do diálogo.
+Revisões por tarefa (spec ✅) com correções aceitas (T1, T3, T5, T6, T8, T10, T11). A revisão final (Opus, `3c40c1e..76f03f2`) concluiu "pronta após correções" e a onda final (`bc20d81`) aplicou:
+
+- **Importantes (com teste vermelho antes):** (1) `attach()` da fachada: se o editor ficou somente leitura (ou sem mídia no esquema) durante a carga do _chunk_, os gestos em buffer viram `'unavailable'` (um `uploadError` por arquivo e um anúncio) em vez de entrar no gerenciador; (2) `onFocusOut` da bandeja: foco que sai sem `relatedTarget` (clique no nada) zera `focused` (em microtarefa, só se o nó segue conectado), e um envio que termina depois não puxa o foco de volta.
+- **Menores:** `AdapterReason` → `RteUploadAdapterReason`, exportado do entry `.`; `response.ts` está no _chunk_ (rulings 27 e (d) e `CLAUDE.md` corrigidos); comentários de `allowDrop` e `mapState` (cópia por arrasto, ruling 25); mensagem do lint do `/upload`; `import` no topo de `table-form.ts`; `inputExtension(): Extension`.
+
+**Verificação final (2026-10-06):** `lint`, `build`, `test`, `test-zone`, `verify-package` e `size` do angular e do core verdes; angular 1597/1597 em `test` e em `test-zone` (61 arquivos), core 1054/1054; `check:rules` e `typecheck:e2e` verdes. E2E `e2e/angular`, `--workers=2`: **Chromium 466 passaram** (2 intermitentes sob carga, verdes isoladas: N23 "setas circulares" zone e N36 "progresso determinado"); **Firefox 464 passaram, 3 ignoradas**, 1 falha (N36 progresso, abaixo); **WebKit 461 passaram, 3 ignoradas, 4 falhas** (abaixo).
+
+- **N36 "progresso determinado cresce" (Firefox, às vezes Chromium):** o motor despeja o corpo de 900 kB no _socket_ de uma vez em _loopback_ (a leitura lenta do servidor não vira contrapressão), e o `progress` salta a ~1 sem valores intermediários. O teste passou a exigir só o valor determinado em [0, 1]; o crescimento é provado nos unitários (bandeja e gerenciador).
+- **WebKit, aberto:** `editor-upload-states` "erro (500)" e "erro (http:)" (zoneless) e `editor-upload-a11y` (axe `forced-colors`; região `aria-live` com erro) falham quando rodam depois do teste "cancelar pelo teclado" na mesma execução (isolados, ou com `-g`, passam). Reproduz em `76f03f2`, sem as correções desta onda, e é só do WebKit; nos casos de `states` o servidor recebe o envio e responde 500, a região de status mostra "Could not upload ...: the server refused it." mas `lastUploadError` segue `null`. Causa não isolada; fica como pendência para o CI do PR.
+
+Menores adiados que **seguem** abertos: guarda de conteúdo cobrir `marker-element`; gatilho de carga sem conferir `rules()`; ganchos de teste frágeis (`loaded` privado); caminho de `requestIdleCallback` só no Playwright; guardar todas as instâncias vistas por entrada (`markers.ts`) e teste do caminho de atualização do nó; `dialog: Signal<unknown>` em `editor-bindings.ts`; `waitForTimeout` no N34; vírgula decimal pt-BR no MB do diálogo.
+
+**Adições da revisão final:**
+
+- `uploadFiles()` após falha de carga do _chunk_ devolve a contagem aceita pela E5, ainda que cada arquivo vire `'unavailable'`; no README, "quantos foram aceitos" = aceitos pela E5.
+- `cancelAllUploads()` descarta os gestos ainda à espera do _chunk_ sem anúncio nem `uploadError` (cancelar não é erro; esses nunca estiveram na bandeja).
+- O teste de _ticks_ do N38 é um limite frouxo; a prova de que o adaptador roda fora da zona é o `upload-manager.spec` (`isInAngularZone`).
+- Lacunas de teste conhecidas: `'count'` antes do _chunk_; _dragover_ em `readonly` (E2E); Aplicar antes do _chunk_; laço da E5 duplicado entre fachada e gerenciador (dívida).
+- O erro do campo de arquivo não tem `aria-live`, como na 05c1 (foco + `aria-describedby`).
 
 ## Pendências conhecidas
 
