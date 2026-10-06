@@ -246,6 +246,8 @@ describe('bandeja (E8, R10)', () => {
     const s = await setup();
     await three(s);
     const ids = s.cmp.uploads().map((u) => u.id);
+    // o clique do Chromium/Firefox foca o botão; o `click()` do jsdom, não
+    cancelButton(s.root, 1).focus();
     cancelButton(s.root, 1).click();
     await settle(s.fixture);
     expect(s.adapter.signal(1).aborted).toBe(true);
@@ -272,6 +274,8 @@ describe('bandeja (E8, R10)', () => {
   it('cancelar o último: foco no anterior', async () => {
     const s = await setup();
     await three(s);
+    // o clique do Chromium/Firefox foca o botão; o `click()` do jsdom, não
+    cancelButton(s.root, 2).focus();
     cancelButton(s.root, 2).click();
     await settle(s.fixture);
     expect(names(s.root)).toEqual(['a.png', 'b.png']);
@@ -290,6 +294,58 @@ describe('bandeja (E8, R10)', () => {
     // o `focus` do Tiptap espera um quadro
     await nextFrame();
     expect(document.activeElement).toBe(s.editor.view.dom);
+  });
+});
+
+describe('foco quando o item focado sai sem cancelar (Ruling 31)', () => {
+  it('o envio focado termina: o foco vai ao botão seguinte, nunca ao body', async () => {
+    const s = await setup();
+    await three(s);
+    cancelButton(s.root, 0).focus();
+    s.adapter.resolve(0, { url: '/a.png' });
+    await drain(s.fixture);
+    expect(names(s.root)).toEqual(['b.png', 'c.png']);
+    expect(document.activeElement).toBe(cancelButton(s.root, 0));
+  });
+
+  it('o último focado falha: o foco vai ao anterior', async () => {
+    const s = await setup();
+    await three(s);
+    s.adapter.resolve(0, { url: '/a.png' });
+    await drain(s.fixture);
+    // c começou depois de a; agora: b (1), c (2)
+    cancelButton(s.root, 1).focus();
+    s.adapter.reject(2, new RteUploadError('server'));
+    await drain(s.fixture);
+    expect(names(s.root)).toEqual(['b.png']);
+    expect(document.activeElement).toBe(cancelButton(s.root, 0));
+  });
+
+  it('o único focado termina: a bandeja some e o foco vai ao editável', async () => {
+    const s = await setup();
+    s.cmp.uploadFiles([png('a.png')]);
+    await settle(s.fixture);
+    cancelButton(s.root, 0).focus();
+    s.adapter.resolve(0, { url: '/a.png' });
+    await drain(s.fixture);
+    expect(tray(s.root)).toBeNull();
+    await nextFrame();
+    expect(document.activeElement).toBe(s.editor.view.dom);
+  });
+
+  it('sem foco na bandeja, um envio que termina não move o foco', async () => {
+    const s = await setup();
+    await three(s);
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    try {
+      outside.focus();
+      s.adapter.resolve(0, { url: '/a.png' });
+      await drain(s.fixture);
+      expect(document.activeElement).toBe(outside);
+    } finally {
+      outside.remove();
+    }
   });
 });
 
@@ -366,10 +422,15 @@ describe('anúncios (E8, R10)', () => {
     expect(cancelButton(s.root, 0).getAttribute('aria-label')).toBe(
       'Cancelar envio de a.png',
     );
-    expect(said(s.root)).toEqual(['Enviando 3 arquivos.']);
+    // a troca de idioma não reanuncia: o texto foi fixado ao anunciar
+    expect(said(s.root)).toEqual(['Uploading 3 files.']);
     expect(s.cmp.uploads().length).toBe(3);
     expect(s.adapter.signal(0).aborted).toBe(false);
     expect(s.adapter.signal(1).aborted).toBe(false);
+    // o anúncio seguinte já sai em pt-BR
+    cancelButton(s.root, 2).click();
+    await settle(s.fixture);
+    expect(said(s.root)).toEqual(['Envio de c.png cancelado.']);
   });
 });
 

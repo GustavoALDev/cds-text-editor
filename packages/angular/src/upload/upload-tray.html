@@ -1,3 +1,4 @@
+@if (items().length) {
 <section class="rte-uploads" role="group" [attr.aria-label]="labels().region">
   <ul class="rte-uploads__list">
     @for (item of items(); track item.id) {
@@ -39,3 +40,4 @@
     }
   </ul>
 </section>
+}

@@ -143,6 +143,12 @@ function receiveUpload(req, res, query) {
       return;
     }
     chunks.push(chunk);
+    // o nome entra no log já no começo do corpo: um envio abortado antes do
+    // fim também é filtrável por nome
+    if (!entry.name) {
+      const head = Buffer.concat(chunks).subarray(0, 8192).toString('utf8');
+      entry.name = /filename="([^"]*)"/i.exec(head)?.[1] ?? '';
+    }
     if (slow) {
       req.pause();
       setTimeout(() => req.resume(), 60);

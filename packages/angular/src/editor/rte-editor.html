@@ -50,14 +50,14 @@
   />
   } } @placeholder {} @error {
   <ng-template [rteDeferFailed]="onFloatingFailed" />
-  } @defer (when uploads().length) { @if (uploads().length) {
+  } @defer (when uploads().length) {
   <rte-upload-tray
     [uploads]="uploads()"
     [labels]="resolvedLabels().upload"
     (cancelUpload)="cancelUpload($event)"
     (focusEditor)="focus()"
   />
-  } } @placeholder {} @error {}
+  } @placeholder {} @error {}
   <div class="rte-uploads__status" aria-live="polite">
     @for (a of announcements(); track a.n) {
     <span>{{ a.text }}</span>

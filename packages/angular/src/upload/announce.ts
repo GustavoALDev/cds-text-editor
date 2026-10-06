@@ -1,4 +1,4 @@
-import { computed, type Signal } from '@angular/core';
+import { computed, untracked, type Signal } from '@angular/core';
 import type { RteUploadLabels } from '../labels/types';
 import type { RteUploadAnnouncement, RteUploadHost } from './host';
 
@@ -28,8 +28,8 @@ export function announcementText(
 }
 
 /**
- * Textos da região `aria-live` (E8) sobre os anúncios do turno e os rótulos
- * atuais; `n` é a chave do `@for` (nó novo a cada anúncio, o mesmo texto
+ * Textos da região `aria-live` (E8) sobre os anúncios do turno, nos rótulos
+ * do momento do anúncio (a troca de idioma não reanuncia); `n` é a chave do `@for` (nó novo a cada anúncio, o mesmo texto
  * repetido é reanunciado).
  */
 export function announcementTexts(
@@ -37,7 +37,8 @@ export function announcementTexts(
   labels: () => RteUploadLabels,
 ): Signal<readonly { readonly n: number; readonly text: string }[]> {
   return computed(() => {
-    const l = labels();
+    // fixado ao anunciar: trocar o idioma não reanuncia (Ruling 31)
+    const l = untracked(labels);
     return host
       .announcements()
       .map((a) => ({ n: a.n, text: announcementText(a, l) }));

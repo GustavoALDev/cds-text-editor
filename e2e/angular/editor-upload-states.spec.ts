@@ -68,6 +68,27 @@ for (const zone of [false, true]) {
       ).toBe(0);
     });
 
+    test('o envio focado termina: o foco vai ao seguinte e, no fim, ao editável (Ruling 31)', async ({
+      page,
+    }) => {
+      await gotoApp(page, '/upload', { zone });
+      await waitForEditor(page, 'upload');
+      const first = uniqueName('f1', 'png', 600);
+      const second = uniqueName('f2', 'png', 1600);
+      expect(
+        await uploadInPage(page, 'upload', [pngFile(first), pngFile(second)]),
+      ).toBe(2);
+      const buttons = tray(page, 'upload').locator(
+        'button.rte-uploads__cancel',
+      );
+      await expect(buttons).toHaveCount(2);
+      await buttons.first().focus();
+      await expect(buttons).toHaveCount(1, { timeout: 10_000 });
+      await expect(buttons.first()).toBeFocused();
+      await expect(tray(page, 'upload')).toHaveCount(0, { timeout: 10_000 });
+      await expect(editableOf(page, 'upload')).toBeFocused();
+    });
+
     for (const scheme of ['light', 'dark'] as const) {
       test(`um envio: marcador, bandeja, progresso legível e chegada (${scheme})`, async ({
         page,
@@ -159,7 +180,8 @@ for (const zone of [false, true]) {
             errors: window.rteE2e.uploadErrors('upload'),
           };
         });
-        expect(arrived.html).toMatch(/<img src="\/__uploads\/\d+"/);
+        // forma canônica: `alt: null` serializa `alt=""` (V7)
+        expect(arrived.html).toMatch(/<img src="\/__uploads\/\d+" alt=""/);
         expect(arrived.attrs).toHaveLength(1);
         expect(arrived.attrs[0]?.alt).toBeNull();
         expect(arrived.missing).toBe(1);
