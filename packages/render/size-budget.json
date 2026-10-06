@@ -1,0 +1,42 @@
+{
+  "scenarios": {
+    "content": {
+      "entry": "dist/packages/render/fesm2022/cds-rte-render.mjs",
+      "exports": ["RteContent", "provideRteRender"],
+      "external": ["@angular/*", "@cds/*", "rxjs", "rxjs/*", "tslib"]
+    },
+    "toc": {
+      "entry": "dist/packages/render/fesm2022/cds-rte-render-toc.mjs",
+      "exports": ["RteToc"],
+      "external": ["@angular/*", "@cds/*", "rxjs", "rxjs/*", "tslib"]
+    },
+    "whole": {
+      "entry": "dist/packages/render/fesm2022/cds-rte-render.mjs",
+      "exports": ["*"],
+      "external": ["@angular/*", "@cds/*", "rxjs", "rxjs/*", "tslib"]
+    },
+    "i18n": {
+      "entry": "dist/packages/render/fesm2022/cds-rte-render-i18n.mjs",
+      "exports": ["*"],
+      "external": ["@angular/*", "@cds/*", "rxjs", "rxjs/*", "tslib"]
+    },
+    "content-page": {
+      "entry": "dist/packages/render/fesm2022/cds-rte-render.mjs",
+      "exports": ["RteContent", "provideRteRender"],
+      "external": ["@angular/*", "rxjs", "rxjs/*", "tslib"]
+    },
+    "page": {
+      "entry": "packages/render/size-page.mjs",
+      "exports": ["*"],
+      "external": ["@angular/*", "rxjs", "rxjs/*", "tslib"]
+    }
+  },
+  "budgets": {
+    "content": 4096,
+    "toc": 1536,
+    "whole": 4160,
+    "i18n": 256,
+    "content-page": 4352,
+    "page": 49600
+  }
+}

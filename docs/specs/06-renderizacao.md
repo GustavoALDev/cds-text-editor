@@ -164,11 +164,11 @@ Rotas novas: `render` (diretiva em `sanitize` com `createSanitizer` das opções
 
 ## 7. Critérios de aceite
 
-- [ ] H2 feito: `feat/spec-04` integrada, conflitos resolvidos, suítes do sanitizador verdes na `feat/spec-06`.
-- [ ] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size --parallel=1` verde; `npm run check:rules`, `check:licenses`, `notices` sem *drift*, `test:tools` e `typecheck:e2e` verdes.
-- [ ] Unitários 6.1 verdes nos alvos `test` e `test-zone`, inclusive a propriedade da R4.
-- [ ] L1–L7 verdes em Chromium, Firefox e WebKit (`npx playwright test -c e2e`), N1–N26 e S1–S3 sem regressão, e no CI do PR.
-- [ ] ADR 0012 (`docs/decisions/0012-renderizacao.md`) registra H1–H21, os *rulings*, o pré-voo da H10, os números da R14 e os tamanhos (H21); pendência do ADR 0010 (rolador) marcada como atendida; README do `rte-render`, `docs/security.md`, `CLAUDE.md`, `docs/specs/README.md` (06 concluída) e changesets atualizados.
+- [x] H2 feito: `feat/spec-04` integrada (merge 9c34da0 e correção bb13502), conflitos resolvidos, suítes do sanitizador verdes na `feat/spec-06` (`e2e/sanitizer` nos 3 motores: Chromium 6, Firefox 5 + 1 pulado, WebKit 5 + 1 pulado; o pulado é o R10, só Chromium).
+- [x] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size --parallel=1` verde (Tarefa 13: 33 tarefas, 9 min 34 s; `render:size`, `core:size`, `angular:size` e `verify-package` de `render` verdes; a única falha, `angular:test-zone` em `editor.lifecycle.spec.ts` "alternar o editor 100×", estourou os 30 s sob carga da máquina compartilhada e passa isolada, 12/12); `check:rules`, `check:licenses`, `notices` sem *drift*, `test:tools` (84/84) e `typecheck:e2e` verdes.
+- [x] Unitários 6.1 verdes nos alvos `test` e `test-zone` (`render` 207/207 nos dois; core 1096), inclusive a propriedade da R4.
+- [x] L1–L7 verdes em Chromium, Firefox e WebKit, N1–N26 e S1–S3 sem regressão (regressão completa da Tarefa 12: Chromium 480/0, Firefox 467 + 1 *flake* de carga, WebKit 467 + 1 *flake*, ambos passam isolados). **Falta o CI do PR.**
+- [x] ADR 0012 (`docs/decisions/0012-renderizacao.md`) registra H1–H21, os *rulings*, o pré-voo da H10, os números da R14 (navegador: a conferir pela Tarefa 12, documento de 20 mil palavras) e os tamanhos (H21); pendência do ADR 0010 (rolador) marcada como atendida; README do `rte-render`, `docs/security.md`, `CLAUDE.md`, `docs/specs/README.md` (06 concluída) e changesets atualizados.
 
 ## 8. Consequências para outras specs
 

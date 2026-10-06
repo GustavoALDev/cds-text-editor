@@ -78,6 +78,22 @@
         "command": "node tools/check-pack.mjs dist/packages/render",
         "cwd": "{workspaceRoot}"
       }
+    },
+    "size": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build", "^build"],
+      "inputs": [
+        "production",
+        "^production",
+        "{workspaceRoot}/tools/check-size.mjs",
+        "{projectRoot}/size-budget.json",
+        "{projectRoot}/size-page.mjs"
+      ],
+      "cache": true,
+      "options": {
+        "command": "node tools/check-size.mjs --config packages/render/size-budget.json",
+        "cwd": "{workspaceRoot}"
+      }
     }
   }
 }

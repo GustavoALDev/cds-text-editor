@@ -28,7 +28,7 @@ Esta pasta é **autocontida**: pode ser movida para a raiz do projeto novo. Nada
 | 05b2b | [Menus flutuantes](05b2b-menus-flutuantes.md) (concluída; falta o CI do PR) | Menus flutuantes de texto, link, tabela (guarda > 100) e imagem (alinhamento e remoção) em `popover` manual dentro do host, posição por função pura, sem roubar o foco, `Alt+F10`/`focusFloatingMenu()`, `floatingMenus`, seção `floating` dos rótulos | 05b2a |
 | 05c | Mídia, upload e rascunho (a escrever) | Adaptador de upload, diálogos de mídia, colar/soltar arquivos, `mediaChange`, rascunho | 05b2b |
 | 05d | Menu `/`, busca, contadores e fechamento (a escrever) | UI do menu `/` e da busca, contadores e `aria-live`, orçamentos de desempenho, `api-extractor` | 05c |
-| 06 | [Renderização](06-renderizacao.md) (revista em 2026-10-05; a executar) | `@cds/rte-render`: diretiva `[rteContent]` (sanitiza com `createSanitizer` das opções do editor, rolador de tabela, estilos por CSSOM sob CSP, âncoras), sumário `rte-toc`, `render.css`; SSR sem JS; integra antes a `feat/spec-04` | 04, 05b1 |
+| 06 | [Renderização](06-renderizacao.md) (concluída; falta o CI do PR) | `@cds/rte-render`: diretiva `[rteContent]` (sanitiza com `createSanitizer` das opções do editor, rolador de tabela, estilos por CSSOM sob CSP, âncoras), sumário `rte-toc`, `render.css`; SSR sem JS; integra antes a `feat/spec-04` | 04, 05b1 |
 | 07 | [Demo, docs e servidor de exemplo](07-demo-docs-exemplos.md) | App demo/playground, site de docs, `examples/server-node` | 05, 06 |
 | 08 | [Qualidade](08-qualidade.md) | E2E em 3 engines, a11y, desempenho, visual, pacote | 05 |
 | 09 | [Release e governança](09-release-governanca.md) | Versionamento, npm com provenance, MIT, SECURITY | todas |
