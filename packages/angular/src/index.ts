@@ -26,3 +26,17 @@ export type {
   RteLabelsSource,
   RteToolbarLabels,
 } from './labels/types';
+export { RteUploadError } from './upload/types';
+export type {
+  RteUploadAdapter,
+  RteUploadConfig,
+  RteUploadContext,
+  RteUploadedImage,
+  RteUploadedVideo,
+  RteUploadErrorEvent,
+  RteUploadErrorReason,
+  RteUploadImageMime,
+  RteUploadStatus,
+  RteUploadType,
+  RteUploadVideoMime,
+} from './upload/types';

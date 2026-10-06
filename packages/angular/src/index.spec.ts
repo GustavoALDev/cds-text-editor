@@ -24,6 +24,7 @@ describe('@cds/rte-angular', () => {
       'RTE_LABELS_EN',
       'RTE_TOOLBAR_PRESETS',
       'RteEditor',
+      'RteUploadError',
       'provideRichText',
     ]);
   });
@@ -55,6 +56,14 @@ describe('@cds/rte-angular', () => {
     expectTypeOf<api.RteEditor['mediaSession']>().toEqualTypeOf<
       Signal<RteMediaSession>
     >();
+  });
+
+  it('RteUploadError guarda o motivo e a causa (E4)', () => {
+    const e = new api.RteUploadError('server', { cause: 1 });
+    expect(e).toBeInstanceOf(Error);
+    expect(e.name).toBe('RteUploadError');
+    expect(e.reason).toBe('server');
+    expect(e.cause).toBe(1);
   });
 
   it('RTE_DIALOG_LANGUAGES é congelado', () => {
