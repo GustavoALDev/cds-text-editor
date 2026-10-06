@@ -27,6 +27,7 @@ import {
 } from './testing-support/dialog';
 import { selectText } from './testing-support/editors';
 import { createFakeUploadAdapter } from './testing-support/fake-upload-adapter';
+import { whenUploadReady } from './testing-support/upload-runtime';
 import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
 import type { RteDialogController } from './dialogs/controller';
@@ -398,6 +399,7 @@ describe('uploadFiles e cancelUpload (05c2a E18)', () => {
       providers: [provideRichText({ upload: { adapter } })],
     });
     const { cmp } = await setup();
+    await whenUploadReady(cmp);
     expect(cmp.uploadFiles(new Set([png()]))).toBe(1);
     const id = cmp.uploads()[0]?.id as string;
     expect(cmp.cancelUpload(id)).toBe(true);

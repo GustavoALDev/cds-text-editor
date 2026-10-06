@@ -1,7 +1,9 @@
 import { getHtmlSchema } from '@cds/rte-core';
 import { describe, expect, it } from 'vitest';
-import { readUploadedMedia, readUploadRules } from './upload/response';
-import { RteUploadError, uploadReason } from './upload/types';
+import { uploadReason } from './upload/reason';
+import { readUploadedMedia } from './upload/response';
+import { readUploadRules } from './upload/rules';
+import { RteUploadError } from './upload/types';
 
 const relative = readUploadRules(getHtmlSchema({ allowRelativeMedia: true }));
 const hosted = readUploadRules(

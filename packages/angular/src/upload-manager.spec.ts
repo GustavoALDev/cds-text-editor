@@ -32,6 +32,10 @@ import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
 import { RTE_TEST_MODE } from './testing-support/test-mode';
 import { mediaSrcs } from './testing-support/upload-markers';
+import {
+  uploadManagerOf,
+  whenUploadReady,
+} from './testing-support/upload-runtime';
 import type { RteUploadManager } from './upload/manager';
 import { RTE_UPLOAD_KEY } from './upload/markers';
 
@@ -101,6 +105,11 @@ async function setup(
   fixture.autoDetectChanges();
   await settle(fixture);
   const cmp = host.cmp();
+  // o *chunk* `rte-upload` (Ruling 28) chega antes dos gestos do teste
+  if (host.upload() !== null || o.provider) {
+    await whenUploadReady(cmp).catch(() => undefined);
+    await settle(fixture);
+  }
   return { fixture, host, cmp, editor: cmp.editor() as Editor, adapter, error };
 }
 
@@ -118,7 +127,7 @@ function nextFrame(): Promise<void> {
 }
 
 function manager(cmp: RteEditor): RteUploadManager {
-  return (cmp as unknown as { uploadManager: RteUploadManager }).uploadManager;
+  return uploadManagerOf(cmp);
 }
 
 function markerIds(editor: Editor): string[] {

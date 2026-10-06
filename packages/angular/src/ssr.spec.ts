@@ -17,6 +17,7 @@ import {
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import { provideRichText, RteEditor } from '@cds/rte-angular';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { RTE_UPLOAD_LOADER } from './upload/facade';
 
 // R12 (D19): no servidor só a casca; nenhum Editor e nenhum HTML do valor.
 
@@ -252,6 +253,44 @@ describe('RteEditor no servidor (R12)', () => {
         expect(host).not.toMatch(/\sstyle=/);
       }
       expect(html).not.toContain('--rte-');
+    },
+  );
+  it(
+    'com configuração de envio, o chunk rte-upload nunca é pedido no servidor (Ruling 28)',
+    { timeout: 30_000 },
+    async () => {
+      const error = vi.spyOn(console, 'error');
+      const loader = vi.fn(() => import('./upload/rte-upload'));
+      const adapter = {
+        uploadImage: () => Promise.reject(new Error('servidor')),
+      };
+      const html = await withServerDomAdapter(() =>
+        renderApplication(
+          (context) =>
+            bootstrapApplication(
+              SsrHost,
+              {
+                providers: [
+                  provideZonelessChangeDetection(),
+                  provideServerRendering(),
+                  provideRichText({ upload: { adapter } }),
+                  { provide: RTE_UPLOAD_LOADER, useValue: loader },
+                ],
+              },
+              context,
+            ),
+          {
+            document:
+              '<!doctype html><html><head></head><body><rte-ssr-host></rte-ssr-host></body></html>',
+            url: '/',
+          },
+        ),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(html).toContain('class="rte-root rte-editor');
+      expect(html).not.toContain('rte-upload');
+      expect(loader).not.toHaveBeenCalled();
+      expect(error).not.toHaveBeenCalled();
     },
   );
 });

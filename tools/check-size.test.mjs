@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import {
   SCENARIOS,
   bundleScenario,
+  checkFiles,
   checkSizes,
   forbiddenHits,
   measureMinGzip,
@@ -421,4 +422,70 @@ test('measureConfig: forbiddenImports ignora o que só um chunk dinâmico extern
   });
   assert.deepEqual(m.x.forbidden, []);
   assert.deepEqual(checkSizes(m, { x: 100000 }), []);
+});
+
+// Spec 05c2a, Tarefa 7b (Ruling 28): o gerenciador de envios não pode ficar
+// no principal (texto exclusivo do `manager.ts` no código medido).
+test('measureConfig: forbiddenContent acha o texto no bundle e o checkSizes reporta', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'check-size-content-'));
+  const entry = join(dir, 'lib.js');
+  writeFileSync(entry, "export const m = 'marcador sem envio';");
+  const m = await measureConfig({
+    scenarios: {
+      x: {
+        entry,
+        exports: ['*'],
+        forbiddenContent: ['marcador sem envio', 'outro texto'],
+      },
+    },
+  });
+  assert.deepEqual(m.x.forbiddenText, ['marcador sem envio']);
+  assert.deepEqual(checkSizes(m, { x: 100000 }), [
+    'cenário "x" contém o que não pode: "marcador sem envio"',
+  ]);
+});
+
+test('measureConfig: forbiddenContent ignora o que só um chunk dinâmico externo contém', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'check-size-content-dyn-'));
+  writeFileSync(
+    join(dir, 'a.mjs'),
+    "export const a = () => import('./b-x.mjs');",
+  );
+  writeFileSync(join(dir, 'b-x.mjs'), "export const m = 'marcador sem envio';");
+  const m = await measureConfig({
+    scenarios: {
+      x: {
+        entry: join(dir, 'a.mjs'),
+        exports: ['*'],
+        externalChunks: 'dynamic',
+        forbiddenContent: ['marcador sem envio'],
+      },
+    },
+  });
+  assert.deepEqual(m.x.forbiddenText, []);
+  assert.deepEqual(checkSizes(m, { x: 100000 }), []);
+});
+
+// Tarefa 7b: um arquivo por padrão e nenhum *chunk* a mais (compartilhado).
+test('checkFiles: cada padrão casa exatamente um arquivo; .mjs fora da lista é erro', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'check-size-files-'));
+  for (const f of ['lib.mjs', 'lib-a-1.mjs', 'lib-a-1.mjs.map', 'lib-b-1.mjs'])
+    writeFileSync(join(dir, f), '');
+  assert.deepEqual(
+    checkFiles({ dir, allowed: ['lib.mjs', 'lib-a-*.mjs', 'lib-b-*.mjs'] }),
+    [],
+  );
+  writeFileSync(join(dir, 'lib-shared-2.mjs'), '');
+  writeFileSync(join(dir, 'lib-a-2.mjs'), '');
+  assert.deepEqual(
+    checkFiles({
+      dir,
+      allowed: ['lib.mjs', 'lib-a-*.mjs', 'lib-b-*.mjs', 'lib-c-*.mjs'],
+    }),
+    [
+      'arquivos: "lib-a-*.mjs" casou 2 arquivos (lib-a-1.mjs, lib-a-2.mjs); precisa casar exatamente um',
+      'arquivos: "lib-c-*.mjs" casou 0 arquivos (); precisa casar exatamente um',
+      'arquivos: .mjs inesperado em ' + dir + ': lib-shared-2.mjs',
+    ],
+  );
 });

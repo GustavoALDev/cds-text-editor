@@ -63,12 +63,7 @@ export function resolveEntry(pattern) {
   if (dir.includes('*')) {
     throw new Error(`curinga só no nome do arquivo: "${pattern}"`);
   }
-  const re = new RegExp(
-    `^${name
-      .split('*')
-      .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
-      .join('.*')}$`,
-  );
+  const re = globToRegExp(name);
   const found = existsSync(dir)
     ? readdirSync(dir).filter((f) => re.test(f))
     : [];
@@ -81,6 +76,45 @@ export function resolveEntry(pattern) {
     );
   }
   return join(dir, found[0]);
+}
+
+/** Curinga `*` (só) de nome de arquivo para expressão regular ancorada. */
+function globToRegExp(name) {
+  return new RegExp(
+    `^${name
+      .split('*')
+      .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+      .join('.*')}$`,
+  );
+}
+
+/**
+ * Arquivos `.mjs` de uma pasta do `dist` (spec 05c2a, Tarefa 7b): cada padrão
+ * de `allowed` (curinga `*` no nome) casa exatamente um arquivo e nenhum `.mjs`
+ * fica fora da lista (um *chunk* compartilhado novo seria erro). Devolve os
+ * erros em pt-BR.
+ */
+export function checkFiles({ dir, allowed }) {
+  const files = existsSync(dir)
+    ? readdirSync(dir).filter((f) => f.endsWith('.mjs'))
+    : [];
+  const errors = [];
+  const matched = new Set();
+  for (const pattern of allowed) {
+    const re = globToRegExp(pattern);
+    const found = files.filter((f) => re.test(f));
+    for (const f of found) matched.add(f);
+    if (found.length !== 1) {
+      errors.push(
+        `arquivos: "${pattern}" casou ${found.length} arquivos (${found.join(', ')}); precisa casar exatamente um`,
+      );
+    }
+  }
+  const extra = files.filter((f) => !matched.has(f));
+  if (extra.length) {
+    errors.push(`arquivos: .mjs inesperado em ${dir}: ${extra.join(', ')}`);
+  }
+  return errors;
 }
 
 /** Empacota só `exportsList` (ou `['*']`) de `distFile` como um consumidor faria. */
@@ -142,12 +176,24 @@ export function forbiddenHits(imports, forbidden) {
  * `forbiddenImports` (opcional) lista pacotes que não podem sobrar como import no
  * bundle do cenário (ex.: `@angular/forms` fora do *chunk* principal, spec 05c2a R1);
  * os encontrados vão em `forbidden` e o `checkSizes` os reporta como erro.
+ * `forbiddenContent` (opcional) lista textos que não podem aparecer no código
+ * medido (ex.: uma mensagem exclusiva do gerenciador de envios, que vive num
+ * *chunk* carregado por `import()`; spec 05c2a, Ruling 28); os encontrados vão
+ * em `forbiddenText`, também como erro. Um `files: { dir, allowed }` no nível
+ * de cima do arquivo é conferido pelo `main` com {@link checkFiles}.
  */
 export async function measureConfig(config) {
   const measurements = {};
   for (const [
     name,
-    { entry, exports: list, external, externalChunks, forbiddenImports },
+    {
+      entry,
+      exports: list,
+      external,
+      externalChunks,
+      forbiddenImports,
+      forbiddenContent,
+    },
   ] of Object.entries(config.scenarios ?? {})) {
     if (!entry || !Array.isArray(list) || list.length === 0) {
       throw new Error(`cenário "${name}" inválido: precisa de entry e exports`);
@@ -164,6 +210,11 @@ export async function measureConfig(config) {
     if (forbiddenImports) {
       measurements[name].forbidden = forbiddenHits(imports, forbiddenImports);
     }
+    if (forbiddenContent) {
+      measurements[name].forbiddenText = forbiddenContent.filter((t) =>
+        code.includes(t),
+      );
+    }
   }
   return measurements;
 }
@@ -179,10 +230,17 @@ export async function measureScenario(distFile, name) {
 /** Compara medições `{ cenário: { min, gzip } }` com orçamentos `{ cenário: bytes }`. */
 export function checkSizes(measurements, budgets) {
   const errors = [];
-  for (const [name, { gzip, forbidden }] of Object.entries(measurements)) {
+  for (const [name, { gzip, forbidden, forbiddenText }] of Object.entries(
+    measurements,
+  )) {
     if (forbidden?.length) {
       errors.push(
         `cenário "${name}" importa o que não pode: ${forbidden.join(', ')}`,
+      );
+    }
+    if (forbiddenText?.length) {
+      errors.push(
+        `cenário "${name}" contém o que não pode: ${forbiddenText.map((t) => JSON.stringify(t)).join(', ')}`,
       );
     }
     const budget = budgets[name];
@@ -253,6 +311,7 @@ async function main() {
   try {
     let measurements = {};
     let budgets;
+    let fileErrors = [];
     if (argv[0] === '--config') {
       if (!argv[1]) throw new Error('--config exige um arquivo .json');
       if (!existsSync(argv[1])) {
@@ -261,6 +320,7 @@ async function main() {
       const config = JSON.parse(readFileSync(argv[1], 'utf8'));
       measurements = await measureConfig(config);
       budgets = config.budgets ?? {};
+      if (config.files) fileErrors = checkFiles(config.files);
     } else {
       parsed = parseArgs(argv, fileBudgets);
       for (const name of Object.keys(SCENARIOS)) {
@@ -268,7 +328,7 @@ async function main() {
       }
       budgets = parsed.budgets;
     }
-    const errors = checkSizes(measurements, budgets);
+    const errors = [...fileErrors, ...checkSizes(measurements, budgets)];
     if (errors.length > 0) {
       console.error(formatTable(measurements, budgets));
       for (const e of errors) console.error(`erro: ${e}`);

@@ -1,7 +1,11 @@
 import { isDevMode, signal, untracked, type Signal } from '@angular/core';
 import type { Editor } from '@tiptap/core';
 import { insertArrival } from './arrival';
-import type { RteUploadHost } from './host';
+import type {
+  RteUploadAnnouncement,
+  RteUploadHost,
+  RteUploadSaid as Said,
+} from './host';
 import { createMarkerElement } from './marker-element';
 import {
   RTE_UPLOAD_KEY,
@@ -10,32 +14,18 @@ import {
 } from './markers';
 import { clampProgress, moved, RteFramePublisher } from './progress';
 import { readUploadedMedia, type RteUploadedAttrs } from './response';
-import {
-  uploadReason,
-  type RteUploadAdapter,
-  type RteUploadErrorEvent,
-  type RteUploadErrorReason,
-  type RteUploadStatus,
-  type RteUploadText,
-  type RteUploadType,
+import { uploadReason } from './reason';
+import type {
+  RteUploadAdapter,
+  RteUploadErrorEvent,
+  RteUploadErrorReason,
+  RteUploadStatus,
+  RteUploadText,
+  RteUploadType,
 } from './types';
 import { displayName, validateUploadFile } from './validate';
 
-export type { RteUploadHost } from './host';
-
-/** Anúncio para a região `aria-live` (E8); `n` muda a cada anúncio. */
-export interface RteUploadAnnouncement {
-  readonly n: number;
-  readonly kind: 'start' | 'done' | 'cancelled' | 'error';
-  readonly names: readonly string[];
-  readonly count?: number;
-  /** Motivo do erro (o do primeiro nome, no anúncio combinado). */
-  readonly reason?: RteUploadErrorReason;
-  /** Recusas do gesto: o motivo de cada nome, na mesma ordem. */
-  readonly reasons?: readonly RteUploadErrorReason[];
-}
-
-type Said = Omit<RteUploadAnnouncement, 'n'>;
+export type { RteUploadAnnouncement, RteUploadHost } from './host';
 
 const MISSING_ELEMENT =
   '[rte-editor] marcador de envio sem envio correspondente; usando um elemento vazio.';
@@ -78,21 +68,19 @@ export class RteUploadManager {
   private readonly prefix = `rte-upload-${++instances}-`;
   private seq = 0;
   private gestures = 0;
-  private announced = 0;
   private jobs: Job[] = [];
   private disposed = false;
   private flushQueued = false;
   private readonly frames: RteFramePublisher;
   private readonly list = signal<readonly RteUploadStatus[]>([]);
-  private readonly said = signal<RteUploadAnnouncement | null>(null);
 
   /** Envios em curso, na ordem dos gestos (E18). */
   readonly uploads: Signal<readonly RteUploadStatus[]> = this.list.asReadonly();
-  /** Último anúncio (E8); a bandeja o lê. */
-  readonly announcement: Signal<RteUploadAnnouncement | null> =
-    this.said.asReadonly();
+  /** Último anúncio (E8), do hospedeiro: a falha de carga também anuncia. */
+  readonly announcement: Signal<RteUploadAnnouncement | null>;
 
   constructor(private readonly host: RteUploadHost) {
+    this.announcement = host.announcement;
     this.frames = new RteFramePublisher({
       view: host.view,
       zone: host.zone,
@@ -425,6 +413,6 @@ export class RteUploadManager {
   }
 
   private announce(a: Said): void {
-    this.said.set({ n: ++this.announced, ...a });
+    this.host.announce(a);
   }
 }
