@@ -1047,6 +1047,19 @@ describe('origem do diálogo de vídeo (05c2a E14, R9)', () => {
     expect(uploadSource(d)).not.toBeNull();
   });
 
+  it('sem tipo de imagem e com uploadVideo: vídeo com "Origem", imagem sem (Ruling 36)', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>', {
+      config: { imageTypes: [] },
+    });
+    let d = await openKind(s, 'video');
+    expect(uploadSource(d)).not.toBeNull();
+    expect(videoFileInput(d).accept).toBe(VIDEO_ACCEPT);
+    await clickIn(s, d, '.rte-dialog__cancel');
+    d = await openKind(s, 'image');
+    expect(uploadSource(d)).toBeNull();
+    expect(d.querySelector('input[type="file"]')).toBeNull();
+  });
+
   it('com uploadVideo, inserir: "Origem", accept e dica do vídeo', async () => {
     const s = await setupUploadDialog(UploadHost, '<p></p>');
     const d = await openKind(s, 'video');

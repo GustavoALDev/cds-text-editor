@@ -106,14 +106,18 @@ describe('@cds/rte-angular', () => {
     expect(Object.keys(testing).sort()).toEqual(['getRteEditor']);
   });
 
-  it('o /validators exporta só validadores, tipos de erro e formatRteError', () => {
+  it('o /validators exporta só validadores, diretivas, tipos de erro e formatRteError', () => {
     expect(Object.keys(validators).sort()).toEqual([
+      'RteImagesHaveAltValidator',
+      'RteUploadsFinishedValidator',
       'RteValidators',
       'formatRteError',
       'isRteValidationError',
+      'rteImagesHaveAlt',
       'rteMaxChars',
       'rteMaxWords',
       'rteRequired',
+      'rteUploadsFinished',
     ]);
   });
 

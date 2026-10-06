@@ -79,10 +79,19 @@ export class RteUploads implements RteUploadInput {
   private disposed = false;
   private cancelIdle: (() => void) | null = null;
   private pending: Pending[] = [];
+  /** Arquivos aceitos em espera do *chunk* (Ruling 33). */
+  private readonly waiting = signal(0);
 
   /** Envios em curso (E18); vazio até o *chunk* chegar. */
   readonly uploads: Signal<readonly RteUploadStatus[]> = computed(
     () => this.runtime()?.manager.uploads() ?? NO_UPLOADS,
+  );
+  /**
+   * Envios ainda não terminados (E18): os da fila mais os aceitos que
+   * esperam o *chunk* (Ruling 33: o formulário não pode passar antes).
+   */
+  readonly pendingUploads: Signal<number> = computed(
+    () => this.uploads().length + this.waiting(),
   );
   /** Último anúncio (E8). */
   readonly announcement: Signal<RteUploadAnnouncement | null>;
@@ -168,6 +177,7 @@ export class RteUploads implements RteUploadInput {
     this.refuse(refused);
     if (accepted.length && !this.failed) {
       this.pending.push({ files: accepted, at, text });
+      this.syncWaiting();
       void this.load();
     }
     return accepted.length;
@@ -179,13 +189,13 @@ export class RteUploads implements RteUploadInput {
 
   /** Cancela os envios e descarta os gestos em espera (fora da bandeja). */
   cancelAll(): void {
-    this.pending = [];
+    this.dropPending();
     untracked(this.runtime)?.manager.cancelAll();
   }
 
   /** E17: aborta os envios e descarta os gestos em espera. */
   abortAll(announce: boolean): void {
-    this.pending = [];
+    this.dropPending();
     untracked(this.runtime)?.manager.abortAll(announce);
   }
 
@@ -206,7 +216,7 @@ export class RteUploads implements RteUploadInput {
     this.disposed = true;
     this.cancelIdle?.();
     this.cancelIdle = null;
-    this.pending = [];
+    this.dropPending();
     this.teardown();
   }
 
@@ -246,13 +256,14 @@ export class RteUploads implements RteUploadInput {
     const pending = this.pending;
     this.pending = [];
     for (const p of pending) runtime.manager.start(p.files, p.at, p.text);
+    this.syncWaiting();
   }
 
   /** Carga falhou: os aceitos em espera viram `'unavailable'`. */
   private fail(): void {
     this.failed = true;
     const pending = this.pending;
-    this.pending = [];
+    this.dropPending();
     const cfg = untracked(this.host.config);
     if (!cfg) return;
     this.refuse(
@@ -293,6 +304,19 @@ export class RteUploads implements RteUploadInput {
         reason: reasons[0] as RteUploadErrorReason,
       });
     });
+  }
+
+  private dropPending(): void {
+    this.pending = [];
+    this.syncWaiting();
+  }
+
+  /** Publica a contagem em espera (só com mudança, na zona). */
+  private syncWaiting(): void {
+    const count = this.pending.reduce((n, p) => n + p.files.length, 0);
+    if (count !== untracked(this.waiting)) {
+      this.host.zone.run(() => this.waiting.set(count));
+    }
   }
 
   private teardown(): void {

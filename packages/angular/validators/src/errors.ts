@@ -18,8 +18,24 @@ export interface RteMaxWordsError extends ValidationError {
   readonly actual: number;
 }
 
+/** Envios em curso no editor (`rteUploadsFinished`, E19). */
+export interface RteUploadsPendingError extends ValidationError {
+  readonly kind: 'rteUploadsPending';
+  readonly count: number;
+}
+
+/** Imagens com `alt: null` no editor (`rteImagesHaveAlt`, E19). */
+export interface RteImagesMissingAltError extends ValidationError {
+  readonly kind: 'rteImagesMissingAlt';
+  readonly count: number;
+}
+
 export type RteValidationError =
-  RteRequiredError | RteMaxCharsError | RteMaxWordsError;
+  | RteRequiredError
+  | RteMaxCharsError
+  | RteMaxWordsError
+  | RteUploadsPendingError
+  | RteImagesMissingAltError;
 
 /**
  * Erro como o Reactive/Template Forms o entrega ao controle customizado
@@ -34,7 +50,8 @@ export interface RteReactiveValidationError {
  * O que `formatRteError` aceita: o erro de Signal Forms, o
  * `ReactiveValidationError` (`{ kind, context }`) ou o `control.errors` do
  * Reactive Forms (`{ rteMaxChars: { max, actual } }`, o primeiro erro do editor
- * presente vence).
+ * presente vence). Os erros de contagem (`rteUploadsPending`,
+ * `rteImagesMissingAlt`) levam `count` nas três formas.
  */
 export type RteFormattableError =
   | RteValidationError
@@ -45,7 +62,13 @@ export type RteFormattableError =
 
 type RteKind = RteValidationError['kind'];
 
-const KINDS: readonly RteKind[] = ['rteRequired', 'rteMaxChars', 'rteMaxWords'];
+const KINDS: readonly RteKind[] = [
+  'rteRequired',
+  'rteMaxChars',
+  'rteMaxWords',
+  'rteUploadsPending',
+  'rteImagesMissingAlt',
+];
 
 function isKind(value: unknown): value is RteKind {
   return KINDS.includes(value as RteKind);
@@ -68,7 +91,7 @@ function read(bag: unknown, key: string): unknown {
   }
 }
 
-/** `kind` e o objeto com `max`/`actual` em qualquer uma das três formas. */
+/** `kind` e o objeto com `max`/`actual`/`count` em qualquer uma das três formas. */
 function normalize(
   error: unknown,
 ): { kind: RteKind; detail: unknown } | undefined {
@@ -76,12 +99,11 @@ function normalize(
   const kind = read(error, 'kind');
   if (typeof kind === 'string') {
     if (!isKind(kind)) return undefined;
-    // Signal Forms: max/actual no próprio erro; Reactive: em `context`.
-    const context = read(error, 'context');
-    return {
-      kind,
-      detail: typeof read(error, 'max') === 'number' ? error : context,
-    };
+    // Signal Forms: max/actual/count no próprio erro; Reactive: em `context`.
+    const own =
+      typeof read(error, 'max') === 'number' ||
+      typeof read(error, 'count') === 'number';
+    return { kind, detail: own ? error : read(error, 'context') };
   }
   for (const key of KINDS) {
     const detail = read(error, key);
@@ -99,6 +121,11 @@ function size(detail: unknown): { max: number; actual: number } | undefined {
     : undefined;
 }
 
+function countOf(detail: unknown): number | undefined {
+  const count = read(detail, 'count');
+  return typeof count === 'number' ? count : undefined;
+}
+
 /** Rótulo do consumidor; ausente, de tipo errado ou que lança cai no inglês. */
 function label<A extends unknown[]>(
   labels: RteLabels,
@@ -109,7 +136,8 @@ function label<A extends unknown[]>(
   const fallback = RTE_LABELS_EN.errors[kind];
   for (const candidate of [given, fallback]) {
     try {
-      // `rteRequired` é texto; os limites são funções de `{ max, actual }`.
+      // `rteRequired` é texto; os limites são funções de `{ max, actual }`
+      // e as contagens, de `count`.
       const out: unknown =
         kind === 'rteRequired'
           ? candidate
@@ -143,6 +171,11 @@ export function formatRteError(
     case 'rteMaxWords': {
       const detail = size(found.detail);
       return detail ? label(labels, found.kind, [detail]) : '';
+    }
+    case 'rteUploadsPending':
+    case 'rteImagesMissingAlt': {
+      const count = countOf(found.detail);
+      return count === undefined ? '' : label(labels, found.kind, [count]);
     }
     default:
       return '';

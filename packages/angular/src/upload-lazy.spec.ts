@@ -194,6 +194,48 @@ describe('carga sob demanda (Ruling 28)', () => {
     ]);
   });
 
+  it('Ruling 33: pendingUploads conta os aceitos em espera e segue na reposição', async () => {
+    const gated = gatedLoader();
+    const s = await setup({ loader: gated.loader });
+    expect(s.cmp.pendingUploads()).toBe(0);
+    expect(s.cmp.uploadFiles([png('a.png'), svg('x.svg')])).toBe(1);
+    expect(s.cmp.uploadFiles([png('b.png')])).toBe(1);
+    expect(s.cmp.uploads()).toEqual([]);
+    expect(s.cmp.pendingUploads()).toBe(2);
+    gated.release();
+    await drain(s);
+    expect(s.cmp.uploads()).toHaveLength(2);
+    expect(s.cmp.pendingUploads()).toBe(2);
+    s.cmp.cancelAllUploads();
+    await settle(s.fixture);
+    expect(s.cmp.pendingUploads()).toBe(0);
+  });
+
+  it('Ruling 33: cancelar, configuração null e falha da carga zeram os em espera', async () => {
+    const gated = gatedLoader();
+    const s = await setup({ loader: gated.loader });
+    s.cmp.uploadFiles([png('a.png')]);
+    expect(s.cmp.pendingUploads()).toBe(1);
+    s.cmp.cancelAllUploads();
+    expect(s.cmp.pendingUploads()).toBe(0);
+    s.cmp.uploadFiles([png('b.png')]);
+    expect(s.cmp.pendingUploads()).toBe(1);
+    s.host.upload.set(null);
+    await settle(s.fixture);
+    expect(s.cmp.pendingUploads()).toBe(0);
+
+    TestBed.resetTestingModule();
+    const t = await setup({
+      loader: () => Promise.reject(new Error('chunk')),
+    });
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    t.cmp.uploadFiles([png('c.png')]);
+    expect(t.cmp.pendingUploads()).toBe(1);
+    await drain(t);
+    expect(t.cmp.pendingUploads()).toBe(0);
+    expect(t.host.errors.map((e) => e.reason)).toEqual(['unavailable']);
+  });
+
   it('a posição em espera acompanha as edições feitas antes da carga', async () => {
     const gated = gatedLoader();
     const s = await setup({ loader: gated.loader });

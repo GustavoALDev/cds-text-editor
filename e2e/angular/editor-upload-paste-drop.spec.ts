@@ -204,9 +204,11 @@ for (const zone of [false, true]) {
       await page.waitForTimeout(300);
       expect(page.url()).toBe(url);
       expect(await uploadedSrcs(page, 'upload')).toEqual([]);
+      // Ruling 33: o aceito em espera do *chunk* já conta como pendente (um
+      // `rteUploadsFinished` não deixa o formulário passar antes).
       expect(
         await page.evaluate(() => window.rteE2e.pendingUploads('upload')),
-      ).toBe(0);
+      ).toBe(1);
       release();
       await expect
         .poll(() => uploadedSrcs(page, 'upload'), { timeout: 15_000 })

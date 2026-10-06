@@ -10,6 +10,7 @@ import {
   FormControl,
   FormGroup,
   FormsModule,
+  NG_VALIDATORS,
   NG_VALUE_ACCESSOR,
   NgModel,
   ReactiveFormsModule,
@@ -20,10 +21,24 @@ import { By } from '@angular/platform-browser';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import { RteEditor } from '@cds/rte-angular';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteValidators } from '@cds/rte-angular/validators';
+import {
+  RteImagesHaveAltValidator,
+  RteUploadsFinishedValidator,
+  RteValidators,
+} from '@cds/rte-angular/validators';
 import type { Editor } from '@tiptap/core';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { installDataTransferShim } from './testing-support/data-transfer';
+import { installDialogShim } from './testing-support/dialog';
+import {
+  createFakeUploadAdapter,
+  type FakeUploadAdapter,
+} from './testing-support/fake-upload-adapter';
+import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
+import { drainUploads, pngFile } from './testing-support/upload-dialog';
+import { fixAlt, imageSrc, pasteImage } from './testing-support/upload-forms';
+import { whenUploadReady } from './testing-support/upload-runtime';
 
 // D5 (revisado na Tarefa 7): sem CVA. O `NgControl` do @angular/forms 22.2
 // liga um `FormValueControl` pelo caminho de controle customizado
@@ -257,6 +272,193 @@ describe.each(CASES)(
       control.markAsTouched();
       await settle(fixture);
       expect(dom.getAttribute('aria-invalid')).toBe('true');
+    });
+  },
+);
+
+// Spec 05c2a, Tarefa 11: diretivas RteUploadsFinishedValidator e
+// RteImagesHaveAltValidator (E19, R13) no Reactive e no Template Forms.
+
+interface UploadCompatHost extends CompatHost {
+  readonly adapter: FakeUploadAdapter;
+}
+
+@Component({
+  selector: 'rte-test-upload-control-name',
+  imports: [
+    RteEditor,
+    ReactiveFormsModule,
+    RteUploadsFinishedValidator,
+    RteImagesHaveAltValidator,
+  ],
+  template: `<form [formGroup]="group">
+    <rte-editor
+      formControlName="body"
+      [upload]="upload"
+      rteUploadsFinished
+      rteImagesHaveAlt
+    />
+  </form>`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class UploadControlNameHost implements UploadCompatHost {
+  readonly adapter = createFakeUploadAdapter();
+  readonly upload = { adapter: this.adapter };
+  readonly group = new FormGroup({
+    body: new FormControl<string | null>('<p>ab</p>'),
+  });
+  readonly cmp = viewChild.required(RteEditor);
+  control() {
+    return this.group.controls.body;
+  }
+  modelValue() {
+    return this.group.controls.body.value;
+  }
+}
+
+@Component({
+  selector: 'rte-test-upload-ng-model',
+  imports: [
+    RteEditor,
+    FormsModule,
+    RteUploadsFinishedValidator,
+    RteImagesHaveAltValidator,
+  ],
+  template: `<form>
+    <rte-editor
+      name="body"
+      [upload]="upload"
+      rteUploadsFinished
+      rteImagesHaveAlt
+      [(ngModel)]="body"
+    />
+  </form>`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class UploadNgModelHost implements UploadCompatHost {
+  readonly adapter = createFakeUploadAdapter();
+  readonly upload = { adapter: this.adapter };
+  readonly body = signal('<p>ab</p>');
+  readonly cmp = viewChild.required(RteEditor);
+  readonly ngModel = viewChild.required(NgModel);
+  control() {
+    return this.ngModel().control;
+  }
+  modelValue() {
+    return this.body();
+  }
+}
+
+const UPLOAD_CASES: [string, Type<UploadCompatHost>][] = [
+  ['formControlName', UploadControlNameHost],
+  ['[(ngModel)]', UploadNgModelHost],
+];
+
+describe.each(UPLOAD_CASES)(
+  '%s com os validadores do envio (E19)',
+  (_, type) => {
+    let restore: (() => void)[] = [];
+    beforeEach(() => {
+      restore = [
+        installDialogShim(),
+        installPopoverShim(),
+        installDataTransferShim(),
+      ];
+    });
+    afterEach(() => {
+      TestBed.resetTestingModule();
+      for (const r of restore) r();
+      vi.restoreAllMocks();
+    });
+
+    async function setupUploads() {
+      const s = await setup(type);
+      await whenUploadReady(s.cmp);
+      await settle(s.fixture);
+      return { ...s, adapter: (s.host as UploadCompatHost).adapter };
+    }
+
+    it('as diretivas provêem NG_VALIDATORS no elemento', async () => {
+      const { el } = await setupUploads();
+      const validators = el.injector.get(NG_VALIDATORS);
+      expect(validators.map((v) => v.constructor)).toEqual(
+        expect.arrayContaining([
+          RteUploadsFinishedValidator,
+          RteImagesHaveAltValidator,
+        ]),
+      );
+    });
+
+    it('válido sem envio; { rteUploadsPending: { count: 2 } } com dois envios; válido depois de terminar', async () => {
+      const { fixture, cmp, control, adapter } = await setupUploads();
+      expect(control.errors).toBeNull();
+      cmp.uploadFiles([pngFile('a.png'), pngFile('b.png')]);
+      await drainUploads(fixture);
+      expect(control.errors).toEqual({ rteUploadsPending: { count: 2 } });
+      expect(cmp.invalid()).toBe(true);
+      adapter.resolve(0, { url: '/a.png' });
+      adapter.resolve(1, { url: '/b.png' });
+      await drainUploads(fixture);
+      expect(control.errors).toEqual({ rteImagesMissingAlt: { count: 2 } });
+    });
+
+    it('falhar e cancelar revalidam sem mudar o valor (registerOnValidatorChange)', async () => {
+      const { fixture, host, cmp, control, adapter } = await setupUploads();
+      const before = host.modelValue();
+      cmp.uploadFiles([pngFile('a.png'), pngFile('b.png')]);
+      await drainUploads(fixture);
+      const revalidate = vi.spyOn(control, 'updateValueAndValidity');
+      adapter.reject(0, new Error('500'));
+      await drainUploads(fixture);
+      expect(revalidate).toHaveBeenCalled();
+      expect(control.errors).toEqual({ rteUploadsPending: { count: 1 } });
+      revalidate.mockClear();
+      cmp.cancelAllUploads();
+      await drainUploads(fixture);
+      expect(revalidate).toHaveBeenCalled();
+      expect(control.errors).toBeNull();
+      expect(control.valid).toBe(true);
+      expect(host.modelValue()).toBe(before);
+    });
+
+    it('registerOnValidatorChange: a função registrada dispara ao falhar, não na primeira leitura', async () => {
+      const { fixture, cmp, el, adapter } = await setupUploads();
+      const dir = el.injector.get(RteUploadsFinishedValidator);
+      const spy = vi.fn();
+      dir.registerOnValidatorChange(spy);
+      cmp.uploadFiles([pngFile('a.png')]);
+      await drainUploads(fixture);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(dir.validate()).toEqual({ rteUploadsPending: { count: 1 } });
+      adapter.reject(0, new Error('500'));
+      await drainUploads(fixture);
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(dir.validate()).toBeNull();
+    });
+
+    it('imagem colada: rteImagesMissingAlt até o "Detalhes…" com texto ou decorativa', async () => {
+      const { fixture, cmp, editor, control, adapter } = await setupUploads();
+      await pasteImage(fixture, editor, (url) => adapter.resolve(0, { url }));
+      expect(control.errors).toEqual({ rteImagesMissingAlt: { count: 1 } });
+      await fixAlt(fixture, cmp, editor, 'Gato');
+      expect(control.errors).toBeNull();
+      expect(imageSrc(editor)).toBe('/up.png');
+      await pasteImage(
+        fixture,
+        editor,
+        (url) => adapter.resolve(1, { url }),
+        '/up2.png',
+      );
+      expect(control.errors).toEqual({ rteImagesMissingAlt: { count: 1 } });
+    });
+
+    it('decorativa também valida, sem mudar a URL', async () => {
+      const { fixture, cmp, editor, control, adapter } = await setupUploads();
+      await pasteImage(fixture, editor, (url) => adapter.resolve(0, { url }));
+      expect(control.invalid).toBe(true);
+      await fixAlt(fixture, cmp, editor, null);
+      expect(control.valid).toBe(true);
+      expect(imageSrc(editor)).toBe('/up.png');
     });
   },
 );

@@ -10,7 +10,9 @@ import {
   FormControl,
   FormGroup,
   FormsModule,
+  NgModel,
   ReactiveFormsModule,
+  type ValidationErrors,
 } from '@angular/forms';
 import {
   disabled,
@@ -23,7 +25,7 @@ import { ActivatedRoute } from '@angular/router';
 import {
   RteEditor,
   type RteEditorConfig,
-  type RteLabelsInput,
+  type RteLabels,
   type RteUploadConfig,
   type RteUploadErrorEvent,
 } from '@cds/rte-angular';
@@ -33,6 +35,13 @@ import {
   RTE_LABELS_PT_BR,
 } from '@cds/rte-angular/i18n';
 import {
+  formatRteError,
+  rteImagesHaveAlt,
+  RteImagesHaveAltValidator,
+  rteUploadsFinished,
+  RteUploadsFinishedValidator,
+} from '@cds/rte-angular/validators';
+import {
   E2eBridge,
   NO_FORM_STATE,
   type RteE2eHandle,
@@ -41,7 +50,7 @@ import {
 } from '../e2e-bridge';
 import { uploadConfig } from './upload-config';
 
-const LABELS: Record<RteE2eLang, RteLabelsInput> = {
+const LABELS: Record<RteE2eLang, RteLabels> = {
   en: RTE_LABELS_EN,
   'pt-BR': RTE_LABELS_PT_BR,
   es: RTE_LABELS_ES,
@@ -56,28 +65,45 @@ const OPTIONS: RteEditorConfig = {
 type Live = 'upload' | 'upload-reactive' | 'upload-template';
 type PageId = Live | 'upload-none';
 
+/** Uma entrada por erro do `control.errors` (cada uma formatável sozinha). */
+function splitErrors(errors: ValidationErrors | null): ValidationErrors[] {
+  return Object.entries(errors ?? {}).map(([k, v]) => ({ [k]: v }));
+}
+
 /**
  * N34–N38 (spec 05c2a, E25): editores com o envio do provider da rota em
  * Signal Forms (`upload`, barra `full`), Reactive Forms (`upload-reactive`) e
  * `ngModel` (`upload-template`), e o `upload-none` (`[upload]="null"`). Os
- * validadores `rteUploadsFinished`/`rteImagesHaveAlt` entram na Tarefa 11
- * (Ruling 13).
+ * três formulários têm `rteUploadsFinished` + `rteImagesHaveAlt` (Tarefa 11,
+ * N37): funções no Signal Forms, diretivas no Reactive e no `ngModel`; a
+ * página mostra as mensagens de cada um por `formatRteError`.
  */
 @Component({
   selector: 'app-upload',
-  imports: [RteEditor, FormField, ReactiveFormsModule, FormsModule],
+  imports: [
+    RteEditor,
+    FormField,
+    ReactiveFormsModule,
+    FormsModule,
+    RteUploadsFinishedValidator,
+    RteImagesHaveAltValidator,
+  ],
   templateUrl: './upload.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UploadPage {
   protected readonly bridge = inject(E2eBridge);
-  protected readonly labels = (): RteLabelsInput => LABELS[this.bridge.lang()];
+  protected readonly labels = (): RteLabels => LABELS[this.bridge.lang()];
   protected readonly options = OPTIONS;
   private readonly preview =
     inject(ActivatedRoute).snapshot.data['preview'] === true;
 
   protected readonly model = signal({ body: '<p>Upload here</p>' });
+  /** O editor do Signal Forms para os validadores (ausente antes da vista). */
+  private readonly mainRef = viewChild<RteEditor>('main');
   protected readonly f = form(this.model, (p) => {
+    rteUploadsFinished(p.body, () => this.mainRef());
+    rteImagesHaveAlt(p.body, () => this.mainRef());
     disabled(p.body, () => this.bridge.disabled());
     readonly(p.body, () => this.bridge.readonly());
     hidden(p.body, () => this.bridge.hidden());
@@ -108,6 +134,7 @@ export class UploadPage {
   private readonly reactive = viewChild.required<RteEditor>('reactive');
   private readonly template = viewChild.required<RteEditor>('template');
   private readonly none = viewChild.required<RteEditor>('none');
+  private readonly templateModel = viewChild(NgModel);
   private readonly editors: Record<PageId, Signal<RteEditor>> = {
     upload: this.main,
     'upload-reactive': this.reactive,
@@ -147,7 +174,16 @@ export class UploadPage {
     this.bridge.register('upload-template', {
       value: () => this.templateValue,
       setValue: (html) => (this.templateValue = html),
-      state: () => NO_FORM_STATE,
+      state: () => {
+        const control = this.templateModel()?.control;
+        if (!control) return NO_FORM_STATE;
+        return {
+          valid: control.valid,
+          touched: control.touched,
+          dirty: control.dirty,
+          errors: Object.keys(control.errors ?? {}),
+        };
+      },
       reset: () => (this.templateValue = ''),
       ...this.uploadHandle('upload-template'),
     });
@@ -159,6 +195,20 @@ export class UploadPage {
       uploadEditor: () => this.editors['upload-none'](),
       uploadErrors: () => this.errors['upload-none'],
     });
+  }
+
+  /** Mensagens dos erros do formulário `id` nos rótulos do idioma atual. */
+  protected messages(id: Live): string[] {
+    const labels = this.labels();
+    const errors: readonly unknown[] =
+      id === 'upload'
+        ? this.f.body().errors()
+        : splitErrors(
+            id === 'upload-reactive'
+              ? this.group.controls.body.errors
+              : (this.templateModel()?.control.errors ?? null),
+          );
+    return errors.map((e) => formatRteError(e as ValidationErrors, labels));
   }
 
   protected onError(id: PageId, e: RteUploadErrorEvent): void {

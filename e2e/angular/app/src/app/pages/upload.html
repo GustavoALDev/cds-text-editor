@@ -11,6 +11,11 @@
     (uploadError)="onError('upload', $event)"
     (editorReady)="bridge.ready('upload')"
   />
+  <ul data-testid="upload-messages">
+    @for (m of messages('upload'); track $index) {
+    <li>{{ m }}</li>
+    }
+  </ul>
 </section>
 <section>
   <form [formGroup]="group">
@@ -22,10 +27,17 @@
       [labels]="labels()"
       [upload]="configs()['upload-reactive']"
       formControlName="body"
+      rteUploadsFinished
+      rteImagesHaveAlt
       (uploadError)="onError('upload-reactive', $event)"
       (editorReady)="bridge.ready('upload-reactive')"
     />
   </form>
+  <ul data-testid="upload-reactive-messages">
+    @for (m of messages('upload-reactive'); track $index) {
+    <li>{{ m }}</li>
+    }
+  </ul>
 </section>
 <section>
   <rte-editor
@@ -36,9 +48,16 @@
     [labels]="labels()"
     [upload]="configs()['upload-template']"
     [(ngModel)]="templateValue"
+    rteUploadsFinished
+    rteImagesHaveAlt
     (uploadError)="onError('upload-template', $event)"
     (editorReady)="bridge.ready('upload-template')"
   />
+  <ul data-testid="upload-template-messages">
+    @for (m of messages('upload-template'); track $index) {
+    <li>{{ m }}</li>
+    }
+  </ul>
 </section>
 <section>
   <rte-editor

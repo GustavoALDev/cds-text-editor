@@ -41,7 +41,6 @@ export interface RteEditorUploadDeps {
  * E17, fica na fachada).
  */
 export class RteEditorUploads extends RteUploads {
-  readonly pendingUploads: Signal<number>;
   /** Textos da região `aria-live` (E8): um nó por anúncio do turno. */
   readonly announcements: Signal<
     readonly { readonly n: number; readonly text: string }[]
@@ -57,12 +56,10 @@ export class RteEditorUploads extends RteUploads {
     const host = createEditorUploadHost(deps);
     super(host);
     this.deps = deps;
-    const uploads = this.uploads;
-    this.pendingUploads = computed(() => uploads().length);
     this.announcements = announcementTexts(host, deps.labels);
     this.dialogUploads = computed(() => {
       const cfg = host.config();
-      return cfg?.imageTypes.length ? createDialogUploads(this, cfg) : null;
+      return cfg ? createDialogUploads(this, cfg) : null;
     });
     effect(() => {
       if (!deps.dialog()) untracked(() => this.flush());
