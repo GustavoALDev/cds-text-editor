@@ -3,7 +3,7 @@ import type { RteUploadManager } from '../upload/manager';
 
 /** Fachada dos envios de um `RteEditor` (campo privado, só nos testes). */
 export function uploadsOf(cmp: object): RteUploads {
-  return (cmp as { uploadRuntime: RteUploads }).uploadRuntime;
+  return (cmp as { uploading: RteUploads }).uploading;
 }
 
 /**
