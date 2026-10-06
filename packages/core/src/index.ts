@@ -9,6 +9,7 @@ export {
 export { isAllowedUrl } from './schema/url';
 export { isAllowedClass } from './schema/classes';
 export { sanitizeStyle, applyStyleFrom } from './schema/style';
+export { RTE_STYLE_PROPERTIES } from './schema/style-properties';
 export {
   getElementSpec,
   sanitizeClass,

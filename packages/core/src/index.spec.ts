@@ -13,6 +13,7 @@ const MAIN = [
   'serializeTokens',
   'sanitizeStyle',
   'applyStyleFrom',
+  'RTE_STYLE_PROPERTIES',
   'getElementSpec',
   'sanitizeClass',
   'sanitizeAttributes',
