@@ -174,10 +174,10 @@ Rota nova `media` (o `serve.mjs` acrescenta `frame-src https://www.youtube-nocoo
 
 ## 7. Critérios de aceite
 
-- [ ] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size --parallel=1` verde; `npm run check:rules`, `check:licenses`, `notices` sem *drift*, `test:tools` e `typecheck:e2e` verdes.
-- [ ] Unitários 6.1 verdes nos alvos `test` e `test-zone`, inclusive as propriedades da R6 (imagem, vídeo, faixas, *embed*) e da R9 (sessão de mídia).
-- [ ] N1–N32 verdes em Chromium, Firefox e WebKit (`npx playwright test -c e2e`) e no CI do PR.
-- [ ] ADR 0011 (`docs/decisions/0011-midia.md`) registra V1–V18, P1–P16 (como diretrizes), os *rulings*, os desvios, os números do N32 e os tamanhos (R15); README do `rte-angular`, `CLAUDE.md`, `docs/specs/README.md`, `05-editor-angular.md` e changeset atualizados.
+- [x] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size --parallel=1` verde; `npm run check:rules`, `check:licenses`, `notices` sem *drift*, `test:tools` e `typecheck:e2e` verdes. *Evidência: Tarefa 14 (relatório `task-14-report.md`), tamanhos no ADR 0011 (d).*
+- [x] Unitários 6.1 verdes nos alvos `test` e `test-zone`, inclusive as propriedades da R6 (imagem, vídeo, faixas, *embed*) e da R9 (sessão de mídia). *Evidência: 1268 por modo; propriedades em `dialog-image|video|embed.spec.ts` e `media-session.spec.ts` (FC_RUNS=1000 na T9).*
+- [ ] N1–N32 verdes em Chromium, Firefox e WebKit (`npx playwright test -c e2e`) e no CI do PR. *Evidência local: regressão completa `e2e/angular` da Tarefa 13 (Chromium 391, WebKit 386, Firefox 388 passaram; o único registro vermelho foi o N5 do Firefox, flake anterior do ADR 0008) e N27–N32 isolados nos 3 motores; **falta o CI do PR**.*
+- [x] ADR 0011 (`docs/decisions/0011-midia.md`) registra V1–V18, P1–P16 (como diretrizes), os *rulings*, os desvios, os números do N32 e os tamanhos (R15); README do `rte-angular`, `CLAUDE.md`, `docs/specs/README.md`, `05-editor-angular.md` e changeset atualizados.
 
 ## 8. Consequências para as partes seguintes e outras specs
 
