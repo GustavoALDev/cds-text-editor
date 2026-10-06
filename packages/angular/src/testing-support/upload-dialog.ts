@@ -22,9 +22,10 @@ import { settle } from './render';
 import { whenUploadReady } from './upload-runtime';
 
 /**
- * Host dos testes do diálogo com arquivo (05c2a E14): cada *spec* declara o
- * seu componente (template inline só em *specs*, R15) com
- * {@link UPLOAD_DIALOG_HOST_TEMPLATE}.
+ * Forma do host dos testes do diálogo com arquivo (05c2a E14). Cada *spec*
+ * declara o seu componente `UploadHost` (cópia igual em `dialog-image` e
+ * `dialog-video`): a R15 (`templates.spec.ts`) proíbe template inline fora
+ * de arquivos `.spec.ts`, e `testing-support/` não leva `templateUrl`.
  */
 export interface UploadDialogHost {
   readonly value: WritableSignal<string>;
@@ -47,7 +48,7 @@ export interface UploadDialogSetup {
 export async function setupUploadDialog(
   type: Type<UploadDialogHost>,
   doc: string,
-  o: { video?: boolean } = {},
+  o: { video?: boolean; config?: Omit<RteUploadConfig, 'adapter'> } = {},
 ): Promise<UploadDialogSetup> {
   const adapter = createFakeUploadAdapter(
     o.video === false ? { video: false } : {},
@@ -55,7 +56,7 @@ export async function setupUploadDialog(
   const fixture = TestBed.createComponent(type);
   const host = fixture.componentInstance;
   host.value.set(doc);
-  host.upload.set({ adapter });
+  host.upload.set({ ...o.config, adapter });
   fixture.autoDetectChanges();
   await settle(fixture);
   const cmp = host.cmp();
@@ -114,12 +115,4 @@ export async function drainUploads(
     await new Promise((resolve) => setTimeout(resolve));
     await settle(fixture);
   }
-}
-
-/** Elemento por id dentro do diálogo. */
-export function byId<T extends HTMLElement>(
-  dialog: HTMLElement,
-  suffix: string,
-): T | null {
-  return dialog.querySelector<T>(`[id$="${suffix}"]`);
 }

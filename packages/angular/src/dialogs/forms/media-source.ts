@@ -1,6 +1,7 @@
 import {
   computed,
   Directive,
+  effect,
   ElementRef,
   input,
   untracked,
@@ -52,11 +53,9 @@ export abstract class RteMediaSourceForm<
     viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
   /** Regras do arquivo: só com a porta, o tipo aceito e o modo inserir. */
-  protected readonly fileRules = computed<RteFileRules | null>(() => {
-    const uploads = this.uploads();
-    if (!uploads || this.request().mode !== 'insert') return null;
-    return this.kind === 'image' ? uploads.image : uploads.video;
-  });
+  protected readonly fileRules = computed<RteFileRules | null>(() =>
+    this.rulesFor(this.uploads(), this.request()),
+  );
 
   /** A origem efetiva é o arquivo. */
   protected readonly useFile = computed(
@@ -73,16 +72,35 @@ export abstract class RteMediaSourceForm<
     };
   });
 
+  constructor() {
+    super();
+    // Regras trocadas com o diálogo aberto (porta nova, sem ou com
+    // adaptador): o arquivo escolhido antes não vale mais (Ruling 36).
+    let last: RteFileRules | null | undefined;
+    effect(() => {
+      const rules = this.fileRules();
+      if (last !== undefined && rules !== last) {
+        untracked(() => {
+          this.clearFileInput();
+          this.model.update((m) => ({ ...m, file: null }));
+        });
+      }
+      last = rules;
+    });
+  }
+
+  /** Regras do arquivo deste tipo para o pedido; `null` fora do modo inserir. */
+  private rulesFor(
+    uploads: RteDialogUploads | null,
+    req: RteDialogRequest,
+  ): RteFileRules | null {
+    if (!uploads || req.mode !== 'insert') return null;
+    return this.kind === 'image' ? uploads.image : uploads.video;
+  }
+
   /** Origem inicial de um pedido: "Arquivo" quando há regras (E14). */
   protected sourceFor(req: RteDialogRequest): RteMediaSource {
-    const uploads = untracked(this.uploads);
-    const rules =
-      uploads && req.mode === 'insert'
-        ? this.kind === 'image'
-          ? uploads.image
-          : uploads.video
-        : null;
-    return rules ? 'file' : 'url';
+    return this.rulesFor(untracked(this.uploads), req) ? 'file' : 'url';
   }
 
   /**
@@ -138,8 +156,9 @@ export abstract class RteMediaSourceForm<
     if (!uploads || !file) return;
     const type = this.kind;
     this.controller().apply((editor) => {
-      // O `focus` do Tiptap foca num quadro seguinte; o `view.focus()` foca
-      // já (G4), antes de o marcador entrar.
+      // Os dois, como o `restoreFocus` do controlador: o `focus` do Tiptap
+      // só foca no quadro seguinte (rAF); o `view.focus()` foca já (G4) e
+      // grava a seleção no DOM antes de o marcador entrar.
       editor.commands.focus();
       editor.view.focus();
       return uploads.start({ file, type, at: req.range.to, text });

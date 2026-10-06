@@ -1063,6 +1063,26 @@ describe('origem do diálogo de imagem (05c2a E14, R9)', () => {
     expect(errorOf(input)).toBe('Choose a file.');
   });
 
+  it('regras trocadas com o diálogo aberto: o arquivo escolhido some (Ruling 36)', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'image');
+    chooseFile(fileInput(d), pngFile());
+    typeInto(dialogField(d, ALT), 'Gato');
+    await settle(s.fixture);
+    s.host.upload.set(null);
+    await settle(s.fixture);
+    expect(sourceOf(d)).toBeNull();
+    expect(hiddenField(dialogField(d, SRC))).toBe(false);
+    s.host.upload.set({ adapter: s.adapter });
+    await settle(s.fixture);
+    expect(sourceOf(d)).not.toBeNull();
+    await applyUpload(s, d);
+    expect(d.open).toBe(true);
+    expect(errorOf(fileInput(d))).toBe('Choose a file.');
+    await drainUploads(s.fixture);
+    expect(s.adapter.calls).toHaveLength(0);
+  });
+
   it('envio chegando com o diálogo de link aberto: o diálogo segue aberto, a figura entra ao fechar (R7)', async () => {
     const s = await setupUploadDialog(UploadHost, '<p>abc</p>');
     selectText(s.editor, 'abc', 3);
@@ -1117,9 +1137,26 @@ describe('porta do diálogo (pré-voo 13, Ruling 11)', () => {
     ).toEqual({
       accept: 'image/jpeg,image/webp,.jpg,.jpeg,.webp',
       typeNames: ['JPEG', 'WebP'],
-      maxMegabytes: 1.3,
+      maxMegabytes: 1.2,
     });
     expect(fileRules(cfg({}, false), 'video')).toBeNull();
+    // Nunca abaixo do limite, nunca "0 MB" (Ruling 36).
+    expect(fileRules(cfg({ maxImageBytes: 100 }), 'image')?.maxMegabytes).toBe(
+      0.1,
+    );
+    expect(
+      fileRules(cfg({ maxImageBytes: 1048575 }), 'image')?.maxMegabytes,
+    ).toBe(0.9);
+  });
+
+  it('createDialogUploads: sem tipo de imagem o vídeo fica; null só sem os dois (Ruling 36)', () => {
+    const start = () => 0;
+    const videoOnly = createDialogUploads({ start }, cfg({ imageTypes: [] }));
+    expect(videoOnly?.image).toBeNull();
+    expect(videoOnly?.video?.typeNames).toEqual(['MP4', 'WebM']);
+    expect(
+      createDialogUploads({ start }, cfg({ imageTypes: [] }, false)),
+    ).toBeNull();
   });
 
   it('createDialogUploads: regras, check pelo tipo do diálogo e start', () => {
@@ -1133,7 +1170,8 @@ describe('porta do diálogo (pré-voo 13, Ruling 11)', () => {
       },
       cfg({ maxImageBytes: 100 }),
     );
-    expect(port.image.maxMegabytes).toBe(0);
+    if (!port) throw new Error('porta nula');
+    expect(port.image?.maxMegabytes).toBe(0.1);
     expect(port.video?.typeNames).toEqual(['MP4', 'WebM']);
     const png = pngFile('a.png', 10);
     expect(port.check(png, 'image')).toBeNull();
@@ -1148,14 +1186,14 @@ describe('porta do diálogo (pré-voo 13, Ruling 11)', () => {
     expect(port.start({ file: png, type: 'image', at: 3, text })).toBe(true);
     expect(starts).toEqual([{ files: [png], at: 3, text }]);
     expect(
-      createDialogUploads({ start: () => 0 }, cfg()).start({
+      createDialogUploads({ start: () => 0 }, cfg())?.start({
         file: png,
         type: 'image',
         at: 1,
         text,
       }),
     ).toBe(false);
-    expect(createDialogUploads({ start: () => 0 }, cfg({}, false)).video).toBe(
+    expect(createDialogUploads({ start: () => 0 }, cfg({}, false))?.video).toBe(
       null,
     );
   });

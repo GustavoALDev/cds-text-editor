@@ -8,7 +8,10 @@ export interface RteFileRules {
   readonly accept: string;
   /** Nomes dos tipos para a dica (`PNG`, `JPEG`, …). */
   readonly typeNames: readonly string[];
-  /** Teto em MB com uma casa (`bytes / 1048576`, arredondado). */
+  /**
+   * Teto em MB com uma casa, arredondado para baixo e no mínimo 0,1: o texto
+   * nunca promete mais do que o limite (Ruling 36).
+   */
   readonly maxMegabytes: number;
 }
 
@@ -18,7 +21,8 @@ export interface RteFileRules {
  * assim não importa o gerenciador. `null` no `RteEditor` sem adaptador.
  */
 export interface RteDialogUploads {
-  readonly image: RteFileRules;
+  /** `null` sem tipo de imagem aceito. */
+  readonly image: RteFileRules | null;
   /** `null` sem `uploadVideo` (ou sem tipo de vídeo). */
   readonly video: RteFileRules | null;
   /** Erro do arquivo para o diálogo do tipo dado; `null` se aceito. */
@@ -64,18 +68,25 @@ export function fileRules(
   return Object.freeze({
     accept: [...mimes, ...extensions].join(','),
     typeNames: Object.freeze(mimes.map((m) => TYPE_NAMES[m] ?? m)),
-    maxMegabytes: Math.round((bytes / 1048576) * 10) / 10,
+    maxMegabytes: Math.max(0.1, Math.floor((bytes / 1048576) * 10) / 10),
   });
 }
 
-/** Porta do diálogo sobre a configuração resolvida (pré-voo 13). */
+/**
+ * Porta do diálogo sobre a configuração resolvida (pré-voo 13); `null` só
+ * quando nem imagem nem vídeo têm tipo aceito (Ruling 36: sem tipo de imagem,
+ * o vídeo com `uploadVideo` mantém "Origem").
+ */
 export function createDialogUploads(
   uploads: RteDialogUploadStarter,
   cfg: RteResolvedUpload,
-): RteDialogUploads {
+): RteDialogUploads | null {
+  const image = fileRules(cfg, 'image');
+  const video = fileRules(cfg, 'video');
+  if (!image && !video) return null;
   return Object.freeze({
-    image: fileRules(cfg, 'image') as RteFileRules,
-    video: fileRules(cfg, 'video'),
+    image,
+    video,
     check(file: File, type: RteUploadType) {
       const r = validateUploadFile(file, cfg);
       if (r.type !== type) return 'type';
