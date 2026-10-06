@@ -79,6 +79,7 @@ import { mergeTheme, sameTheme, themeKey } from '../theme/instance-theme';
 import { RteUploads } from '../upload/facade';
 import { announcementTexts } from '../upload/announce';
 import { createEditorUploadHost } from '../upload/host';
+import { createUploadInputExtension } from '../upload/input';
 // Só no `@defer` da bandeja: o mesmo módulo do carregador (*chunk* `rte-upload`).
 import { RteUploadTray } from '../upload/rte-upload';
 import type {
@@ -777,6 +778,8 @@ export class RteEditor implements FormValueControl<string> {
             }),
           ),
           createRteUiExtension({ openLink: () => this.openDialog('link') }),
+          // Colar e soltar arquivos (E12, E13): no principal, Ruling 29.
+          createUploadInputExtension(this.uploadRuntime),
           // `Escape` no editável (M6): o último `handleKeyDown` do ProseMirror.
           createFloatingEscapeExtension(() =>
             this.ngZone.run(
@@ -1001,8 +1004,9 @@ export class RteEditor implements FormValueControl<string> {
 
   /**
    * Envia na posição da seleção, como colar (E18); devolve os aceitos (E5).
-   * Antes de o *chunk* `rte-upload` chegar, o gesto espera: marcadores,
-   * `uploads` e recusas vêm na chegada; falha da carga → `'unavailable'`.
+   * Antes de o *chunk* `rte-upload` chegar, as recusas da E5 saem na hora e
+   * os aceitos esperam (marcadores e `uploads` na chegada); falha da carga →
+   * `'unavailable'`.
    */
   uploadFiles(files: Iterable<File>): number {
     const editor = untracked(this.instance);

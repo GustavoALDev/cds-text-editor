@@ -12,9 +12,9 @@ export const RTE_UPLOAD_PLUGIN_KEYS: readonly PluginKey[] = [
 
 /**
  * *Plugins* do envio (E7, pré-voo 12): os marcadores e o `compositionend`
- * (Ruling 9); colar e soltar entram na Tarefa 9. Registrados quando o *chunk*
- * `rte-upload` chega (Ruling 28) **no começo** da lista, o equivalente da
- * prioridade 1100 de antes (acima do `charLimit` e do bloco de código, E12).
+ * (Ruling 9); colar e soltar ficam no principal (`input.ts`, Ruling 29).
+ * Registrados quando o *chunk* `rte-upload` chega (Ruling 28) **no começo**
+ * da lista (acima do `charLimit` e do bloco de código).
  */
 export function createUploadPlugins(manager: RteUploadManager): Plugin[] {
   return [

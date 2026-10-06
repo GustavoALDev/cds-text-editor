@@ -10,13 +10,15 @@ import {
 } from '@angular/core';
 import type { Editor } from '@tiptap/core';
 import type { Transaction } from '@tiptap/pm/state';
+import type { RteResolvedUpload } from './config';
 import type { RteUploadAnnouncement, RteUploadHost } from './host';
+import type { RteUploadInput } from './input';
 import type { RteUploadRuntime } from './rte-upload';
 import type {
-  RteUploadErrorEvent,
   RteUploadErrorReason,
   RteUploadStatus,
   RteUploadText,
+  RteUploadType,
 } from './types';
 import { displayName, validateUploadFile } from './validate';
 
@@ -45,7 +47,14 @@ const IDLE_TIMEOUT = 2000;
 
 const NO_UPLOADS: readonly RteUploadStatus[] = Object.freeze([]);
 
-/** Gesto feito antes de o *chunk* chegar, reposto na ordem. */
+/** Recusa de um arquivo (E5 ou `'unavailable'`). */
+interface Refusal {
+  readonly file: File;
+  readonly type: RteUploadType;
+  readonly reason: RteUploadErrorReason;
+}
+
+/** Gesto feito antes de o *chunk* chegar (só os aceitos), reposto na ordem. */
 interface Pending {
   readonly files: readonly File[];
   at: number;
@@ -56,13 +65,13 @@ interface Pending {
  * Fachada dos envios no *chunk* principal (Ruling 28, ADR 0013): só com
  * configuração não nula, e no navegador (o editor só existe lá), carrega o
  * *chunk* `rte-upload` em ocioso (ou já no primeiro gesto). Até ele chegar,
- * os gestos esperam na ordem, com a posição mapeada pelas transações, e
- * `uploadFiles` devolve a contagem da E5; se a carga falha, cada arquivo
- * aceito vira `uploadError` `'unavailable'` (os recusados, o motivo da E5),
+ * as recusas da E5 saem na hora (Ruling 29) e os aceitos esperam na ordem,
+ * com a posição mapeada pelas transações; `uploadFiles` devolve a contagem
+ * da E5; se a carga falha, cada aceito vira `uploadError` `'unavailable'`,
  * com um anúncio por lote. Configuração `null` desmonta o gerenciador e os
  * *plugins*; o módulo carregado fica guardado.
  */
-export class RteUploads {
+export class RteUploads implements RteUploadInput {
   private readonly runtime = signal<RteUploadRuntime | null>(null);
   private loaded: Promise<RteUploadModule | null> | null = null;
   private failed = false;
@@ -122,22 +131,46 @@ export class RteUploads {
     });
   }
 
+  /** Há envio possível: configuração, mídia no esquema, editável e visível. */
+  accepts(): boolean {
+    const editor = untracked(this.host.editor);
+    return (
+      !this.disposed &&
+      !!editor &&
+      !editor.isDestroyed &&
+      !!untracked(this.host.config) &&
+      !!untracked(this.host.rules) &&
+      this.host.canInsert()
+    );
+  }
+
   /** Um gesto (E5, E11); devolve quantos a E5 aceita. */
   start(files: readonly File[], at: number, text?: RteUploadText): number {
-    const editor = untracked(this.host.editor);
-    if (this.disposed || !editor || editor.isDestroyed) return 0;
+    if (!this.accepts()) return 0;
     const runtime = untracked(this.runtime);
     if (runtime) return runtime.manager.start(files, at, text);
-    const cfg = untracked(this.host.config);
-    if (!cfg || !untracked(this.host.rules) || !this.host.canInsert()) return 0;
-    const accepted = files.filter(
-      (file, i) =>
-        i < cfg.maxFilesPerAction && validateUploadFile(file, cfg).ok,
-    ).length;
-    this.pending.push({ files: [...files], at, text });
-    if (this.failed) this.fail();
-    else void this.load();
-    return accepted;
+    const cfg = untracked(this.host.config) as RteResolvedUpload;
+    const accepted: File[] = [];
+    const refused: Refusal[] = [];
+    files.forEach((file, i) => {
+      const check = validateUploadFile(file, cfg);
+      if (i >= cfg.maxFilesPerAction) {
+        refused.push({ file, type: check.type, reason: 'count' });
+      } else if (!check.ok) {
+        refused.push({ file, type: check.type, reason: check.reason });
+      } else if (this.failed) {
+        accepted.push(file);
+        refused.push({ file, type: check.type, reason: 'unavailable' });
+      } else {
+        accepted.push(file);
+      }
+    });
+    this.refuse(refused);
+    if (accepted.length && !this.failed) {
+      this.pending.push({ files: accepted, at, text });
+      void this.load();
+    }
+    return accepted.length;
   }
 
   cancel(id: string): boolean {
@@ -215,38 +248,47 @@ export class RteUploads {
     for (const p of pending) runtime.manager.start(p.files, p.at, p.text);
   }
 
-  /** Carga falhou: recusa os gestos em espera, um anúncio por lote. */
+  /** Carga falhou: os aceitos em espera viram `'unavailable'`. */
   private fail(): void {
     this.failed = true;
     const pending = this.pending;
     this.pending = [];
     const cfg = untracked(this.host.config);
-    if (!cfg || !pending.some((p) => p.files.length > 0)) return;
-    if (isDevMode() && !this.warned) {
+    if (!cfg) return;
+    this.refuse(
+      pending.flatMap((p) =>
+        p.files.map((file) => ({
+          file,
+          type: validateUploadFile(file, cfg).type,
+          reason: 'unavailable' as const,
+        })),
+      ),
+    );
+  }
+
+  /** Um `uploadError` por arquivo e um anúncio combinado (E8, E15). */
+  private refuse(list: readonly Refusal[]): void {
+    if (!list.length) return;
+    if (
+      isDevMode() &&
+      !this.warned &&
+      list.some((r) => r.reason === 'unavailable')
+    ) {
       this.warned = true;
       console.warn(LOAD_FAILED);
     }
-    const events: RteUploadErrorEvent[] = [];
-    const names: string[] = [];
-    for (const p of pending) {
-      p.files.forEach((file, i) => {
-        const check = validateUploadFile(file, cfg);
-        const reason: RteUploadErrorReason =
-          i >= cfg.maxFilesPerAction
-            ? 'count'
-            : check.ok
-              ? 'unavailable'
-              : check.reason;
-        events.push({ fileName: file.name, type: check.type, reason });
-        names.push(displayName(file));
-      });
-    }
     this.host.zone.run(() => {
-      for (const e of events) this.host.emitError(e);
-      const reasons = events.map((e) => e.reason);
+      for (const r of list) {
+        this.host.emitError({
+          fileName: r.file.name,
+          type: r.type,
+          reason: r.reason,
+        });
+      }
+      const reasons = list.map((r) => r.reason);
       this.host.announce({
         kind: 'error',
-        names,
+        names: list.map((r) => displayName(r.file)),
         reasons,
         reason: reasons[0] as RteUploadErrorReason,
       });

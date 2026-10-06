@@ -118,3 +118,95 @@ export function uniqueName(base: string, ext: string, delay?: number): string {
 export function uploadChunk(page: Page): Promise<DialogsChunk> {
   return chunkByMarker(page, 'rteUploadComposition');
 }
+
+/** Resultado de um gesto despachado na página: `defaultPrevented` de cada evento. */
+export interface GestureResult {
+  readonly prevented: Record<string, boolean>;
+}
+
+/**
+ * Cola `files` no editável do editor `id` (E12): `DataTransfer` real com os
+ * arquivos e, opcionalmente, `text/plain`/`text/html`, num `ClipboardEvent`
+ * `paste` despachado no elemento focado (a seleção atual do editor).
+ */
+export function pasteFiles(
+  page: Page,
+  id: RteE2eId,
+  files: readonly PageFile[],
+  data: { text?: string; html?: string } = {},
+): Promise<GestureResult> {
+  return page.evaluate(
+    ({ id, files, data }) => {
+      const host = document.querySelector(`rte-editor[data-testid="${id}"]`);
+      const editable = host?.querySelector('.ProseMirror');
+      if (!editable) throw new Error(`sem o editável de ${id}`);
+      const dt = new DataTransfer();
+      for (const f of files) {
+        const bytes = Uint8Array.from(atob(f.base64), (c) => c.charCodeAt(0));
+        dt.items.add(new File([bytes], f.name, { type: f.type }));
+      }
+      if (data.text !== undefined) dt.setData('text/plain', data.text);
+      if (data.html !== undefined) dt.setData('text/html', data.html);
+      const init = { bubbles: true, cancelable: true, clipboardData: dt };
+      const event = new ClipboardEvent('paste', init);
+      if (event.clipboardData !== dt) {
+        Object.defineProperty(event, 'clipboardData', { value: dt });
+      }
+      const target =
+        document.activeElement && editable.contains(document.activeElement)
+          ? document.activeElement
+          : editable;
+      target.dispatchEvent(event);
+      return { prevented: { paste: event.defaultPrevented } };
+    },
+    { id, files: [...files], data },
+  );
+}
+
+/**
+ * Solta `files` no editor `id` (E13): `dragenter`, `dragover` e `drop` com um
+ * `DataTransfer` real, nas coordenadas `point` da janela (padrão: o centro
+ * do editável), no elemento sob o ponto.
+ */
+export function dropFiles(
+  page: Page,
+  id: RteE2eId,
+  files: readonly PageFile[],
+  point?: { x: number; y: number },
+): Promise<GestureResult> {
+  return page.evaluate(
+    ({ id, files, point }) => {
+      const host = document.querySelector(`rte-editor[data-testid="${id}"]`);
+      const editable = host?.querySelector('.ProseMirror');
+      if (!editable) throw new Error(`sem o editável de ${id}`);
+      const box = editable.getBoundingClientRect();
+      const at = point ?? {
+        x: box.left + box.width / 2,
+        y: box.top + box.height / 2,
+      };
+      const target = document.elementFromPoint(at.x, at.y) ?? editable;
+      const dt = new DataTransfer();
+      for (const f of files) {
+        const bytes = Uint8Array.from(atob(f.base64), (c) => c.charCodeAt(0));
+        dt.items.add(new File([bytes], f.name, { type: f.type }));
+      }
+      const prevented: Record<string, boolean> = {};
+      for (const type of ['dragenter', 'dragover', 'drop']) {
+        const event = new DragEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          clientX: at.x,
+          clientY: at.y,
+          dataTransfer: dt,
+        });
+        if (event.dataTransfer !== dt) {
+          Object.defineProperty(event, 'dataTransfer', { value: dt });
+        }
+        target.dispatchEvent(event);
+        prevented[type] = event.defaultPrevented;
+      }
+      return { prevented };
+    },
+    { id, files: [...files], point },
+  );
+}

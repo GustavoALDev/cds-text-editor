@@ -176,7 +176,10 @@ describe('carga sob demanda (Ruling 28)', () => {
     expect(s.cmp.uploads()).toEqual([]);
     expect(markerIds(s.editor)).toEqual([]);
     expect(s.adapter.calls).toEqual([]);
-    expect(s.host.errors).toEqual([]);
+    // Ruling 29: as recusas da E5 saem na hora; só os aceitos esperam
+    expect(s.host.errors).toEqual([
+      { fileName: 'x.svg', type: 'image', reason: 'type' },
+    ]);
     gated.release();
     await drain(s);
     expect(s.cmp.uploads().map((u) => u.fileName)).toEqual([
