@@ -54,6 +54,11 @@ describe('prepareRteHtml (H6): casos', () => {
       '<table><caption>L</caption><colgroup><col style="width: 90px"></colgroup><tbody><tr><td><p>a</p></td></tr></tbody></table>',
       '<table class="rte-table--sized"><caption>',
     ],
+    [
+      'min-width antes de width no mesmo col',
+      '<table><colgroup><col style="min-width: 1px; width: 10px"></colgroup><tbody><tr><td><p>a</p></td></tr></tbody></table>',
+      '<table class="rte-table--sized"><colgroup>',
+    ],
   ])(
     'tabela com larguras de coluna ganha a classe (H20): %s',
     (_n, input, head) => {
@@ -74,6 +79,10 @@ describe('prepareRteHtml (H6): casos', () => {
     [
       'width só dentro de outra tabela (a de fora não ganha)',
       '<table><tbody><tr><td><table><colgroup><col style="width: 50px"></colgroup><tbody><tr><td><p>a</p></td></tr></tbody></table></td></tr></tbody></table>',
+    ],
+    [
+      'só min-width no col (trusted; o esquema não emite)',
+      '<table><colgroup><col style="min-width: 9px"></colgroup><tbody><tr><td><p>a</p></td></tr></tbody></table>',
     ],
   ])(
     'sem largura de coluna própria, a tabela não ganha a classe: %s',
@@ -175,6 +184,19 @@ describe('prepareRteHtml (H6): casos', () => {
     ],
   ])('%s', (_name, input, fragmentBase, expected) => {
     expect(prepareRteHtml(input, { fragmentBase })).toBe(expected);
+  });
+
+  it('pré-condição: HTML fora do canônico não é suportado (< cru em atributo vira marcação)', () => {
+    // Documenta o limite da H6 (revisão final, 1.2): só a saída de `createSanitizer`
+    // escapa `<` em atributos; aqui a varredura casa `<table` dentro do `alt` e a
+    // árvore muda (o `img` de dentro do valor vira elemento). `trusted` só para a
+    // saída de `createSanitizer`.
+    const input = '<img alt="<table><img src=x onerror=alert(1)>">';
+    const out = prepareRteHtml(input, { fragmentBase: null });
+    expect(out).not.toBe(input);
+    const tags = (h: string) => parseTree(h).filter((n) => 'tag' in n).length;
+    expect(tags(input)).toBe(1);
+    expect(tags(out)).toBeGreaterThan(1);
   });
 
   it('não depende de estado entre chamadas (regex global)', () => {

@@ -112,3 +112,27 @@ describe('sem estilo em template nem host (CSP)', () => {
     expect(bad).toEqual([]);
   });
 });
+
+describe('sem HTML cru em template (H19)', () => {
+  /** `innerHTML`/`outerHTML` em qualquer forma de ligação (`[x]`, `bind-x`, `[attr.x]`). */
+  const RAW_HTML_IN_TEMPLATE = /\b(innerHTML|outerHTML)\b/i;
+
+  it('a expressão pega as formas de ligação', () => {
+    for (const bad of [
+      '<div [innerHTML]="x"></div>',
+      '<div bind-innerHTML="x"></div>',
+      '<div [outerHTML]="x"></div>',
+      '<div [attr.innerhtml]="x"></div>',
+    ])
+      expect(bad).toMatch(RAW_HTML_IN_TEMPLATE);
+    expect('<div [innerText]="x"></div>').not.toMatch(RAW_HTML_IN_TEMPLATE);
+  });
+
+  it('nenhum template .html publicado usa innerHTML/outerHTML', () => {
+    expect(templates.length).toBeGreaterThan(0);
+    const bad = templates
+      .filter((f) => RAW_HTML_IN_TEMPLATE.test(readFileSync(f, 'utf8')))
+      .map(packagePath);
+    expect(bad).toEqual([]);
+  });
+});

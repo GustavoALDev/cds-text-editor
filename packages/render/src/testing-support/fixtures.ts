@@ -2,10 +2,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 /**
- * Texto de `fixtures/content/<name>` com quebras normalizadas para `\n`. Sobe
- * a partir do `cwd` até achar o arquivo: o builder roda os specs do render com
- * `cwd` em `packages/render` (e `__dirname`/`import.meta.url` não valem nos
- * specs empacotados; ver o helper do core).
+ * Texto de `fixtures/content/<name>` com quebras normalizadas para `\n`. O
+ * builder roda os specs do render com `cwd` na raiz do repositório (como diz
+ * `workspace.ts`); subir a partir do `cwd` até achar o arquivo é só robustez
+ * (`__dirname`/`import.meta.url` não valem nos specs empacotados; ver o helper
+ * do core).
  */
 export function readFixture(name: string): string {
   const rel = join('fixtures', 'content', name);

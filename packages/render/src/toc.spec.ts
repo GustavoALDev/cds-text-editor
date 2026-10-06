@@ -290,6 +290,17 @@ describe('RteToc (R7)', () => {
     expect(links(fixture)).toEqual(['/q?x=1#rt-a A']);
   });
 
+  it('pathname com barras iniciais repetidas não vira link protocolo-relativo', async () => {
+    const fixture = await render('<h2 id="rt-a">A</h2>', [
+      {
+        provide: PlatformLocation,
+        useValue: { pathname: '//evil.example/x', search: '' },
+      },
+      { provide: Location, useValue: { onUrlChange: () => () => undefined } },
+    ]);
+    expect(links(fixture)).toEqual(['/evil.example/x#rt-a A']);
+  });
+
   it('nav com aria-label Table of contents (padrão)', async () => {
     const fixture = await render('<h2 id="rt-a">A</h2>');
     expect(host(fixture).querySelector('nav')!.getAttribute('aria-label')).toBe(

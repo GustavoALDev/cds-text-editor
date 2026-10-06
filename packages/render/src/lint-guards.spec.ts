@@ -40,6 +40,12 @@ const DOC_WRITE =
   'export function f(doc: Document, x: string): void { doc.write(x); }\n';
 const EXTRACT_TOC =
   "import { extractToc } from '@cds/rte-core/html';\nexport const t = extractToc;\n";
+const DYNAMIC_SANITIZER =
+  "export const load = () => import('@cds/rte-sanitizer');\n";
+const DYNAMIC_CORE_HTML =
+  "export const load = () => import('@cds/rte-core/html');\n";
+const COMPUTED_INNER_HTML =
+  "export function f(el: HTMLElement, x: string): void { el['innerHTML'] = x; }\n";
 
 const forbidden: ReadonlyArray<[string, string, string]> = [
   [
@@ -142,6 +148,37 @@ const forbidden: ReadonlyArray<[string, string, string]> = [
     TS_IMPORTS,
   ],
   ["import de '@cds/rte-core/html' fora de toc", EXTRACT_TOC, TS_IMPORTS],
+  [
+    "import('@cds/rte-sanitizer') dinâmico",
+    DYNAMIC_SANITIZER,
+    'no-restricted-syntax',
+  ],
+  [
+    "import('@cds/rte-sanitizer/x') dinâmico",
+    "export const load = () => import('@cds/rte-sanitizer/x');\n",
+    'no-restricted-syntax',
+  ],
+  [
+    "import('@cds/rte-core/html') dinâmico fora de toc",
+    DYNAMIC_CORE_HTML,
+    'no-restricted-syntax',
+  ],
+  ["el['innerHTML'] = x", COMPUTED_INNER_HTML, 'no-restricted-syntax'],
+  [
+    'el[`outerHTML`]',
+    'export const o = (el: HTMLElement): string => el[`outerHTML`];\n',
+    'no-restricted-syntax',
+  ],
+  [
+    "renderer.setProperty(el, 'innerHTML', x)",
+    "export function f(r: { setProperty(e: unknown, n: string, v: unknown): void }, el: unknown, x: string): void { r.setProperty(el, 'innerHTML', x); }\n",
+    'no-restricted-syntax',
+  ],
+  [
+    "Reflect.set(el, 'outerHTML', x)",
+    "export function f(el: HTMLElement, x: string): void { Reflect.set(el, 'outerHTML', x); }\n",
+    'no-restricted-syntax',
+  ],
 ];
 
 describe('guardas por lint (spec 06, H19)', () => {
@@ -182,6 +219,8 @@ describe('guardas por lint (spec 06, H19)', () => {
     ['innerHTML', INNER_HTML],
     ['insertAdjacentHTML', INSERT_ADJACENT],
     ['write', DOC_WRITE],
+    ["el['innerHTML']", COMPUTED_INNER_HTML],
+    ["import('@cds/rte-sanitizer')", DYNAMIC_SANITIZER],
   ])('src/content/rte-content.ts continua barrando %s', async (_n, code) => {
     expect(await ruleIds(code, CONTENT_FILE)).toContain('no-restricted-syntax');
   });
@@ -206,6 +245,18 @@ describe('guardas por lint (spec 06, H19)', () => {
     expect(await ruleIds(EXTRACT_TOC, CONTENT_OTHER)).toContain(TS_IMPORTS);
     expect(await ruleIds("import 'zone.js';\n", TOC_FILE)).toContain(
       TS_IMPORTS,
+    );
+  });
+
+  it('import() dinâmico: @cds/rte-core/html permitido no /toc; o sanitizador e HTML cru, não', async () => {
+    expect(await ruleIds(DYNAMIC_CORE_HTML, TOC_FILE)).not.toContain(
+      'no-restricted-syntax',
+    );
+    expect(await ruleIds(DYNAMIC_SANITIZER, TOC_FILE)).toContain(
+      'no-restricted-syntax',
+    );
+    expect(await ruleIds(COMPUTED_INNER_HTML, TOC_FILE)).toContain(
+      'no-restricted-syntax',
     );
   });
 

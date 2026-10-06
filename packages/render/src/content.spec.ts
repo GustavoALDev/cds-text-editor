@@ -393,6 +393,26 @@ describe('RteContent: porta única de HTML (R3, H6, H9)', () => {
     fixture.destroy();
     expect(loc.unregister).toHaveBeenCalledTimes(1);
   });
+
+  it('pathname com barras iniciais repetidas não vira link protocolo-relativo', async () => {
+    const loc = fakeLocation();
+    loc.platform.pathname = '//evil.example/x';
+    const fixture = await renderHost(Host, [
+      provideRteRender({ sanitize }),
+      ...loc.providers,
+    ]);
+    fixture.componentInstance.html.set('<p><a href="#rt-a">x</a></p>');
+    await fixture.whenStable();
+    expect(el(fixture).querySelector('a')!.getAttribute('href')).toBe(
+      '/evil.example/x?q=1#rt-a',
+    );
+    loc.platform.pathname = '/\\/evil.example/y';
+    loc.state.listener!();
+    await fixture.whenStable();
+    expect(el(fixture).querySelector('a')!.getAttribute('href')).toBe(
+      '/evil.example/y?q=1#rt-a',
+    );
+  });
 });
 
 describe('RteContent: host (H3)', () => {

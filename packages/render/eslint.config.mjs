@@ -57,12 +57,47 @@ const D25_SELECTORS = [
   },
 ];
 
+// `import()` dinâmico escapa do no-restricted-imports: mesma regra por sintaxe
+// (revisão final). O esquery não aceita `/` dentro do regex: `\x2F` é a barra.
+const SANITIZER_DYNAMIC_IMPORT = {
+  selector: String.raw`ImportExpression[source.value=/^@cds\x2Frte-sanitizer(\x2F|$)/]`,
+  message: `${SANITIZER_PATH.message} Nem por import().`,
+};
+
+const CORE_HTML_DYNAMIC_IMPORT = {
+  selector: String.raw`ImportExpression[source.value=/^@cds\x2Frte-core\x2Fhtml$/]`,
+  message: `${CORE_HTML_PATH.message} Nem por import().`,
+};
+
+const RAW_HTML_MESSAGE =
+  'innerHTML/outerHTML são proibidos: o HTML entra só pelo [innerHTML] do RteContent (spec 06, H19).';
+const RAW_HTML_NAME = '/^(innerHTML|outerHTML)$/';
+
 // Nenhum caminho de HTML bruto no código publicado (spec 06, H19).
 const RAW_HTML_SELECTORS = [
   {
-    selector: 'MemberExpression[property.name=/^(innerHTML|outerHTML)$/]',
-    message:
-      'innerHTML/outerHTML são proibidos: o HTML entra só pelo [innerHTML] do RteContent (spec 06, H19).',
+    selector: `MemberExpression[property.name=${RAW_HTML_NAME}]`,
+    message: RAW_HTML_MESSAGE,
+  },
+  {
+    // `el['innerHTML']`.
+    selector: `MemberExpression[computed=true][property.value=${RAW_HTML_NAME}]`,
+    message: RAW_HTML_MESSAGE,
+  },
+  {
+    // `` el[`outerHTML`] `` (template sem expressões).
+    selector: `MemberExpression[computed=true] > TemplateLiteral.property[expressions.length=0][quasis.0.value.cooked=${RAW_HTML_NAME}]`,
+    message: RAW_HTML_MESSAGE,
+  },
+  {
+    // `renderer.setProperty(el, 'innerHTML', v)`.
+    selector: `CallExpression[callee.property.name='setProperty'] > Literal.arguments[value=${RAW_HTML_NAME}]`,
+    message: RAW_HTML_MESSAGE,
+  },
+  {
+    // `Reflect.set(el, 'outerHTML', v)`.
+    selector: `CallExpression[callee.object.name='Reflect'][callee.property.name='set'] > Literal.arguments[value=${RAW_HTML_NAME}]`,
+    message: RAW_HTML_MESSAGE,
   },
   {
     selector:
@@ -122,13 +157,6 @@ export default [
             '{projectRoot}/size-page.mjs',
           ],
           ignoredDependencies: [
-            // `@angular/common` e `@angular/platform-browser` são peers por
-            // H17 (a faixa de versão do Angular; `DomSanitizer` vive no
-            // segundo) e `@cds/rte-core` entra com o entry `/toc`: declarados
-            // antes de serem importados.
-            '@angular/common',
-            '@angular/platform-browser',
-            '@cds/rte-core',
             // Peer opcional sem import algum (pré-voo 3): documenta o
             // acoplamento de versão com o sanitizador que o consumidor passa
             // a `provideRteRender`.
@@ -174,6 +202,8 @@ export default [
         ...D25_SELECTORS,
         ...RAW_HTML_SELECTORS,
         ...CONTENT_ONLY_SELECTORS,
+        SANITIZER_DYNAMIC_IMPORT,
+        CORE_HTML_DYNAMIC_IMPORT,
       ],
       'no-restricted-globals': ['error', ...GLOBALS],
       'no-restricted-properties': [
@@ -211,6 +241,8 @@ export default [
         'error',
         ...D25_SELECTORS,
         ...RAW_HTML_SELECTORS,
+        SANITIZER_DYNAMIC_IMPORT,
+        CORE_HTML_DYNAMIC_IMPORT,
       ],
     },
   },
@@ -219,6 +251,13 @@ export default [
     files: ['**/toc/src/**/*.ts'],
     ignores: NOT_PUBLISHED,
     rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...D25_SELECTORS,
+        ...RAW_HTML_SELECTORS,
+        ...CONTENT_ONLY_SELECTORS,
+        SANITIZER_DYNAMIC_IMPORT,
+      ],
       '@typescript-eslint/no-restricted-imports': [
         'error',
         {

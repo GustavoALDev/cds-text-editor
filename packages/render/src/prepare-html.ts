@@ -13,7 +13,8 @@ const TABLE_OPEN = /<table(?=[\s>])/g;
 /** Início canônico de uma tabela com `colgroup` próprio (depois de um `caption` opcional). */
 const TABLE_HEAD =
   /<table>(?:<caption>[\s\S]*?<\/caption>)?<colgroup>((?:<col\b[^>]*>)*)<\/colgroup>/y;
-const COL_WIDTH = /<col\b[^>]*\sstyle="[^"]*\bwidth:/;
+/** `width:` como nome de declaração (não o fim de `min-width:`). */
+const COL_WIDTH = /<col\b[^>]*\sstyle="(?:[^"]*[;\s])?width:/;
 const TABLE_CLOSE = /<\/table>/g;
 const ANCHOR_TAG = /<a\s[^>]*>/g;
 const FRAGMENT_HREF = /(\s)href="#/;
