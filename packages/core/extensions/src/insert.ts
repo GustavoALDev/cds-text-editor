@@ -1,11 +1,14 @@
 import type { Command } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { NodeSelection } from '@tiptap/pm/state';
-import type { Selection } from '@tiptap/pm/state';
+import type { Selection, Transaction } from '@tiptap/pm/state';
+
+/** O que as regras de inserção leem da seleção (ou de uma posição `at`). */
+export type InsertionTarget = Pick<Selection, '$from' | '$to' | 'empty'>;
 
 /** Faixa a substituir: o parágrafo vazio do cursor, se o pai aceitar o nó. */
 export function emptyParagraph(
-  selection: Selection,
+  selection: InsertionTarget,
   node: ProseMirrorNode,
 ): [number, number] | null {
   const { $from, empty } = selection;
@@ -23,7 +26,7 @@ export function emptyParagraph(
  * subindo até um pai que aceite o nó.
  */
 export function insertionPoint(
-  selection: Selection,
+  selection: InsertionTarget,
   node: ProseMirrorNode,
 ): number | null {
   const $to = selection.$to;
@@ -62,19 +65,40 @@ function findInserted(
   return best;
 }
 
+/** Alvo das regras: a seleção, ou `at` (inteiro, dentro do documento). */
+function targetOf(
+  tr: Transaction,
+  at: number | undefined,
+): InsertionTarget | null {
+  if (at === undefined) return tr.selection;
+  if (!Number.isInteger(at) || at < 0 || at > tr.doc.content.size) return null;
+  const $at = tr.doc.resolve(at);
+  return { $from: $at, $to: $at, empty: true };
+}
+
 /**
  * Insere um bloco atômico (lição 14): o parágrafo vazio do cursor é
  * substituído; senão o nó entra depois do bloco. O nó inserido fica
  * selecionado (`NodeSelection`).
+ *
+ * Com `at` (05c2a E9), as mesmas regras usam essa posição em vez da seleção,
+ * e a inserção é de fundo: a seleção só é mapeada e nada rola (quem chama
+ * decide). `at` não inteiro ou fora de `[0, doc.content.size]` → `false`.
  */
-export function replaceEmptyParagraphWith(node: ProseMirrorNode): Command {
+export function replaceEmptyParagraphWith(
+  node: ProseMirrorNode,
+  at?: number,
+): Command {
   return ({ tr, dispatch }) => {
-    const range = emptyParagraph(tr.selection, node);
-    const at = range ? range[0] : insertionPoint(tr.selection, node);
-    if (at === null) return false;
+    const target = targetOf(tr, at);
+    if (!target) return false;
+    const range = emptyParagraph(target, node);
+    const from = range ? range[0] : insertionPoint(target, node);
+    if (from === null) return false;
     if (!dispatch) return true;
-    tr.replaceWith(at, range ? range[1] : at, node);
-    const pos = findInserted(tr.doc, node, at);
+    tr.replaceWith(from, range ? range[1] : from, node);
+    if (at !== undefined) return true;
+    const pos = findInserted(tr.doc, node, from);
     if (pos !== null) tr.setSelection(NodeSelection.create(tr.doc, pos));
     tr.scrollIntoView();
     return true;
