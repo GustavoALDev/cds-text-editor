@@ -35,7 +35,8 @@ export type RteE2eId =
   | 'floating'
   | 'floating-alt'
   | 'media'
-  | 'media-alt';
+  | 'media-alt'
+  | 'media-key';
 export type RteE2eToggle = 'disabled' | 'readonly' | 'hidden' | 'show';
 export type RteE2eLang = 'en' | 'pt-BR' | 'es';
 

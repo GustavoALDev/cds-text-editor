@@ -1,4 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
+import {
+  MEDIA_FIXTURE,
+  MEDIA_FIXTURE_OUT,
+} from './app/src/app/pages/media-fixture';
 import { editableOf, gotoApp, modelValue, waitForEditor } from './helpers/app';
 import { dialogField, openDialogFrom, submitDialog } from './helpers/dialogs';
 import { expectFloating, floatingItem, floatingMenu } from './helpers/floating';
@@ -92,14 +96,11 @@ for (const zone of [false, true]) {
         added: [],
         removed: [],
       });
-      // O fixture escrito à mão é o ponto fixo de `getRteHtml` (ida e volta).
-      const model = await modelValue(page, ID);
-      expect(model).toContain('youtube-nocookie.com/embed');
-      // O core acrescenta `style="aspect-ratio: 16 / 9"` ao `iframe` do embed na
-      // saída; carregado de volta, esse atributo violaria a CSP estrita.
-      expect(
-        (await rteHtml(page, ID)).replace(' style="aspect-ratio: 16 / 9"', ''),
-      ).toBe(model);
+      // O fixture escrito à mão faz a ida e volta por `getRteHtml` (só a imagem
+      // sem `alt` e o `style` do iframe mudam, as duas diferenças de
+      // `MEDIA_FIXTURE_OUT`).
+      expect(await modelValue(page, ID)).toBe(MEDIA_FIXTURE);
+      expect(await rteHtml(page, ID)).toBe(MEDIA_FIXTURE_OUT);
     });
 
     test('inserir, trocar o endereço, remover, desfazer e refazer', async ({

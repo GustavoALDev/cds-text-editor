@@ -247,6 +247,35 @@ for (const zone of [false, true]) {
       expect(await rteHtml(page, ID)).toBe(BASE);
     });
 
+    test('imagem sem alt (V7): Image details… abre com texto e decorativa em branco e exige escolher', async ({
+      page,
+    }) => {
+      const bare = '<img src="/e2e.png" loading="lazy" decoding="async">';
+      const fig = (img: string) =>
+        `<p>Início</p><figure class="rt-figure rt-figure--center">${img}</figure><p>Fim</p>`;
+      // o HTML canônico escreve `alt=""`; a sessão guarda o `null`
+      await loadDoc(
+        page,
+        ID,
+        fig(bare),
+        fig('<img src="/e2e.png" alt="" loading="lazy" decoding="async">'),
+      );
+      await editableOf(page, ID).locator(IMG).click();
+      const dialog = await openDetails(page);
+      await expect(dialogField(dialog, 'Alternative text')).toHaveValue('');
+      await expect(dialogField(dialog, 'Alternative text')).toBeEnabled();
+      await expect(dialogField(dialog, 'Decorative image')).not.toBeChecked();
+      await submitDialog(dialog);
+      await expect(dialog).toBeVisible();
+      const alt = dialogField(dialog, 'Alternative text');
+      await expect(alt).toHaveAttribute('aria-invalid', 'true');
+      await expect(alt).toBeFocused();
+      // escolher "decorativa" libera
+      await dialogField(dialog, 'Decorative image').check();
+      await submitDialog(dialog);
+      await expect(dialog).toBeHidden();
+    });
+
     test('Details… muda a largura e um Mod+Z restaura o estado anterior', async ({
       page,
     }) => {

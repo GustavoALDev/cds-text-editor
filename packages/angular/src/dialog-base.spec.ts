@@ -899,25 +899,34 @@ describe.each(MEDIA)('R7: diálogo $kind (05c1)', (m) => {
 });
 
 describe('cancelar com o foco já devolvido ao editável', () => {
-  it('o <dialog> nativo restaura o foco ao fechar: o ProseMirror sincroniza a seleção do DOM (Firefox, N29)', async () => {
-    const { fixture, cmp, editor } = await setup();
-    await focusEditor(fixture, editor);
-    inQuote(editor);
-    expect(cmp.openDialog('quoteAuthor')).toBe(true);
+  it('o <dialog> nativo restaura o foco ao fechar: a NodeSelection de mídia sobrevive ao cursor que o Firefox põe no início (N29)', async () => {
+    const doc = mediaDoc();
+    const { fixture, cmp, editor } = await setup((h) => h.value.set(doc));
+    selectMedia(editor, 'rtVideo');
+    const selected = editor.state.selection;
+    expect(selected).toBeInstanceOf(NodeSelection);
+    expect(cmp.openDialog('video')).toBe(true);
     const dialog = await waitForDialog(fixture);
-    // O `close()` nativo devolve o foco ao editável antes de o controlador
-    // agir; o `commands.focus()` do Tiptap então não faz nada (já tem foco) e
-    // o Firefox, que põe o cursor no início ao focar, vence a seleção de nó.
+    // O `close()` nativo devolve o foco ao editável antes do controlador agir;
+    // o `commands.focus()` do Tiptap então não faz nada (já tem foco) e o
+    // Firefox, que põe o cursor no início ao focar, vence a seleção de nó
+    // quando o ProseMirror lê o DOM.
     const close = dialog.close.bind(dialog);
     dialog.close = (value?: string) => {
       close(value);
       editor.view.dom.focus();
+      const text = editor.view.dom.querySelector('p')?.firstChild;
+      if (text) document.getSelection()?.collapse(text, 0);
     };
     const sync = vi.spyOn(editor.view, 'focus');
     action(dialog, 'Cancel').click();
     await nextFrame();
     await settle(fixture);
     expect(editor.view.hasFocus()).toBe(true);
+    // `view.focus()` regrava a seleção no DOM antes do `selectionchange`
     expect(sync).toHaveBeenCalled();
+    const now = editor.state.selection;
+    expect(now).toBeInstanceOf(NodeSelection);
+    expect(now.from).toBe(selected.from);
   });
 });

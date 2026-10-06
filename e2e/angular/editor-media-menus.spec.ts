@@ -144,8 +144,11 @@ const TOOLBAR_MEDIA = [
 const ACTIVE = /rte-toolbar__button--active/;
 
 /** Clique real no primeiro parágrafo (separa dois cliques de mídia seguidos). */
-async function clickParagraph(page: Page): Promise<void> {
-  await editableOf(page, ID).locator('p').first().click();
+async function clickParagraph(
+  page: Page,
+  id: 'media' | 'media-key' = ID,
+): Promise<void> {
+  await editableOf(page, id).locator('p').first().click();
 }
 
 for (const zone of [false, true]) {
@@ -180,6 +183,33 @@ for (const zone of [false, true]) {
         await expect(button).not.toHaveAttribute('aria-pressed', /.*/);
         await expect(button).not.toHaveClass(ACTIVE);
       }
+    });
+
+    test('presets: article tem image e embed (sem video); minimal nenhum; lista própria na ordem dada', async ({
+      page,
+    }) => {
+      await selectIn(page, ID, 'Mídia', 5);
+      const set = (config: unknown) =>
+        page.evaluate(
+          (c) =>
+            window.rteE2e.setToolbar(
+              'media',
+              c as 'full' | readonly string[][],
+            ),
+          config,
+        );
+      const media = async () =>
+        (await barLabels(page)).filter((l) => TOOLBAR_MEDIA.includes(l));
+      await set('article');
+      await expect
+        .poll(media)
+        .toEqual(['Insert image', 'Insert embedded content']);
+      await set('minimal');
+      await expect.poll(media).toEqual([]);
+      await set([['embed', 'video', 'image']]);
+      await expect
+        .poll(media)
+        .toEqual(['Insert embedded content', 'Insert video', 'Insert image']);
     });
 
     test('Edit … e --active só com a mídia do tipo selecionada', async ({
@@ -243,7 +273,7 @@ for (const zone of [false, true]) {
           editableOf(page, ID).locator(targets[kind].figure),
         ).toHaveClass(/ProseMirror-selectednode/);
         // editável: o ponteiro cai na figure, não no elemento
-        expect(await hit(targets[kind].figure)).not.toBe(targets[kind].tag);
+        expect(await hit(targets[kind].figure)).toBe('FIGURE');
       }
       await page.evaluate(() => window.rteE2e.toggle('readonly'));
       await expect
@@ -289,6 +319,14 @@ for (const zone of [false, true]) {
         await floatingItem(menu, remove).click();
         await expect(editableOf(page, ID).locator(tag)).toHaveCount(0);
         expect(await rteHtml(page, ID)).not.toContain(`<${tag}`);
+        // as outras mídias continuam
+        const others = {
+          video: { img: 2, video: 0, iframe: 1 },
+          embed: { img: 2, video: 1, iframe: 0 },
+        }[kind];
+        for (const [name, count] of Object.entries(others)) {
+          await expect(editableOf(page, ID).locator(name)).toHaveCount(count);
+        }
         await expect(editableOf(page, ID)).toBeFocused();
       });
     }
@@ -311,6 +349,37 @@ for (const zone of [false, true]) {
       await cancelDialog(mediaDialog(page, ID));
       await expect(editableOf(page, ID)).toBeFocused();
       expect((await formState(page, ID)).touched).toBe(false);
+    });
+  });
+
+  test.describe(`N29 media-key${zone ? ' (zone.js)' : ''}`, () => {
+    const KEY = 'media-key';
+    test.beforeEach(async ({ page }) => {
+      await routeMedia(page.context());
+      await gotoApp(page, '/media', { zone });
+      await waitForEditor(page, KEY);
+      await expect(editableOf(page, KEY).locator('.rt-embed')).toHaveCount(1);
+    });
+
+    test('floatingMenus: { embed: false } desliga só o menu de embed, com provedores ativos', async ({
+      page,
+    }) => {
+      // o embed existe e há provedores: openDialog('embed') é aceito
+      expect(
+        await page.evaluate(() =>
+          window.rteE2e.openDialog('media-key', 'embed'),
+        ),
+      ).toBe(true);
+      await cancelDialog(mediaDialog(page, KEY));
+      await selectMediaByClick(page, KEY, 'embed');
+      await expect(editableOf(page, KEY).locator('.rt-embed')).toHaveClass(
+        /ProseMirror-selectednode/,
+      );
+      await expectFloating(page, KEY, null);
+      // os outros menus continuam
+      await clickParagraph(page, KEY);
+      await selectMediaByClick(page, KEY, 'video');
+      await expectFloating(page, KEY, 'video');
     });
   });
 

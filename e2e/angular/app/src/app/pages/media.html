@@ -4,7 +4,7 @@
     #main
     data-testid="media"
     ariaLabel="Media editor"
-    toolbar="full"
+    [toolbar]="toolbar()"
     [options]="mainOptions"
     [labels]="labels"
     [theme]="mainTheme"
@@ -46,5 +46,19 @@
     [floatingMenus]="altMenus"
     [(value)]="altValue"
     (editorReady)="bridge.ready('media-alt')"
+  />
+</section>
+<section>
+  <rte-editor
+    #key
+    data-testid="media-key"
+    ariaLabel="Third media editor"
+    [toolbar]="false"
+    [options]="mainOptions"
+    [labels]="labels"
+    [theme]="altTheme"
+    [floatingMenus]="altMenus"
+    [(value)]="keyValue"
+    (editorReady)="bridge.ready('media-key')"
   />
 </section>

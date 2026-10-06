@@ -17,6 +17,7 @@ import {
   type RteDialogKind,
   type RteEditorConfig,
   type RteLabelsInput,
+  type RteToolbarConfig,
   type RteMediaChange,
 } from '@cds/rte-angular';
 import {
@@ -25,6 +26,7 @@ import {
   RTE_LABELS_PT_BR,
 } from '@cds/rte-angular/i18n';
 import { E2eBridge, NO_FORM_STATE, type RteE2eLang } from '../e2e-bridge';
+import { MEDIA_FIXTURE } from './media-fixture';
 import { ALT_THEME, MAIN_THEME } from './toolbar';
 
 const LABELS: Record<RteE2eLang, RteLabelsInput> = {
@@ -32,23 +34,6 @@ const LABELS: Record<RteE2eLang, RteLabelsInput> = {
   'pt-BR': RTE_LABELS_PT_BR,
   es: RTE_LABELS_ES,
 };
-
-/**
- * Documento inicial do `media` (N25-N31): imagem com `alt`, imagem decorativa
- * (`alt=""`: o HTML canônico não distingue "sem `alt`"), vídeo WebM com uma
- * faixa de legenda, o *embed* do YouTube que `toEmbed` produz e um parágrafo
- * final. WebM + `.vtt` (sem MP4, ruling 6 do ADR 0011). Forma canônica de
- * `getRteHtml`, menos o `style="aspect-ratio: 16 / 9"` que o core acrescenta
- * ao `iframe` na saída: um atributo `style` no HTML carregado violaria a CSP
- * estrita (`style-src-attr`); o N30 confere a ida e volta sem ele.
- */
-export const MEDIA_FIXTURE =
-  '<p>Mídia</p>' +
-  '<figure class="rt-figure rt-figure--center"><img src="/e2e.png" alt="Imagem de teste" loading="lazy" decoding="async"></figure>' +
-  '<figure class="rt-figure rt-figure--center"><img src="/e2e.png" alt="" loading="lazy" decoding="async"></figure>' +
-  '<figure class="rt-figure rt-figure--video"><video src="/e2e.webm" controls="" preload="metadata" playsinline=""><track kind="captions" src="/e2e.vtt" srclang="pt-BR" label="Português"></video></figure>' +
-  '<figure class="rt-embed rt-embed--youtube" data-rt-provider="youtube"><iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" title="YouTube" width="560" height="315" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; fullscreen; picture-in-picture" allowfullscreen="" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox"></iframe></figure>' +
-  '<p>Fim</p>';
 
 /** Documento da carga externa (muda os endereços sem emitir `mediaChange`). */
 export const MEDIA_EXTERNAL =
@@ -105,6 +90,8 @@ export class MediaPage {
     hidden(p.body, () => this.bridge.hidden());
   });
   protected readonly altValue = signal(MEDIA_FIXTURE);
+  protected readonly keyValue = signal(MEDIA_FIXTURE);
+  protected readonly toolbar = signal<RteToolbarConfig>('full');
 
   protected readonly lastChange = signal<RteMediaChange | null>(null);
   protected readonly changeCount = signal(0);
@@ -114,6 +101,7 @@ export class MediaPage {
 
   private readonly main = viewChild.required<RteEditor>('main');
   private readonly alt = viewChild.required<RteEditor>('alt');
+  private readonly key = viewChild.required<RteEditor>('key');
 
   constructor() {
     this.bridge.register('media', {
@@ -133,6 +121,7 @@ export class MediaPage {
       lastMediaChange: () => this.lastChange(),
       mediaChanges: () => this.changeCount(),
       mediaSession: () => this.main().mediaSession(),
+      setToolbar: (config) => this.toolbar.set(config),
     });
     this.bridge.register('media-alt', {
       value: () => this.altValue(),
@@ -143,6 +132,16 @@ export class MediaPage {
       lastMediaChange: () => null,
       mediaChanges: () => 0,
       mediaSession: () => this.alt().mediaSession(),
+    });
+    this.bridge.register('media-key', {
+      value: () => this.keyValue(),
+      setValue: (html) => this.keyValue.set(html),
+      state: () => NO_FORM_STATE,
+      reset: () => this.keyValue.set(MEDIA_FIXTURE),
+      openDialog: (kind) => this.key().openDialog(kind as RteDialogKind),
+      lastMediaChange: () => null,
+      mediaChanges: () => 0,
+      mediaSession: () => this.key().mediaSession(),
     });
   }
 

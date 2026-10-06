@@ -17,7 +17,8 @@ export type RteE2eId =
   | 'floating'
   | 'floating-alt'
   | 'media'
-  | 'media-alt';
+  | 'media-alt'
+  | 'media-key';
 
 /** `RteToolbarConfig` do `@cds/rte-angular` (sem importar o pacote Angular aqui). */
 export type RteE2eToolbarConfig =
