@@ -34,7 +34,7 @@ import { RteToc } from '@cds/rte-render/toc';
 ### Modos
 
 - **`sanitize` (padrão):** o HTML exibido é `sanitize(html)` mais as transformações de exibição. Sem `sanitize` fornecido a diretiva **lança** na criação, com instrução de configuração (no SSR, com o `ErrorHandler` padrão, o erro é registrado e o artigo sai vazio: olhe o log).
-- **`trusted` (`[mode]="'trusted'"`):** usa o HTML como veio e dispensa o sanitizador. **Só use se o servidor já sanitiza com `createSanitizer`** (mesma versão maior, opções do editor). As transformações supõem a forma canônica da saída do sanitizador; com HTML de outra origem não há barreira alguma.
+- **`trusted` (`[mode]="'trusted'"`):** usa o HTML como veio e dispensa o sanitizador. **Só use se o servidor já sanitiza com `createSanitizer`** (mesma versão maior, opções do editor). As transformações supõem a forma canônica da saída do sanitizador; com HTML de outra origem não há barreira alguma (com `<` cru num valor de atributo, a varredura das tabelas pode até criar marcação). Os estilos reaplicados por CSSOM passam pela mesma lista de propriedades do modo `sanitize`: o CSS fora dela é retirado no navegador.
 - **`error()`:** `RteSanitizeError` (`input-too-long`, `max-depth`) deixa o conteúdo **vazio**, emite um `console.warn` com `code` e `limit` e preenche `error()`; mostre a alternativa que quiser. Outra exceção propaga. `null`/`undefined` valem `''`.
 - **`renderedHtml()`:** o HTML exibido (antes das transformações), para alimentar o sumário.
 
@@ -52,14 +52,14 @@ O `render.css` só tem o que é de leitura (rolador de tabela, sumário, margem 
 
 ## Âncoras, sumário e rolagem
 
-- Links de fragmento do conteúdo (`href="#x"`) viram `<caminho do documento>#x` (com consulta), porque o `<base href="/">` de todo app Angular os mandaria para a raiz. A navegação é a nativa (rolagem, `:target`, histórico, foco), com e sem JS; nada intercepta clique. `provideRteRender({ fragmentLinks: 'keep' })` mantém o `href` original (`'document'` é o padrão). **Limitação:** `HashLocationStrategy` não é suportada; use `'keep'`.
+- Links de fragmento do conteúdo (`href="#x"`) viram `<caminho do documento>#x` (com consulta), porque o `<base href="/">` de todo app Angular os mandaria para a raiz. A navegação é a nativa (rolagem, `:target`, histórico, foco), com e sem JS; nada intercepta clique. `provideRteRender({ fragmentLinks: 'keep' })` mantém o `href` original (`'document'` é o padrão). **Limitação:** `HashLocationStrategy` não é suportada; use `'keep'`. Trocar `pathname`/`search` (navegação, filtro por _query_) muda a base e re-insere o conteúdo (`iframe`/`video` recarregam); só o _hash_ não. A base sai com uma só barra inicial (um `pathname` `//outro.host/x` não vira link para outro _host_).
 - `--rte-scroll-margin` (padrão `1rem`) é o `scroll-margin-top` de todo `[id]` do conteúdo; ajuste-o para cabeçalho fixo do site.
 - `rte-toc` (`@cds/rte-render/toc`, a única parte que carrega o `htmlparser2`): `<rte-toc [html]="…" [levels]="[2, 3]" [labels]="…" />` gera `nav.rte-toc > ol.rte-toc__list > li.rte-toc__item > a.rte-toc__link`, aninhado por nível (nível que salta fica sob o último anterior), ignora título vazio, vale a primeira ocorrência de `id` repetido e, sem entradas, não renderiza nada (nem o `nav`). Os `href` usam a mesma base das âncoras. O servidor pode pré-calcular as entradas com `extractToc` de `@cds/rte-core/html`.
 - **Tabelas largas:** cada `table` fica num `div.rte-table-scroll` (no HTML do servidor também). Quando transborda, o rolador ganha `tabindex="0"`, `role="region"` e `aria-label` (rótulo `tableScroller`) e responde a setas, `Home` e `End`; quando deixa de transbordar, os três saem (só tabela larga vira parada de `Tab`).
 
 ## Rótulos
 
-`RTE_RENDER_LABELS_EN` é o padrão; `RTE_RENDER_LABELS_PT_BR` e `RTE_RENDER_LABELS_ES` estão em `@cds/rte-render/i18n`. Forneça por `provideRteRender({ labels })` ou `RTE_RENDER_LABELS`, ou pela entrada `labels` (parcial) da diretiva e do `rte-toc`, que vence o _provider_ e troca ao vivo.
+`RTE_RENDER_LABELS_EN` é o padrão; `RTE_RENDER_LABELS_PT_BR` e `RTE_RENDER_LABELS_ES` estão em `@cds/rte-render/i18n`. Forneça por `provideRteRender({ labels })` ou `RTE_RENDER_LABELS` — um ou outro: `provideRteRender` sempre fornece `RTE_RENDER_LABELS` e, num mesmo ramo, encobre o token de um injetor acima — ou pela entrada `labels` (parcial) da diretiva e do `rte-toc`, que vence o _provider_ e troca ao vivo.
 
 ## CSP e _Trusted Types_
 
@@ -70,7 +70,7 @@ Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'
   require-trusted-types-for 'script'; trusted-types angular angular#unsafe-bypass
 ```
 
-A CSP sem `'unsafe-inline'` bloqueia o atributo `style` que vem no HTML; a diretiva reaplica por CSSOM, depois de cada inserção, `text-align`, `width` de `col` (e a dimensão da tabela), `aspect-ratio` de `iframe` e as cores da paleta. Os relatórios `style-src-attr` na inserção são esperados (um por elemento com `style`, e outro na hidratação); `script-src*` nunca. Detalhes de segurança: `docs/security.md` (seção "Exibição").
+A CSP sem `'unsafe-inline'` bloqueia o atributo `style` que vem no HTML; a diretiva reaplica por CSSOM, depois de cada inserção, **só as propriedades da lista** `RTE_STYLE_PROPERTIES` do core, nos dois modos: `text-align` de `p`/`h2`–`h4`, `width` de `col`, `aspect-ratio` de `iframe`, `color` de `span` e `background-color` de `mark` (mais a dimensão calculada da tabela). Declarações com `!important` são descartadas, e o `style` inteiro se tiver `\` ou comentário; em `trusted`, o CSS fora da lista é retirado no navegador. Os relatórios `style-src-attr` na inserção são esperados (um por elemento com `style`, e outro na hidratação); `script-src*` nunca. Detalhes de segurança: `docs/security.md` (seção "Exibição").
 
 ## Sem JavaScript
 

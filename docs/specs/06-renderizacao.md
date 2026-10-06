@@ -166,9 +166,9 @@ Rotas novas: `render` (diretiva em `sanitize` com `createSanitizer` das opções
 
 - [x] H2 feito: `feat/spec-04` integrada (merge 9c34da0 e correção bb13502), conflitos resolvidos, suítes do sanitizador verdes na `feat/spec-06` (`e2e/sanitizer` nos 3 motores: Chromium 6, Firefox 5 + 1 pulado, WebKit 5 + 1 pulado; o pulado é o R10, só Chromium).
 - [x] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size --parallel=1` verde (Tarefa 13: 33 tarefas, 9 min 34 s; `render:size`, `core:size`, `angular:size` e `verify-package` de `render` verdes; a única falha, `angular:test-zone` em `editor.lifecycle.spec.ts` "alternar o editor 100×", estourou os 30 s sob carga da máquina compartilhada e passa isolada, 12/12); `check:rules`, `check:licenses`, `notices` sem *drift*, `test:tools` (84/84) e `typecheck:e2e` verdes.
-- [x] Unitários 6.1 verdes nos alvos `test` e `test-zone` (`render` 207/207 nos dois; core 1096), inclusive a propriedade da R4.
-- [x] L1–L7 verdes em Chromium, Firefox e WebKit, N1–N26 e S1–S3 sem regressão (regressão completa da Tarefa 12: Chromium 480/0, Firefox 467 + 1 *flake* de carga, WebKit 467 + 1 *flake*, ambos passam isolados). **Falta o CI do PR.**
-- [x] ADR 0012 (`docs/decisions/0012-renderizacao.md`) registra H1–H21, os *rulings*, o pré-voo da H10, os números da R14 (navegador: a conferir pela Tarefa 12, documento de 20 mil palavras) e os tamanhos (H21); pendência do ADR 0010 (rolador) marcada como atendida; README do `rte-render`, `docs/security.md`, `CLAUDE.md`, `docs/specs/README.md` (06 concluída) e changesets atualizados.
+- [x] Unitários 6.1 verdes nos alvos `test` e `test-zone` (`render` 237/237 nos dois depois da revisão final, eram 207; core 1099), inclusive a propriedade da R4.
+- [x] L1–L7 verdes em Chromium, Firefox e WebKit, N1–N26 e S1–S3 sem regressão (regressão completa final, `fbb3223`: Chromium 480, Firefox 468, WebKit 468 aprovados, **0 falhas**; nas corridas anteriores da Tarefa 12 houve 1 *flake* de carga no Firefox e 1 no WebKit, ambos passando isolados). **Falta o CI do PR.**
+- [x] ADR 0012 (`docs/decisions/0012-renderizacao.md`) registra H1–H21, os *rulings*, o pré-voo da H10, os números da R14 (navegador: mediana/p95 por motor na seção (d)) e os tamanhos (H21); pendência do ADR 0010 (rolador) marcada como atendida; README do `rte-render`, `docs/security.md`, `CLAUDE.md`, `docs/specs/README.md` (06 concluída) e changesets atualizados.
 
 ## 8. Consequências para outras specs
 
@@ -183,7 +183,7 @@ Rotas novas: `render` (diretiva em `sanitize` com `createSanitizer` das opções
 | Risco | Mitigação |
 |---|---|
 | A hidratação re-atribuir `innerHTML` e recarregar `iframe`/`video` | Pré-voo da H10 mede; aceito e documentado se ocorrer (conteúdo idêntico); L2 cobre |
-| Varredura de *tags* da H6 falhar em HTML não canônico no modo `trusted` | Pré-condição documentada (saída de `createSanitizer`); em `sanitize` a forma canônica é garantida (S13) e a propriedade da R4 prova; o pior caso em `trusted` é leiaute, não execução |
+| Varredura de *tags* da H6 falhar em HTML não canônico no modo `trusted` | Pré-condição documentada e **de segurança**: em `sanitize` a forma canônica é garantida (S13) e a propriedade da R4 prova; em `trusted` com HTML fora da saída de `createSanitizer` (`<` cru em valor de atributo) a varredura pode fechar um atributo e criar marcação, isto é, executar script (teste "pré-condição" em `prepare-html.spec.ts`); endurecer a varredura é pendência do ADR 0012 |
 | Consumidor usar `trusted` com HTML que o servidor não sanitizou | Nome explícito; README e `docs/security.md`; `sanitize` é o padrão e falha alto sem configuração (H4) |
 | Sanitizador do navegador com opções diferentes das do servidor | README: o mesmo objeto de opções nos dois lados; o servidor é a autoridade; a diferença só remove mais ou menos, nunca executa |
 | CSP do consumidor bloquear os estilos sem JS | H8 reaplica com JS; sem JS a paleta continua (U17) e o resto é documentado |

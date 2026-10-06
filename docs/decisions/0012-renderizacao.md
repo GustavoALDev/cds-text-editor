@@ -33,7 +33,7 @@ O `@cds/rte-render` exibe o HTML publicado pelo editor **igual ao do editor**, *
 | H18 | Nada escrito em _signal_ a partir de `ResizeObserver`/CSSOM; `renderedHtml()` e `error()` são `computed`; mesma suíte em `test` e `test-zone`.                                                        | Sem `NG0100`/`NG0101` e sem _ticks_ ao redimensionar.                                                                                                                       |
 | H19 | Guardas por lint (D25) mais proibição de `innerHTML`/`outerHTML`/`insertAdjacentHTML`/`write` e de `bypassSecurityTrust*` fora de `src/content/rte-content.ts`.                                       | H9; provadas por `lint-guards.spec.ts`.                                                                                                                                     |
 | H20 | Equivalência editor × página por estilo computado e geometria (±1 px), claro e escuro, nos 3 motores; captura de tela fica com a spec 08.                                                             | Comparação determinística, sem imagens de referência.                                                                                                                       |
-| H21 | Tamanho por cenário (D26). **Cenários mudaram (rulings 11 e 24):** ver (d).                                                                                                                           | Custo do pacote e da página inteira.                                                                                                                                        |
+| H21 | Tamanho por cenário (D26). **Cenários mudaram (rulings 11 e 22):** ver (d).                                                                                                                           | Custo do pacote e da página inteira.                                                                                                                                        |
 
 ### (b) Rulings
 
@@ -51,13 +51,13 @@ O `@cds/rte-render` exibe o HTML publicado pelo editor **igual ao do editor**, *
 10. **`caption` em navegador.** O _smoke_ do `render.css` confere `caption` (`caption-side`, `text-align`, cor = `--rte-text-muted`, 0,875 × a fonte da célula) por `setRenderInput`, e o axe do L5 inclui essa tabela.
 11. **`RteToc` no entry `/toc`.** Medida (check-size): com o `RteToc` no `.`, a página só de conteúdo media **32 854 B** min+gzip com `htmlparser2` (o FESM parcial retém o componente); movido para o entry secundário `@cds/rte-render/toc`: `content-page` **2 574 B** na época. **Mudança da §4 da spec:** `import { RteToc } from '@cds/rte-render/toc'`; o `.` exporta `ɵinjectFragmentBase` e `ɵmergeRenderLabels` (internos: o token `RTE_RENDER_OPTIONS` e o _signal_ da base precisam ser os mesmos nos dois entries; o `ng-packagr` não deixa um entry secundário importar arquivo do primário). A R1 vence a posição do componente na §4.
 12. **Peer `@angular/platform-browser`.** `DomSanitizer` vive nele e a H17 o omitiu: _peer_ novo e faixas de `core`/`common` em `>=22.2.1 <23`, sem entrada nova no _lockfile_. Correção da spec. O guarda do sanitizador aceita `import type` (`allowTypeImports`), mais frouxo que a convenção "nem `import type`"; o `dist` não tem import algum.
-13. **Foco visível dos links.** O L5 confere `:focus-visible` e `outline-width` = `--rte-focus-width` também em `.rte-toc__link` e num `a` do conteúdo (a regra do anel foi estendida, ver 33).
+13. **Foco visível dos links.** O L5 confere `:focus-visible` e `outline-width` = `--rte-focus-width` também em `.rte-toc__link` e num `a` do conteúdo (a regra do anel foi estendida, ver 31).
 14. **`<a\nhref="#x">`.** É reescrito (`\n` é `\s`); `<TABLE>` e `href='#x'` ficam intactos (fora da forma canônica; pré-condição documentada da H6).
 15. **Assinatura.** `prepareRteHtml(html, { fragmentBase })`.
 16. **Idiomas.** A rota `render` troca o idioma pelo `setLang` da ponte (padrão do app), não por botões (que acrescentariam paradas de `Tab`).
 17. **Orçamentos no JSON.** Os orçamentos ficam em `packages/render/size-budget.json` (`--budget` do `check-size` só aceita `[a-z]+`); `check-size.mjs` não mudou.
 
-**Da execução**
+**Da execução** (numeração própria deste ADR; o ledger numera de outro jeito)
 
 19. **Fixture lido sem `__dirname` no core.** O gerador `dangerous-urls.ts` do core (da 04) quebrava o `validators.spec` do angular no _builder_: passou a subir a partir do `cwd` até achar `fixtures/content/dangerous-urls.json` (import JSON estático falha no lint de fronteiras; `import.meta.url` falha no jsdom).
 20. **Classes do _host_.** O Angular põe as classes estáticas do _host_ da diretiva antes das do template (`rte-root rte-content post`); a H3 exige o conjunto, não a ordem.
@@ -77,16 +77,21 @@ O `@cds/rte-render` exibe o HTML publicado pelo editor **igual ao do editor**, *
 34. **Cores do _host_ no escuro.** Sem fundo do site o texto claro do tema ficava sobre o branco do `body` (contraste 3,18): os _hosts_ da exibição (`.rte-root.rte-content` e `rte-toc.rte-root`) pintam `color: var(--rte-text)` e `background-color: var(--rte-surface)`; o editor tem `rte-root` e `rte-content` em elementos diferentes e não casa. Quem quer fundo transparente **sobrescreve**; `data-rte-mode="inherit"` não torna o fundo transparente. O L5 mede o contraste do texto, do sumário e do `a` no escuro sem invólucro.
 35. **WIDE_TABLE do app (T11-1).** Duas colunas de 300 px: transborda a 400 px de _viewport_ e cabe a 1280/1600 (o `main` do app tem 720 px de máximo); R11/R12 rodam a 400 px.
 36. **R14.** O brief fixava o critério por caracteres (≥ 400 000); a spec fala em 20 mil palavras (ruling 35 do ledger: a spec vence): ver (d).
+37. **Lista de propriedades na reaplicação (Ruling 23 do ledger, revisão final).** Reescrever o `style` inteiro por `cssText` reabilitava, sob CSP sem `'unsafe-inline'`, qualquer CSS inline que o navegador barrou (`position: fixed`, `background-image: url(…)`) em `trusted` ou com `sanitize` mal configurado. O core exporta `RTE_STYLE_PROPERTIES` (entry `/`, sem `htmlparser2`): `p`, `h2`–`h4` → `text-align`; `col` → `width`; `iframe` → `aspect-ratio`; `span` → `color`; `mark` → `background-color`. É uma constante literal congelada (não `getHtmlSchema` em tempo de execução: bytes e CPU na página), amarrada ao esquema por `style-properties.spec.ts` (igualdade com as `styles` e `styleFrom.property` de `getHtmlSchema` com todos os recursos). `allowedStyle(tag, texto)` em `restore-styles.ts`: `\`, `/*` ou `*/` descartam tudo; cada declaração fica se o nome (minúsculas ASCII) está na lista da _tag_, o valor não é vazio e não tem `!` (sem `!important`, que venceria o da paleta no `content.css`); a última vence; serializa na ordem da lista. Valores não são validados (nenhuma das cinco propriedades aceita imagem; o CSSOM recusa valor inválido; as paletas do servidor podem diferir). Composição com a ruling 27: o casamento (contagem + impressão) é o mesmo e usa o `style` cru; escolhida a fonte (HTML casado ou `getAttribute`), uma escrita `cssText = allowedStyle(…)` por elemento nos dois ramos; elemento sem nada permitido fica `style=""`. **Mudança de comportamento em `trusted`:** sem CSP, o CSS fora da lista que o navegador já aplicou é **retirado** depois da inserção (o HTML do servidor e a exibição sem JS não mudam). Composição com a ruling 33: `applyTableSizing` roda **depois**, inalterado; `table` não está na lista (um `style` de `table` é zerado) e a dimensão calculada (`width`/`min-width` em px inteiros de `parseColWidth`) é a **única** escrita CSSOM fora da lista — calculada, não copiada. Provas: `styles-allowed.spec.ts` (cada caso nos dois ramos; propriedade sobre `createSanitizer()(hostileHtml)` e `all-features.html` sem perda; diretiva `trusted`) e o L4 (`trusted` com `position: fixed` sob CSP → `static`).
+38. **Base do fragmento com `//` (revisão final).** Com a URL `https://site//evil.example/x` o `pathname` é `//evil.example/x` e cada `href="#y"` virava um link protocolo-relativo para outro _host_. As barras (e contrabarras) iniciais são colapsadas numa só: `'/' + pathname.replace(/^[/\\]+/, '') + search` (`content.spec.ts`, `toc.spec.ts`).
+39. **Correções menores da revisão final.** `COL_WIDTH` casava `min-width:` (o `\b` antes de `width` casa depois do `-`): agora `/<col\b[^>]*\sstyle="(?:[^"]*[;\s])?width:/`. Guardas de lint: `import()` dinâmico de `@cds/rte-sanitizer` (e subcaminhos) e de `@cds/rte-core/html` fora do `/toc` (`ImportExpression`); `innerHTML`/`outerHTML` por acesso computado (`el['innerHTML']`, ``el[`outerHTML`]``), por `setProperty(el, 'innerHTML', …)` e `Reflect.set`; `templates.spec.ts` confere que nenhum `.html` publicado usa `innerHTML`/`outerHTML`. `ignoredDependencies` do lint ficou só com `@cds/rte-sanitizer`.
 
 ### (c) Mudanças na spec
 
-- **§4 e H21 (rulings 11 e 24):** `RteToc` e `RteTocEntry` vivem em `@cds/rte-render/toc`; o `.` ganha dois exports `ɵ` internos; entries `.`, `/toc`, `/i18n` e `styles/render.css`.
+- **§4 e H21 (rulings 11 e 22):** `RteToc` e `RteTocEntry` vivem em `@cds/rte-render/toc`; o `.` ganha dois exports `ɵ` internos; entries `.`, `/toc`, `/i18n` e `styles/render.css`.
 - **H17 (ruling 12):** _peer_ `@angular/platform-browser` e faixas `>=22.2.1 <23`.
-- **R2/H4 no SSR (ruling 25):** "a criação lança" vale; `renderApplication` só rejeita com um `ErrorHandler` que relança; com o padrão, o artigo sai vazio e o erro é registrado.
-- **H8/H20 (rulings 29 e 35):** a reaplicação lê do HTML preparado (Firefox) e a tabela com larguras de coluna ganha classe e dimensão por CSSOM; `getTableSizing` e afins no core.
-- **H7/R6 (ruling 32):** `Home`/`End` tratados pelo produto.
-- **H13/H20 (ruling 31):** `:empty { min-block-size: 1lh }` no `content.css`.
-- **Hosts (ruling 36):** o `render.css` pinta texto e fundo dos _hosts_.
+- **R2/H4 no SSR (ruling 23):** "a criação lança" vale; `renderApplication` só rejeita com um `ErrorHandler` que relança; com o padrão, o artigo sai vazio e o erro é registrado.
+- **H8/H20 (rulings 27 e 33):** a reaplicação lê do HTML preparado (Firefox) e a tabela com larguras de coluna ganha classe e dimensão por CSSOM; `getTableSizing` e afins no core.
+- **H7/R6 (ruling 30):** `Home`/`End` tratados pelo produto.
+- **H13/H20 (ruling 29):** `:empty { min-block-size: 1lh }` no `content.css`.
+- **Hosts (ruling 34):** o `render.css` pinta texto e fundo dos _hosts_.
+- **H8 (ruling 37, Ruling 23 do ledger):** a reaplicação por CSSOM é filtrada pela lista `RTE_STYLE_PROPERTIES` do core nos dois modos; em `trusted`, o CSS fora da lista é retirado também no navegador sem CSP (o HTML do servidor e a exibição sem JS não mudam).
+- **H6 (ruling 38):** a base do fragmento sai com uma só barra inicial.
 - **§6.2:** idioma pelo `setLang` da ponte (ruling 16); `render-tt` ganha o cabeçalho de _Trusted Types_ no `serve.mjs` (sem `angular#bundler`: sem violações).
 
 ### (d) Números
@@ -95,16 +100,16 @@ O `@cds/rte-render` exibe o HTML publicado pelo editor **igual ao do editor**, *
 
 | Cenário        | Descrição                                                                    | Medido (B) | Orçamento (B) |
 | -------------- | ---------------------------------------------------------------------------- | ---------: | ------------: |
-| `content`      | `RteContent` + `provideRteRender`, `@angular/*` e `@cds/*` externos          |      3 534 |         4 096 |
+| `content`      | `RteContent` + `provideRteRender`, `@angular/*` e `@cds/*` externos          |      3 810 |         4 416 |
 | `toc`          | `RteToc` (`/toc`), externos                                                  |      1 289 |         1 536 |
-| `whole`        | `*` do `.`, externos                                                         |      3 591 |         4 160 |
+| `whole`        | `*` do `.`, externos                                                         |      3 869 |         4 480 |
 | `i18n`         | `*` do `/i18n`                                                               |        172 |           256 |
-| `content-page` | `RteContent` com `@cds/*` **embutidos** (sem `htmlparser2`)                  |      3 766 |         4 352 |
-| `page`         | diretiva + sumário + `createSanitizer`, `@cds/*` embutidos (`size-page.mjs`) |     43 124 |        49 600 |
+| `content-page` | `RteContent` com `@cds/*` **embutidos** (sem `htmlparser2`)                  |      4 095 |         4 736 |
+| `page`         | diretiva + sumário + `createSanitizer`, `@cds/*` embutidos (`size-page.mjs`) |     43 360 |        49 920 |
 
-`content-page` ficou bem abaixo do limite de ~8 kB: o _fallback_ do pré-voo 17 já tinha sido aplicado na T6 (ruling 11). `render.css`: 1 546 B (705 B gzip). O `page` é dominado pelo `htmlparser2`, compartilhado pelo sanitizador e pelo `extractToc`. Nenhum import de `@cds/rte-sanitizer` no `dist` (os `.d.ts` só o citam em comentários). Orçamentos de `core` e `angular` inalterados (conferidos em `nx run-many -t size`).
+Remedidos depois da ruling 37 (lista de propriedades: +276 B no `content`, +329 B no `content-page`) e orçamentos recalculados pela D26. `content-page` ficou bem abaixo do limite de ~8 kB: o _fallback_ do pré-voo 17 já tinha sido aplicado na T6 (ruling 11). `render.css`: 1 546 B (705 B gzip). O `page` é dominado pelo `htmlparser2`, compartilhado pelo sanitizador e pelo `extractToc`. Nenhum import de `@cds/rte-sanitizer` no `dist` (os `.d.ts` só o citam em comentários). Orçamentos de `core` e `angular` inalterados (conferidos em `nx run-many -t size`).
 
-**R14 (informativo).** Node, razão `prepareRteHtml` / sanitizador sobre 401 225 caracteres: **0,035** (sanitizador 30,4 ms; `prepareRteHtml` 1,08 ms; teto 10%). Navegador (mediana / p95): **ver task-12 fix round** (a Tarefa 12 está refazendo a medida com o documento de 20 mil palavras; a medida anterior, com 401 225 caracteres e ~8 360 palavras, foi Chromium 291/1213 ms, Firefox 825/932 ms, WebKit 3477/3972 ms).
+**R14 (informativo).** Node, razão `prepareRteHtml` / sanitizador sobre 401 225 caracteres: **0,035** (sanitizador 30,4 ms; `prepareRteHtml` 1,08 ms; teto 10%). Navegador (`render-perf.spec.ts`): documento montado no Node com o fixture uma vez (4 `iframe`, 1 `video`) mais blocos de prosa até ≥ 20 000 palavras **e** ≥ 400 000 caracteres (401 323 caracteres, 56 202 palavras; o piso de caracteres decide), 3 aquecimentos e 11 medições; mediana / p95 (n = 11 → p95 = máximo) em ms — isolado (`--workers=1`): Chromium **92 / 99**, Firefox **135 / 230**, WebKit **175 / 757**; corrida completa (`--workers=2`): Chromium 99 / 107, Firefox 121 / 131, WebKit 224 / 1 279. Histórico: a medida anterior usava um documento cheio de _embeds_ (401 225 caracteres, ~8 360 palavras) e deu Chromium 291/1213, Firefox 825/932, WebKit 3477/3972 ms; a diferença vinha do custo dos `iframe`, não da diretiva.
 
 **Pré-voo da H10 (Angular 22.2.1).** Idêntico nos 3 motores e nos 2 _builds_: a hidratação **re-atribui** o `innerHTML` do _host_ (`sameNodes` do `h2`, do `iframe` e do rolador = `false`; `iframeReloads` = 4, os quatro `iframe` do fixture são inseridos de novo). Aceito sem `ngSkipHydration`, sem `NG05xx`; custo = recarga de `iframe`/`video` na hidratação. `iframeLoads` é informativo: 8 no Chromium, 0 no Firefox e no WebKit.
 
@@ -112,16 +117,18 @@ O `@cds/rte-render` exibe o HTML publicado pelo editor **igual ao do editor**, *
 
 ### (e) Verificação
 
-L1 (segurança: fixture byte a byte, 290 casos de XSS e 2000 hostis, `__xssCalls` 0), L2 (SSR, sem JS, hidratação, H10), L3 (equivalência), L4 (CSP e _Trusted Types_), L5 (acessibilidade e rolador), L6 (sumário e âncoras) e L7 (desempenho e _ticks_) em Chromium, Firefox e WebKit, _builds_ zoneless e zone.js; N1–N26 do `rte-angular` e S1–S3 do sanitizador sem regressão. Regressão completa na Tarefa 12: Chromium 480 aprovados e 0 falhas; Firefox e WebKit 467 aprovados e 1 falha cada, **ambas flakes de carga que passam isoladas** (`editor-floating-commands` N24 no Firefox; `editor-tasks` E4 no WebKit). Unitários: `render` 207 em `test` e em `test-zone`; core 1096. A evidência por critério da §7 está em `docs/specs/06-renderizacao.md`.
+L1 (segurança: fixture byte a byte, 290 casos de XSS e 2000 hostis, `__xssCalls` 0), L2 (SSR, sem JS, hidratação, H10), L3 (equivalência), L4 (CSP e _Trusted Types_), L5 (acessibilidade e rolador), L6 (sumário e âncoras) e L7 (desempenho e _ticks_) em Chromium, Firefox e WebKit, _builds_ zoneless e zone.js; N1–N26 do `rte-angular` e S1–S3 do sanitizador sem regressão. Regressão completa final (`fbb3223`): Chromium 480, Firefox 468 e WebKit 468 aprovados, **0 falhas**; corridas anteriores da Tarefa 12 tiveram 1 _flake_ de carga no Firefox (`editor-floating-commands` N24) e 1 no WebKit (`editor-tasks` E4), ambos passando isolados. Unitários (depois da revisão final): `render` 237 em `test` e em `test-zone`; core 1099. A evidência por critério da §7 está em `docs/specs/06-renderizacao.md`.
 
 ## Pendências
 
-- **Defesa em profundidade da H8 (ruling 23 do ledger):** filtrar a reaplicação por lista de propriedades por tag tirada do esquema (`text-align` em `p`/`h2`–`h4`, `width` em `col`, `aspect-ratio` em `iframe`, `color`/`background-color` em `span`/`mark[data-rt-color]`; também no modo `trusted`) foi decidida e **não está implementada**; hoje o `cssText` inteiro é reaplicado, e em `sanitize` o esquema já limitou o que chega.
+- **Endurecer a varredura da H6 em `trusted` fora do canônico:** com `<` cru num valor de atributo (HTML que não veio de `createSanitizer`) a varredura pode fechar o atributo e criar marcação (execução); hoje é pré-condição documentada (`docs/security.md`, teste "pré-condição" em `prepare-html.spec.ts`). Evolução opcional: tokenizar as _tags_ com valores entre aspas, como o `TAG` de `restore-styles.ts`.
+- **`landmark-unique` com várias tabelas largas:** os `region` dos roladores têm o mesmo nome (`Scrollable table`); regra _moderate_ do axe, fora do filtro do L5. Evolução: `aria-labelledby` para o `caption` quando houver.
+- **Re-inserção ao trocar `pathname`/`search`:** a base do fragmento muda, o conteúdo é re-inserido e `iframe`/`video` recarregam (mudar só o _hash_ não re-insere); consequência da H6, documentada no README.
 - **Realce de código (H15)** e **`crossorigin` em `track`/`video`** (legendas de outra origem): evolução do core.
 - **`HashLocationStrategy`:** limitação documentada (`fragmentLinks: 'keep'`).
 - **Tabela sem larguras de coluna:** diverge do `TableView` (`min-width` 25 × colunas e layout fixo); colunas < 25 px sem _clamp_.
 - **Motores antigos** (`light-dark()`, `ResizeObserver`, roladores focáveis nativos), leitores de tela e captura de tela editor × página: spec 08. O ramo "motor sem _Trusted Types_" do L4 nunca roda com o Playwright atual (todos os motores o impõem).
-- **Menores da revisão** (ledger): `import()` dinâmico escapa do guarda de lint; `ngOnInit` sem teste próprio; teste de zona da diretiva não pode falhar (ruling 6); `sanitize('')` a mais com o sumário antes do artigo.
+- **Menores da revisão** (ledger): `ngOnInit` sem teste próprio; teste de zona da diretiva não pode falhar (ruling 6); `sanitize('')` a mais com o sumário antes do artigo.
 
 ## Consequências
 
@@ -129,5 +136,5 @@ L1 (segurança: fixture byte a byte, 290 casos de XSS e 2000 hostis, `__xssCalls
 - **Spec 08:** regressão visual por captura, matriz de motores antigos e leitores de tela no sumário e no rolador; o oráculo I1 do sanitizador cobre também a saída da H6.
 - **Spec 09:** `SECURITY.md` aponta para a seção "Exibição" de `docs/security.md`; mudar a H6 ou a H8 exige changeset de segurança.
 - **05d:** o `api-extractor` cobre também o `@cds/rte-render` e trata os exports `ɵ` como internos.
-- **Core:** `getTableSizing`, `parseColWidth` e `RTE_TABLE_CELL_MIN_WIDTH` são API nova do `@cds/rte-core`; `content.css` ganhou tarefa, `caption`, bloco vazio e `rte-table--sized`.
+- **Core:** `getTableSizing`, `parseColWidth`, `RTE_TABLE_CELL_MIN_WIDTH` e `RTE_STYLE_PROPERTIES` são API nova do `@cds/rte-core` (um recurso novo com estilo tem de entrar na lista, ou o teste de igualdade com o esquema quebra); `content.css` ganhou tarefa, `caption`, bloco vazio e `rte-table--sized`.
 - **ADR 0010:** a pendência do rolador focável está atendida pelo `rte-render` (H7).
