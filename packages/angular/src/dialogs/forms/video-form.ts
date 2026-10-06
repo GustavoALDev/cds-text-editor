@@ -26,14 +26,13 @@ import { normalizeAttribute } from '@cds/rte-core';
 import type { RteVideoTrack } from '@cds/rte-core/extensions';
 import { applyVideo, removeMediaAt } from '../apply-media';
 import type { RteDialogRequest } from '../controller';
-import {
-  focusFirstInvalid,
-  langCodeValidator,
-  requiredTrimmed,
-  text,
-} from '../form-helpers';
+import { focusFirstInvalid, langCodeCheck, text } from '../form-helpers';
 import type { RteMediaRules } from '../media-rules';
-import { canonicalMediaUrl, mediaUrlValidator } from '../media-validate';
+import {
+  canonicalMediaUrl,
+  mediaUrlValidator,
+  requiredTrimmed,
+} from '../media-validate';
 import { RteDialogFormBase } from './form-base';
 
 /** Limites do vídeo (V8): legenda e rótulo da faixa, da UI; faixas 0–10. */
@@ -140,7 +139,10 @@ export class RteVideoForm extends RteDialogFormBase {
         requiredTrimmed(t.src);
         mediaUrlValidator(t.src, () => this.rules()?.trackSrc ?? null);
         required(t.srclang);
-        langCodeValidator(t.srclang, () => this.rules()?.trackLang ?? null);
+        validate(
+          t.srclang,
+          langCodeCheck(() => this.rules()?.trackLang ?? null),
+        );
         // Rótulo obrigatório (não só espaços): é o nome no menu do player.
         validate(t.label, ({ value }) =>
           value().trim() === '' ? { kind: 'required' } : undefined,

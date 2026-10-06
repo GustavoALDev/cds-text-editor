@@ -83,6 +83,7 @@ for (const zone of [false, true]) {
       page,
     }) => {
       await routeMedia(page.context());
+      const messages = collectConsole(page);
       const media = await mediaFormsChunk(page);
       media.abort();
       await gotoApp(page, '/media', { zone });
@@ -93,7 +94,11 @@ for (const zone of [false, true]) {
       await selectIn(page, 'media', 'Mídia', 5);
       const origin = toolbarButton(page, 'media', 'Insert image');
       await origin.click();
-      await page.waitForTimeout(300);
+      // Falha registrada: os itens de mídia da barra ficam desabilitados.
+      await expect(origin).toHaveAttribute('aria-disabled', 'true');
+      await expect(
+        toolbarButton(page, 'media', 'Insert video'),
+      ).toHaveAttribute('aria-disabled', 'true');
       await expect(page.locator('dialog.rte-dialog[open]')).toHaveCount(0);
       await expect(origin).toBeFocused();
       // Sem pedido pendente nem seleção pendente; o editor continua editável.
@@ -114,6 +119,14 @@ for (const zone of [false, true]) {
       await expect(dialogField(link, 'Address (URL)')).toBeFocused();
       await cancelDialog(link);
       await expect(openDialogOf(page, 'media')).toHaveCount(0);
+      expect(
+        await page.evaluate(() => window.rteE2e.openDialog('media', 'image')),
+      ).toBe(false);
+      // O bloco de pré-carga tem `@error {}`: nenhum NG0750 nem NG05xx.
+      await settlePage(page);
+      expect(
+        messages.filter((m) => m.includes('NG0750') || m.includes('NG05')),
+      ).toEqual([]);
     });
   });
 }

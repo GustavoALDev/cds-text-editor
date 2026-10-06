@@ -21,13 +21,13 @@ import type { RteAttrRule } from '@cds/rte-core';
 import type { RteImageAlign } from '@cds/rte-core/extensions';
 import { applyImage, removeMediaAt } from '../apply-media';
 import type { RteDialogRequest } from '../controller';
+import { focusFirstInvalid, text } from '../form-helpers';
 import {
-  focusFirstInvalid,
+  canonicalMediaUrl,
+  mediaUrlValidator,
   optionalIntegerInRange,
   requiredTrimmed,
-  text,
-} from '../form-helpers';
-import { canonicalMediaUrl, mediaUrlValidator } from '../media-validate';
+} from '../media-validate';
 import { RteDialogFormBase } from './form-base';
 
 /** Limites da imagem (V6): `alt` é o teto do core; legenda e crédito, da UI. */

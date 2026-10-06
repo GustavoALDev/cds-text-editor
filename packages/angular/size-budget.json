@@ -14,7 +14,8 @@
         "rxjs",
         "rxjs/*",
         "tslib"
-      ]
+      ],
+      "forbiddenImports": ["@angular/forms"]
     },
     "whole": {
       "entry": "dist/packages/angular/fesm2022/cds-rte-angular.mjs",
@@ -30,7 +31,8 @@
         "rxjs",
         "rxjs/*",
         "tslib"
-      ]
+      ],
+      "forbiddenImports": ["@angular/forms"]
     },
     "dialogs": {
       "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-dialogs-*.mjs",
@@ -112,10 +114,10 @@
     }
   },
   "budgets": {
-    "editor": 31168,
-    "whole": 31232,
-    "dialogs": 6336,
-    "media": 6784,
+    "editor": 31104,
+    "whole": 31168,
+    "dialogs": 6400,
+    "media": 6976,
     "floating": 8576,
     "i18n": 4352,
     "validators": 1344

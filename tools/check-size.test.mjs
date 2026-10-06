@@ -8,6 +8,7 @@ import {
   SCENARIOS,
   bundleScenario,
   checkSizes,
+  forbiddenHits,
   measureMinGzip,
   measureConfig,
   measureScenario,
@@ -362,4 +363,62 @@ test('measureConfig: externalChunks inválido é erro em pt-BR', async () => {
     }),
     /externalChunks/,
   );
+});
+
+// Spec 05c2a (R1): `@angular/forms` não pode sobrar no *chunk* principal.
+test('forbiddenHits: pacote exato e subcaminho casam; prefixo sem barra não', () => {
+  assert.deepEqual(
+    forbiddenHits(
+      [
+        '@angular/forms/signals',
+        '@angular/forms',
+        '@angular/formsx',
+        './c.mjs',
+      ],
+      ['@angular/forms'],
+    ),
+    ['@angular/forms/signals', '@angular/forms'],
+  );
+});
+
+test('measureConfig: forbiddenImports acha o import estático e o checkSizes reporta', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'check-size-forbid-'));
+  const entry = join(dir, 'lib.js');
+  writeFileSync(entry, FAKE_EXT_SOURCE);
+  const m = await measureConfig({
+    scenarios: {
+      x: {
+        entry,
+        exports: ['*'],
+        external: ['fake-ext'],
+        forbiddenImports: ['fake-ext'],
+      },
+    },
+  });
+  assert.deepEqual(m.x.forbidden, ['fake-ext']);
+  assert.deepEqual(checkSizes(m, { x: 100000 }), [
+    'cenário "x" importa o que não pode: fake-ext',
+  ]);
+});
+
+test('measureConfig: forbiddenImports ignora o que só um chunk dinâmico externo importa', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'check-size-forbid-dyn-'));
+  writeFileSync(
+    join(dir, 'a.mjs'),
+    "export const a = () => import('./b-x.mjs');",
+  );
+  writeFileSync(join(dir, 'b-x.mjs'), FAKE_EXT_SOURCE);
+  const m = await measureConfig({
+    scenarios: {
+      x: {
+        entry: join(dir, 'a.mjs'),
+        exports: ['*'],
+        external: ['fake-ext'],
+        externalChunks: 'dynamic',
+        forbiddenImports: ['fake-ext'],
+      },
+    },
+  });
+  assert.deepEqual(m.x.forbidden, []);
+  assert.deepEqual(checkSizes(m, { x: 100000 }), []);
 });

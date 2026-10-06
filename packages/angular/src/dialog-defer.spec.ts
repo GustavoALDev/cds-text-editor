@@ -358,6 +358,67 @@ describe('@defer próprio dos formulários de mídia (05c2a E2)', () => {
     expect(warn.mock.calls.filter(([m]) => m === DEFER_FAILED)).toHaveLength(1);
   });
 
+  it('@error da mídia chegando com um link aberto (imagem pendente cancelada antes): o link continua aberto', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const s = await setup();
+    expect(s.cmp.openDialog('image')).toBe(true);
+    await render(s, DeferBlockState.Complete);
+    const media = await mediaBlock(s);
+    // Cancela o pedido de imagem pendente (estado) e abre um link.
+    s.host.disabled.set(true);
+    await settle(s.fixture);
+    s.host.disabled.set(false);
+    await settle(s.fixture);
+    selectText(s.editor, 'abcd');
+    expect(s.cmp.openDialog('link')).toBe(true);
+    await settle(s.fixture);
+    const dialog = s.root.querySelector<HTMLDialogElement>('.rte-dialog');
+    expect(dialog?.open).toBe(true);
+    const url = dialogField(dialog as HTMLDialogElement, 'Address (URL)');
+    url.focus();
+
+    await media.render(DeferBlockState.Error);
+    await settle(s.fixture);
+    expect(dialog?.open).toBe(true);
+    expect(dialogTitle(s.root)).toBe('Insert link');
+    expect(document.activeElement).toBe(url);
+    expect(warn.mock.calls.filter(([m]) => m === DEFER_FAILED)).toHaveLength(1);
+    dialog?.close();
+    await settle(s.fixture);
+    expect(s.cmp.openDialog('image')).toBe(false);
+  });
+
+  it('@error da mídia: os itens de mídia da barra ficam aria-disabled; o link não', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const s = await setup();
+    const button = (label: string) =>
+      [
+        ...s.root.querySelectorAll<HTMLButtonElement>(
+          '.rte-toolbar .rte-toolbar__button',
+        ),
+      ].find((b) => b.getAttribute('aria-label') === label);
+    const media = ['Insert image', 'Insert video', 'Insert embedded content'];
+    for (const label of media) {
+      expect(button(label)?.getAttribute('aria-disabled'), label).toBeNull();
+    }
+    expect(s.cmp.openDialog('image')).toBe(true);
+    await render(s, DeferBlockState.Complete);
+    await (await mediaBlock(s)).render(DeferBlockState.Error);
+    await settle(s.fixture);
+
+    for (const label of media) {
+      expect(button(label)?.getAttribute('aria-disabled'), label).toBe('true');
+    }
+    selectText(s.editor, 'abcd');
+    await settle(s.fixture);
+    expect(button('Link')?.getAttribute('aria-disabled')).toBeNull();
+    // Clicar no item desabilitado não abre nada nem pede o diálogo.
+    button('Insert image')?.click();
+    await settle(s.fixture);
+    expect(s.root.querySelector('.rte-dialog[open]')).toBeNull();
+    expect(s.cmp.openDialog('link')).toBe(true);
+  });
+
   it('um diálogo por vez com os dois chunks; imagem → link → imagem foca o formulário recriado', async () => {
     const s = await setup();
     expect(s.cmp.openDialog('image')).toBe(true);

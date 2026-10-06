@@ -102,6 +102,13 @@ const FLOATING_FAILED =
   '[rte-editor] não foi possível carregar os menus flutuantes; o editor segue sem eles.';
 
 const NO_LANGUAGES: readonly RteCodeLanguage[] = Object.freeze([]);
+/** Itens de mídia da barra (desabilitados com `mediaFailed`, 05c2a E2). */
+const MEDIA_ITEMS: readonly RteToolbarItemId[] = Object.freeze([
+  'image',
+  'video',
+  'embed',
+]);
+const NO_ITEMS: readonly RteToolbarItemId[] = Object.freeze([]);
 
 function sameGroups(
   a: readonly (readonly string[])[],
@@ -386,6 +393,11 @@ export class RteEditor implements FormValueControl<string> {
       { equal: sameIds },
     ),
     interactive: this.interactive,
+    // Falha do *chunk* dos formulários de mídia (05c2a E2): os itens de
+    // mídia ficam desabilitados em vez de não fazer nada.
+    unavailable: computed(() =>
+      this.dialogs.mediaFailed() ? MEDIA_ITEMS : NO_ITEMS,
+    ),
   });
 
   /** Paleta do esquema; igual por valor (a criação não re-renderiza os menus). */

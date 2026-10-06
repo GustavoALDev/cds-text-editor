@@ -8,7 +8,7 @@ import {
 import type { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { RteDialogMode, RteDialogTarget } from './target';
-import type { RteDialogKind } from './types';
+import { isMediaKind, type RteDialogKind } from './types';
 import { setPendingSelection } from './ui-extension';
 
 const DEFER_FAILED =
@@ -214,7 +214,10 @@ export class RteDialogController {
   failMedia(): void {
     this.mediaBroken.set(true);
     if (isDevMode()) console.warn(DEFER_FAILED);
-    this.cancel('cancelled');
+    // Só o pedido de mídia em curso: um link aberto depois de um pedido de
+    // mídia cancelado não é derrubado pela falha que chega atrasada.
+    const req = untracked(this.current);
+    if (req && isMediaKind(req.kind)) this.cancel('cancelled');
   }
 
   /** Encerra o pedido em curso e libera o documento (G6). */

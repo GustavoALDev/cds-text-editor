@@ -5,7 +5,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { form } from '@angular/forms/signals';
+import { form, validate } from '@angular/forms/signals';
 import {
   getHtmlSchema,
   normalizeAttribute,
@@ -19,7 +19,7 @@ import type { Editor } from '@tiptap/core';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import fc from 'fast-check';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { langCodeValidator } from './dialogs/form-helpers';
+import { langCodeCheck } from './dialogs/form-helpers';
 import { mediaUrlValidator } from './dialogs/media-validate';
 import {
   chooseOption,
@@ -876,7 +876,12 @@ describe('propriedade R6: aceito ⇔ a regra do esquema aceita', () => {
     const rule = ruleOf({}, 'track', 'srclang');
     const model = signal({ lang: '' });
     const f = TestBed.runInInjectionContext(() =>
-      form(model, (p) => langCodeValidator(p.lang, () => rule)),
+      form(model, (p) =>
+        validate(
+          p.lang,
+          langCodeCheck(() => rule),
+        ),
+      ),
     );
     fc.assert(
       fc.property(ANY_LANG, (s) => {

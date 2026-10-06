@@ -85,6 +85,15 @@ export function resolveEntry(pattern) {
 
 /** Empacota só `exportsList` (ou `['*']`) de `distFile` como um consumidor faria. */
 export async function bundleScenario(distFile, exportsList, opts = {}) {
+  return (await bundleWithImports(distFile, exportsList, opts)).code;
+}
+
+/**
+ * Como {@link bundleScenario}, mais a lista dos imports externos que sobram no
+ * bundle (`import` estático e `import()`; os *chunks* irmãos externos entram
+ * pelo caminho relativo).
+ */
+export async function bundleWithImports(distFile, exportsList, opts = {}) {
   const abs = resolve(distFile);
   if (!existsSync(abs)) {
     throw new Error(`arquivo não encontrado: ${abs} (rode "nx build theme")`);
@@ -102,9 +111,23 @@ export async function bundleScenario(distFile, exportsList, opts = {}) {
     external: opts.external ?? [],
     plugins: chunkPlugins(opts.externalChunks),
     write: false,
+    metafile: true,
     logLevel: 'silent',
   });
-  return result.outputFiles[0].text;
+  const imports = Object.values(result.metafile.outputs).flatMap((o) =>
+    o.imports.filter((i) => i.external).map((i) => i.path),
+  );
+  return { code: result.outputFiles[0].text, imports: [...new Set(imports)] };
+}
+
+/**
+ * Imports proibidos de um cenário (spec 05c2a, R1): `forbidden` casa o pacote
+ * exato ou um subcaminho (`@angular/forms` casa `@angular/forms/signals`).
+ */
+export function forbiddenHits(imports, forbidden) {
+  return imports.filter((i) =>
+    forbidden.some((f) => i === f || i.startsWith(`${f}/`)),
+  );
 }
 
 /**
@@ -116,24 +139,31 @@ export async function bundleScenario(distFile, exportsList, opts = {}) {
  * (custo inicial de um entry que o rollup dividiu num *chunk* compartilhado).
  * Os caminhos de `entry` são relativos à raiz do repositório (cwd) e aceitam um curinga `*`
  * no nome do arquivo, que precisa casar exatamente um arquivo (`resolveEntry`).
+ * `forbiddenImports` (opcional) lista pacotes que não podem sobrar como import no
+ * bundle do cenário (ex.: `@angular/forms` fora do *chunk* principal, spec 05c2a R1);
+ * os encontrados vão em `forbidden` e o `checkSizes` os reporta como erro.
  */
 export async function measureConfig(config) {
   const measurements = {};
   for (const [
     name,
-    { entry, exports: list, external, externalChunks },
+    { entry, exports: list, external, externalChunks, forbiddenImports },
   ] of Object.entries(config.scenarios ?? {})) {
     if (!entry || !Array.isArray(list) || list.length === 0) {
       throw new Error(`cenário "${name}" inválido: precisa de entry e exports`);
     }
-    const code = await bundleScenario(resolveEntry(entry), list, {
-      external,
-      externalChunks,
-    });
+    const { code, imports } = await bundleWithImports(
+      resolveEntry(entry),
+      list,
+      { external, externalChunks },
+    );
     measurements[name] = {
       min: Buffer.byteLength(code),
       gzip: await measureMinGzip(code),
     };
+    if (forbiddenImports) {
+      measurements[name].forbidden = forbiddenHits(imports, forbiddenImports);
+    }
   }
   return measurements;
 }
@@ -149,7 +179,12 @@ export async function measureScenario(distFile, name) {
 /** Compara medições `{ cenário: { min, gzip } }` com orçamentos `{ cenário: bytes }`. */
 export function checkSizes(measurements, budgets) {
   const errors = [];
-  for (const [name, { gzip }] of Object.entries(measurements)) {
+  for (const [name, { gzip, forbidden }] of Object.entries(measurements)) {
+    if (forbidden?.length) {
+      errors.push(
+        `cenário "${name}" importa o que não pode: ${forbidden.join(', ')}`,
+      );
+    }
     const budget = budgets[name];
     if (budget === undefined) {
       errors.push(`cenário "${name}" sem orçamento definido`);
