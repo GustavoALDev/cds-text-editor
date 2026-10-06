@@ -105,7 +105,10 @@ function takeTargets(page: Page): Promise<Target[]> {
 
 /** Elementos com `style` dentro do seletor. */
 function styledCount(page: Page, selector: string): Promise<number> {
-  return page.locator(`${selector} [style]`).count();
+  // A `table.rte-table--sized` ganha `style` só por CSSOM (H20): nunca veio do HTML.
+  return page
+    .locator(`${selector} [style]:not(table.rte-table--sized)`)
+    .count();
 }
 
 /**

@@ -26,12 +26,11 @@ import { RENDER_SANITIZE } from '../render-options';
 import { RenderKeep } from './render-keep';
 
 /**
- * Tabela larga (H7, R6): duas colunas de palavras sem quebra (~520 px no total) — transborda
- * o contêiner numa viewport de 400 px e cabe nos 688 px do `main` (1280 e 1600). Larguras de
- * `col` sozinhas não bastam: a tabela de layout automático as encolhe até caber (L5).
+ * Tabela de colunas largas (H7, R6): 2 × 300 px (`width: 600px` como na edição, H20) —
+ * transborda o contêiner numa viewport de 400 px e cabe nos 688 px do `main` (1280 e 1600).
  */
 export const WIDE_TABLE =
-  '<table><tbody><tr><td><p>Inconstitucionalissimamente</p></td><td><p>Anticonstitucionalissimamente</p></td></tr></tbody></table>';
+  '<table><colgroup><col style="width: 300px"><col style="width: 300px"></colgroup><tbody><tr><td><p>A</p></td><td><p>B</p></td></tr></tbody></table>';
 
 const LABELS: Record<RteE2eLang, RteRenderLabels> = {
   en: RTE_RENDER_LABELS_EN,

@@ -24,6 +24,7 @@ import type {
 import { missingSanitizerError, renderContent } from './render-content';
 import { restoreContentStyles } from './restore-styles';
 import { createTableScrollers, type RteTableScrollers } from './table-scroller';
+import { applyTableSizing } from './table-sizing';
 
 /**
  * Exibe HTML do editor no elemento do consumidor (H3), que ganha
@@ -108,6 +109,8 @@ export class RteContent implements OnInit {
         const host = this.host.nativeElement;
         // Os valores vêm do HTML inserido: o Firefox sob CSP lê o atributo vazio.
         restoreContentStyles(host, this.preparedHtml());
+        // Depois dos `col`: a tabela com larguras recebe a dimensão da edição (H20).
+        applyTableSizing(host);
         // Criado aqui, e não num `afterNextRender` (que roda depois desta
         // fase), para a 1ª inserção já ser observada (Ruling 7).
         if (this.scrollers === undefined)

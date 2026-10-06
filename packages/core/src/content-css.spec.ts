@@ -206,6 +206,20 @@ describe('content.css (R11)', () => {
     );
   });
 
+  it('tabela com larguras de coluna (classe da exibição) em layout fixo, como no editor', () => {
+    // Spec 06 (H20/R6): a exibição marca `table.rte-table--sized` e dá `width`/`min-width` por
+    // CSSOM; o editor tem `table-layout: fixed` no `editor.css` e nunca vê a classe.
+    const rule = styleRules().find((r) =>
+      r.selectors.includes('.rte-content table.rte-table--sized'),
+    );
+    expect(rule).toBeDefined();
+    const decls: Record<string, string> = {};
+    rule?.walkDecls((d) => {
+      decls[d.prop] = d.value;
+    });
+    expect(decls).toEqual({ 'table-layout': 'fixed' });
+  });
+
   it('parágrafo e títulos vazios têm uma linha de altura (como no editor)', () => {
     // Na edição o ProseMirror mantém um `br` no bloco vazio (`:empty` não casa); na página o
     // bloco vazio colapsaria a 0 px (spec 06, H20).

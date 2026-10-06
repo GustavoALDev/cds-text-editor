@@ -91,7 +91,7 @@ for (const zone of [false, true]) {
             : { colorScheme: scheme },
         );
         await page.reload();
-        await waitForRender(page);
+        await waitForRender(page, { timeout: 15_000 });
         if (scheme === 'forced') {
           const active = await page.evaluate(
             () => matchMedia('(forced-colors: active)').matches,
@@ -149,7 +149,12 @@ for (const zone of [false, true]) {
           'Table of contents',
         );
 
+        // Sem fundo do site (o `body` do app é branco): os hosts dão texto e fundo do tema.
         const links: [string, Locator][] = [
+          [
+            '[data-testid="render-main"] > p',
+            renderHost(page, 'render-main').locator('> p').first(),
+          ],
           ['.rte-toc__link', page.locator('.rte-toc__link').first()],
           [
             '[data-testid="render-main"] a',
@@ -162,6 +167,10 @@ for (const zone of [false, true]) {
             await link.evaluate((el) => getComputedStyle(el).color),
           );
           const bg = await effectiveBackground(page, selector);
+          if (scheme === 'dark')
+            expect(bg, `${selector}: fundo do host`).not.toBe(
+              'rgb(255, 255, 255)',
+            );
           expect(
             contrastRatio(color, bg),
             `${selector}: ${color} sobre ${bg}`,

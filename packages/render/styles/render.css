@@ -6,6 +6,16 @@
  * `--rte-*`; cores de sistema apenas em `forced-colors`.
  */
 @layer rte.components {
+  /*
+   * Texto e fundo do tema nos hosts (exibição e sumário): legível no escuro mesmo num site sem
+   * fundo próprio. O consumidor sobrescreve ou usa `data-rte-mode="inherit"`.
+   */
+  .rte-root.rte-content,
+  rte-toc.rte-root {
+    color: var(--rte-text);
+    background-color: var(--rte-surface);
+  }
+
   .rte-content .rte-table-scroll {
     overflow-x: auto;
     max-inline-size: 100%;

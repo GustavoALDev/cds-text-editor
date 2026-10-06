@@ -86,6 +86,25 @@ async function snapshot(page: Page, root: string): Promise<Snapshot> {
   };
 }
 
+/** Tabela de colunas largas (2 × 480 px): transborda o contêiner de 640 px nas duas páginas. */
+const WIDE_COLS =
+  '<table><colgroup><col style="width: 480px"><col style="width: 480px"></colgroup><tbody><tr><td><p>a</p></td><td><p>b</p></td></tr></tbody></table>';
+
+/** Largura da tabela e da 1ª célula e se o invólucro (rolador ou `tableWrapper`) transborda. */
+function measureTable(page: Page, root: string) {
+  return page.evaluate((selector) => {
+    const table = document.querySelector(`${selector} table`)!;
+    const cell = table.querySelector('tr > :first-child')!;
+    const wrapper = table.parentElement!;
+    return {
+      table: table.getBoundingClientRect().width,
+      cell: cell.getBoundingClientRect().width,
+      overflow: wrapper.scrollWidth > wrapper.clientWidth,
+      wrapper: wrapper.className,
+    };
+  }, root);
+}
+
 async function editorSnapshot(page: Page, zone: boolean): Promise<Snapshot> {
   await gotoApp(page, '/content', { zone });
   await waitForEditor(page, 'content');
@@ -191,6 +210,44 @@ for (const zone of [false, true]) {
       ]);
     });
   }
+
+  test(`L3 (${build}): tabela de colunas largas com a dimensão da edição (H20, R6)`, async ({
+    context,
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await blockThirdParty(context);
+    await gotoApp(page, '/content', { zone });
+    await waitForEditor(page, 'content');
+    await page.evaluate(
+      (html) => window.rteE2e.setValue('content', html),
+      WIDE_COLS,
+    );
+    await expect(editorHost(page, 'content').locator('table')).toHaveCount(1);
+    await equalizeContainer(page, EDITOR_ROOT);
+    const editor = await measureTable(page, EDITOR_ROOT);
+
+    await gotoRender(page, '/render', { zone });
+    await page.evaluate(
+      (html) => window.rteE2e.setRenderInput(html),
+      WIDE_COLS,
+    );
+    const input = '[data-testid="render-input"]';
+    // A H20 já dimensionou a tabela (CSSOM; o computado tem a meia borda a mais).
+    await expect
+      .poll(() => page.locator(`${input} table`).evaluate((t) => t.style.width))
+      .toBe('960px');
+    await equalizeContainer(page, input);
+    const render = await measureTable(page, input);
+
+    const where = JSON.stringify({ editor, render });
+    expect(Math.abs(editor.table - 960), where).toBeLessThanOrEqual(1);
+    expect(Math.abs(render.table - editor.table), where).toBeLessThanOrEqual(1);
+    expect(Math.abs(render.cell - editor.cell), where).toBeLessThanOrEqual(1);
+    expect(Math.abs(render.cell - 480), where).toBeLessThanOrEqual(1);
+    expect(editor.overflow, where).toBe(true);
+    expect(render.overflow, where).toBe(true);
+  });
 
   test(`L3 R9 (${build}): video e iframe recebem o clique na rota render`, async ({
     context,

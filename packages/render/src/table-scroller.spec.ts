@@ -167,6 +167,16 @@ describe('RteContent: rolador de tabela (H7, R6)', () => {
       expect(scrollA.value).toBe(40);
     });
 
+    it('evento já tratado por outro ouvinte (defaultPrevented) → não rola', async () => {
+      const fixture = await renderHost(Host);
+      const [a] = scrollers(fixture);
+      ro.trigger(new Map([[a!, WIDE]]));
+      const scroll = trackScroll(a!, 40);
+      a!.addEventListener('keydown', (e) => e.preventDefault());
+      press(a!, 'End');
+      expect(scroll.value).toBe(40);
+    });
+
     it('depois do destroy a tecla não é tratada', async () => {
       const fixture = await renderHost(Host);
       const [a] = scrollers(fixture);

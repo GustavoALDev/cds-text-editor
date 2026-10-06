@@ -52,7 +52,10 @@ for (const zone of [false, true]) {
       // H6: rolador em volta da tabela, sem os atributos do rolador transbordado (H7, só no navegador).
       const scrollers = main!.match(/<div class="rte-table-scroll"[^>]*>/g);
       expect(scrollers).toEqual(['<div class="rte-table-scroll">']);
-      expect(main).toContain('<div class="rte-table-scroll"><table>');
+      // H20: a tabela do fixture tem largura de coluna (`col` 200 px) → classe de layout fixo.
+      expect(main).toContain(
+        '<div class="rte-table-scroll"><table class="rte-table--sized">',
+      );
       // Fragmento no caminho do documento (pré-voo 6).
       expect(main).toContain(`href="${base}#rt-subtitulo"`);
       expect(main).not.toContain('href="#rt-subtitulo"');
@@ -96,6 +99,11 @@ for (const zone of [false, true]) {
       );
       // Os `style` do conteúdo ficam bloqueados pela CSP sem JS (documentado na R5).
       await expect(justified(page)).toHaveCSS('text-align', 'start');
+      // H20 sem JS: o layout fixo vem da classe, mas a `min-width` da tabela é CSSOM (não há)
+      // e as larguras dos `col` estão bloqueadas.
+      const table = main.locator('table.rte-table--sized');
+      await expect(table).toHaveCSS('table-layout', 'fixed');
+      await expect(table).toHaveCSS('min-width', '0px');
       expect(
         await verticalEmbed(page).evaluate(
           (el) => getComputedStyle(el).aspectRatio,
@@ -131,6 +139,10 @@ for (const zone of [false, true]) {
       // Depois da hidratação os estilos voltam por CSSOM (H8).
       await expect(justified(page)).toHaveCSS('text-align', 'justify');
       await expect(verticalEmbed(page)).toHaveCSS('aspect-ratio', '9 / 16');
+      // H20: `col` 200 px + 2 sem largura → `min-width` 250 px como na edição.
+      await expect(
+        renderHost(page, 'render-main').locator('table.rte-table--sized'),
+      ).toHaveCSS('min-width', '250px');
 
       const h10: H10Measure = await measureH10(page);
       testInfo.annotations.push({

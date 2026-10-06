@@ -82,6 +82,7 @@ export function createTableScrollers(
 
   // Um ouvinte por instância, no *host* (criado fora da zona Angular, como o observador).
   const onKeydown = (event: KeyboardEvent) => {
+    if (event.defaultPrevented) return;
     const target = event.target as HTMLElement;
     if (
       (event.key !== 'Home' && event.key !== 'End') ||

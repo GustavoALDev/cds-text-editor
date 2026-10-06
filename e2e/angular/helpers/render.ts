@@ -22,9 +22,13 @@ export async function gotoRender(
 
 /**
  * Espera a exibição do fixture registrar-se na ponte (a rota é carregada sob demanda);
- * também depois de um `reload`.
+ * também depois de um `reload` (lá o Firefox com emulação às vezes passa dos 5 s padrão: quem
+ * recarrega passa `timeout`).
  */
-export async function waitForRender(page: Page): Promise<void> {
+export async function waitForRender(
+  page: Page,
+  options: { timeout?: number } = {},
+): Promise<void> {
   await expect
     .poll(
       () =>
@@ -35,8 +39,7 @@ export async function waitForRender(page: Page): Promise<void> {
             return false;
           }
         }),
-      // Depois de um `reload` com emulação o Firefox às vezes passa dos 5 s padrão.
-      { timeout: 15_000 },
+      options,
     )
     .toBe(true);
 }

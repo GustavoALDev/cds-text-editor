@@ -124,6 +124,15 @@ describe('render.css', () => {
     ).not.toEqual([]);
   });
 
+  it('hosts da exibição e do sumário com texto e fundo do tema (legível no escuro sem o site)', () => {
+    for (const sel of ['.rte-root.rte-content', 'rte-toc.rte-root']) {
+      const rule = rules().find((r) => r.selectors.includes(sel));
+      expect(rule && layerOf(rule), sel).toBe('rte.components');
+      expect(value(sel, 'color'), sel).toBe('var(--rte-text)');
+      expect(value(sel, 'background-color'), sel).toBe('var(--rte-surface)');
+    }
+  });
+
   it('margem de rolagem dos elementos com id', () => {
     const rule = rules().find((r) => r.selectors.includes('.rte-content [id]'));
     expect(rule && layerOf(rule)).toBe('rte.content');

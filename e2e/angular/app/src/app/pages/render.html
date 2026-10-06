@@ -1,7 +1,7 @@
 @if (article) {
 <header class="e2e-render-header" data-testid="render-header">Header</header>
 }
-<div class="e2e-render rte-root" [class.e2e-render--article]="article">
+<div class="e2e-render" [class.e2e-render--article]="article">
   <rte-toc
     data-testid="render-toc"
     [html]="main.renderedHtml()"

@@ -38,6 +38,13 @@ export { slugify, createHeadingIds } from './headings';
 export { countCharacters, countWords, readingTime } from './text';
 
 export { computeResize, parseSrcset, formatSrcset } from './image';
+
+export {
+  getTableSizing,
+  parseColWidth,
+  RTE_TABLE_CELL_MIN_WIDTH,
+} from './table-sizing';
+export type { RteTableSizing } from './table-sizing';
 export type { RteResizeCorner, RteResizeInput, SrcsetCandidate } from './image';
 
 export {

@@ -134,6 +134,15 @@
     border-collapse: collapse;
   }
 
+  /*
+   * Tabela com larguras de coluna na exibição (classe do `@cds/rte-render`, que lhe dá
+   * `width`/`min-width` por CSSOM): layout fixo como o do editor (`editor.css`), que nunca vê
+   * a classe.
+   */
+  .rte-content table.rte-table--sized {
+    table-layout: fixed;
+  }
+
   .rte-content th,
   .rte-content td {
     box-sizing: border-box;

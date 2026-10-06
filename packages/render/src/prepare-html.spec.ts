@@ -3,7 +3,11 @@ import { escapeHtmlAttribute } from '@cds/rte-core';
 import { createSanitizer } from '@cds/rte-sanitizer';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { RTE_TABLE_SCROLL_CLASS, prepareRteHtml } from './prepare-html';
+import {
+  RTE_TABLE_SCROLL_CLASS,
+  RTE_TABLE_SIZED_CLASS,
+  prepareRteHtml,
+} from './prepare-html';
 import { readFixture } from './testing-support/fixtures';
 import {
   isScroller,
@@ -29,6 +33,57 @@ describe('prepareRteHtml (H6): casos', () => {
   it('exporta a classe do rolador', () => {
     expect(RTE_TABLE_SCROLL_CLASS).toBe('rte-table-scroll');
   });
+
+  it('exporta a classe da tabela com larguras', () => {
+    expect(RTE_TABLE_SIZED_CLASS).toBe('rte-table--sized');
+  });
+
+  it.each<[string, string, string]>([
+    [
+      'todas as colunas com largura',
+      '<table><colgroup><col style="width: 480px"><col style="width: 480px"></colgroup><tbody><tr><td><p>a</p></td><td><p>b</p></td></tr></tbody></table>',
+      '<table class="rte-table--sized"><colgroup>',
+    ],
+    [
+      'uma coluna com largura (colspan na 1ª linha)',
+      '<table><colgroup><col style="width: 200px"><col><col></colgroup><tbody><tr><th><p>a</p></th><th colspan="2"><p>b</p></th></tr></tbody></table>',
+      '<table class="rte-table--sized"><colgroup>',
+    ],
+    [
+      'com caption antes do colgroup',
+      '<table><caption>L</caption><colgroup><col style="width: 90px"></colgroup><tbody><tr><td><p>a</p></td></tr></tbody></table>',
+      '<table class="rte-table--sized"><caption>',
+    ],
+  ])(
+    'tabela com larguras de coluna ganha a classe (H20): %s',
+    (_n, input, head) => {
+      const out = prepareRteHtml(input, { fragmentBase: null });
+      expect(out.startsWith(`<div class="rte-table-scroll">${head}`)).toBe(
+        true,
+      );
+      expect(out.replace(' class="rte-table--sized"', '')).toBe(wrap(input));
+    },
+  );
+
+  it.each<[string, string]>([
+    ['sem colgroup', TABLE],
+    [
+      'colgroup sem largura',
+      '<table><colgroup><col><col></colgroup><tbody><tr><td><p>a</p></td><td><p>b</p></td></tr></tbody></table>',
+    ],
+    [
+      'width só dentro de outra tabela (a de fora não ganha)',
+      '<table><tbody><tr><td><table><colgroup><col style="width: 50px"></colgroup><tbody><tr><td><p>a</p></td></tr></tbody></table></td></tr></tbody></table>',
+    ],
+  ])(
+    'sem largura de coluna própria, a tabela não ganha a classe: %s',
+    (_n, input) => {
+      const out = prepareRteHtml(input, { fragmentBase: null });
+      expect(out.startsWith('<div class="rte-table-scroll"><table>')).toBe(
+        true,
+      );
+    },
+  );
 
   it.each<[string, string, string | null, string]>([
     ['sem tabela nem âncora: igual', '<p>x</p>', '/blog/post', '<p>x</p>'],
@@ -169,13 +224,50 @@ function countTables(nodes: HtmlNode[]): number {
   return n;
 }
 
+/** `col` do `colgroup` filho direto com `style` de `width` (H20). */
+function hasColWidth(table: HtmlNode): boolean {
+  if (!('tag' in table)) return false;
+  return table.children.some(
+    (c) =>
+      'tag' in c &&
+      c.tag === 'colgroup' &&
+      c.children.some(
+        (col) =>
+          'tag' in col &&
+          col.tag === 'col' &&
+          col.attrs.some(([n, v]) => n === 'style' && /width:/.test(v)),
+      ),
+  );
+}
+
+/**
+ * Tira a classe `rte-table--sized` das tabelas, conferindo que ela está exatamente nas que têm
+ * largura de coluna no próprio `colgroup` (H20).
+ */
+function unsize(nodes: HtmlNode[]): HtmlNode[] {
+  return nodes.map((node) => {
+    if (!('tag' in node)) return node;
+    let attrs = node.attrs;
+    if (node.tag === 'table') {
+      const sized = attrs.some(
+        ([n, v]) => n === 'class' && v === RTE_TABLE_SIZED_CLASS,
+      );
+      expect(sized).toBe(hasColWidth(node));
+      attrs = attrs.filter(
+        ([n, v]) => !(n === 'class' && v === RTE_TABLE_SIZED_CLASS),
+      );
+    }
+    return { tag: node.tag, attrs, children: unsize(node.children) };
+  });
+}
+
 /** R4 sobre `h` (saída do sanitizador) com a base `base`. */
 function checkProperty(h: string, base: string | null): void {
   const before = parseTree(h);
   const prepared = parseTree(prepareRteHtml(h, { fragmentBase: base }));
   const expected =
     base === null ? before : withBase(before, escapeHtmlAttribute(base));
-  expect(unwrapScrollers(prepared)).toEqual(expected);
+  expect(unsize(unwrapScrollers(prepared))).toEqual(expected);
   expect(checkScrollers(prepared)).toBe(countTables(before));
 }
 
