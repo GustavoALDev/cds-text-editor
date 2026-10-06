@@ -5,6 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RteContent } from './content/rte-content';
 import { restoreContentStyles } from './content/restore-styles';
 import { provideRteRender } from './provide';
+import {
+  blankStyleAttributes,
+  spyCssText,
+  type CssWrite,
+} from './testing-support/css-text';
 import { renderHost, settle } from './testing-support/render';
 import type { RteRenderMode } from './types';
 
@@ -35,37 +40,6 @@ function el(fixture: ComponentFixture<unknown>): HTMLElement {
   return (fixture.nativeElement as HTMLElement).querySelector(
     '.rte-content',
   ) as HTMLElement;
-}
-
-interface CssWrite {
-  /** Dono da declaração, se já estava no documento na hora da escrita. */
-  owner: Element | null;
-  target: CSSStyleDeclaration;
-  value: string;
-}
-
-/**
- * Espião no *setter* de `cssText`. O jsdom também escreve `cssText` ao
- * analisar o atributo `style` (`_attrModified`), mas isso acontece no
- * fragmento ainda desligado do `[innerHTML]`; só a reaplicação da diretiva
- * escreve em elementos já no documento — é o que `owner` separa.
- */
-function spyCssText(): CssWrite[] {
-  const calls: CssWrite[] = [];
-  const proto = CSSStyleDeclaration.prototype;
-  const desc = Object.getOwnPropertyDescriptor(proto, 'cssText')!;
-  vi.spyOn(proto, 'cssText', 'set').mockImplementation(function (
-    this: CSSStyleDeclaration,
-    value: string,
-  ) {
-    const owner =
-      [...document.querySelectorAll<HTMLElement>('*')].find(
-        (e) => e.style === this,
-      ) ?? null;
-    calls.push({ owner, target: this, value });
-    desc.set!.call(this, value);
-  });
-  return calls;
 }
 
 /** Escritas em elementos do conteúdo já inseridos: `[tag, valor]`. */
@@ -171,17 +145,6 @@ describe('RteContent: estilos por CSSOM depois de cada inserção (H8, R5)', () 
  * os valores vêm do HTML preparado, casados pela ordem do documento e pela tag.
  */
 describe('restoreContentStyles com o HTML preparado (Firefox sob CSP)', () => {
-  /** Simula o Gecko: o atributo `style` existe, mas lê vazio. */
-  function blankStyleAttributes(): void {
-    const get = Element.prototype.getAttribute;
-    vi.spyOn(Element.prototype, 'getAttribute').mockImplementation(function (
-      this: Element,
-      name: string,
-    ) {
-      return name === 'style' ? '' : get.call(this, name);
-    });
-  }
-
   /** A árvore exibida: o próprio HTML analisado (o Gecko a deixa com `style=""`). */
   function parse(html: string): HTMLElement {
     const root = document.createElement('div');
@@ -206,12 +169,12 @@ describe('restoreContentStyles com o HTML preparado (Firefox sob CSP)', () => {
   });
 
   it('entidades no valor do atributo são decodificadas', () => {
-    const html = '<span style="font-family: &quot;A&amp;B&quot;">a</span>';
+    const html = '<span style="color: &quot;A&amp;B&quot;">a</span>';
     const root = parse(html);
     blankStyleAttributes();
     const calls = spyCssText();
     restoreContentStyles(root, html);
-    expect(calls.map((c) => c.value)).toEqual(['font-family: "A&B"']);
+    expect(calls.map((c) => c.value)).toEqual(['color: "A&B"']);
   });
 
   it('style dentro do valor de outro atributo não conta: vale o par chamado style', () => {

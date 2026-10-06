@@ -202,6 +202,21 @@ for (const zone of [false, true]) {
       expectOnlyContentStyles(swap, swapStyled, swapStyled);
     });
 
+    test('render trusted: só as propriedades da lista voltam por CSSOM (Ruling 23)', async ({
+      page,
+    }) => {
+      await gotoRender(page, '/render', { zone });
+      await page.evaluate(
+        (html) => window.rteE2e.setRenderInput(html, 'trusted'),
+        '<p style="text-align: center; position: fixed; background-color: rgb(255, 0, 0)">fora da lista</p>',
+      );
+      const p = renderHost(page, 'render-input').locator('p');
+      await expect(p).toHaveText('fora da lista');
+      await expect(p).toHaveCSS('text-align', 'center');
+      await expect(p).toHaveCSS('position', 'static');
+      await expect(p).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    });
+
     test('render-tt: conteúdo exibido e, com Trusted Types, nenhuma violação e a política imposta', async ({
       page,
     }, testInfo) => {

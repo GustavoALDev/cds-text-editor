@@ -1,3 +1,5 @@
+import { RTE_STYLE_PROPERTIES } from '@cds/rte-core';
+
 /** Comentários e o texto cru de elementos *raw text*: não são *tags* da árvore. */
 const COMMENT = /<!--[\s\S]*?-->/g;
 const RAW_TEXT =
@@ -89,6 +91,55 @@ function sameShape(el: Element, root: Element, expected: StyledTag): boolean {
   );
 }
 
+/** Tira espaços ASCII das pontas (os do CSS; não os de Unicode). */
+function trimAscii(s: string): string {
+  return s.replace(/^[ \t\n\r\f]+|[ \t\n\r\f]+$/g, '');
+}
+
+/** Minúsculas só ASCII (sem depender de *locale*). */
+function lowerAscii(s: string): string {
+  return s.replace(/[A-Z]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 32));
+}
+
+/**
+ * O texto de `style` reduzido às propriedades que o esquema emite para `tag`
+ * (`RTE_STYLE_PROPERTIES`, Ruling 23), na ordem da lista, `prop: valor`
+ * unidos por `; ` (`''` se nada sobra). Barra invertida ou comentário
+ * descartam tudo (como `sanitizeStyle`); declaração com `!` (`!important`,
+ * que venceria o `!important` da paleta no `content.css`) ou valor vazio é
+ * descartada; a última declaração de uma propriedade vale. Não valida
+ * valores: nenhuma das propriedades aceita imagem e o CSSOM recusa valor
+ * inválido (nem cores pela paleta: o servidor pode ter paletas próprias).
+ */
+export function allowedStyle(tag: string, text: string): string {
+  const allowed = Object.hasOwn(RTE_STYLE_PROPERTIES, tag)
+    ? RTE_STYLE_PROPERTIES[tag]!
+    : [];
+  if (
+    allowed.length === 0 ||
+    text.includes('\\') ||
+    text.includes('/*') ||
+    text.includes('*/')
+  ) {
+    return '';
+  }
+  const found = new Map<string, string>();
+  for (const decl of text.split(';')) {
+    const colon = decl.indexOf(':');
+    if (colon < 0) continue;
+    const name = lowerAscii(trimAscii(decl.slice(0, colon)));
+    const value = trimAscii(decl.slice(colon + 1));
+    if (!allowed.includes(name) || value === '' || value.includes('!')) {
+      continue;
+    }
+    found.set(name, value);
+  }
+  return allowed
+    .filter((name) => found.has(name))
+    .map((name) => `${name}: ${found.get(name)!}`)
+    .join('; ');
+}
+
 /**
  * Reaplica por CSSOM o atributo `style` de cada descendente de `root` que o
  * tenha (H8, pré-voo 9).
@@ -110,7 +161,9 @@ function sameShape(el: Element, root: Element, expected: StyledTag): boolean {
  * `<plaintext>` e referências nomeadas além de `&amp;`, `&quot;`, `&lt;`,
  * `&gt;`, `&apos;` e `&nbsp;` não são lidos como o *parser* os leria e, quando
  * isso muda a contagem ou a impressão, também caem no *fallback* (no pior
- * caso o valor reaplicado é o do próprio atributo). O próprio `root` (do
+ * caso o valor reaplicado é o do próprio atributo). Nos dois ramos o texto
+ * passa por `allowedStyle` (Ruling 23): só as propriedades do esquema para a
+ * *tag*, uma escrita de `cssText` por elemento. O próprio `root` (do
  * consumidor) não é tocado. Só no navegador. Devolve quantos reaplicou.
  */
 export function restoreContentStyles(root: Element, html?: string): number {
@@ -123,9 +176,10 @@ export function restoreContentStyles(root: Element, html?: string): number {
   elements.forEach((el, i) => {
     const style = (el as Partial<ElementCSSInlineStyle>).style;
     if (!style) return;
-    style.cssText = matches
-      ? fromHtml[i]!.style
-      : (el.getAttribute('style') ?? '');
+    const raw = matches ? fromHtml[i]!.style : (el.getAttribute('style') ?? '');
+    // Uma escrita por elemento, já filtrada (Ruling 23): sem nada permitido
+    // fica `style=""` (em `trusted`, o CSS fora da lista sai também sem CSP).
+    style.cssText = allowedStyle(el.tagName.toLowerCase(), raw);
     count++;
   });
   return count;

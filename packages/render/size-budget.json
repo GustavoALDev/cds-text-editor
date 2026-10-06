@@ -32,11 +32,11 @@
     }
   },
   "budgets": {
-    "content": 4096,
+    "content": 4416,
     "toc": 1536,
-    "whole": 4160,
+    "whole": 4480,
     "i18n": 256,
-    "content-page": 4352,
-    "page": 49600
+    "content-page": 4736,
+    "page": 49920
   }
 }
