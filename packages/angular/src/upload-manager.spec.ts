@@ -46,6 +46,7 @@ import { RTE_UPLOAD_KEY } from './upload/markers';
     [upload]="upload()"
     [readonly]="readonly()"
     [disabled]="disabled()"
+    [hidden]="hidden()"
     (valueChange)="log.push('value')"
     (mediaChange)="log.push('media')"
     (uploadError)="onError($event)"
@@ -56,6 +57,7 @@ class Host {
   readonly value = signal('<p>ab</p>');
   readonly upload = signal<RteUploadConfig | null | undefined>(undefined);
   readonly readonly = signal(false);
+  readonly hidden = signal(false);
   readonly disabled = signal(false);
   readonly log: string[] = [];
   readonly errors: RteUploadErrorEvent[] = [];
@@ -633,7 +635,7 @@ describe('zona e detecção de mudanças (E23)', () => {
     for (let i = 1; i <= 50; i++) s.adapter.progress(0, i / 100);
     expect(s.cmp.uploads()).toBe(before);
     const scheduled = frames.length;
-    expect(scheduled).toBeGreaterThanOrEqual(1);
+    expect(scheduled).toBe(1);
     for (const cb of frames.splice(0)) cb(performance.now());
     const after = s.cmp.uploads();
     expect(after).not.toBe(before);
@@ -644,5 +646,148 @@ describe('zona e detecção de mudanças (E23)', () => {
     expect(s.cmp.uploads()).toBe(after);
     await settle(s.fixture);
     noNg010x(s.error);
+  });
+});
+
+describe('revisão da Tarefa 6 (Ruling 27)', () => {
+  it('o widget do marcador é o elemento do gerenciador (vídeo, sem --queued depois de começar)', async () => {
+    const s = await setup();
+    const webm = new File(['v'], 'v.webm', { type: 'video/webm' });
+    s.cmp.uploadFiles([webm, png('a.png'), png('b.png')]);
+    const [v, , b] = s.cmp.uploads().map((u) => u.id) as [
+      string,
+      string,
+      string,
+    ];
+    const shown = [
+      ...s.editor.view.dom.querySelectorAll<HTMLElement>('.rte-upload-marker'),
+    ];
+    expect(shown.length).toBe(3);
+    expect(shown[0]).toBe(manager(s.cmp).elementOf(v));
+    expect(shown[2]).toBe(manager(s.cmp).elementOf(b));
+    expect(shown[0]?.classList.contains('rte-upload-marker--video')).toBe(true);
+    expect(shown[0]?.classList.contains('rte-upload-marker--queued')).toBe(
+      false,
+    );
+    expect(shown[2]?.classList.contains('rte-upload-marker--queued')).toBe(
+      true,
+    );
+    s.adapter.resolve(0, { url: '/v.webm' });
+    await drain(s.fixture);
+    expect(shown[2]?.classList.contains('rte-upload-marker--queued')).toBe(
+      false,
+    );
+  });
+
+  it('recusas do gesto: um anúncio de erro combinado, depois do início', async () => {
+    const s = await setup({
+      upload: (adapter) => ({ adapter, maxImageBytes: 2 }),
+    });
+    const svg = new File(['<svg/>'], 'x.svg', { type: 'image/svg+xml' });
+    expect(s.cmp.uploadFiles([svg, png('big.png', 3)])).toBe(0);
+    expect(manager(s.cmp).announcement()).toEqual({
+      n: 1,
+      kind: 'error',
+      names: ['x.svg', 'big.png'],
+      reasons: ['type', 'size'],
+      reason: 'type',
+    });
+    expect(s.cmp.uploadFiles([png('a.png', 1), svg])).toBe(1);
+    expect(manager(s.cmp).announcement()).toMatchObject({
+      n: 3,
+      kind: 'error',
+      names: ['x.svg'],
+      reasons: ['type'],
+    });
+  });
+
+  it('hidden na chegada → unavailable', async () => {
+    const s = await setup();
+    s.cmp.uploadFiles([png('a.png')]);
+    s.host.hidden.set(true);
+    await settle(s.fixture);
+    s.adapter.resolve(0, { url: '/a.png' });
+    await drain(s.fixture);
+    expect(s.host.errors.map((e) => e.reason)).toEqual(['unavailable']);
+    expect(markerIds(s.editor)).toEqual([]);
+  });
+
+  it('cancelar todos com um envio esperando para inserir: nada entra depois', async () => {
+    const s = await setup();
+    s.cmp.uploadFiles([png('a.png')]);
+    const composing = vi
+      .spyOn(s.editor.view, 'composing', 'get')
+      .mockReturnValue(true);
+    s.adapter.resolve(0, { url: '/a.png' });
+    await drain(s.fixture);
+    expect(states(s.cmp)).toEqual(['a.png:inserting']);
+    s.cmp.cancelAllUploads();
+    expect(s.cmp.uploads()).toEqual([]);
+    expect(markerIds(s.editor)).toEqual([]);
+    composing.mockRestore();
+    s.editor.view.dom.dispatchEvent(
+      new CompositionEvent('compositionend', { bubbles: true }),
+    );
+    await drain(s.fixture);
+    expect(mediaSrcs(s.editor.state.doc)).toEqual([]);
+    expect(s.host.errors).toEqual([]);
+  });
+
+  it('vídeo sem uploadVideo → type, sem chamada', async () => {
+    const s = await setup({
+      upload: () => ({ adapter: createFakeUploadAdapter({ video: false }) }),
+    });
+    const webm = new File(['v'], 'v.webm', { type: 'video/webm' });
+    expect(s.cmp.uploadFiles([webm])).toBe(0);
+    expect(s.host.errors).toEqual([
+      { fileName: 'v.webm', type: 'video', reason: 'type' },
+    ]);
+  });
+
+  it('exceção na inserção → response com a causa', async () => {
+    const s = await setup();
+    s.cmp.uploadFiles([png('a.png')]);
+    const boom = new Error('boom');
+    vi.spyOn(s.editor, 'chain').mockImplementation(() => {
+      throw boom;
+    });
+    s.adapter.resolve(0, { url: '/a.png' });
+    await drain(s.fixture);
+    expect(s.host.errors).toEqual([
+      { fileName: 'a.png', type: 'image', reason: 'response', cause: boom },
+    ]);
+  });
+
+  it('sem compositionend, a transação seguinte libera a inserção adiada', async () => {
+    const s = await setup();
+    s.cmp.uploadFiles([png('a.png')]);
+    const composing = vi
+      .spyOn(s.editor.view, 'composing', 'get')
+      .mockReturnValue(true);
+    s.adapter.resolve(0, { url: '/a.png' });
+    await drain(s.fixture);
+    s.editor.commands.insertContentAt(1, 'x');
+    await drain(s.fixture);
+    expect(mediaSrcs(s.editor.state.doc)).toEqual([]);
+    composing.mockRestore();
+    s.editor.commands.insertContentAt(1, 'y');
+    await drain(s.fixture);
+    expect(mediaSrcs(s.editor.state.doc)).toEqual(['/a.png']);
+    expect(s.cmp.uploads()).toEqual([]);
+  });
+
+  it('a fila esvaziada cancela o quadro pendente', async () => {
+    const s = await setup();
+    s.cmp.uploadFiles([png('a.png')]);
+    const frames: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      frames.push(cb);
+      return 77;
+    });
+    const cancel = vi.spyOn(window, 'cancelAnimationFrame');
+    s.adapter.progress(0, 0.5);
+    expect(frames.length).toBe(1);
+    s.cmp.cancelAllUploads();
+    expect(cancel).toHaveBeenCalledWith(77);
   });
 });

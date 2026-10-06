@@ -6,7 +6,6 @@ import {
   Component,
   computed,
   DestroyRef,
-  DOCUMENT,
   effect,
   ElementRef,
   inject,
@@ -77,10 +76,9 @@ import type { RteToolbarConfig, RteToolbarItemId } from '../toolbar/items';
 import { RteToolbar } from '../toolbar/rte-toolbar';
 import { createToolbarState, type RteToolbarState } from '../toolbar/state';
 import { mergeTheme, sameTheme, themeKey } from '../theme/instance-theme';
-import { resolveUploadConfig } from '../upload/config';
 import { createRteUploadExtension } from '../upload/extension';
+import { createEditorUploadHost } from '../upload/host';
 import { RteUploadManager } from '../upload/manager';
-import { readUploadRules } from '../upload/response';
 import type {
   RteUploadConfig,
   RteUploadErrorEvent,
@@ -490,24 +488,19 @@ export class RteEditor implements FormValueControl<string> {
     () => this.schema().elements['span']?.attributes['lang']?.rule ?? null,
   );
 
-  /** Envio resolvido uma vez por objeto de configuração (E3). */
-  private readonly uploadConfig = computed(() => {
-    const own = this.upload();
-    return resolveUploadConfig(own === undefined ? this.config.upload : own);
-  });
-  /** Envios (E4, E10, E11, E17, E23); a lógica fica em `src/upload/`. */
-  private readonly uploadManager = new RteUploadManager({
+  /** Envios (E3, E4, E10, E11, E17, E23); a lógica fica em `src/upload/`. */
+  private readonly uploadHost = createEditorUploadHost({
     editor: this.instance,
-    config: this.uploadConfig,
-    rules: computed(() => readUploadRules(this.schema())),
-    canInsert: () => untracked(this.interactive) && !untracked(this.hidden),
-    mustWait: () =>
-      untracked(this.dialogs.request) !== null ||
-      !!untracked(this.instance)?.view.composing,
+    upload: this.upload,
+    provided: this.config.upload,
+    schema: this.schema,
+    interactive: this.interactive,
+    hidden: this.hidden,
+    dialog: this.dialogs.request,
     zone: this.ngZone,
-    view: inject(DOCUMENT).defaultView,
     emitError: (e) => this.uploadError.emit(e),
   });
+  private readonly uploadManager = new RteUploadManager(this.uploadHost);
   /** Envios em curso, na ordem do gesto (E18). */
   readonly uploads: Signal<readonly RteUploadStatus[]> =
     this.uploadManager.uploads;
@@ -543,7 +536,7 @@ export class RteEditor implements FormValueControl<string> {
     // E17: outra configuração de envio aborta os envios; E10: o diálogo
     // fechado libera as inserções adiadas.
     effect(() => {
-      this.uploadConfig();
+      this.uploadHost.config();
       untracked(() => this.uploadManager.abortAll(true));
     });
     effect(() => {
@@ -572,6 +565,7 @@ export class RteEditor implements FormValueControl<string> {
         zone.run(() => this.dialogs.cancel('cancelled'));
       }
       if (this.loading) return;
+      this.uploadManager.afterTransaction();
       const media = this.media;
       const delta = media?.apply([transaction, ...appendedTransactions]);
       let emitted = false;

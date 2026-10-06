@@ -1,22 +1,15 @@
-import { signal, untracked, type NgZone, type Signal } from '@angular/core';
-import type { RteImageAttrs, RteVideoAttrs } from '@cds/rte-core/extensions';
+import { isDevMode, signal, untracked, type Signal } from '@angular/core';
 import type { Editor } from '@tiptap/core';
-import type { RteResolvedUpload } from './config';
-import {
-  insertUploaded,
-  selectOnArrival,
-  type RteUploadArrival,
-} from './insert';
+import { insertArrival } from './arrival';
+import type { RteUploadHost } from './host';
+import { createMarkerElement } from './marker-element';
 import {
   RTE_UPLOAD_KEY,
   uploadMetaTransaction,
   type RteUploadMeta,
 } from './markers';
-import {
-  readUploadedMedia,
-  type RteUploadedAttrs,
-  type RteUploadRules,
-} from './response';
+import { clampProgress, moved, RteFramePublisher } from './progress';
+import { readUploadedMedia, type RteUploadedAttrs } from './response';
 import {
   uploadReason,
   type RteUploadAdapter,
@@ -28,19 +21,7 @@ import {
 } from './types';
 import { displayName, validateUploadFile } from './validate';
 
-/** O que o gerenciador precisa do `RteEditor` (pré-voo 10). */
-export interface RteUploadHost {
-  readonly editor: Signal<Editor | null>;
-  readonly config: Signal<RteResolvedUpload | null>;
-  readonly rules: Signal<RteUploadRules | null>;
-  /** Editável e não oculto. */
-  canInsert(): boolean;
-  /** Diálogo próprio aberto ou composição de IME (E10). */
-  mustWait(): boolean;
-  readonly zone: NgZone;
-  readonly view: Window | null;
-  emitError(e: RteUploadErrorEvent): void;
-}
+export type { RteUploadHost } from './host';
 
 /** Anúncio para a região `aria-live` (E8); `n` muda a cada anúncio. */
 export interface RteUploadAnnouncement {
@@ -48,10 +29,16 @@ export interface RteUploadAnnouncement {
   readonly kind: 'start' | 'done' | 'cancelled' | 'error';
   readonly names: readonly string[];
   readonly count?: number;
+  /** Motivo do erro (o do primeiro nome, no anúncio combinado). */
   readonly reason?: RteUploadErrorReason;
+  /** Recusas do gesto: o motivo de cada nome, na mesma ordem. */
+  readonly reasons?: readonly RteUploadErrorReason[];
 }
 
-type JobState = RteUploadStatus['state'];
+type Said = Omit<RteUploadAnnouncement, 'n'>;
+
+const MISSING_ELEMENT =
+  '[rte-editor] marcador de envio sem envio correspondente; usando um elemento vazio.';
 
 interface Job {
   readonly id: string;
@@ -62,7 +49,7 @@ interface Job {
   readonly adapter: RteUploadAdapter;
   readonly abort: AbortController;
   readonly element: HTMLElement;
-  state: JobState;
+  state: RteUploadStatus['state'];
   /** Último progresso recebido (`null` = indeterminado). */
   progress: number | null;
   /** Progresso publicado em `uploads` (E23). */
@@ -77,55 +64,15 @@ interface Job {
 
 /** Envios simultâneos por instância (E11). */
 const CONCURRENCY = 2;
-/** Mudança mínima de progresso publicada (E23). */
-const STEP = 0.01;
 
 let instances = 0;
 
-/** `NaN`/não número → `null`; senão preso a `[0, 1]` (Review Focus 2). */
-function clampProgress(value: unknown): number | null {
-  if (typeof value !== 'number' || Number.isNaN(value)) return null;
-  return Math.min(1, Math.max(0, value));
-}
-
-function moved(shown: number | null, next: number | null): boolean {
-  if (shown === null || next === null) return shown !== next;
-  return Math.abs(next - shown) >= STEP;
-}
-
-/**
- * Chegada (E9): resposta + textos do diálogo; colado, solto ou por
- * `uploadFiles`, a imagem entra com `alt: null` (E19). No vídeo, o pôster do
- * diálogo vence o da resposta.
- */
-function arrival(
-  id: string,
-  type: RteUploadType,
-  r: RteUploadedAttrs,
-  text: RteUploadText | undefined,
-  select: boolean,
-): RteUploadArrival {
-  if (type === 'image') {
-    const attrs: RteImageAttrs = { ...r, alt: text?.alt ?? null };
-    if (text) attrs.caption = text.caption;
-    if (text?.credit !== undefined) attrs.credit = text.credit;
-    return { id, type, attrs, select };
-  }
-  const { poster: served, ...rest } = r;
-  const attrs: RteVideoAttrs = { ...rest };
-  const poster = text?.poster ?? served;
-  if (poster !== undefined) attrs.poster = poster;
-  if (text) attrs.caption = text.caption;
-  if (text?.tracks) attrs.tracks = text.tracks;
-  return { id, type, attrs, select };
-}
-
 /**
  * Gerenciador de envios (E4, E10, E11, E15–E18, E23; pré-voo 10): fila FIFO
- * com 2 simultâneos, `AbortController` por envio, progresso publicado no
- * máximo uma vez por quadro, inserção adiada com diálogo aberto ou
- * composição, e abortos de ciclo de vida. Vive fora da zona; `uploadError`,
- * `uploads` e o anúncio entram nela.
+ * com 2 simultâneos, `AbortController` por envio, anúncios e abortos de
+ * ciclo de vida. O progresso por quadro fica em `progress.ts`, a inserção em
+ * `arrival.ts` e o elemento do marcador em `marker-element.ts`. Vive fora da
+ * zona; `uploadError`, `uploads` e o anúncio entram nela.
  */
 export class RteUploadManager {
   private readonly prefix = `rte-upload-${++instances}-`;
@@ -133,8 +80,9 @@ export class RteUploadManager {
   private gestures = 0;
   private announced = 0;
   private jobs: Job[] = [];
-  private frame: number | null = null;
   private disposed = false;
+  private flushQueued = false;
+  private readonly frames: RteFramePublisher;
   private readonly list = signal<readonly RteUploadStatus[]>([]);
   private readonly said = signal<RteUploadAnnouncement | null>(null);
 
@@ -144,13 +92,20 @@ export class RteUploadManager {
   readonly announcement: Signal<RteUploadAnnouncement | null> =
     this.said.asReadonly();
 
-  constructor(private readonly host: RteUploadHost) {}
+  constructor(private readonly host: RteUploadHost) {
+    this.frames = new RteFramePublisher({
+      view: host.view,
+      zone: host.zone,
+      paint: () => this.paint(),
+    });
+  }
 
   /**
    * Um gesto (E5, E11): os arquivos de índice `>= maxFilesPerAction` dão
    * `'count'`; os outros passam pela E5; os aceitos ganham marcadores em
-   * `at`, na ordem do gesto. Devolve quantos foram aceitos; 0 sem editor,
-   * sem adaptador, sem mídia no esquema ou não editável.
+   * `at`, na ordem do gesto. Recusas: um `uploadError` por arquivo e um
+   * anúncio combinado (E8). Devolve quantos foram aceitos; 0 sem editor, sem
+   * adaptador, sem mídia no esquema ou não editável.
    */
   start(files: readonly File[], at: number, text?: RteUploadText): number {
     const editor = untracked(this.host.editor);
@@ -165,20 +120,25 @@ export class RteUploadManager {
     ) {
       return 0;
     }
+    const doc = editor.view.dom.ownerDocument;
     const gesture = ++this.gestures;
     const added: Job[] = [];
     const refused: RteUploadErrorEvent[] = [];
+    const refusedNames: string[] = [];
     files.forEach((file, i) => {
       const check = validateUploadFile(file, cfg);
       const reason =
         i >= cfg.maxFilesPerAction ? 'count' : check.ok ? null : check.reason;
       if (reason) {
         refused.push({ fileName: file.name, type: check.type, reason });
+        refusedNames.push(displayName(file));
       } else {
-        added.push(this.createJob(file, check.type, text, cfg.adapter));
+        added.push(this.createJob(doc, file, check.type, text, cfg.adapter));
       }
     });
     if (added.length) {
+      // os envios existem antes da transação: o *widget* pede `elementOf`
+      this.jobs.push(...added);
       const pos = Math.min(Math.max(at, 0), editor.state.doc.content.size);
       this.dispatch(editor, {
         add: added.map((job, index) => ({
@@ -189,7 +149,6 @@ export class RteUploadManager {
           type: job.type,
         })),
       });
-      this.jobs.push(...added);
     }
     this.host.zone.run(() => {
       for (const e of refused) this.host.emitError(e);
@@ -199,6 +158,15 @@ export class RteUploadManager {
           kind: 'start',
           names: added.map((j) => j.name),
           count: added.length,
+        });
+      }
+      if (refused.length) {
+        const reasons = refused.map((e) => e.reason);
+        this.announce({
+          kind: 'error',
+          names: refusedNames,
+          reasons,
+          reason: reasons[0] as RteUploadErrorReason,
         });
       }
     });
@@ -224,33 +192,54 @@ export class RteUploadManager {
    * `destroy` (sem anúncio). Nunca emite `uploadError`.
    */
   abortAll(announce: boolean): void {
-    if (this.jobs.length)
+    if (this.jobs.length) {
       this.drop([...this.jobs], announce ? 'cancelled' : null);
+    }
   }
 
   /** Tenta as inserções adiadas (diálogo fechado, `compositionend`). */
   flush(): void {
     for (const job of [...this.jobs]) {
-      if (!job.done && job.attrs) this.insert(job);
+      if (!job.done && job.attrs) this.insert(job, job.attrs);
     }
+  }
+
+  /**
+   * Rede de segurança depois de cada transação: com uma inserção adiada e
+   * nada mais a impedir (motor que não dispara `compositionend`), tenta numa
+   * microtarefa, fora do despacho em curso.
+   */
+  afterTransaction(): void {
+    if (this.flushQueued || !this.jobs.some((j) => j.attrs && !j.done)) return;
+    if (this.host.mustWait()) return;
+    this.flushQueued = true;
+    queueMicrotask(() => {
+      this.flushQueued = false;
+      if (!this.disposed) this.flush();
+    });
   }
 
   /** Elemento do marcador `id` (o *plugin* o põe no *widget*). */
   elementOf(id: string): HTMLElement {
-    return (
-      this.jobs.find((j) => j.id === id)?.element ?? this.createElement('image')
-    );
+    const job = this.jobs.find((j) => j.id === id);
+    if (job) return job.element;
+    if (isDevMode()) console.warn(MISSING_ELEMENT);
+    const doc =
+      untracked(this.host.editor)?.view.dom.ownerDocument ??
+      this.host.view?.document;
+    if (!doc) throw new Error(MISSING_ELEMENT);
+    return createMarkerElement(doc, 'image');
   }
 
   /** Destruição do editor: aborta sem anunciar e para o laço por quadro. */
   dispose(): void {
     this.abortAll(false);
     this.disposed = true;
-    if (this.frame !== null) this.host.view?.cancelAnimationFrame(this.frame);
-    this.frame = null;
+    this.frames.cancel();
   }
 
   private createJob(
+    doc: Document,
     file: File,
     type: RteUploadType,
     text: RteUploadText | undefined,
@@ -264,7 +253,7 @@ export class RteUploadManager {
       text,
       adapter,
       abort: new AbortController(),
-      element: this.createElement(type),
+      element: createMarkerElement(doc, type),
       state: 'queued',
       progress: null,
       shown: null,
@@ -272,18 +261,6 @@ export class RteUploadManager {
       settled: false,
       done: false,
     };
-  }
-
-  /** Elemento mínimo do marcador; a Tarefa 8 completa o DOM (E7). */
-  private createElement(type: RteUploadType): HTMLElement {
-    const doc =
-      untracked(this.host.editor)?.view.dom.ownerDocument ??
-      (this.host.view?.document as Document);
-    const el = doc.createElement('span');
-    el.className = `rte-upload-marker rte-upload-marker--${type} rte-upload-marker--queued`;
-    el.setAttribute('contenteditable', 'false');
-    el.setAttribute('aria-hidden', 'true');
-    return el;
   }
 
   /** Começa os da fila até 2 simultâneos (E11). */
@@ -302,8 +279,9 @@ export class RteUploadManager {
   }
 
   /**
-   * Chama o adaptador uma vez, fora da zona (E4, E23): o lançamento síncrono
-   * vira rejeição e um valor que não é *promise* vale como resposta.
+   * Chama o adaptador uma vez, fora da zona (E4, E23), com as reações também
+   * ligadas fora dela: o lançamento síncrono vira rejeição e um valor que não
+   * é *promise* vale como resposta.
    */
   private begin(job: Job): void {
     job.state = 'uploading';
@@ -314,50 +292,34 @@ export class RteUploadManager {
     };
     const upload =
       job.type === 'video' ? job.adapter.uploadVideo : job.adapter.uploadImage;
-    this.host.zone
-      .runOutsideAngular(
-        () =>
-          new Promise<unknown>((resolve) =>
-            resolve(upload?.call(job.adapter, job.file, ctx)),
-          ),
-      )
-      .then(
+    this.host.zone.runOutsideAngular(() => {
+      new Promise<unknown>((resolve) =>
+        resolve(upload?.call(job.adapter, job.file, ctx)),
+      ).then(
         (value) => this.arrive(job, value),
         (error: unknown) => {
           job.settled = true;
           if (!job.done) this.fail(job, uploadReason(error), error);
         },
       );
+    });
   }
 
   private progress(job: Job, fraction: unknown): void {
     if (job.done || job.settled) return;
     job.progress = clampProgress(fraction);
-    if (moved(job.shown, job.progress)) this.schedule();
-  }
-
-  /** Um quadro por vez, só com envio ativo (E23). */
-  private schedule(): void {
-    const view = this.host.view;
-    if (this.frame !== null || this.disposed) return;
-    if (!view?.requestAnimationFrame) {
-      this.paint();
-      return;
+    if (!this.disposed && moved(job.shown, job.progress)) {
+      this.frames.request();
     }
-    this.frame = this.host.zone.runOutsideAngular(() =>
-      view.requestAnimationFrame(() => {
-        this.frame = null;
-        this.paint();
-      }),
-    );
   }
 
   /** Publica o progresso que mudou ≥ 0,01 (ou entre `null` e número). */
   private paint(): void {
     let changed = false;
     for (const job of this.jobs) {
-      if (job.state !== 'uploading' || !moved(job.shown, job.progress))
+      if (job.state !== 'uploading' || !moved(job.shown, job.progress)) {
         continue;
+      }
       job.shown = job.progress;
       changed = true;
     }
@@ -377,40 +339,19 @@ export class RteUploadManager {
     job.attrs = read.attrs;
     job.state = 'inserting';
     this.host.zone.run(() => this.publish());
-    this.insert(job);
+    this.insert(job, read.attrs);
   }
 
-  /**
-   * Inserção (E9, E10): não editável → `'unavailable'`; diálogo aberto ou
-   * composição → espera o `flush`; comando recusado → `'response'`.
-   */
-  private insert(job: Job): void {
-    const editor = untracked(this.host.editor);
-    if (!editor || editor.isDestroyed || !this.host.canInsert()) {
-      this.fail(job, 'unavailable', undefined);
-      return;
-    }
-    if (this.host.mustWait() || !job.attrs) return;
-    const attrs = job.attrs;
-    let ok = false;
-    try {
-      ok = this.host.zone.runOutsideAngular(() =>
-        insertUploaded(
-          editor,
-          arrival(
-            job.id,
-            job.type,
-            attrs,
-            job.text,
-            selectOnArrival(editor, job.id),
-          ),
-        ),
-      );
-    } catch {
-      ok = false;
-    }
-    if (!ok) {
-      this.fail(job, 'response', undefined);
+  private insert(job: Job, attrs: RteUploadedAttrs): void {
+    const outcome = insertArrival(this.host, {
+      id: job.id,
+      type: job.type,
+      attrs,
+      text: job.text,
+    });
+    if (outcome.kind === 'wait') return;
+    if (outcome.kind === 'failed') {
+      this.fail(job, outcome.reason, outcome.cause);
       return;
     }
     this.finish([job], { kind: 'done', names: [job.name] });
@@ -438,7 +379,7 @@ export class RteUploadManager {
   /** Tira os envios da lista, publica, anuncia, emite e anda a fila. */
   private finish(
     jobs: readonly Job[],
-    said: Omit<RteUploadAnnouncement, 'n'> | null,
+    said: Said | null,
     error?: RteUploadErrorEvent,
   ): void {
     const gone = new Set(jobs);
@@ -450,6 +391,8 @@ export class RteUploadManager {
       if (error) this.host.emitError(error);
     });
     this.pump();
+    // sem envio ativo, nenhum quadro pendente (E23)
+    if (!this.jobs.some((j) => j.state === 'uploading')) this.frames.cancel();
   }
 
   private removeMarkers(jobs: readonly Job[]): void {
@@ -481,7 +424,7 @@ export class RteUploadManager {
     );
   }
 
-  private announce(a: Omit<RteUploadAnnouncement, 'n'>): void {
+  private announce(a: Said): void {
     this.said.set({ n: ++this.announced, ...a });
   }
 }
