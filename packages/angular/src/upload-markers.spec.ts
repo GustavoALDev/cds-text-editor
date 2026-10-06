@@ -216,17 +216,21 @@ describe('chegada (E9, R7 parcial)', () => {
     expect(getRteHtml(editor)).toBe('<p></p>');
   });
 
-  it('digitação logo antes não é desfeita junto (closeHistory)', () => {
-    const editor = markersEditor('<p>ab</p><p></p>');
-    addGesture(editor, 1, { pos: 5 });
+  it('edição adjacente logo antes não é desfeita junto (closeHistory)', () => {
+    const editor = markersEditor('<p>ab</p>');
     caret(editor, 3);
-    editor.view.dispatch(editor.state.tr.insertText('x', 3));
-    expect(markerPos(editor, 'm1')).toBe(6);
+    addGesture(editor, 1, { pos: 3 });
+    // dentro do `newGroupDelay` e com faixas adjacentes: sem `closeHistory`
+    // o histórico fundiria a divisão e a chegada num passo só
+    editor.commands.splitBlock();
+    expect(getRteHtml(editor)).toBe('<p>ab</p><p></p>');
+    expect(markerPos(editor, 'm1')).toBe(5);
     expect(arrive(editor, 'm1')).toBe(true);
-    editor.commands.undo();
-    expect(getRteHtml(editor)).toBe('<p>abx</p><p></p>');
+    expect(mediaSrcs(editor.state.doc)).toEqual(['/m1.png']);
     editor.commands.undo();
     expect(getRteHtml(editor)).toBe('<p>ab</p><p></p>');
+    editor.commands.undo();
+    expect(getRteHtml(editor)).toBe('<p>ab</p>');
   });
 
   it('foco e cursor no marcador: NodeSelection no nó, com rolagem', () => {
@@ -428,6 +432,43 @@ describe('ordem do gesto (E11, R6)', () => {
       '/m2.png',
       '/m3.png',
     ]);
+  });
+
+  it('desfazer uma chegada não liga o irmão a outra imagem de mesmo src', () => {
+    const IMG =
+      '<figure class="rt-figure rt-figure--center"><img src="/x.png" alt="A"></figure>';
+    const editor = markersEditor(`${IMG}<p>z</p><p>abc</p>`);
+    selectText(editor, 'abc', 1);
+    const pos = editor.state.selection.to;
+    addGesture(editor, 2, { pos });
+    expect(arrive(editor, 'm1', '/x.png')).toBe(true);
+    editor.commands.undo();
+    expect(uploadState(editor).placed.every((p) => p.from === p.to)).toBe(true);
+    expect(arrive(editor, 'm2')).toBe(true);
+    // o m2 cai no próprio marcador (depois de abc), não junto da /x.png
+    const { doc } = editor.state;
+    expect(mediaSrcs(doc)).toEqual(['/x.png', '/m2.png']);
+    expect(doc.child(1).textContent).toBe('z');
+    expect(doc.child(2).textContent).toBe('abc');
+    expect(doc.child(3).type.name).toBe('rtImage');
+  });
+
+  it('mídia substituída por digitação e o desfazer: a faixa é retomada no ponto', () => {
+    const editor = markersEditor('<hr>');
+    addGesture(editor, 3, { pos: 1 });
+    expect(arrive(editor, 'm3', '/c.png')).toBe(true);
+    expect(arrive(editor, 'm2', '/b.png')).toBe(true);
+    // a digitação substitui a /c.png selecionada e se funde no histórico com
+    // a chegada anterior (faixas adjacentes): o desfazer leva as duas
+    editor.view.dispatch(
+      editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, 2)),
+    );
+    editor.commands.insertContent('t');
+    expect(mediaSrcs(editor.state.doc)).toEqual(['/b.png']);
+    editor.commands.undo();
+    expect(mediaSrcs(editor.state.doc)).toEqual(['/c.png']);
+    expect(arrive(editor, 'm1', '/a.png')).toBe(true);
+    expect(mediaSrcs(editor.state.doc)).toEqual(['/a.png', '/c.png']);
   });
 
   it('Review Focus 4: mesmo src nos dois, seleção no segundo nó', () => {

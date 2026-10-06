@@ -22,29 +22,48 @@ import {
 
 afterEach(() => destroyTestEditors());
 
+// `near`: deslocamento a partir de um marcador vivo (edições perto do ponto
+// do gesto); sem ele, ou sem marcador, a posição `at`/`a` vale em qualquer
+// lugar do documento
+type Near = { near?: number | undefined };
 type Edit =
   | { op: 'event' }
-  | { op: 'insertText'; at: number }
-  | { op: 'deleteRange'; a: number; b: number }
-  | { op: 'splitBlock'; at: number }
+  | ({ op: 'insertText'; at: number } & Near)
+  | ({ op: 'deleteRange'; a: number; b: number } & Near)
+  | ({ op: 'splitBlock'; at: number } & Near)
   | { op: 'undo' }
   | { op: 'redo' }
-  | { op: 'paste'; at: number; html: string };
+  | ({ op: 'paste'; at: number; html: string } & Near);
+
+const near = fc.option(fc.integer({ min: -3, max: 3 }), {
+  nil: undefined,
+  freq: 2,
+});
 
 const editArb: fc.Arbitrary<Edit> = fc.oneof(
   { weight: 4, arbitrary: fc.constant({ op: 'event' as const }) },
-  fc.record({ op: fc.constant('insertText' as const), at: fc.nat() }),
+  fc.record({
+    op: fc.constant('insertText' as const),
+    at: fc.nat(),
+    near,
+  }),
   fc.record({
     op: fc.constant('deleteRange' as const),
     a: fc.nat(),
     b: fc.nat(),
+    near,
   }),
-  fc.record({ op: fc.constant('splitBlock' as const), at: fc.nat() }),
+  fc.record({
+    op: fc.constant('splitBlock' as const),
+    at: fc.nat(),
+    near,
+  }),
   fc.constant({ op: 'undo' as const }),
   fc.constant({ op: 'redo' as const }),
   fc.record({
     op: fc.constant('paste' as const),
     at: fc.nat(),
+    near,
     html: fc.constantFrom('<p>p</p>', '<b>q</b>', '<p>r</p><p>s</p>'),
   }),
 );
@@ -82,16 +101,25 @@ function caretAt(editor: Editor, at: number): void {
   );
 }
 
+/** Posição da edição: perto de um marcador vivo (`near`) ou `at` livre. */
+function placeOf(editor: Editor, at: number, offset: number | undefined) {
+  const size = editor.state.doc.content.size;
+  const ref = uploadState(editor).markers[0]?.pos;
+  if (offset === undefined || ref === undefined) return at % (size + 1);
+  return Math.max(0, Math.min(size, ref + offset));
+}
+
 function runEdit(editor: Editor, e: Exclude<Edit, { op: 'event' }>): void {
   switch (e.op) {
     case 'insertText':
-      caretAt(editor, e.at);
+      caretAt(editor, placeOf(editor, e.at, e.near));
       editor.commands.insertContent('t');
       return;
     case 'deleteRange': {
       const size = editor.state.doc.content.size + 1;
-      const a = e.a % size;
-      const b = e.b % size;
+      const a = placeOf(editor, e.a, e.near);
+      const b =
+        e.near === undefined ? e.b % size : Math.min(size - 1, a + (e.b % 6));
       try {
         editor.commands.deleteRange({
           from: Math.min(a, b),
@@ -108,7 +136,7 @@ function runEdit(editor: Editor, e: Exclude<Edit, { op: 'event' }>): void {
       return;
     }
     case 'splitBlock':
-      caretAt(editor, e.at);
+      caretAt(editor, placeOf(editor, e.at, e.near));
       editor.commands.splitBlock();
       return;
     case 'undo':
@@ -118,10 +146,23 @@ function runEdit(editor: Editor, e: Exclude<Edit, { op: 'event' }>): void {
       editor.commands.redo();
       return;
     case 'paste':
-      caretAt(editor, e.at);
+      caretAt(editor, placeOf(editor, e.at, e.near));
       editor.view.pasteHTML(e.html, new Event('paste') as ClipboardEvent);
       return;
   }
+}
+
+/** Faixas `[from, to)` das mídias do gesto, em ordem do documento. */
+function gestureSpans(doc: ProseMirrorNode): [number, number][] {
+  const out: [number, number][] = [];
+  doc.descendants((node, pos) => {
+    if (SRC.test(String(node.attrs['src'] ?? ''))) {
+      out.push([pos, pos + node.nodeSize]);
+      return false;
+    }
+    return true;
+  });
+  return out;
 }
 
 const emptyParagraphs = (doc: ProseMirrorNode) => {
@@ -228,6 +269,11 @@ describe('ordem do gesto: propriedade (R6, E11)', () => {
           expect(indices).toEqual([...indices].sort((a, b) => a - b));
           if (!edited) {
             expect(indices).toHaveLength(arrived);
+            // E11: sem edições, as mídias do gesto são irmãs em sequência
+            const spans = gestureSpans(editor.state.doc);
+            for (let i = 1; i < spans.length; i += 1) {
+              expect(spans[i]?.[0]).toBe(spans[i - 1]?.[1]);
+            }
             // Ruling 7: só sem edições, e com todos chegando
             if (arrived === c.n && originEmpty) {
               expect(emptyParagraphs(editor.state.doc)).toBe(emptyBefore - 1);

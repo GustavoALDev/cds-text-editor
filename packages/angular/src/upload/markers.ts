@@ -1,3 +1,4 @@
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { Mapping } from '@tiptap/pm/transform';
 import {
   Plugin,
@@ -22,8 +23,8 @@ export interface RteUploadMarker {
 
 /**
  * Mídia de um gesto já inserida (E11): faixa `[from, to)` do nó, mais o tipo
- * e o `src` para reencontrá-lo quando a faixa se perde (desfazer e refazer
- * devolvem o nó sem que o mapeamento o acompanhe).
+ * e o `src` para retomar a faixa quando o nó volta no mesmo ponto (desfazer e
+ * refazer devolvem o nó sem que o mapeamento o acompanhe).
  */
 export interface RteUploadPlaced {
   readonly gesture: number;
@@ -66,10 +67,41 @@ export function uploadMetaTransaction(
   return state.tr.setMeta(RTE_UPLOAD_KEY, meta).setMeta('addToHistory', false);
 }
 
-/** Marcadores e mídias inseridas: nunca descartados pelo mapeamento. */
+const isSame = (node: ProseMirrorNode | null | undefined, p: RteUploadPlaced) =>
+  !!node && node.type.name === p.typeName && node.attrs['src'] === p.src;
+
+/**
+ * Faixa da mídia `p` no ponto `at` do documento: o nó que começa **ou**
+ * termina exatamente ali, com o mesmo tipo e `src`; senão o ponto colapsado
+ * (a mídia conta como apagada e não ordena nada).
+ */
+function reacquire(
+  doc: ProseMirrorNode,
+  p: RteUploadPlaced,
+  at: number,
+): RteUploadPlaced {
+  const after = doc.nodeAt(at);
+  if (after && isSame(after, p)) {
+    return { ...p, from: at, to: at + after.nodeSize };
+  }
+  const before = doc.resolve(at).nodeBefore;
+  if (before && isSame(before, p)) {
+    return { ...p, from: at - before.nodeSize, to: at };
+  }
+  return { ...p, from: at, to: at };
+}
+
+/**
+ * Marcadores e mídias inseridas: nunca descartados pelo mapeamento. A faixa
+ * de uma mídia que deixa de conter o nó (apagado ou substituído) colapsa num
+ * ponto; se um nó do mesmo tipo e `src` voltar **exatamente** nesse ponto
+ * (refazer a chegada depois de desfazê-la, desfazer a substituição), a faixa
+ * é retomada; qualquer outro nó com o mesmo `src` não conta.
+ */
 function mapState(
   prev: RteUploadPluginState,
   mapping: Mapping,
+  doc: ProseMirrorNode,
 ): Pick<RteUploadPluginState, 'markers' | 'placed'> {
   const markers = prev.markers.map((m) => ({
     ...m,
@@ -77,14 +109,14 @@ function mapState(
     pos: mapping.map(m.pos, 1),
   }));
   const placed = prev.placed.map((p) => {
-    if (p.from >= p.to) {
-      // faixa perdida: só um ponto de referência até reencontrar o nó
-      const at = mapping.map(p.from, -1);
-      return { ...p, from: at, to: at };
-    }
+    if (p.from >= p.to) return reacquire(doc, p, mapping.map(p.from, -1));
     const from = mapping.map(p.from, 1);
     const to = mapping.map(p.to, -1);
-    return from < to ? { ...p, from, to } : { ...p, from, to: from };
+    const node = from < to ? doc.nodeAt(from) : null;
+    if (node && isSame(node, p) && from + node.nodeSize === to) {
+      return { ...p, from, to };
+    }
+    return reacquire(doc, p, mapping.map(p.from, -1));
   });
   return { markers, placed };
 }
@@ -122,7 +154,7 @@ export function createUploadMarkersPlugin(
         const meta = tr.getMeta(RTE_UPLOAD_KEY) as RteUploadMeta | undefined;
         if (!meta && (!tr.docChanged || !prev.markers.length)) return prev;
         const { markers, placed } = applyMeta(
-          tr.docChanged ? mapState(prev, tr.mapping) : prev,
+          tr.docChanged ? mapState(prev, tr.mapping, next.doc) : prev,
           meta,
         );
         if (!markers.length) return EMPTY;

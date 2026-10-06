@@ -46,7 +46,10 @@ export function selectOnArrival(editor: Editor, id: string): boolean {
   );
 }
 
-/** Tipo e `src` do nó que o comando do core inseriu, e onde (o último passo). */
+/**
+ * Tipo e `src` do nó que o comando do core inseriu, e onde (o último passo);
+ * se o último passo não insere um nó do tipo esperado, os valores de entrada.
+ */
 function insertedBy(
   props: CommandProps,
   fallback: { typeName: string; src: string; near: number },
@@ -55,6 +58,7 @@ function insertedBy(
   const node =
     last instanceof ReplaceStep ? last.slice.content.firstChild : null;
   if (!node || !(last instanceof ReplaceStep)) return fallback;
+  if (node.type.name !== fallback.typeName) return fallback;
   return {
     typeName: node.type.name,
     src: String(node.attrs['src']),

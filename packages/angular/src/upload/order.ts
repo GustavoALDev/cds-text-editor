@@ -15,20 +15,19 @@ interface Located {
 }
 
 /**
- * Posição do nó de tipo `typeName` e `src` mais perto de `near` (lição 14),
- * ignorando as posições de `skip`; `null` se não houver.
+ * Posição do nó de tipo `typeName` e `src` mais perto de `near` (lição 14);
+ * `null` se não houver.
  */
 export function findInsertedNear(
   doc: ProseMirrorNode,
   typeName: string,
   src: string,
   near: number,
-  skip: ReadonlySet<number> = new Set(),
 ): number | null {
   let best: number | null = null;
   doc.descendants((node, pos) => {
     if (node.type.name !== typeName) return true;
-    if (node.attrs['src'] === src && !skip.has(pos)) {
+    if (node.attrs['src'] === src) {
       if (best === null || Math.abs(pos - near) < Math.abs(best - near)) {
         best = pos;
       }
@@ -38,6 +37,7 @@ export function findInsertedNear(
   return best;
 }
 
+/** A faixa ainda contém o nó registrado (mesmo tipo, `src` e tamanho). */
 function holds(doc: ProseMirrorNode, p: RteUploadPlaced): boolean {
   if (p.from >= p.to || p.to > doc.content.size) return false;
   const node = doc.nodeAt(p.from);
@@ -50,33 +50,17 @@ function holds(doc: ProseMirrorNode, p: RteUploadPlaced): boolean {
 }
 
 /**
- * Mídias já inseridas do gesto, no documento atual: pela faixa mapeada ou,
- * perdida (desfazer/refazer devolvem o nó sem que o mapeamento o siga), pelo
- * nó de mesmo tipo e `src` mais perto do último ponto conhecido. Mídia que
- * não está mais no documento não ordena nada.
+ * Mídias já inseridas do gesto, no documento atual: só as de faixa válida (o
+ * *plugin* retoma a faixa quando o nó volta no mesmo ponto). Mídia apagada
+ * não ordena nada.
  */
 function locate(
   doc: ProseMirrorNode,
   placed: readonly RteUploadPlaced[],
 ): Located[] {
-  const claimed = new Set<number>();
-  const out: Located[] = [];
-  const lost: RteUploadPlaced[] = [];
-  for (const p of placed) {
-    if (holds(doc, p) && !claimed.has(p.from)) {
-      claimed.add(p.from);
-      out.push({ index: p.index, from: p.from, to: p.to });
-    } else lost.push(p);
-  }
-  for (const p of lost) {
-    const near = Math.min(p.from, doc.content.size);
-    const pos = findInsertedNear(doc, p.typeName, p.src, near, claimed);
-    const node = pos === null ? null : doc.nodeAt(pos);
-    if (pos === null || !node) continue;
-    claimed.add(pos);
-    out.push({ index: p.index, from: pos, to: pos + node.nodeSize });
-  }
-  return out;
+  return placed
+    .filter((p) => holds(doc, p))
+    .map((p) => ({ index: p.index, from: p.from, to: p.to }));
 }
 
 const isEmptyParagraph = (node: ProseMirrorNode) =>
