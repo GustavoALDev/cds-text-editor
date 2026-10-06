@@ -44,15 +44,17 @@ export function validateUploadFile(
     : { ok: true, type: 'image' };
 }
 
-const MIME_EXTENSION: Readonly<Record<string, string>> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/gif': 'gif',
-  'image/webp': 'webp',
-  'image/avif': 'avif',
-  'video/mp4': 'mp4',
-  'video/webm': 'webm',
-};
+const MIME_EXTENSION: Readonly<Record<string, string>> = Object.freeze(
+  Object.assign(Object.create(null) as Record<string, string>, {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/gif': 'gif',
+    'image/webp': 'webp',
+    'image/avif': 'avif',
+    'video/mp4': 'mp4',
+    'video/webm': 'webm',
+  }),
+);
 
 /**
  * Nome exibido (pré-voo 14): o nome aparado ou, vazio, `image.<ext>` /

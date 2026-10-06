@@ -93,6 +93,44 @@ describe('readUploadedMedia (E6)', () => {
     ).toEqual({ ok: false });
   });
 
+  it('candidatos do srcset fora de mediaHosts, data: e javascript: recusados', () => {
+    const r = rules().hosted;
+    for (const srcset of [
+      'https://outro.example.test/a.png 1x',
+      'https://media.example.test/a.png 1x, data:image/png;base64,AAAA 2x',
+      'https://media.example.test/a.png 1x, javascript:alert(1) 2x',
+    ]) {
+      expect(
+        readUploadedMedia(
+          'image',
+          { url: 'https://media.example.test/a.png', srcset },
+          r,
+        ),
+      ).toEqual({ ok: false });
+    }
+  });
+
+  it('poster fora de mediaHosts recusado; string vazia é recusada (estrito, E6)', () => {
+    const r = rules().hosted;
+    expect(
+      readUploadedMedia(
+        'video',
+        {
+          url: 'https://media.example.test/a.mp4',
+          poster: 'https://outro.example.test/p.png',
+        },
+        r,
+      ),
+    ).toEqual({ ok: false });
+    expect(
+      readUploadedMedia(
+        'video',
+        { url: 'https://media.example.test/a.mp4', poster: '' },
+        r,
+      ),
+    ).toEqual({ ok: false });
+  });
+
   it('srcset válido entra canônico', () => {
     const out = readUploadedMedia(
       'image',
@@ -155,6 +193,12 @@ describe('uploadReason (E4)', () => {
     );
     expect(uploadReason(new Error('x'))).toBe('server');
     expect(uploadReason(null)).toBe('server');
+    const hostile = {
+      get name(): string {
+        throw new Error('x');
+      },
+    };
+    expect(uploadReason(hostile)).toBe('server');
     expect(uploadReason('network')).toBe('server');
   });
 });

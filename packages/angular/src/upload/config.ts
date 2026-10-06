@@ -22,16 +22,24 @@ export const RTE_UPLOAD_VIDEO_TYPES: readonly RteUploadVideoMime[] = [
 /** Extensão (minúscula) → tipo, para o MIME vazio (E5). */
 export const RTE_UPLOAD_EXTENSIONS: Readonly<
   Record<string, RteUploadImageMime | RteUploadVideoMime>
-> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  gif: 'image/gif',
-  webp: 'image/webp',
-  avif: 'image/avif',
-  mp4: 'video/mp4',
-  webm: 'video/webm',
-};
+> = Object.freeze(
+  Object.assign(
+    Object.create(null) as Record<
+      string,
+      RteUploadImageMime | RteUploadVideoMime
+    >,
+    {
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      gif: 'image/gif',
+      webp: 'image/webp',
+      avif: 'image/avif',
+      mp4: 'video/mp4',
+      webm: 'video/webm',
+    },
+  ),
+);
 
 const DEFAULT_MAX_IMAGE = 10 * 1024 * 1024;
 const DEFAULT_MAX_VIDEO = 200 * 1024 * 1024;
@@ -59,7 +67,11 @@ function subset<T extends string>(
   allowed: readonly T[],
   discarded: string[],
 ): readonly T[] {
-  if (!Array.isArray(requested)) return allowed;
+  if (requested === undefined) return allowed;
+  if (!Array.isArray(requested)) {
+    discarded.push('(valor que não é lista)');
+    return allowed;
+  }
   const out: T[] = [];
   for (const t of requested as readonly T[]) {
     if (allowed.includes(t)) {

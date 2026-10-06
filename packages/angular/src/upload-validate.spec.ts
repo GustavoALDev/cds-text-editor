@@ -57,6 +57,11 @@ describe('validateUploadFile (E5, tabela)', () => {
       { ok: false, type: 'video', reason: 'size' },
     ],
     ['a.mp4', '', 1, { ok: true, type: 'video' }],
+    ['x.constructor', '', 1, { ok: false, type: 'image', reason: 'type' }],
+    ['x.__proto__', '', 1, { ok: false, type: 'image', reason: 'type' }],
+    ['x.CONSTRUCTOR', '', 1, { ok: false, type: 'image', reason: 'type' }],
+    ['x.toString', '', 1, { ok: false, type: 'image', reason: 'type' }],
+    ['x.hasOwnProperty', '', 1, { ok: false, type: 'image', reason: 'type' }],
   ])('%s / "%s" / %d B', (name, type, size, expected) => {
     expect(validateUploadFile(file(name, type, size), cfg())).toEqual(expected);
   });
@@ -106,6 +111,13 @@ describe('validateUploadFile (E5, tabela)', () => {
     expect(c.preview).toBe(false);
     expect(cfg({ maxFilesPerAction: 3 }).maxFilesPerAction).toBe(3);
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('imageTypes/videoTypes que não são lista: aviso 1× e padrão', () => {
+    const c = cfg({ imageTypes: 'image/png' as never, videoTypes: 5 as never });
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(c.imageTypes).toHaveLength(5);
+    expect(c.videoTypes).toHaveLength(2);
   });
 
   it('videoTypes fica vazio sem uploadVideo', () => {
@@ -166,6 +178,9 @@ describe('validateUploadFile (E5, propriedade)', () => {
           '.PNG',
           '.Mp4',
           '.svg',
+          '.constructor',
+          '.__proto__',
+          '.toString',
           '.txt',
           '.',
         ),
@@ -222,6 +237,9 @@ describe('validateUploadFile (E5, propriedade)', () => {
           expect(result.ok).toBe(typeOk && sizeOk);
           if (!result.ok) {
             expect(result.reason).toBe(typeOk ? 'size' : 'type');
+            expect(result.type).toBe(
+              effective.startsWith('video/') ? 'video' : 'image',
+            );
           } else {
             expect(result.type).toBe(isImage ? 'image' : 'video');
           }
@@ -240,6 +258,8 @@ describe('displayName (pré-voo 14)', () => {
     expect(displayName({ name: '', type: 'image/jpeg' })).toBe('image.jpg');
     expect(displayName({ name: '', type: 'video/webm' })).toBe('video.webm');
     expect(displayName({ name: '', type: '' })).toBe('image');
+    expect(displayName({ name: '', type: 'constructor' })).toBe('image');
+    expect(displayName({ name: '', type: '__proto__' })).toBe('image');
   });
 
   it('funciona com File real', () => {

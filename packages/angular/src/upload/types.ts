@@ -97,15 +97,19 @@ export interface RteUploadText {
  * crie erros sem importar o principal. Tudo o mais vale `'server'`.
  */
 export function uploadReason(e: unknown): AdapterReason {
-  if (e instanceof RteUploadError) return e.reason;
-  if (typeof e === 'object' && e !== null) {
-    const { name, reason } = e as { name?: unknown; reason?: unknown };
-    if (
-      name === 'RteUploadError' &&
-      (reason === 'network' || reason === 'server' || reason === 'response')
-    ) {
-      return reason;
+  try {
+    if (e instanceof RteUploadError) return e.reason;
+    if (typeof e === 'object' && e !== null) {
+      const { name, reason } = e as { name?: unknown; reason?: unknown };
+      if (
+        name === 'RteUploadError' &&
+        (reason === 'network' || reason === 'server' || reason === 'response')
+      ) {
+        return reason;
+      }
     }
+  } catch {
+    // getter que lança: vale 'server'
   }
   return 'server';
 }
