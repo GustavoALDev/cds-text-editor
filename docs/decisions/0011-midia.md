@@ -41,7 +41,7 @@ Diretrizes **P1–P16** (Apêndice A da spec, para a 05c2; **não implementadas 
 1. Os ícones `image`/`video`/`embed` passam da T2 para a T3 (junto dos ids da barra); a T2 acrescenta só `mediaDetails`: `RteIconName` deriva de `RteToolbarItemId` e o teste de chaves quebraria duas vezes.
 2. A prova "menus fora do principal" usa `grep -c "rte-video-form"` e `grep -cE "\.videoDetails\b|\.embedDetails\b|removeMedia"` no `cds-rte-angular.mjs` (→ 0); o `grep videoDetails` cru acha a chave de `RTE_LABELS_EN`, que é do _chunk_ principal por desenho (D15).
 3. O N31 (zone) não usa "`zoneTurns()` igual antes e depois de 20 teclas": cada tecla emite `value` por `zone.run` (D8). Guarda real: ver ruling R-T13-2.
-4. Comando de mídia que devolve `false` fecha o diálogo **como cancelamento** (V9): foco devolvido à origem ou ao editável, documento intacto, aviso `[rte-editor]` 1× em `isDevMode()`. A spec vence o pré-voo 8. `controller.ts` ganhou o `restoreFocus` na recusa (vale para os sete diálogos).
+4. Comando de mídia que devolve `false` fecha o diálogo **como cancelamento** (V9): foco devolvido à origem ou ao editável, documento intacto, aviso `[rte-editor]` 1× em `isDevMode()`. A spec vence o pré-voo 8. `controller.ts` ganhou o `restoreFocus` na recusa (vale para os sete diálogos), só com o documento intacto (revisão final: a cadeia do Tiptap dos diálogos antigos despacha mesmo com um passo `false`, e então o foco fica onde o comando o deixou).
 5. **Desvio da V16 (rota `media`):** CSP com `img-src` e `media-src 'self' https://media.example.test` além do `frame-src` dos três provedores. Sem isso o N27 com `https://media.example.test/a.png` gera violação antes de o `context.route` responder; é a CSP de consumidor que o README documenta. As outras rotas seguem com a CSP estrita da 05a.
 6. **Ausência de MP4 (pré-voo 16, desvio da §6.2/§9):** só `e2e.webm` (VP8) e `e2e.vtt`. Gerar H.264 exigiria dependência nova (R1). O N28 confere `textTracks` nos 3 motores; no WebKit (sem VP8 no Linux) a prova de carga da _cue_ foi feita mesmo assim (o `.vtt` carrega) e o resto só pelo DOM. Pendência abaixo.
 7. A propriedade R6 de imagem e vídeo exercita o **validador do formulário** contra `normalizeAttribute(regra do schema(), s.trim())`, com o caso pelo DOM (aceito ⇒ `src` canônico, recusado ⇒ HTML inalterado); comparar `canonicalMediaUrl` com a fórmula que a define seria teste-espelho. A do _embed_ compara com um editor de controle separado.
@@ -55,16 +55,22 @@ Diretrizes **P1–P16** (Apêndice A da spec, para a 05c2; **não implementadas 
 15. A página `media` do app de teste mostra também o último `mediaChange` e o `mediaSession()` (`<output>`/`<pre>` com `data-testid`), além da ponte.
 16. Listas de `RteMediaChange`/`RteMediaSession` ordenadas por unidade de código (`a < b`), não `localeCompare` (determinístico entre jsdom e os 3 motores).
 
-**Execução:**
+**Execução** (numeração do _ledger_ `progress.md`, a mesma das citações deste ADR):
 
 17. Modelos: Opus nas tarefas 3–9 e revisões delas; Sonnet nas demais (otimização aprovada pelo usuário).
-18. Revisões em paralelo com a tarefa seguinte quando os arquivos são disjuntos (rulings 18, 21, 22, 23, 25, 26, 28, 30 do _ledger_).
+18. Revisão da T1 em paralelo com a T2 (arquivos disjuntos).
 19. **Vídeo com mais de 10 faixas** (HTML colado): todas as faixas são carregadas, "Acrescentar faixa" fica desabilitado com ≥ 10, sem erro de formulário, e aplicar preserva todas. Um corte (`slice`) descartaria faixas em silêncio, contra a R4.
 20. **Tamanho do _chunk_ dos diálogos aceito:** estimativa ~10,5–10,9 kB, medido 10022 B (< 11 kB e < 12 kB da V3), sem segundo `@defer`. **A 05c2 começa separando os formulários de mídia num `@defer` próprio** (um _chunk_ `media`, auxiliares no principal) antes dos campos de arquivo.
-21. Revisão da T6 em paralelo com a T7; 22. revisão da T7 (só testes) com a T8; 23. da T8 com a T9; 25. da T10 com a T11; 26. da T11 com a T12; 28. da T12 com a T13; 30. da T13 com a T14.
-22. **URLs canônicas na sessão:** o rastreador normaliza os endereços com as mesmas regras do esquema que o `renderHTML` usa e descarta os inválidos (`updateAttributes`, `setContent` por JSON e `setNodeMarkup` incluídos), e `mediaChange` só sai junto de `value`. Contar valores crus produziria `removed` de uma URL ainda presente no HTML, risco de exclusão no `onMediaRemoved` da 05c2.
-23. **Os botões de `.rte-dialog__actions` não tiram o foco do campo:** `mousedown` com `preventDefault` (em vez de "não marcar como tocado quando o foco vai para as ações", como a ruling do _ledger_ pedia; mesmo efeito, aceita). Motivo: no Firefox o clique em "Aplicar" logo depois do `blur` de um campo se perdia porque o erro inline que aparecia deslocava o botão entre `mousedown` e `mouseup`. Vale para os sete formulários (defeito de produto pré-existente, achado na T11).
-24. **R14 é limite do custo do _rastreador_** (redação da spec: "o rastreador não pode somar mais de 1 ms à mediana"). Guarda do N32 = ouvintes de `transaction` menos a serialização, pareado por tecla, com B−A ≤ 1 ms e B ≤ 1 ms. O B−A da tecla inteira é informativo (ver (d)).
+21. Revisão da T6 em paralelo com a T7.
+22. Revisão da T7 (só testes) em paralelo com a T8.
+23. Revisão da T8 em paralelo com a T9.
+24. **URLs canônicas na sessão:** o rastreador normaliza os endereços com as mesmas regras do esquema que o `renderHTML` usa e descarta os inválidos (`updateAttributes`, `setContent` por JSON e `setNodeMarkup` incluídos), e `mediaChange` só sai junto de `value`. Contar valores crus produziria `removed` de uma URL ainda presente no HTML, risco de exclusão no `onMediaRemoved` da 05c2.
+25. Revisão da T10 em paralelo com a T11.
+26. Revisão da T11 em paralelo com a T12.
+27. **Os botões de `.rte-dialog__actions` não tiram o foco do campo:** `mousedown` com `preventDefault` (em vez de "não marcar como tocado quando o foco vai para as ações", como a ruling do _ledger_ pedia; mesmo efeito, aceita). Motivo: no Firefox o clique em "Aplicar" logo depois do `blur` de um campo se perdia porque o erro inline que aparecia deslocava o botão entre `mousedown` e `mouseup`. Vale para os sete formulários (defeito de produto pré-existente, achado na T11).
+28. Revisão da T12 em paralelo com a T13.
+29. **R14 é limite do custo do _rastreador_** (redação da spec: "o rastreador não pode somar mais de 1 ms à mediana"). Guarda do N32 = ouvintes de `transaction` menos a serialização, pareado por tecla, com B−A ≤ 1 ms e B ≤ 1 ms. O B−A da tecla inteira é informativo (ver (d)).
+30. Revisão da T13 em paralelo com a T14.
 
 **Rulings de tarefa:**
 
@@ -104,7 +110,7 @@ Tamanho (`min+gzip`, Angular, Tiptap, `@cds/*`, `lowlight` e `highlight.js` exte
 | `i18n`       | 2643          | 3749  | 3072            | 4352            |
 | `validators` | 1156          | 1156  | 1344            | 1344 (igual)    |
 
-O `editor` cresceu +3019 B (a expectativa da R15 era ~1,5 kB: o rastreador de mídia, o `RteDialogFormBase`/ajudantes que ficam no principal para não criar um terceiro _chunk_, os itens e _presets_ e os rótulos em inglês, que são do principal); o `dialogs` +4974 B (dentro dos 4–6 kB); o `floating` +363 B; o `i18n` +1106 B (rótulos novos em pt-BR e es). **V3:** `dialogs` = 10022 B < 12288 B: nenhum segundo `@defer` agora (ruling 20); a 05c2 começa por separar os formulários de mídia.
+O `editor` cresceu +3019 B (a expectativa da R15 era ~1,5 kB: o rastreador de mídia, os itens e _presets_ e os rótulos em inglês, que são do principal); o `dialogs` +4974 B (dentro dos 4–6 kB); o `floating` +363 B; o `i18n` +1106 B (rótulos novos em pt-BR e es). O `RteDialogFormBase` e os ajudantes de formulário (`focusFirstInvalid`, `langCodeValidator`, `dialogErrorText`) ficam no _chunk_ `rte-dialogs`, como `runMedia` e `canonicalMediaUrl` (conferido no `dist`): só os diálogos os usam, então não vão ao principal nem criam um terceiro _chunk_. **V3:** `dialogs` = 10022 B < 12288 B: nenhum segundo `@defer` agora (ruling 20); a 05c2 começa por separar os formulários de mídia.
 
 R1 (`grep -c`): `rte-core/embeds` no _chunk_ dos diálogos = 0; `rte-video-form` no _chunk_ dos menus e no principal = 0; `videoDetails` no _chunk_ dos diálogos = 0; `\.videoDetails|\.embedDetails|removeMedia` no principal = 0. Um único _chunk_ `rte-dialogs-<hash>` e um único `rte-floating-menus-<hash>`.
 
@@ -137,7 +143,19 @@ Achados reais do navegador (todos com teste antes da correção):
 
 ## Revisão final
 
-Revisões por tarefa (spec ✅) com correções aceitas: T1 classe base `RteDialogFormBase` e `form-helpers.ts`; T5 faixas > 10; T9 URLs canônicas e `mediaChange` só com `value` (ruling 24); T11 clique perdido (ruling 27) e cobertura de editar/remover, foco e `Mod+Z`; T12 `MEDIA_FIXTURE` com imagem sem alt, N29 com `embed: false`. Menores aceitos sem mudança (onda final): teste de recusa parcial em modo editar; largura não numérica apaga em silêncio (ruling T4); `hostValue` mutável no `dialog-defer.spec`; id de rótulo órfão no URL somente leitura do _embed_ (o rótulo é um `span`, ruling T6); rótulo "Endereço da página" mostrando o `src` do player; busca do nó duplicada; `removeImage` sem uso em `commands.ts`; `rte-floating-menus.ts` (507 linhas) para extrair um `placement-controller.ts`; `nav-media` mantém o CSP estrito da home; `media-alt` devolve `null`/0 em silêncio.
+Revisões por tarefa (spec ✅) com correções aceitas: T1 classe base `RteDialogFormBase` e `form-helpers.ts`; T5 faixas > 10; T9 URLs canônicas e `mediaChange` só com `value` (ruling 24); T11 clique perdido (ruling 27) e cobertura de editar/remover, foco e `Mod+Z`; T12 `MEDIA_FIXTURE` com imagem sem alt, N29 com `embed: false`. Menores aceitos sem mudança na onda das tarefas: teste de recusa parcial em modo editar; largura não numérica apaga em silêncio (ruling T4); `hostValue` mutável no `dialog-defer.spec`; rótulo "Endereço da página" mostrando o `src` do player; busca do nó duplicada; `rte-floating-menus.ts` (507 linhas) para extrair um `placement-controller.ts`; `nav-media` mantém o CSP estrito da home.
+
+Revisão final da 05c1 (`5837ed1..2241230`, veredito "pronta com correções"): segurança, fronteiras de _chunk_, sessão de mídia, zona e SSR sem achado; 1 Important e 9 menores corrigidos na onda final, com teste antes da correção:
+
+- **Important:** trocar o endereço de uma imagem no diálogo limpa `srcset`, `sizes` e `height` antigos (a `width` fica, salvo se a pessoa mexeu nela); antes o navegador seguia exibindo os candidatos do `srcset` da imagem antiga e a sessão os contava em `current` (órfãos para o `onMediaRemoved` da 05c2). Só mudar `alt`/legenda preserva `srcset`/`sizes`/`height`.
+- Endereços só de espaços: `required` no endereço de imagem, vídeo e faixa; pôster só de espaços é "sem pôster", sem erro.
+- `restoreFocus` na recusa só com o documento intacto (ruling 4).
+- `removeImage` morto removido do _chunk_ dos menus; `RTE_FLOATING_MEDIA` exaustivo por `satisfies`.
+- Ponte E2E de `media-alt`/`media-key`: `lastMediaChange`/`mediaChanges` lançam erro (sem `(mediaChange)` ligado) em vez de `null`/0.
+- `toolbar.spec.ts` volta a provar que o pedido chega ao `RteDialogController.open`.
+- URL somente leitura do _embed_ num `role="group"` nomeado pelo rótulo; grupo das faixas com `aria-describedby` para o lembrete da WCAG 1.2.2 enquanto não há faixa `captions`.
+
+Aceitos sem mudança: `keepFocus` no `mousedown` das ações; esperas de 600 ms nos E2E; extração do `placement-controller.ts` (na 05d); largura não numérica como vazia (ruling T4); `rteEmbedUrl` em recusa de posição (inalcançável); `nav-media` com a CSP estrita; demais itens da lista "Accepted" da revisão.
 
 ## Pendências conhecidas
 
@@ -153,7 +171,7 @@ Revisões por tarefa (spec ✅) com correções aceitas: T1 classe base `RteDial
 
 ## Consequências
 
-- **05c2:** os diálogos de imagem e de vídeo ganham o campo de arquivo ("endereço **ou** arquivo"); **começa separando os formulários de mídia num `@defer` próprio** (ruling 20); `onMediaRemoved` recebe o `removed` líquido da sessão em `markSaved()`; `rteImagesHaveAlt` usa a contagem de `alt: null` da sessão (V7) via `missingAlt()`; `registerExternal` passa pela mesma regra de URL (V4); as diretrizes P1–P16 viram decisões numeradas, com testes N33 em diante.
+- **05c2:** os diálogos de imagem e de vídeo ganham o campo de arquivo ("endereço **ou** arquivo"); **começa separando os formulários de mídia num `@defer` próprio** (ruling 20); `onMediaRemoved` recebe o `removed` líquido da sessão em `markSaved()`; `rteImagesHaveAlt` usa a contagem de `alt: null` da sessão (V7), mas precisa de um _signal_ próprio dessa contagem: `missingAlt()` é método, não reativo, e a única escrita reativa (`mediaState`) fica atrás do portão do delta de URLs em `onTransaction` (`rte-editor.ts`, `if (!media || !delta || !emitted) return`), então trocar o `alt` de `null` para texto (sem mudar URL) não publicaria nada; a 05c2 escreve esse _signal_ quando a contagem muda, fora do portão; `registerExternal` passa pela mesma regra de URL (V4); as diretrizes P1–P16 viram decisões numeradas, com testes N33 em diante.
 - **05d:** `onUiItem` de `image`/`video`/`embed` chama `openDialog(kind)`; o menu `/` oculta também os menus de vídeo e _embed_; os orçamentos de desempenho somam o N32 (a serialização do D8 é o custo por tecla com mídia, não o rastreador); `api-extractor` cobre `RteMediaChange`, `RteMediaSession`, `mediaChange`, `mediaSession`, `RteDialogKind` e `RteFloatingMenuKind` ampliados.
 - **Spec 06:** nada muda no HTML; a regra de `pointer-events` é só do editor.
 - **Spec 08:** leitores de tela nos diálogos com faixas, teclado virtual, motores mais antigos.
