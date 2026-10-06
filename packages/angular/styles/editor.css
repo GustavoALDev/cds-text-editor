@@ -415,6 +415,11 @@
     gap: 0.25rem 0.5rem;
   }
 
+  /* Origem "Arquivo" ou "Endereço" (05c2a E14): o grupo inativo fica no DOM, oculto. */
+  .rte-editor .rte-dialog__field[hidden] {
+    display: none;
+  }
+
   .rte-editor .rte-dialog__label {
     flex: 0 1 auto;
     font-weight: 500;
@@ -439,7 +444,8 @@
     border-color: var(--rte-danger);
   }
 
-  .rte-editor .rte-dialog__checkbox {
+  .rte-editor .rte-dialog__checkbox,
+  .rte-editor .rte-dialog__radio {
     flex: none;
     min-inline-size: 24px;
     min-block-size: 24px;
@@ -514,6 +520,7 @@
   .rte-editor .rte-dialog__input:focus-visible,
   .rte-editor .rte-dialog__select:focus-visible,
   .rte-editor .rte-dialog__checkbox:focus-visible,
+  .rte-editor .rte-dialog__radio:focus-visible,
   .rte-editor .rte-dialog__apply:focus-visible,
   .rte-editor .rte-dialog__cancel:focus-visible,
   .rte-editor .rte-dialog__remove:focus-visible,

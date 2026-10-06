@@ -3,8 +3,67 @@
   [formRoot]="form"
   (mousedown)="keepFocus($event)"
 >
-  @let srcError = error(form.src);
-  <div class="rte-dialog__field">
+  @if (fileRules(); as rules) {
+  <fieldset class="rte-dialog__fieldset rte-dialog__source">
+    <legend class="rte-dialog__legend">{{ labels().mediaSource }}</legend>
+    <div class="rte-dialog__field">
+      <input
+        class="rte-dialog__radio"
+        type="radio"
+        value="file"
+        [name]="sourceIds().name"
+        [id]="sourceIds().file"
+        [checked]="useFile()"
+        (change)="onSource('file')"
+      />
+      <label class="rte-dialog__label" [for]="sourceIds().file"
+        >{{ labels().mediaSourceFile }}</label
+      >
+    </div>
+    <div class="rte-dialog__field">
+      <input
+        class="rte-dialog__radio"
+        type="radio"
+        value="url"
+        [name]="sourceIds().name"
+        [id]="sourceIds().url"
+        [checked]="!useFile()"
+        (change)="onSource('url')"
+      />
+      <label class="rte-dialog__label" [for]="sourceIds().url"
+        >{{ labels().mediaSourceUrl }}</label
+      >
+    </div>
+  </fieldset>
+  @let fileError = error(form.file);
+  <div class="rte-dialog__field" [hidden]="!useFile()">
+    <label class="rte-dialog__label" [for]="sourceIds().input"
+      >{{ labels().videoFile }}</label
+    >
+    <input
+      #fileInput
+      class="rte-dialog__input rte-dialog__file"
+      type="file"
+      [id]="sourceIds().input"
+      [accept]="rules.accept"
+      [attr.aria-invalid]="fileError ? 'true' : null"
+      [attr.aria-describedby]="
+          sourceIds().input + '-hint' +
+          (fileError ? ' ' + sourceIds().input + '-error' : '')
+        "
+      (change)="onFile($event)"
+    />
+    <p class="rte-dialog__hint" [id]="sourceIds().input + '-hint'">
+      {{ labels().fileHint(rules.typeNames, rules.maxMegabytes) }}
+    </p>
+    @if (fileError) {
+    <p class="rte-dialog__error" [id]="sourceIds().input + '-error'">
+      {{ fileError }}
+    </p>
+    }
+  </div>
+  } @let srcError = error(form.src);
+  <div class="rte-dialog__field" [hidden]="useFile()">
     <label class="rte-dialog__label" [for]="ids().src"
       >{{ labels().videoUrl }}</label
     >

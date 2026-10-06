@@ -16,6 +16,7 @@ import {
 import type { RteAttrRule, RteLinkPolicy } from '@cds/rte-core';
 import type { RteImageAlign } from '@cds/rte-core/extensions';
 import type { RteDialogLabels } from '../labels/types';
+import type { RteDialogUploads } from '../upload/dialog-port';
 import type { RteDialogController, RteDialogRequest } from './controller';
 import { RteDeferFailed } from './defer-failed';
 import type { RteMediaRules } from './media-rules';
@@ -65,6 +66,8 @@ export class RteDialogs {
   /** Nomes dos alinhamentos de imagem, de `floating` (V14). */
   readonly alignNames =
     input.required<Readonly<Record<RteImageAlign, string>>>();
+  /** Porta do envio (05c2a E14); `null` sem adaptador. */
+  readonly uploads = input<RteDialogUploads | null>(null);
 
   protected readonly prefix = `rte-dialog-${++nextInstance}`;
   protected readonly ids = { title: `${this.prefix}-title` };

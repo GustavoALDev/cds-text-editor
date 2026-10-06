@@ -14,7 +14,13 @@ import {
 import { getRteHtml } from '@cds/rte-core/extensions';
 import { validateHtml } from '@cds/rte-core/html';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteEditor, type RteEditorConfig } from '@cds/rte-angular';
+import {
+  RteEditor,
+  type RteEditorConfig,
+  type RteLabelsSource,
+  type RteUploadConfig,
+  type RteUploadErrorEvent,
+} from '@cds/rte-angular';
 import type { Editor } from '@tiptap/core';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import fc from 'fast-check';
@@ -33,6 +39,18 @@ import { selectText } from './testing-support/editors';
 import { ANY_LANG, anyMediaUrl, fcOptions } from './testing-support/media-urls';
 import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
+import {
+  chooseFile,
+  drainUploads,
+  markerPositions,
+  openKind,
+  pngFile,
+  setupUploadDialog,
+  uploadHtml,
+  webmFile,
+  type UploadDialogHost,
+  type UploadDialogSetup,
+} from './testing-support/upload-dialog';
 
 // Spec 05c1, Tarefa 5: diálogo de vídeo e faixas (R4, R6 vídeo; V4, V8).
 
@@ -956,5 +974,201 @@ describe('propriedade R6: aceito ⇔ a regra do esquema aceita', () => {
     );
     // O ramo "aceito" foi exercitado (ao menos os exemplos fixos).
     expect(accepted).toBeGreaterThanOrEqual(2);
+  });
+});
+
+@Component({
+  selector: 'rte-test-upload-dialog-host',
+  imports: [RteEditor],
+  template: `<rte-editor
+    [value]="value()"
+    [upload]="upload()"
+    [labels]="labels()"
+    (valueChange)="changes = changes + 1"
+    (uploadError)="errors.push($event)"
+    toolbar="full"
+  />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class UploadHost implements UploadDialogHost {
+  readonly value = signal('<p></p>');
+  readonly upload = signal<RteUploadConfig | null>(null);
+  readonly labels = signal<RteLabelsSource | undefined>(undefined);
+  changes = 0;
+  readonly errors: RteUploadErrorEvent[] = [];
+  readonly cmp = viewChild.required(RteEditor);
+}
+
+// Spec 05c2a, Tarefa 10: origem "Arquivo" ou "Endereço" no vídeo (E14; R9, R7).
+
+const VIDEO_FILE = 'Video file';
+const VIDEO_ACCEPT = 'video/mp4,video/webm,.mp4,.webm';
+const VIDEO_HINT = 'Accepted: MP4, WebM. Up to 200 MB.';
+
+function uploadSource(d: HTMLElement): HTMLFieldSetElement | null {
+  return d.querySelector<HTMLFieldSetElement>(
+    'fieldset.rte-dialog__fieldset.rte-dialog__source',
+  );
+}
+
+function videoFileInput(d: HTMLElement): HTMLInputElement {
+  const input = d.querySelector<HTMLInputElement>('input[type="file"]');
+  if (!input) throw new Error('campo de arquivo ausente');
+  return input;
+}
+
+async function clickIn(
+  s: UploadDialogSetup,
+  d: HTMLElement,
+  selector: string,
+): Promise<void> {
+  const b = d.querySelector<HTMLButtonElement>(selector);
+  if (!b) throw new Error(`${selector} ausente`);
+  b.click();
+  await settle(s.fixture);
+}
+
+describe('origem do diálogo de vídeo (05c2a E14, R9)', () => {
+  it('sem adaptador: sem "Origem"', async () => {
+    const s = await setup('<p></p>');
+    const o = await openVideo(s);
+    expect(uploadSource(o.dialog)).toBeNull();
+    expect(o.dialog.querySelector('input[type="file"]')).toBeNull();
+  });
+
+  it('adaptador sem uploadVideo: vídeo sem "Origem" (a imagem tem)', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>', { video: false });
+    let d = await openKind(s, 'video');
+    expect(uploadSource(d)).toBeNull();
+    expect(d.querySelector('input[type="file"]')).toBeNull();
+    expect(document.activeElement).toBe(dialogField(d, SRC));
+    await clickIn(s, d, '.rte-dialog__cancel');
+    d = await openKind(s, 'image');
+    expect(uploadSource(d)).not.toBeNull();
+  });
+
+  it('com uploadVideo, inserir: "Origem", accept e dica do vídeo', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'video');
+    const radios = [
+      ...(uploadSource(d)?.querySelectorAll<HTMLInputElement>(
+        'input[type="radio"]',
+      ) ?? []),
+    ];
+    expect(radios.map((r) => r.checked)).toEqual([true, false]);
+    expect(radios[0]?.id).toMatch(/-video-source-file$/);
+    expect(radios[1]?.id).toMatch(/-video-source-url$/);
+    expect(document.activeElement).toBe(radios[0]);
+    const input = videoFileInput(d);
+    expect(input.id).toMatch(/-video-file$/);
+    expect(dialogField(d, VIDEO_FILE)).toBe(input);
+    expect(input.accept).toBe(VIDEO_ACCEPT);
+    expect(
+      d.ownerDocument.getElementById(`${input.id}-hint`)?.textContent?.trim(),
+    ).toBe(VIDEO_HINT);
+    expect(
+      dialogField(d, SRC).closest('.rte-dialog__field')?.hasAttribute('hidden'),
+    ).toBe(true);
+  });
+
+  it('editar: sem "Origem"', async () => {
+    const s = await setupUploadDialog(UploadHost, EDIT_DOC);
+    selectNode(s.editor, 'rtVideo');
+    const d = await openKind(s, 'video');
+    expect(uploadSource(d)).toBeNull();
+  });
+
+  it('erros no campo: sem arquivo e imagem no vídeo; sem uploadError', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'video');
+    const input = videoFileInput(d);
+    await clickIn(s, d, '.rte-dialog__apply');
+    expect(d.open).toBe(true);
+    expect(errorOf(input)).toBe('Choose a file.');
+    expect(document.activeElement).toBe(input);
+    chooseFile(input, pngFile());
+    await settle(s.fixture);
+    expect(errorOf(input)).toBe('This file type is not accepted.');
+    await clickIn(s, d, '.rte-dialog__apply');
+    expect(d.open).toBe(true);
+    await drainUploads(s.fixture);
+    expect(s.host.errors).toEqual([]);
+    expect(s.adapter.calls).toHaveLength(0);
+  });
+
+  it('"Aplicar": marcador no parágrafo; o pôster do diálogo vence o da resposta; legenda e faixas', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'video');
+    const doc = s.editor.state.doc;
+    const file = webmFile();
+    chooseFile(videoFileInput(d), file);
+    typeInto(dialogField(d, POSTER), '/p.png');
+    typeInto(dialogField(d, CAPTION), 'Um vídeo');
+    await clickIn(s, d, '.rte-dialog__track-add');
+    const set = d.querySelector<HTMLElement>('.rte-dialog__tracks fieldset');
+    if (!set) throw new Error('faixa ausente');
+    // O foco da faixa nova (`afterNextRender`) chega antes do "Aplicar".
+    for (let i = 0; i < 20 && !set.contains(document.activeElement); i++) {
+      await new Promise((resolve) => setTimeout(resolve));
+      await settle(s.fixture);
+    }
+    expect(set.contains(document.activeElement)).toBe(true);
+    typeInto(dialogField(set, TRACK_SRC), '/t.vtt');
+    typeInto(dialogField(set, LANG), 'pt-BR');
+    typeInto(dialogField(set, LABEL), 'Português');
+    await settle(s.fixture);
+    await clickIn(s, d, '.rte-dialog__apply');
+    expect(d.open).toBe(false);
+    expect(document.activeElement).toBe(s.editor.view.dom);
+    expect(markerPositions(s.editor)).toEqual([1]);
+    expect(s.editor.state.doc).toBe(doc);
+    expect(s.host.changes).toBe(0);
+    await drainUploads(s.fixture);
+    expect(s.adapter.calls[0]?.file).toBe(file);
+    expect(s.adapter.calls[0]?.type).toBe('video');
+    s.adapter.resolve(0, { url: '/v.webm', poster: '/servidor.png' });
+    await drainUploads(s.fixture);
+    expect(uploadHtml(s)).toBe(
+      VIDEO(
+        'src="/v.webm"',
+        ` poster="/p.png">${TRACK('kind="captions" src="/t.vtt" srclang="pt-BR" label="Português"')}`,
+        '<figcaption>Um vídeo</figcaption>',
+      ),
+    );
+    expect(s.host.changes).toBe(1);
+  });
+
+  it('sem pôster no diálogo → o da resposta', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'video');
+    chooseFile(videoFileInput(d), webmFile());
+    await settle(s.fixture);
+    await clickIn(s, d, '.rte-dialog__apply');
+    await drainUploads(s.fixture);
+    s.adapter.resolve(0, { url: '/v.webm', poster: '/servidor.png' });
+    await drainUploads(s.fixture);
+    expect(uploadHtml(s)).toBe(
+      VIDEO('src="/v.webm"', ' poster="/servidor.png">'),
+    );
+  });
+
+  it('"Endereço" valida como na 05c1 e mantém o arquivo', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'video');
+    const input = videoFileInput(d);
+    const file = webmFile();
+    chooseFile(input, file);
+    setChecked(dialogField(d, 'Address (URL)'), true);
+    await settle(s.fixture);
+    const src = dialogField(d, SRC);
+    typeInto(src, 'http://example.com/v.webm');
+    await settle(s.fixture);
+    await clickIn(s, d, '.rte-dialog__apply');
+    expect(errorOf(src)).toBe(MEDIA_URL);
+    setChecked(dialogField(d, 'File'), true);
+    await settle(s.fixture);
+    expect(input.files?.[0]).toBe(file);
+    await clickIn(s, d, '.rte-dialog__apply');
+    expect(d.open).toBe(false);
   });
 });

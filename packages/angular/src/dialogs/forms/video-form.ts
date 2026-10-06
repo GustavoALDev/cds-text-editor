@@ -33,7 +33,7 @@ import {
   mediaUrlValidator,
   requiredTrimmed,
 } from '../media-validate';
-import { RteDialogFormBase } from './form-base';
+import { RteMediaSourceForm, type MediaSourceModel } from './media-source';
 
 /** Limites do vídeo (V8): legenda e rótulo da faixa, da UI; faixas 0–10. */
 const CAPTION_MAX = 300;
@@ -51,7 +51,7 @@ interface TrackModel {
   isDefault: boolean;
 }
 
-interface VideoModel {
+interface VideoModel extends MediaSourceModel {
   src: string;
   poster: string;
   caption: string;
@@ -59,7 +59,14 @@ interface VideoModel {
 }
 
 function emptyVideo(): VideoModel {
-  return { src: '', poster: '', caption: '', tracks: [] };
+  return {
+    source: 'url',
+    file: null,
+    src: '',
+    poster: '',
+    caption: '',
+    tracks: [],
+  };
 }
 
 function newTrack(): TrackModel {
@@ -90,6 +97,7 @@ function videoValues(req: RteDialogRequest): VideoModel {
   if (!node || node.type.name !== 'rtVideo') return emptyVideo();
   const a = node.attrs;
   return {
+    ...emptyVideo(),
     src: text(a['src']),
     poster: text(a['poster']),
     caption: text(a['caption']),
@@ -107,7 +115,8 @@ function videoValues(req: RteDialogRequest): VideoModel {
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
 })
-export class RteVideoForm extends RteDialogFormBase {
+export class RteVideoForm extends RteMediaSourceForm<VideoModel> {
+  protected readonly kind = 'video';
   /** Regras das mídias do esquema do editor (V4); `null` sem `media`. */
   readonly rules = input<RteMediaRules | null>(null);
 
@@ -127,12 +136,14 @@ export class RteVideoForm extends RteDialogFormBase {
     };
   });
 
-  private readonly model = signal<VideoModel>(emptyVideo());
+  protected readonly model = signal<VideoModel>(emptyVideo());
   protected readonly form: FieldTree<VideoModel> = form(
     this.model,
     (p) => {
-      requiredTrimmed(p.src);
-      mediaUrlValidator(p.src, () => this.rules()?.videoSrc ?? null);
+      this.sourceSchema(p, (q) => {
+        requiredTrimmed(q.src);
+        mediaUrlValidator(q.src, () => this.rules()?.videoSrc ?? null);
+      });
       mediaUrlValidator(p.poster, () => this.rules()?.videoPoster ?? null);
       maxLength(p.caption, CAPTION_MAX);
       applyEach(p.tracks, (t) => {
@@ -157,6 +168,7 @@ export class RteVideoForm extends RteDialogFormBase {
           return undefined;
         },
         onInvalid: () =>
+          this.focusFileIfInvalid() ||
           focusFirstInvalid([
             this.form.src,
             this.form.poster,
@@ -184,7 +196,10 @@ export class RteVideoForm extends RteDialogFormBase {
     // Pedido novo: valores atuais no formulário antes do render.
     effect(() => {
       const req = this.request();
-      untracked(() => this.form().reset(videoValues(req)));
+      untracked(() => {
+        this.clearFileInput();
+        this.form().reset({ ...videoValues(req), source: this.sourceFor(req) });
+      });
     });
   }
 
@@ -257,7 +272,8 @@ export class RteVideoForm extends RteDialogFormBase {
     // formulário seguirem as mesmas regras; só protegem contra divergência.
     const m = untracked(this.model);
     const rules = untracked(this.rules);
-    const src = canonicalMediaUrl(rules?.videoSrc ?? null, m.src);
+    const file = untracked(this.useFile);
+    const src = file ? '' : canonicalMediaUrl(rules?.videoSrc ?? null, m.src);
     if (src === null) return;
     const poster =
       m.poster.trim() === ''
@@ -279,6 +295,10 @@ export class RteVideoForm extends RteDialogFormBase {
         label: t.label.trim(),
         default: t.isDefault,
       });
+    }
+    if (file) {
+      this.startUpload({ poster, caption: m.caption, tracks });
+      return;
     }
     const value = { src, poster, caption: m.caption, tracks };
     this.controller().apply((editor) => applyVideo(editor, req, value));

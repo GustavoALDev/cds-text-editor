@@ -42,6 +42,7 @@ import { selectText } from './testing-support/editors';
 import { fakeCoords, installGeometry } from './testing-support/geometry';
 import { installPopoverShim, isPopoverOpen } from './testing-support/popover';
 import { mergeLabels, readLabelsSource } from './labels/merge';
+import { dialogErrorText } from './dialogs/form-helpers';
 import { settle } from './testing-support/render';
 import { createFakeUploadAdapter } from './testing-support/fake-upload-adapter';
 import { whenUploadReady } from './testing-support/upload-runtime';
@@ -1439,5 +1440,39 @@ describe('rótulos do envio na tela (E20, R14)', () => {
     expect(
       root.querySelector('.rte-uploads__status')?.textContent?.trim(),
     ).toBe('n=1');
+  });
+});
+
+describe('erros do campo de arquivo no diálogo (05c2a E14, Tarefa 10)', () => {
+  const kinds = (maxMegabytes: number) =>
+    [
+      { kind: 'rteFileRequired' },
+      { kind: 'rteFileType' },
+      { kind: 'rteFileSize', maxMegabytes },
+    ] as unknown as Parameters<typeof dialogErrorText>[0];
+
+  it('en e pt-BR, com o teto do erro', () => {
+    for (const [pack, expected] of [
+      [
+        RTE_LABELS_EN,
+        [
+          'Choose a file.',
+          'This file type is not accepted.',
+          'The file is larger than 10 MB.',
+        ],
+      ],
+      [
+        RTE_LABELS_PT_BR,
+        [
+          'Escolha um arquivo.',
+          'Este tipo de arquivo não é aceito.',
+          'O arquivo passa de 10 MB.',
+        ],
+      ],
+    ] as const) {
+      const labels = pack.dialogs;
+      const errors = kinds(10);
+      expect(errors.map((e) => dialogErrorText([e], labels))).toEqual(expected);
+    }
   });
 });

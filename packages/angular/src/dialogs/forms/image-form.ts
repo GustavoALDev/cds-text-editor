@@ -28,7 +28,7 @@ import {
   optionalIntegerInRange,
   requiredTrimmed,
 } from '../media-validate';
-import { RteDialogFormBase } from './form-base';
+import { RteMediaSourceForm, type MediaSourceModel } from './media-source';
 
 /** Limites da imagem (V6): `alt` é o teto do core; legenda e crédito, da UI. */
 const ALT_MAX = 1000;
@@ -37,7 +37,7 @@ const WIDTH_MAX = 10000;
 
 const ALIGNS: readonly RteImageAlign[] = ['left', 'center', 'right', 'full'];
 
-interface ImageModel {
+interface ImageModel extends MediaSourceModel {
   src: string;
   alt: string;
   decorative: boolean;
@@ -48,6 +48,8 @@ interface ImageModel {
 }
 
 const IMAGE_INITIAL: Readonly<ImageModel> = Object.freeze({
+  source: 'url',
+  file: null,
   src: '',
   alt: '',
   decorative: false,
@@ -68,6 +70,8 @@ function imageValues(req: RteDialogRequest): ImageModel {
   const align = a['align'] as RteImageAlign;
   const width: unknown = a['width'];
   return {
+    source: 'url',
+    file: null,
     src: text(a['src']),
     alt: text(a['alt']),
     decorative: a['alt'] === '',
@@ -91,7 +95,8 @@ function widthOf(value: number | null): number | null {
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
 })
-export class RteImageForm extends RteDialogFormBase {
+export class RteImageForm extends RteMediaSourceForm<ImageModel> {
+  protected readonly kind = 'image';
   /** Regra de `img[src]` do esquema do editor (V4); `null` sem `media`. */
   readonly rule = input<RteAttrRule | null>(null);
   /** Nomes dos alinhamentos, de `floating` (V14). */
@@ -112,7 +117,7 @@ export class RteImageForm extends RteDialogFormBase {
     };
   });
 
-  private readonly model = signal<ImageModel>({ ...IMAGE_INITIAL });
+  protected readonly model = signal<ImageModel>({ ...IMAGE_INITIAL });
   /** Largura da abertura: só uma largura diferente mexe no tamanho (V6). */
   private initialWidth: number | null = null;
   /** Endereço da abertura: outro endereço limpa `srcset`/`sizes`/`height`. */
@@ -120,8 +125,10 @@ export class RteImageForm extends RteDialogFormBase {
   protected readonly form: FieldTree<ImageModel> = form(
     this.model,
     (p) => {
-      requiredTrimmed(p.src);
-      mediaUrlValidator(p.src, () => this.rule());
+      this.sourceSchema(p, (q) => {
+        requiredTrimmed(q.src);
+        mediaUrlValidator(q.src, () => this.rule());
+      });
       // Texto obrigatório (não só espaços) sem "decorativa" (V7).
       validate(p.alt, ({ value, valueOf }) =>
         !valueOf(p.decorative) && value().trim() === ''
@@ -141,6 +148,7 @@ export class RteImageForm extends RteDialogFormBase {
           return undefined;
         },
         onInvalid: () =>
+          this.focusFileIfInvalid() ||
           focusFirstInvalid([
             this.form.src,
             this.form.alt,
@@ -161,7 +169,8 @@ export class RteImageForm extends RteDialogFormBase {
         const values = imageValues(req);
         this.initialWidth = values.width;
         this.initialSrc = values.src;
-        this.form().reset(values);
+        this.clearFileInput();
+        this.form().reset({ ...values, source: this.sourceFor(req) });
       });
     });
   }
@@ -181,6 +190,14 @@ export class RteImageForm extends RteDialogFormBase {
     const req = untracked(this.request);
     if (req.kind !== 'image') return;
     const m = untracked(this.model);
+    if (untracked(this.useFile)) {
+      this.startUpload({
+        alt: m.decorative ? '' : m.alt.trim(),
+        caption: m.caption,
+        credit: m.credit,
+      });
+      return;
+    }
     const rule = untracked(this.rule);
     const src = canonicalMediaUrl(rule, m.src);
     if (src === null) return;

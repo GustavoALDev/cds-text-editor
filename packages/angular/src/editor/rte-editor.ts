@@ -502,6 +502,7 @@ export class RteEditor implements FormValueControl<string> {
   readonly uploads = this.uploading.uploads;
   readonly pendingUploads = this.uploading.pendingUploads;
   protected readonly announcements = this.uploading.announcements;
+  protected readonly dialogUploads = this.uploading.dialogUploads;
   /** Imagens com `alt: null` (E18), fora do portão do delta de URLs. */
   readonly imagesMissingAlt = this.uploading.imagesMissingAlt;
 

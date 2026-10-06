@@ -10,6 +10,7 @@ import type { RteHtmlSchema } from '@cds/rte-core';
 import type { Editor } from '@tiptap/core';
 import type { RteUploadLabels } from '../labels/types';
 import { announcementTexts } from './announce';
+import { createDialogUploads, type RteDialogUploads } from './dialog-port';
 import { RteUploads } from './facade';
 import { createEditorUploadHost } from './host';
 import { createUploadInputExtension } from './input';
@@ -48,6 +49,8 @@ export class RteEditorUploads extends RteUploads {
   private readonly missingAlt = signal(0);
   /** Imagens com `alt: null` (E18), fora do portão do delta de URLs. */
   readonly imagesMissingAlt: Signal<number> = this.missingAlt.asReadonly();
+  /** Porta dos diálogos de imagem e vídeo (E14); `null` sem adaptador. */
+  readonly dialogUploads: Signal<RteDialogUploads | null>;
   private readonly deps: RteEditorUploadDeps;
 
   constructor(deps: RteEditorUploadDeps) {
@@ -57,6 +60,10 @@ export class RteEditorUploads extends RteUploads {
     const uploads = this.uploads;
     this.pendingUploads = computed(() => uploads().length);
     this.announcements = announcementTexts(host, deps.labels);
+    this.dialogUploads = computed(() => {
+      const cfg = host.config();
+      return cfg?.imageTypes.length ? createDialogUploads(this, cfg) : null;
+    });
     effect(() => {
       if (!deps.dialog()) untracked(() => this.flush());
     });

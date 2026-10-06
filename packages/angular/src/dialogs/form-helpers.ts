@@ -30,6 +30,12 @@ export function dialogErrorText(
       return labels.errorMediaUrl;
     case 'rteEmbedUrl':
       return labels.errorEmbedUrl;
+    case 'rteFileRequired':
+      return labels.errorFileRequired;
+    case 'rteFileType':
+      return labels.errorFileType;
+    case 'rteFileSize':
+      return labels.errorFileSize(numberOf(error, 'maxMegabytes'));
     case 'min':
     case 'max':
     case 'rteInteger':

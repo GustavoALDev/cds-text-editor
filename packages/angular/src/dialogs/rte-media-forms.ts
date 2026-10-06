@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import type { RteImageAlign } from '@cds/rte-core/extensions';
 import type { RteDialogLabels } from '../labels/types';
+import type { RteDialogUploads } from '../upload/dialog-port';
 import type { RteDialogController, RteDialogRequest } from './controller';
 import { RteEmbedForm } from './forms/embed-form';
 import { RteImageForm } from './forms/image-form';
@@ -43,6 +44,8 @@ export class RteMediaForms {
   readonly alignNames = input<Readonly<Record<RteImageAlign, string>> | null>(
     null,
   );
+  /** Porta do envio (05c2a E14); `null` sem adaptador. */
+  readonly uploads = input<RteDialogUploads | null>(null);
 
   /**
    * Primeiro render feito: o `RteDialogs` só chama `showModal()` de um pedido
