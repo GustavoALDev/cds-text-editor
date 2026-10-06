@@ -58,6 +58,14 @@ const ALT_OPTIONS: RteEditorConfig = {
 };
 
 /**
+ * Instâncias sem `(mediaChange)` ligado: ler o delta delas é erro do teste,
+ * não `null`/0 em silêncio (Fix 6 da revisão final da 05c1).
+ */
+function notWired(id: string): never {
+  throw new Error(`rteE2e: editor '${id}' sem (mediaChange) ligado.`);
+}
+
+/**
  * N25–N31 (spec 05c1): diálogos e menus de mídia no editor `media` (barra
  * `full`, `[formField]`, `mediaChange` gravado e mostrado) e no `media-alt`
  * (sem barra, `embedProviders: []`, `floatingMenus: { embed: false }`, com
@@ -129,8 +137,8 @@ export class MediaPage {
       state: () => NO_FORM_STATE,
       reset: () => this.altValue.set(MEDIA_FIXTURE),
       openDialog: (kind) => this.alt().openDialog(kind as RteDialogKind),
-      lastMediaChange: () => null,
-      mediaChanges: () => 0,
+      lastMediaChange: () => notWired('media-alt'),
+      mediaChanges: () => notWired('media-alt'),
       mediaSession: () => this.alt().mediaSession(),
     });
     this.bridge.register('media-key', {
@@ -139,8 +147,8 @@ export class MediaPage {
       state: () => NO_FORM_STATE,
       reset: () => this.keyValue.set(MEDIA_FIXTURE),
       openDialog: (kind) => this.key().openDialog(kind as RteDialogKind),
-      lastMediaChange: () => null,
-      mediaChanges: () => 0,
+      lastMediaChange: () => notWired('media-key'),
+      mediaChanges: () => notWired('media-key'),
       mediaSession: () => this.key().mediaSession(),
     });
   }

@@ -14,7 +14,6 @@ import {
   FormField,
   FormRoot,
   maxLength,
-  required,
   validate,
   type FieldTree,
 } from '@angular/forms/signals';
@@ -25,6 +24,7 @@ import type { RteDialogRequest } from '../controller';
 import {
   focusFirstInvalid,
   optionalIntegerInRange,
+  requiredTrimmed,
   text,
 } from '../form-helpers';
 import { canonicalMediaUrl, mediaUrlValidator } from '../media-validate';
@@ -115,10 +115,12 @@ export class RteImageForm extends RteDialogFormBase {
   private readonly model = signal<ImageModel>({ ...IMAGE_INITIAL });
   /** Largura da abertura: só uma largura diferente mexe no tamanho (V6). */
   private initialWidth: number | null = null;
+  /** Endereço da abertura: outro endereço limpa `srcset`/`sizes`/`height`. */
+  private initialSrc = '';
   protected readonly form: FieldTree<ImageModel> = form(
     this.model,
     (p) => {
-      required(p.src);
+      requiredTrimmed(p.src);
       mediaUrlValidator(p.src, () => this.rule());
       // Texto obrigatório (não só espaços) sem "decorativa" (V7).
       validate(p.alt, ({ value, valueOf }) =>
@@ -158,6 +160,7 @@ export class RteImageForm extends RteDialogFormBase {
       untracked(() => {
         const values = imageValues(req);
         this.initialWidth = values.width;
+        this.initialSrc = values.src;
         this.form().reset(values);
       });
     });
@@ -178,9 +181,12 @@ export class RteImageForm extends RteDialogFormBase {
     const req = untracked(this.request);
     if (req.kind !== 'image') return;
     const m = untracked(this.model);
-    const src = canonicalMediaUrl(untracked(this.rule), m.src);
+    const rule = untracked(this.rule);
+    const src = canonicalMediaUrl(rule, m.src);
     if (src === null) return;
     const width = widthOf(m.width);
+    const initialSrc =
+      canonicalMediaUrl(rule, this.initialSrc) ?? this.initialSrc;
     const value = {
       src,
       alt: m.decorative ? '' : m.alt.trim(),
@@ -189,6 +195,7 @@ export class RteImageForm extends RteDialogFormBase {
       align: m.align,
       width,
       widthChanged: width !== this.initialWidth,
+      srcChanged: src !== initialSrc,
     };
     this.controller().apply((editor) => applyImage(editor, req, value));
   }

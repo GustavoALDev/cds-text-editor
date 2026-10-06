@@ -954,9 +954,9 @@ describe('itens de diálogo (G11, G16, G17)', () => {
     // O pedido não abre o diálogo: com o chunk já carregado no worker
     // (`isolate: false`), o <dialog> abriria durante o `settle`, sem o calço,
     // roubaria o foco e vazaria o pedido para os arquivos seguintes.
-    vi.spyOn(RteDialogController.prototype, 'open').mockImplementation(
-      () => undefined,
-    );
+    const open = vi
+      .spyOn(RteDialogController.prototype, 'open')
+      .mockImplementation(() => undefined);
     const { el, fixture } = await setup();
     const spy = vi.fn();
     toolbarCmp(fixture).dialog.subscribe(spy);
@@ -971,6 +971,13 @@ describe('itens de diálogo (G11, G16, G17)', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
     expect(document.activeElement).toBe(trigger);
     expect(spy).toHaveBeenCalledWith({ kind: 'table', origin: trigger });
+    // O pedido chega ao controlador (Fix 7 da revisão final).
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledWith(
+      'table',
+      expect.objectContaining({ mode: 'insert' }),
+      trigger,
+    );
   });
 
   it('newsBlocks desligado: sem Language nem Quote author, com Link', async () => {

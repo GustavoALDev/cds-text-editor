@@ -73,6 +73,7 @@
     class="rte-dialog__tracks"
     role="group"
     [attr.aria-labelledby]="ids().tracks"
+    [attr.aria-describedby]="noCaptions() ? ids().hint : null"
   >
     <h3 class="rte-dialog__subtitle" [id]="ids().tracks">
       {{ labels().videoTracks }}

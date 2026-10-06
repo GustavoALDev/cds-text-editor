@@ -13,7 +13,10 @@ import { getRteHtml } from '@cds/rte-core/extensions';
 import { RteEditor, type RteToolbarConfig } from '@cds/rte-angular';
 import type { Editor } from '@tiptap/core';
 import { EditorState, NodeSelection } from '@tiptap/pm/state';
-import { documentDialogBusy } from './dialogs/controller';
+import {
+  documentDialogBusy,
+  type RteDialogController,
+} from './dialogs/controller';
 import {
   afterEach,
   beforeEach,
@@ -510,6 +513,48 @@ describe('foco e D11 (R4)', () => {
     editor.commands.insertContent('x');
     expect(getRteHtml(editor)).toContain('marxcante');
     expect(getRteHtml(editor)).toContain('<cite>Ana</cite>');
+  });
+
+  it('Fix 3: recusa com o documento já alterado → foco segue no editável', async () => {
+    const { fixture, el, cmp, editor } = await setup();
+    await focusEditor(fixture, editor);
+    inQuote(editor);
+    const { origin } = await openByButton(fixture, el);
+    const dialogs = (cmp as unknown as { dialogs: RteDialogController })
+      .dialogs;
+    // A cadeia do Tiptap despacha mesmo com um passo `false` (só o `run()`
+    // devolve `false`), como nos diálogos antigos de `apply.ts`; o foco é
+    // posto no editável na hora (o `focus()` da cadeia o põe no quadro
+    // seguinte, o que esconderia a troca).
+    const ok = dialogs.apply((ed) => {
+      ed.view.focus();
+      return ed
+        .chain()
+        .insertContent('x')
+        .command(() => false)
+        .run();
+    });
+    expect(ok).toBe(false);
+    await nextFrame();
+    await settle(fixture);
+    expect(getRteHtml(editor)).toContain('x');
+    expect(document.activeElement).not.toBe(origin);
+    expect(document.activeElement).toBe(editor.view.dom);
+  });
+
+  it('Fix 3: recusa sem mudar o documento → foco volta à origem', async () => {
+    const { fixture, el, cmp, editor } = await setup();
+    await focusEditor(fixture, editor);
+    inQuote(editor);
+    const { origin } = await openByButton(fixture, el);
+    const before = editor.state.doc;
+    const dialogs = (cmp as unknown as { dialogs: RteDialogController })
+      .dialogs;
+    expect(dialogs.apply(() => false)).toBe(false);
+    await nextFrame();
+    await settle(fixture);
+    expect(editor.state.doc).toBe(before);
+    expect(document.activeElement).toBe(origin);
   });
 
   it('cancelar devolve o foco ao botão de origem', async () => {

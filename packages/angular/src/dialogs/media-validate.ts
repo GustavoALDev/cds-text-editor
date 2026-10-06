@@ -16,7 +16,8 @@ export function canonicalMediaUrl(
 
 /**
  * Endereço de mídia aceito pela regra (V4): recusado → `rteMediaUrl`. O vazio
- * nunca dá erro aqui (Ruling 10): o campo obrigatório usa `required`.
+ * (inclusive só de espaços, que o `apply` apara) nunca dá erro aqui
+ * (Ruling 10): o campo obrigatório usa `requiredTrimmed`.
  */
 export function mediaUrlValidator(
   path: SchemaPath<string>,
@@ -24,7 +25,7 @@ export function mediaUrlValidator(
 ): void {
   validate(path, ({ value }) => {
     const url = value();
-    return url !== '' && canonicalMediaUrl(rule(), url) === null
+    return url.trim() !== '' && canonicalMediaUrl(rule(), url) === null
       ? { kind: 'rteMediaUrl' }
       : undefined;
   });

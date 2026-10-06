@@ -35,6 +35,12 @@ export interface RteImageApply {
   width: number | null;
   /** A largura mudou em relação à abertura (só então se mexe nela). */
   widthChanged: boolean;
+  /**
+   * O endereço mudou em relação à abertura: outro arquivo, então `srcset`,
+   * `sizes` e `height` da imagem antiga caem (a `width` fica, salvo se a
+   * pessoa mexeu nela).
+   */
+  srcChanged: boolean;
 }
 
 /**
@@ -65,7 +71,9 @@ export function runMedia(
  * Imagem (V6, pré-voo 8). Inserir: `setImage` na seleção viva (o core acha
  * o ponto e deixa a imagem selecionada, V12). Editar: `updateImage` no nó da
  * abertura e, se a largura mudou, `setImageSize` (a altura segue a
- * proporção) ou, apagada, `width`/`height` nulos na mesma chamada.
+ * proporção) ou, apagada, `width`/`height` nulos na mesma chamada. Com o
+ * endereço trocado, `srcset`/`sizes`/`height` antigos saem na mesma chamada
+ * (senão o navegador seguiria exibindo os candidatos da imagem antiga).
  */
 export function applyImage(
   editor: Editor,
@@ -85,6 +93,7 @@ export function applyImage(
       caption,
       credit,
       align: v.align,
+      ...(v.srcChanged ? { srcset: null, sizes: null, height: null } : {}),
       ...(cleared ? { width: null, height: null } : {}),
     });
     return v.widthChanged && v.width !== null

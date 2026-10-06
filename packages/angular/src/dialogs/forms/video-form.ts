@@ -26,7 +26,12 @@ import { normalizeAttribute } from '@cds/rte-core';
 import type { RteVideoTrack } from '@cds/rte-core/extensions';
 import { applyVideo, removeMediaAt } from '../apply-media';
 import type { RteDialogRequest } from '../controller';
-import { focusFirstInvalid, langCodeValidator, text } from '../form-helpers';
+import {
+  focusFirstInvalid,
+  langCodeValidator,
+  requiredTrimmed,
+  text,
+} from '../form-helpers';
 import type { RteMediaRules } from '../media-rules';
 import { canonicalMediaUrl, mediaUrlValidator } from '../media-validate';
 import { RteDialogFormBase } from './form-base';
@@ -127,12 +132,12 @@ export class RteVideoForm extends RteDialogFormBase {
   protected readonly form: FieldTree<VideoModel> = form(
     this.model,
     (p) => {
-      required(p.src);
+      requiredTrimmed(p.src);
       mediaUrlValidator(p.src, () => this.rules()?.videoSrc ?? null);
       mediaUrlValidator(p.poster, () => this.rules()?.videoPoster ?? null);
       maxLength(p.caption, CAPTION_MAX);
       applyEach(p.tracks, (t) => {
-        required(t.src);
+        requiredTrimmed(t.src);
         mediaUrlValidator(t.src, () => this.rules()?.trackSrc ?? null);
         required(t.srclang);
         langCodeValidator(t.srclang, () => this.rules()?.trackLang ?? null);

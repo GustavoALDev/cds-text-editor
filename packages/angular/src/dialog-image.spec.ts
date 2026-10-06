@@ -14,7 +14,11 @@ import {
 import { getRteHtml } from '@cds/rte-core/extensions';
 import { validateHtml } from '@cds/rte-core/html';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteEditor, type RteEditorConfig } from '@cds/rte-angular';
+import {
+  RteEditor,
+  type RteEditorConfig,
+  type RteMediaChange,
+} from '@cds/rte-angular';
 import type { Editor } from '@tiptap/core';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import fc from 'fast-check';
@@ -60,6 +64,7 @@ const VIDEO =
   template: `<rte-editor
     [value]="value()"
     (valueChange)="changes = changes + 1"
+    (mediaChange)="media.push($event)"
     [options]="options()"
   />`,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -68,6 +73,7 @@ class Host {
   readonly value = signal('<p></p>');
   readonly options = signal<RteEditorConfig | undefined>(undefined);
   changes = 0;
+  readonly media: RteMediaChange[] = [];
   readonly cmp = viewChild.required(RteEditor);
 }
 
@@ -414,6 +420,42 @@ describe('editar imagem (R3, V6, V12)', () => {
     expectOneStep(o);
   });
 
+  const SRCSET_DOC = `<p>ab</p>${IMG(
+    'src="/a.png" srcset="/a.png 1x, /a2.png 2x" sizes="100vw" alt="A" width="800" height="600"',
+  )}<p>cd</p>`;
+
+  it('Fix 1: trocar o endereço limpa srcset, sizes e height antigos (largura fica)', async () => {
+    const o = await openEdit(SRCSET_DOC);
+    typeInto(field(o, SRC), '/b.png');
+    await submit(o);
+    expect(html(o)).toBe(
+      `<p>ab</p>${IMG('src="/b.png" alt="A" width="800"')}<p>cd</p>`,
+    );
+    expectImageSelected(o.editor);
+    expectOneStep(o);
+  });
+
+  it('Fix 1: mudar só o alt preserva srcset, sizes e height', async () => {
+    const o = await openEdit(SRCSET_DOC);
+    typeInto(field(o, ALT), 'B');
+    await submit(o);
+    expect(html(o)).toBe(
+      '<p>ab</p><figure class="rt-figure rt-figure--center"><img src="/a.png" alt="B" width="800" height="600" loading="lazy" decoding="async" srcset="/a.png 1x, /a2.png 2x" sizes="100vw"></figure><p>cd</p>',
+    );
+    expectOneStep(o);
+  });
+
+  it('Fix 1: trocar o endereço → mediaChange tira os URLs antigos do srcset da sessão', async () => {
+    const o = await openEdit(SRCSET_DOC);
+    o.host.media.length = 0;
+    typeInto(field(o, SRC), '/b.png');
+    await submit(o);
+    expect(o.host.media).toEqual([
+      { added: ['/b.png'], removed: ['/a.png', '/a2.png'] },
+    ]);
+    expect(o.host.cmp().mediaSession().current).toEqual(['/b.png']);
+  });
+
   it('"Remover" → imagem fora, cursor onde ela estava, um passo', async () => {
     const o = await openEdit();
     button(o.dialog, '.rte-dialog__remove').click();
@@ -561,6 +603,17 @@ describe('recusas (R3, V4)', () => {
     expectNothingApplied(o);
   });
 
+  it('Fix 2: endereço só de espaços → errorRequired, nada aplicado', async () => {
+    const s = await setup('<p></p>');
+    const o = await openImage(s);
+    typeInto(field(o, SRC), '   ');
+    typeInto(field(o, ALT), 'Gato');
+    await submit(o);
+    expect(errorOf(field(o, SRC))).toBe(REQUIRED);
+    expect(document.activeElement).toBe(field(o, SRC));
+    expectNothingApplied(o);
+  });
+
   it.each(['0', '10001', '2.5'])('largura %s → errorRange', async (width) => {
     const s = await setup(EDIT_DOC);
     selectNode(s.editor, 'rtImage');
@@ -639,7 +692,7 @@ describe('propriedade R6: o diálogo aceita ⇔ a regra img[src] do esquema acei
           .some((e) => e.kind === 'rteMediaUrl');
         // Vazio nunca dá `rteMediaUrl` (Ruling 10: é do `required`).
         const expected =
-          s !== '' && normalizeAttribute(rule, s.trim()) === null;
+          s.trim() !== '' && normalizeAttribute(rule, s.trim()) === null;
         expect(refused).toBe(expected);
       }),
       fcOptions(),

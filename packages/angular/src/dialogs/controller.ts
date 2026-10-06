@@ -139,7 +139,8 @@ export class RteDialogController {
    * Aplica (G5): com outro documento no estado, cancela e devolve `false`;
    * senão fecha o diálogo, limpa a seleção pendente, roda o comando (que
    * devolve o foco ao editável) e encerra o pedido. Comando que devolve
-   * `false` encerra como cancelamento: foco na origem ou no editável (V9).
+   * `false` encerra como cancelamento: foco na origem ou no editável (V9),
+   * se o documento não mudou.
    */
   apply(run: (editor: Editor) => boolean): boolean {
     const req = untracked(this.current);
@@ -160,8 +161,12 @@ export class RteDialogController {
       this.clear();
       this.settling = false;
       // Comando recusado: fecha como cancelamento (V9, Ruling 4), com o
-      // foco de volta à origem ou ao editável (G4).
-      if (!ok && !this.disposed) restoreFocus(req.origin, editor);
+      // foco de volta à origem ou ao editável (G4) — só com o documento
+      // intacto: a cadeia do Tiptap despacha mesmo com um passo `false`, e
+      // então o foco fica onde o comando o deixou.
+      if (!ok && !this.disposed && editor.state.doc === req.doc) {
+        restoreFocus(req.origin, editor);
+      }
     }
   }
 

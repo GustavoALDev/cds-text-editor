@@ -50,7 +50,9 @@ export interface RteFloatingMedia {
 
 /**
  * Menus de mídia (pré-voo 10): "Detalhes…" · (alinhamentos, só imagem) ·
- * "Remover". Os demais tipos não têm entrada.
+ * "Remover". Os demais tipos não têm entrada. O `satisfies` exige uma
+ * entrada por tipo de mídia (com o `kind` da própria chave): uma mídia nova
+ * esquecida aqui não compila, em vez de renderizar um menu vazio.
  */
 export const RTE_FLOATING_MEDIA: Readonly<
   Partial<Record<RteFloatingMenuKind, RteFloatingMedia>>
@@ -73,6 +75,8 @@ export const RTE_FLOATING_MEDIA: Readonly<
     details: 'embedDetails',
     remove: 'removeEmbed',
   },
+} satisfies {
+  readonly [K in RteFloatingMediaKind]: RteFloatingMedia & { readonly kind: K };
 });
 
 /** Operações de tabela do menu flutuante como botões (M13, M16). */
@@ -149,11 +153,6 @@ export function alignImage(editor: Editor, align: RteImageAlign): boolean {
 export function removeMedia(editor: Editor, typeName: string): boolean {
   if (!selectedMedia(editor, typeName)) return false;
   return editor.chain().focus().deleteSelection().run();
-}
-
-/** Remove a imagem selecionada. */
-export function removeImage(editor: Editor): boolean {
-  return removeMedia(editor, 'rtImage');
 }
 
 /**

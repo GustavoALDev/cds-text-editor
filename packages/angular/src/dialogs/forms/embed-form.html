@@ -4,7 +4,11 @@
   (mousedown)="keepFocus($event)"
 >
   @if (editing()) {
-  <div class="rte-dialog__field">
+  <div
+    class="rte-dialog__field"
+    role="group"
+    [attr.aria-labelledby]="ids().url + '-label'"
+  >
     <span class="rte-dialog__label" [id]="ids().url + '-label'"
       >{{ labels().embedUrl }}</span
     >

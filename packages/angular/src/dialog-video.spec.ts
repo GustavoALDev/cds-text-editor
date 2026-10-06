@@ -587,6 +587,34 @@ describe('erros no campo (R4, V4, V8)', () => {
     expectNothingApplied(o);
   });
 
+  it('Fix 2: endereço do vídeo só de espaços → errorRequired, nada aplicado', async () => {
+    const s = await setup('<p></p>');
+    const o = await openVideo(s);
+    typeInto(field(o, SRC), '   ');
+    await submit(o);
+    expect(errorOf(field(o, SRC))).toBe(REQUIRED);
+    expect(document.activeElement).toBe(field(o, SRC));
+    expectNothingApplied(o);
+  });
+
+  it('Fix 2: endereço da faixa só de espaços → errorRequired', async () => {
+    const o = await withTrack({ src: '   ' });
+    expect(errorOf(trackField(o, 0, TRACK_SRC))).toBe(REQUIRED);
+    expectNothingApplied(o);
+  });
+
+  it('Fix 2: pôster só de espaços → aplica sem poster, sem erro no campo', async () => {
+    const s = await setup('<p></p>');
+    const o = await openVideo(s);
+    typeInto(field(o, SRC), '/e2e.webm');
+    typeInto(field(o, POSTER), '   ');
+    await submit(o);
+    expect(errorOf(field(o, POSTER))).toBeNull();
+    expect(o.dialog.open).toBe(false);
+    expect(html(o)).toBe(VIDEO('src="/e2e.webm"', '>'));
+    expectOneStep(o);
+  });
+
   it('Ruling 14: legenda de 301 → Use at most 300 characters.', async () => {
     const s = await setup('<p></p>');
     const o = await openVideo(s);
@@ -707,6 +735,25 @@ describe('dica WCAG 1.2.2 (V8)', () => {
   });
 });
 
+describe('Fix 9: grupo das faixas descrito pela dica WCAG 1.2.2', () => {
+  function group(o: Opened): HTMLElement {
+    const g = o.dialog.querySelector<HTMLElement>('.rte-dialog__tracks');
+    if (!g) throw new Error('grupo das faixas ausente');
+    return g;
+  }
+
+  it('sem captions → aria-describedby aponta para a dica; com captions → sem descrição nem dica', async () => {
+    const s = await setup('<p></p>');
+    const o = await openVideo(s);
+    const id = group(o).getAttribute('aria-describedby');
+    expect(id).toBeTruthy();
+    expect(document.getElementById(id ?? '')?.textContent?.trim()).toBe(HINT);
+    await fillNewTrack(o, { kind: 'captions' });
+    expect(group(o).hasAttribute('aria-describedby')).toBe(false);
+    expect(hintShown(o)).toBe(false);
+  });
+});
+
 describe('comando recusado (V9, Ruling 4)', () => {
   function rawCommands(
     editor: Editor,
@@ -817,7 +864,7 @@ describe('propriedade R6: aceito ⇔ a regra do esquema aceita', () => {
             .some((e) => e.kind === 'rteMediaUrl');
           // Endereços aparados (Ruling 11); o vazio é do `required` (Ruling 10).
           const expected =
-            s !== '' && normalizeAttribute(rule, s.trim()) === null;
+            s.trim() !== '' && normalizeAttribute(rule, s.trim()) === null;
           expect(refused).toBe(expected);
         }),
         fcOptions(),

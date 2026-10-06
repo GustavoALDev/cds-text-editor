@@ -24,7 +24,7 @@ import {
   type MockInstance,
 } from 'vitest';
 import { RteDialogController } from './dialogs/controller';
-import { floatingHref } from './floating/commands';
+import { floatingHref, RTE_FLOATING_MEDIA } from './floating/commands';
 import { RteFloatingMenus } from './floating/rte-floating-menus';
 import {
   dialogField,
@@ -1451,5 +1451,18 @@ describe('menus de vídeo e de embed (V10, R8)', () => {
     expect(open).not.toHaveBeenCalled();
     expect(el.querySelector('dialog.rte-dialog[open]')).toBeNull();
     expect(error).not.toHaveBeenCalled();
+  });
+});
+
+describe('RTE_FLOATING_MEDIA (Fix 5 da revisão final)', () => {
+  it('uma entrada por tipo de mídia, com o kind da chave', () => {
+    expect(Object.keys(RTE_FLOATING_MEDIA).sort()).toEqual([
+      'embed',
+      'image',
+      'video',
+    ]);
+    for (const [key, entry] of Object.entries(RTE_FLOATING_MEDIA)) {
+      expect(entry?.kind).toBe(key);
+    }
   });
 });

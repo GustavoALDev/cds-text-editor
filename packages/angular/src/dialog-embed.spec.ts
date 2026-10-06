@@ -365,6 +365,16 @@ describe('editar embed (R5, V5)', () => {
     expect(button(o, '.rte-dialog__remove').textContent?.trim()).toBe('Remove');
   });
 
+  it('Fix 8: a URL somente leitura fica num grupo nomeado pelo rótulo', async () => {
+    const o = await openEdit();
+    const ro = o.dialog.querySelector('.rte-dialog__readonly');
+    const group = ro?.closest('[role="group"]');
+    expect(group).toBeTruthy();
+    const id = group?.getAttribute('aria-labelledby') ?? '';
+    expect(id).not.toBe('');
+    expect(document.getElementById(id)?.textContent?.trim()).toBe(URL_LABEL);
+  });
+
   it('só a legenda muda; NodeSelection mantida; 1 passo', async () => {
     const o = await openEdit();
     typeInto(field(o, CAPTION), 'Nova');
