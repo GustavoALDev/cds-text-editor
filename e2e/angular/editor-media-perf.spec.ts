@@ -17,6 +17,15 @@ import { frames } from './helpers/toolbar';
 const KEYS = 50;
 const PARAGRAPHS = 2000;
 const IMAGES = 200;
+/**
+ * Sentinela: a mediana dos ouvintes cobre pelo menos esta fração da mediana de
+ * uma serialização avulsa. Folga relativa: no WebKit sob carga as duas sobem
+ * juntas (27 ms) e a diferença passa do relógio de 1 ms; sem a serialização
+ * do `value` nos ouvintes, a razão cai para perto de 0.
+ */
+const SERIALIZE_SHARE = 0.5;
+/** Teto de alarme do B-A da tecla inteira (informativo; não é a guarda da R14). */
+const WHOLE_KEY_ALARM = 5;
 
 /** Mediana e p95 (método do posto mais próximo), em ms. */
 function summarize(times: readonly number[]): { median: number; p95: number } {
@@ -115,8 +124,8 @@ interface Sample {
  * serialize`, pareado por tecla, isola o rastreador do resto do custo do
  * documento maior (desenho das imagens, validador, detecção de mudanças).
  */
-function measure(page: Page, render: boolean): Promise<Sample[]> {
-  return editorHost(page, 'perf').evaluate(
+async function measure(page: Page, render: boolean): Promise<Sample[]> {
+  const { samples, calls } = await editorHost(page, 'perf').evaluate(
     (host, { keys, render }) => {
       const editor = window.rteE2e.getRteEditor(host);
       if (!editor) throw new Error("editor 'perf' ausente");
@@ -128,9 +137,11 @@ function measure(page: Page, render: boolean): Promise<Sample[]> {
       const original = emitter.callbacks['transaction'] ?? [];
       if (original.length === 0) throw new Error('sem ouvintes transaction');
       let spent = 0;
+      let calls = 0;
       emitter.callbacks['transaction'] = original.map(
         (fn) =>
           function (this: unknown, ...args: unknown[]) {
+            calls++;
             const t0 = performance.now();
             try {
               fn.apply(this, args);
@@ -167,10 +178,25 @@ function measure(page: Page, render: boolean): Promise<Sample[]> {
       } finally {
         emitter.callbacks['transaction'] = original;
       }
-      return result;
+      return { samples: result, calls };
     },
     { keys: KEYS, render },
   );
+  // Sentinelas: a medida depende do campo privado `callbacks` do Tiptap. Se
+  // ele mudar, os envoltórios deixam de ser chamados (ou deixam de cobrir a
+  // serialização do `value`) e o "rastreador" daria 0 sem medir nada.
+  expect(
+    calls,
+    'Tiptap EventEmitter mudou; revisar N32 (ouvintes transaction não chamados)',
+  ).toBeGreaterThanOrEqual(KEYS);
+  const med = (values: number[]) => summarize(values).median;
+  expect(
+    med(samples.map((r) => r.listeners)),
+    'Tiptap EventEmitter mudou; revisar N32 (ouvintes sem a serialização do value)',
+  ).toBeGreaterThanOrEqual(
+    med(samples.map((r) => r.serialize)) * SERIALIZE_SHARE,
+  );
+  return samples;
 }
 
 test('N32 (R14): custo por tecla com 200 imagens no documento de 20 mil palavras (A sem mídia x B com 200 imagens; guarda de 1 ms na mediana)', async ({
@@ -245,4 +271,10 @@ test('N32 (R14): custo por tecla com 200 imagens no documento de 20 mil palavras
     at('B rastreador').median,
     'rastreador com 200 imagens (mediana por tecla)',
   ).toBeLessThanOrEqual(1);
+  // Informativo, teto de alarme: a tecla inteira com 200 imagens não pode
+  // disparar (medido 2-2,3 ms em N8 nos 3 motores).
+  expect(
+    deltaN8,
+    'B-A da tecla inteira, N8 (informativo, teto de alarme)',
+  ).toBeLessThanOrEqual(WHOLE_KEY_ALARM);
 });

@@ -29,9 +29,9 @@ import { E2eBridge } from '../e2e-bridge';
 export class PerfPage {
   protected readonly bridge = inject(E2eBridge);
   protected readonly model = signal({ body: '' });
-  protected readonly options: RteEditorConfig = inject(
-    DOCUMENT,
-  ).location?.search.includes('media')
+  protected readonly options: RteEditorConfig = new URLSearchParams(
+    inject(DOCUMENT).location?.search ?? '',
+  ).has('media')
     ? { features: { media: true }, allowRelativeMedia: true }
     : {};
   protected readonly toolbar = signal<RteToolbarConfig>('full');

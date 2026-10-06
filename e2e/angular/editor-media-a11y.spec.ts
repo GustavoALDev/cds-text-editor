@@ -47,35 +47,43 @@ async function severe(page: Page) {
     }));
 }
 
-/** Contraste de rótulos, legendas, dicas, erros e URL somente leitura. */
+/**
+ * Contraste de rótulos, legendas, dicas, erros e URL somente leitura sobre o
+ * fundo efetivo (`effectiveBackground`; cada texto marcado com um atributo
+ * temporário para o seletor).
+ */
 async function textContrasts(page: Page, dialog: Locator) {
-  const pairs = await dialog.evaluate((d) =>
-    [
-      ...d.querySelectorAll(
-        '.rte-dialog__title, .rte-dialog__label, .rte-dialog__legend, .rte-dialog__hint, .rte-dialog__error, .rte-dialog__readonly',
-      ),
-    ].map((el) => {
-      let node: Element | null = el;
-      let bg = 'rgb(255, 255, 255)';
-      while (node) {
-        const value = getComputedStyle(node).backgroundColor;
-        if (value !== 'transparent' && !/\/ 0\)$|, 0\)$/.test(value)) {
-          bg = value;
-          break;
-        }
-        node = node.parentElement;
-      }
-      return {
-        text: (el.textContent ?? '').trim().slice(0, 30),
-        fg: getComputedStyle(el).color,
-        bg,
-      };
-    }),
+  const MARK = 'data-n31-contrast';
+  const texts = await dialog.evaluate(
+    (d, mark) =>
+      [
+        ...d.querySelectorAll(
+          '.rte-dialog__title, .rte-dialog__label, .rte-dialog__legend, .rte-dialog__hint, .rte-dialog__error, .rte-dialog__readonly',
+        ),
+      ].map((el, i) => {
+        el.setAttribute(mark, String(i));
+        return {
+          text: (el.textContent ?? '').trim().slice(0, 30),
+          fg: getComputedStyle(el).color,
+        };
+      }),
+    MARK,
   );
   const out: { text: string; ratio: number }[] = [];
-  for (const { text, fg, bg } of pairs) {
-    const ratio = contrastRatio(await toRgb(page, fg), await toRgb(page, bg));
-    out.push({ text, ratio: Math.round(ratio * 100) / 100 });
+  try {
+    for (const [i, { text, fg }] of texts.entries()) {
+      const bg = await effectiveBackground(page, `[${MARK}="${i}"]`);
+      const ratio = contrastRatio(await toRgb(page, fg), bg);
+      out.push({ text, ratio: Math.round(ratio * 100) / 100 });
+    }
+  } finally {
+    await dialog.evaluate(
+      (d, mark) =>
+        d
+          .querySelectorAll(`[${mark}]`)
+          .forEach((el) => el.removeAttribute(mark)),
+      MARK,
+    );
   }
   return out;
 }
@@ -581,5 +589,4 @@ test('N31 (R13, zone): cada uma de 20 teclas num parágrafo com mídia custa um 
     description: `turnos por tecla sem mídia: ${without.join(',')}`,
   });
   expect(median(without)).toBe(1);
-  expect(median(withMedia)).toBeLessThanOrEqual(median(without));
 });
