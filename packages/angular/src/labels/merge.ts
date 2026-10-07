@@ -2,7 +2,12 @@ import type {
   RteContentLabels,
   RteSlashLabels,
 } from '@cds/rte-core/extensions';
-import type { RteLabels, RteLabelsInput, RteLabelsSource } from './types';
+import type {
+  RteLabels,
+  RteLabelsInput,
+  RteLabelsSource,
+  RteToolbarLabels,
+} from './types';
 
 type Bag = Record<string, unknown>;
 
@@ -134,6 +139,33 @@ function mergeErrors(base: RteLabels['errors'], given: unknown) {
   };
 }
 
+function mergeToolbar(
+  base: RteToolbarLabels,
+  given: unknown,
+): RteToolbarLabels {
+  if (!isBag(given)) return base;
+  const out: Record<string, unknown> = { ...base };
+  for (const key of Object.keys(base)) {
+    if (key === 'heading' || key === 'colorNames') continue;
+    const value = own(given, key);
+    if (typeof value === 'string') out[key] = value;
+  }
+  const heading = own(given, 'heading');
+  if (typeof heading === 'function')
+    out['heading'] = guard(
+      heading as (level: 2 | 3 | 4) => unknown,
+      base.heading,
+    );
+  const names: Record<string, string> = { ...base.colorNames };
+  const givenNames = own(given, 'colorNames');
+  for (const name of Object.keys(base.colorNames)) {
+    const value = own(givenNames, name);
+    if (typeof value === 'string') names[name] = value;
+  }
+  out['colorNames'] = names;
+  return out as unknown as RteToolbarLabels;
+}
+
 /**
  * Mescla a entrada sobre `base` por seção e por chave: só chaves próprias com
  * o tipo esperado. Sem entrada, devolve `base` (o mesmo objeto).
@@ -159,6 +191,10 @@ export function mergeLabels(
     errors: safely(
       () => mergeErrors(base.errors, own(input, 'errors')),
       base.errors,
+    ),
+    toolbar: safely(
+      () => mergeToolbar(base.toolbar, own(input, 'toolbar')),
+      base.toolbar,
     ),
   };
 }

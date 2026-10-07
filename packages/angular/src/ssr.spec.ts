@@ -15,7 +15,7 @@ import {
   renderApplication,
 } from '@angular/platform-server';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteEditor } from '@cds/rte-angular';
+import { provideRichText, RteEditor } from '@cds/rte-angular';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // R12 (D19): no servidor só a casca; nenhum Editor e nenhum HTML do valor.
@@ -105,6 +105,63 @@ describe('RteEditor no servidor (R12)', () => {
       expect(html).not.toContain('ProseMirror');
       expect(html).not.toContain('segredo');
       expect(error).not.toHaveBeenCalled();
+
+      // Barra (U10, R7, R16): mesma estrutura, botões disabled, fora do Tab, sem style.
+      expect(html).toContain('class="rte-toolbar"');
+      expect(html).toContain('role="toolbar"');
+      const toolbars = [
+        ...html.matchAll(/<rte-toolbar\b[\s\S]*?<\/rte-toolbar>/g),
+      ].map(([m]) => m);
+      expect(toolbars).toHaveLength(2);
+      for (const toolbar of toolbars) {
+        const buttons = [...toolbar.matchAll(/<button\b[^>]*>/g)].map(
+          ([m]) => m,
+        );
+        const own = buttons.filter((b) => b.includes('rte-toolbar__button'));
+        expect(own.length).toBeGreaterThan(10);
+        for (const b of own) expect(b).toMatch(/\sdisabled(?:=""|\s|>)/);
+        expect(toolbar).not.toContain('tabindex="0"');
+        expect(toolbar).not.toMatch(/\sstyle=/);
+      }
+      const hosts = [...html.matchAll(/<rte-editor\b[^>]*>/g)].map(([m]) => m);
+      expect(hosts).toHaveLength(2);
+      for (const host of hosts) expect(host).not.toMatch(/\sstyle=/);
+    },
+  );
+  it(
+    'tema do provider: data-rte-mode no HTML e nenhum style no host (U15, R10)',
+    { timeout: 30_000 },
+    async () => {
+      const html = await withServerDomAdapter(() =>
+        renderApplication(
+          (context) =>
+            bootstrapApplication(
+              SsrHost,
+              {
+                providers: [
+                  provideZonelessChangeDetection(),
+                  provideServerRendering(),
+                  provideRichText({
+                    theme: { mode: 'dark', primary: '#0b57d0' },
+                  }),
+                ],
+              },
+              context,
+            ),
+          {
+            document:
+              '<!doctype html><html><head></head><body><rte-ssr-host></rte-ssr-host></body></html>',
+            url: '/',
+          },
+        ),
+      );
+      const hosts = [...html.matchAll(/<rte-editor\b[^>]*>/g)].map(([m]) => m);
+      expect(hosts).toHaveLength(2);
+      for (const host of hosts) {
+        expect(host).toContain('data-rte-mode="dark"');
+        expect(host).not.toMatch(/\sstyle=/);
+      }
+      expect(html).not.toContain('--rte-');
     },
   );
 });

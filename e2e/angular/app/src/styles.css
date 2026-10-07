@@ -19,3 +19,23 @@ nav {
 section {
   margin-block: 16px;
 }
+
+/* N13: a variável do consumidor vence a paleta do content.css (a regra sem camada ganha da camada). */
+.e2e-custom-palette .rte-content span[data-rt-color='red'] {
+  --rte-content-color: rgb(1, 2, 3);
+}
+
+/* Página `toolbar` (N10): espaçadores e contêiner com rolagem. */
+.e2e-spacer {
+  height: 100vh;
+}
+
+.e2e-scroller {
+  height: 320px;
+  overflow: auto;
+  border: 1px solid #888;
+}
+
+.e2e-scroller__spacer {
+  height: 240px;
+}

@@ -1,0 +1,157 @@
+@for (group of groups(); track $index; let last = $last) { @for (id of group;
+track id) { @let s = state.item(id)(); @let kind = kindOf(id); @if (kind ===
+'menu') {
+<button
+  type="button"
+  class="rte-toolbar__button rte-toolbar__button--menu"
+  rteRovingItem
+  [disabled]="!interactive()"
+  [rteMenuTrigger]="menu"
+  [attr.aria-label]="menuButtonName(id, s.value)"
+  [attr.title]="title(label(id), null)"
+  [attr.aria-disabled]="ariaDisabled(s.enabled)"
+  (mousedown)="$event.preventDefault()"
+>
+  @if (id === 'blockType') {
+  <span class="rte-toolbar__label">
+    <span class="rte-toolbar__text">{{ blockText(s.value) }}</span>
+    @for (text of blockTexts(); track $index) {
+    <span class="rte-toolbar__sizer" aria-hidden="true">{{ text }}</span>
+    }
+  </span>
+  } @else {
+  <svg
+    class="rte-icon"
+    aria-hidden="true"
+    focusable="false"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    @for (d of icon(itemIcon(id, s.value)); track $index) {
+    <path [attr.d]="d" />
+    }
+  </svg>
+  }
+  <svg
+    class="rte-icon rte-icon--chevron"
+    aria-hidden="true"
+    focusable="false"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    @for (d of icon('chevronDown'); track $index) {
+    <path [attr.d]="d" />
+    }
+  </svg>
+</button>
+<div
+  rteMenu
+  #menu="rteMenu"
+  [attr.aria-label]="label(id)"
+  (tabOut)="tabOut.emit()"
+>
+  @let table = id === 'table' ? tableState(menu) : null; @for (e of
+  menuEntries(id); track e.key) { @let enabled = entryEnabled(id, e, s, table);
+  @let on = checked(e, s); @let limited = spanLimited(table, e);
+  <button
+    type="button"
+    class="rte-menu__item"
+    tabindex="-1"
+    [attr.role]="e.role"
+    [attr.aria-checked]="e.role === 'menuitemradio' ? on : null"
+    [class.rte-menu__item--checked]="on"
+    [attr.aria-disabled]="enabled ? null : 'true'"
+    [attr.title]="title(e.label, e.shortcut, limited)"
+    [attr.aria-keyshortcuts]="keyShortcuts(e.shortcut)"
+    (click)="choose(menu, id, e)"
+  >
+    @if (e.palette) {
+    <span
+      class="rte-swatch"
+      [attr.data-rte-palette]="e.palette"
+      [attr.data-rte-color]="e.color"
+    ></span>
+    } @if (e.icon) {
+    <svg
+      class="rte-icon"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      @for (d of icon(e.icon); track $index) {
+      <path [attr.d]="d" />
+      }
+    </svg>
+    }
+    <span class="rte-menu__label">{{ e.label }}</span>
+    @if (on) {
+    <svg
+      class="rte-icon rte-icon--check"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      @for (d of icon('check'); track $index) {
+      <path [attr.d]="d" />
+      }
+    </svg>
+    }
+  </button>
+  }
+</div>
+} @else {
+<button
+  type="button"
+  class="rte-toolbar__button"
+  rteRovingItem
+  [disabled]="!interactive()"
+  [attr.aria-label]="label(id)"
+  [attr.title]="title(label(id), id)"
+  [attr.aria-keyshortcuts]="keyShortcuts(id)"
+  [attr.aria-disabled]="ariaDisabled(s.enabled)"
+  [attr.aria-pressed]="kind === 'toggle' ? s.active : null"
+  [class.rte-toolbar__button--pressed]="kind === 'toggle' && s.active"
+  (mousedown)="$event.preventDefault()"
+  (click)="run(id)"
+>
+  <svg
+    class="rte-icon"
+    aria-hidden="true"
+    focusable="false"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    @for (d of icon(itemIcon(id, s.value)); track $index) {
+    <path [attr.d]="d" />
+    }
+  </svg>
+</button>
+} } @if (!last) {
+<div
+  class="rte-toolbar__separator"
+  role="separator"
+  aria-orientation="vertical"
+></div>
+} }

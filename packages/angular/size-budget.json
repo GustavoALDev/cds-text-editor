@@ -62,9 +62,9 @@
     }
   },
   "budgets": {
-    "editor": 6016,
-    "whole": 6016,
-    "i18n": 448,
+    "editor": 20032,
+    "whole": 20032,
+    "i18n": 1792,
     "validators": 1344
   }
 }

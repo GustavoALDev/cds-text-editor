@@ -45,7 +45,7 @@ export default [
             },
             {
               sourceTag: 'scope:angular',
-              onlyDependOnLibsWithTags: ['scope:core'],
+              onlyDependOnLibsWithTags: ['scope:core', 'scope:theme'],
             },
             {
               sourceTag: 'scope:render',
@@ -53,7 +53,11 @@ export default [
             },
             {
               sourceTag: 'scope:e2e',
-              onlyDependOnLibsWithTags: ['scope:angular', 'scope:core'],
+              onlyDependOnLibsWithTags: [
+                'scope:angular',
+                'scope:core',
+                'scope:theme',
+              ],
             },
           ],
         },

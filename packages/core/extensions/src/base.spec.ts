@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { validateHtml } from '../../html/src/validate-html';
 import { getRteHtml } from './serialize';
 import { createTestEditor, destroyTestEditors } from './testing/editor';
+import { pressChord } from './testing/press-chord';
 import { pressKey } from './testing/press-key';
 
 const OFF = {
@@ -152,6 +153,30 @@ describe('base: marcas e blocos', () => {
   it('lista com marcadores', () => {
     const html = '<ul><li><p>a</p></li></ul>';
     expect(roundTrip(html)).toBe(html);
+  });
+});
+
+describe('base: atalhos de negrito e citação (K1)', () => {
+  const html = (editor: ReturnType<typeof createTestEditor>) =>
+    getRteHtml(editor);
+
+  it('Ctrl+Shift+B cria citação, não negrito', () => {
+    const editor = createTestEditor({ features: OFF }, '<p>ab</p>');
+    editor.commands.setTextSelection({ from: 1, to: 3 });
+    expect(pressChord(editor, { key: 'B', keyCode: 66, shift: true })).toBe(
+      true,
+    );
+    expect(html(editor)).toBe('<blockquote><p>ab</p></blockquote>');
+  });
+
+  it.each([
+    ['Ctrl+B', 'b'],
+    ['Ctrl+B com Caps Lock', 'B'],
+  ])('%s alterna o negrito', (_name, key) => {
+    const editor = createTestEditor({ features: OFF }, '<p>ab</p>');
+    editor.commands.setTextSelection({ from: 1, to: 3 });
+    expect(pressChord(editor, { key, keyCode: 66 })).toBe(true);
+    expect(html(editor)).toBe('<p><strong>ab</strong></p>');
   });
 });
 

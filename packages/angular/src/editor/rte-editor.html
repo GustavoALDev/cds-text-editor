@@ -1,5 +1,18 @@
 <div class="rte-editor__frame">
-  @if (!editor()) {
+  @if (toolbarGroups().length) {
+  <rte-toolbar
+    [editor]="editor()"
+    [version]="version"
+    [groups]="toolbarGroups()"
+    [interactive]="interactive()"
+    [labels]="resolvedLabels().toolbar"
+    [calloutTitles]="contentLabels().calloutTitles"
+    [palette]="palette()"
+    [codeLanguages]="codeLanguages()"
+    (escape)="focus()"
+    (tabOut)="focus()"
+  />
+  } @if (!editor()) {
   <div
     class="rte-content rte-editor__shell"
     role="textbox"

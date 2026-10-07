@@ -7,6 +7,7 @@ import {
   modelValue,
   waitForEditor,
 } from './helpers/app';
+import { expectToolbarFocused } from './helpers/toolbar';
 
 // N2 (spec 05a, R5, R7, D10, D12): `disabled`, `readonly` e `hidden` do Signal
 // Forms com o teclado real; `rteMaxChars(50)` recusa a digitação além do
@@ -38,9 +39,11 @@ test('N2: disabled fica fora da ordem de Tab e não é editável', async ({
   await expect(editable).toHaveAttribute('contenteditable', 'false');
   await expect(editable).toHaveAttribute('aria-disabled', 'true');
 
+  // Nem o editável nem a barra (botões `disabled` nativos, spec 05b1): a
+  // próxima parada é a barra do `reactive`.
   await focusBeforeSignal(page);
   await page.keyboard.press('Tab');
-  await expect(editableOf(page, 'reactive')).toBeFocused();
+  await expectToolbarFocused(page, 'reactive');
 
   await editable.click({ force: true });
   await page.keyboard.type('nada');

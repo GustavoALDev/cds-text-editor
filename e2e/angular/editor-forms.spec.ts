@@ -6,6 +6,7 @@ import {
   modelValue,
   waitForEditor,
 } from './helpers/app';
+import { expectToolbarFocused } from './helpers/toolbar';
 
 // N1 (spec 05a, R4–R6, R14), nos builds zoneless e `zone`: o teclado real
 // escreve o HTML canônico nos três modelos (Signal Forms, Reactive Forms e
@@ -87,15 +88,20 @@ for (const zone of [false, true]) {
       await expect(editableOf(page, 'signal')).toBeFocused();
       expect((await formState(page, 'signal')).touched).toBe(false);
 
+      // A barra (spec 05b1) é a primeira parada de Tab de cada editor.
       await page.keyboard.press('Tab');
-      await expect(editableOf(page, 'reactive')).toBeFocused();
+      await expectToolbarFocused(page, 'reactive');
       await expect
         .poll(async () => (await formState(page, 'signal')).touched)
         .toBe(true);
       expect((await formState(page, 'reactive')).touched).toBe(false);
+      await page.keyboard.press('Tab');
+      await expect(editableOf(page, 'reactive')).toBeFocused();
+      // Barra → editável é foco interno do host: não toca (D11).
+      expect((await formState(page, 'reactive')).touched).toBe(false);
 
       await page.keyboard.press('Tab');
-      await expect(editableOf(page, 'plain')).toBeFocused();
+      await expectToolbarFocused(page, 'plain');
       await expect
         .poll(async () => (await formState(page, 'reactive')).touched)
         .toBe(true);

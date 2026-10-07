@@ -11,7 +11,10 @@
  * - `rte.components`: a moldura (`.rte-editor`, `__frame`, `__shell`, `__mount` e modificadores).
  * - `rte.content`: tudo dentro do editável `.rte-content` (o CSS base do Tiptap portado, sem
  *   `!important`, mais placeholder, tarefas, alças da imagem, tabelas em edição, `hljs-*`, busca
- *   e comandos `/`). A aparência dos blocos `rt-*` (caixas, citação, figuras) é da spec 05b.
+ *   e comandos `/`). Só o funcional da edição: a aparência do conteúdo (`rt-*`, tabelas, `pre`,
+ *   cores da paleta) é do `content.css` do `@cds/rte-core` (spec 05b1, U16). Ordem de inclusão:
+ *   `theme.css` → `content.css` → `editor.css`. Onde o seletor coincidiria com o do `content.css`,
+ *   o daqui leva `.rte-editor` na frente (mais específico, sem repetir o seletor).
  */
 
 @layer rte.components {
@@ -65,6 +68,272 @@
     cursor: not-allowed;
   }
 
+  /* Barra de ferramentas (spec 05b1, U2–U13). Alvos ≥ 24 × 24 px em qualquer densidade (WCAG
+   * 2.5.8); pressionado e marcado se distinguem sem cor (borda, ícone de marca). */
+  .rte-editor .rte-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: calc(0.25rem * var(--rte-density));
+    padding: calc(0.25rem * var(--rte-density));
+    border-bottom: 1px solid var(--rte-border);
+  }
+
+  .rte-editor .rte-toolbar__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25em;
+    box-sizing: border-box;
+    min-inline-size: max(24px, calc(2rem * var(--rte-density)));
+    min-block-size: max(24px, calc(2rem * var(--rte-density)));
+    margin: 0;
+    padding: 0 calc(0.375rem * var(--rte-density));
+    color: var(--rte-text);
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--rte-radius);
+    font: inherit;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .rte-editor .rte-toolbar__button:hover {
+    background-color: var(--rte-surface-raised);
+  }
+
+  .rte-editor .rte-toolbar__button:focus-visible {
+    outline: var(--rte-focus-width) solid var(--rte-focus);
+    outline-offset: 1px;
+  }
+
+  .rte-editor .rte-toolbar__button[aria-disabled='true'],
+  .rte-editor .rte-toolbar__button:disabled {
+    color: var(--rte-text-muted);
+    background-color: transparent;
+    cursor: default;
+  }
+
+  .rte-editor .rte-toolbar__button:disabled {
+    cursor: not-allowed;
+  }
+
+  .rte-editor .rte-toolbar__button--pressed {
+    color: var(--rte-primary-text);
+    background-color: var(--rte-primary-subtle);
+    border-color: var(--rte-primary-border);
+  }
+
+  .rte-editor .rte-toolbar__button--menu {
+    padding-inline-end: calc(0.25rem * var(--rte-density));
+  }
+
+  /* Texto do `blockType`: o atual e, invisíveis na mesma célula, todos os possíveis; a largura é
+   * a do mais longo, então trocar o texto não muda o leiaute (R7). */
+  .rte-editor .rte-toolbar__label {
+    display: inline-grid;
+    min-inline-size: 6em;
+  }
+
+  .rte-editor .rte-toolbar__text,
+  .rte-editor .rte-toolbar__sizer {
+    grid-area: 1 / 1;
+    text-align: start;
+    white-space: nowrap;
+  }
+
+  .rte-editor .rte-toolbar__sizer {
+    visibility: hidden;
+  }
+
+  .rte-editor .rte-toolbar__separator {
+    align-self: stretch;
+    inline-size: 1px;
+    margin-block: calc(0.25rem * var(--rte-density));
+    background-color: var(--rte-border);
+  }
+
+  .rte-editor .rte-icon {
+    flex: none;
+    inline-size: 1.125em;
+    block-size: 1.125em;
+  }
+
+  .rte-editor .rte-icon--chevron {
+    inline-size: 0.875em;
+    block-size: 0.875em;
+  }
+
+  /* Menus em `popover="auto"` (U7): posição por CSSOM (`left`/`top`/`max-height`). */
+  .rte-editor .rte-menu {
+    position: fixed;
+    inset: auto;
+    box-sizing: border-box;
+    width: max-content;
+    min-inline-size: 10rem;
+    max-inline-size: calc(100vw - 16px);
+    margin: 0;
+    padding: 0.25rem;
+    overflow-y: auto;
+    color: var(--rte-text);
+    background-color: var(--rte-surface);
+    border: 1px solid var(--rte-border);
+    border-radius: var(--rte-radius);
+    font-family: var(--rte-font-sans);
+    font-size: var(--rte-font-size);
+    line-height: var(--rte-line-height);
+  }
+
+  .rte-editor .rte-menu__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-inline-size: 24px;
+    min-block-size: max(24px, calc(2rem * var(--rte-density)));
+    margin: 0;
+    padding: 0 calc(0.5rem * var(--rte-density));
+    color: var(--rte-text);
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--rte-radius);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .rte-editor .rte-menu__item:hover {
+    background-color: var(--rte-surface-raised);
+  }
+
+  .rte-editor .rte-menu__item:focus-visible {
+    outline: var(--rte-focus-width) solid var(--rte-focus);
+    outline-offset: -2px;
+  }
+
+  .rte-editor .rte-menu__item[aria-disabled='true'] {
+    color: var(--rte-text-muted);
+    cursor: default;
+  }
+
+  .rte-editor .rte-menu__item--checked {
+    color: var(--rte-primary-text);
+    background-color: var(--rte-primary-subtle);
+    border-color: var(--rte-primary-border);
+  }
+
+  .rte-editor .rte-menu__label {
+    flex: 1 1 auto;
+  }
+
+  .rte-editor .rte-icon--check {
+    margin-inline-start: auto;
+  }
+
+  /* Amostras da paleta (U13): por classe, nunca por `style`; literais iguais aos do core. */
+  .rte-editor .rte-swatch {
+    display: inline-block;
+    flex: none;
+    box-sizing: border-box;
+    inline-size: 1em;
+    block-size: 1em;
+    background-color: transparent;
+    border: 1px solid var(--rte-border);
+    border-radius: 2px;
+  }
+
+  .rte-editor .rte-swatch[data-rte-palette='text'] {
+    background-color: currentColor;
+  }
+
+  .rte-editor .rte-swatch[data-rte-palette='text'][data-rte-color='gray'] {
+    color: light-dark(#5f6368, #bdc1c6);
+  }
+
+  .rte-editor .rte-swatch[data-rte-palette='text'][data-rte-color='red'] {
+    color: light-dark(#b3261e, #ff8f87);
+  }
+
+  .rte-editor .rte-swatch[data-rte-palette='text'][data-rte-color='orange'] {
+    color: light-dark(#9f4900, #f0b84d);
+  }
+
+  .rte-editor .rte-swatch[data-rte-palette='text'][data-rte-color='green'] {
+    color: light-dark(#197136, #5fd08a);
+  }
+
+  .rte-editor .rte-swatch[data-rte-palette='text'][data-rte-color='blue'] {
+    color: light-dark(#1d4ed8, #8ab4ff);
+  }
+
+  .rte-editor .rte-swatch[data-rte-palette='text'][data-rte-color='purple'] {
+    color: light-dark(#6b21a8, #d2a8ff);
+  }
+
+  .rte-editor .rte-swatch[data-rte-palette='text'][data-rte-color='pink'] {
+    color: light-dark(#be185d, #ff8cc6);
+  }
+
+  .rte-editor .rte-swatch[data-rte-palette='text'][data-rte-color='teal'] {
+    color: light-dark(#0e6e66, #5eead4);
+  }
+
+  .rte-editor
+    .rte-swatch[data-rte-palette='highlight'][data-rte-color='yellow'] {
+    background-color: light-dark(#fff3a3, #4d4100);
+  }
+
+  .rte-editor
+    .rte-swatch[data-rte-palette='highlight'][data-rte-color='green'] {
+    background-color: light-dark(#ccf2d1, #1d4a29);
+  }
+
+  .rte-editor .rte-swatch[data-rte-palette='highlight'][data-rte-color='blue'] {
+    background-color: light-dark(#d3e8ff, #1c3a5e);
+  }
+
+  .rte-editor .rte-swatch[data-rte-palette='highlight'][data-rte-color='pink'] {
+    background-color: light-dark(#ffd6e8, #5e1f3d);
+  }
+
+  .rte-editor
+    .rte-swatch[data-rte-palette='highlight'][data-rte-color='orange'] {
+    background-color: light-dark(#ffe1bf, #5c3300);
+  }
+
+  .rte-editor
+    .rte-swatch[data-rte-palette='highlight'][data-rte-color='purple'] {
+    background-color: light-dark(#eadcff, #3f2a63);
+  }
+
+  @media (forced-colors: active) {
+    /* Par principal invertido (o contraste é o do tema do sistema; o par
+     * Highlight/HighlightText de motores emulados fica abaixo de 4,5:1) e o
+     * Highlight na borda. */
+    .rte-editor .rte-toolbar__button--pressed,
+    .rte-editor .rte-menu__item--checked {
+      color: Canvas;
+      background-color: CanvasText;
+      border-color: Highlight;
+    }
+
+    /* Inaplicável em GrayText, menos o pressionado/marcado: GrayText sobre o
+     * fundo CanvasText do par invertido perderia o contraste. */
+    .rte-editor
+      .rte-toolbar__button[aria-disabled='true']:not(
+        .rte-toolbar__button--pressed
+      ),
+    .rte-editor
+      .rte-menu__item[aria-disabled='true']:not(.rte-menu__item--checked) {
+      color: GrayText;
+    }
+
+    .rte-editor .rte-swatch {
+      forced-color-adjust: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .rte-editor .rte-editor__frame {
       transition: none;
@@ -75,7 +344,7 @@
 
 @layer rte.content {
   /* CSS base do Tiptap (`@tiptap/core/src/style.ts`) com `.rte-content` no lugar de `.ProseMirror`. */
-  .rte-content {
+  .rte-editor .rte-content {
     position: relative;
     box-sizing: border-box;
     min-height: 6em;
@@ -102,7 +371,7 @@
     white-space: pre-wrap;
   }
 
-  .rte-content pre {
+  .rte-editor .rte-content pre {
     white-space: pre-wrap;
   }
 
@@ -175,12 +444,7 @@
   }
 
   /* Tarefas: o checkbox fica fora da área editável (`contenteditable=false`). */
-  .rte-content .rt-tasks {
-    list-style: none;
-    padding-inline-start: 0;
-  }
-
-  .rte-content .rt-task {
+  .rte-editor .rte-content .rt-task {
     display: flex;
     align-items: flex-start;
     gap: 0.5em;
@@ -210,16 +474,8 @@
   }
 
   /* Imagem: a figura acompanha o `img` para as alças ficarem nos cantos dele. */
-  .rte-content .rt-figure {
+  .rte-editor .rte-content .rt-figure {
     position: relative;
-    width: fit-content;
-    max-width: 100%;
-  }
-
-  .rte-content .rt-figure img {
-    display: block;
-    max-width: 100%;
-    height: auto;
   }
 
   .rte-content .rte-image--selected img {
@@ -278,18 +534,14 @@
     overflow-x: auto;
   }
 
-  .rte-content table {
-    border-collapse: collapse;
+  .rte-editor .rte-content table {
     table-layout: fixed;
   }
 
-  .rte-content td,
-  .rte-content th {
+  .rte-editor .rte-content td,
+  .rte-editor .rte-content th {
     position: relative;
-    box-sizing: border-box;
     min-width: 1em;
-    vertical-align: top;
-    border: 1px solid var(--rte-border);
   }
 
   .rte-content .selectedCell {
@@ -311,20 +563,7 @@
     cursor: col-resize;
   }
 
-  /* Bloco de código e realce (`hljs-*`) sobre os tokens `--rte-code-*` do tema. */
-  .rte-content pre {
-    padding: 0.75em 1em;
-    overflow-x: auto;
-    color: var(--rte-code-text);
-    background-color: var(--rte-code-bg);
-    border-radius: var(--rte-radius);
-    font-family: var(--rte-font-mono);
-  }
-
-  .rte-content pre code {
-    font-family: inherit;
-  }
-
+  /* Realce (`hljs-*`) sobre os tokens `--rte-code-*` do tema; o bloco `pre` é do `content.css`. */
   .rte-content .hljs-keyword,
   .rte-content .hljs-built_in,
   .rte-content .hljs-literal,
@@ -379,7 +618,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .rte-content,
+    .rte-editor .rte-content,
     .rte-content *,
     .rte-content *::before,
     .rte-content *::after {

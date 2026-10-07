@@ -7,6 +7,8 @@ import {
   settlePage,
   waitForEditor,
 } from './helpers/app';
+import { loadDoc, openMenu, rteHtml, selectIn } from './helpers/toolbar';
+import { act, CASES } from './helpers/toolbar-cases';
 
 // N5 (spec 05a, R10 e R11): com `default-src 'self'; script-src 'self';
 // style-src 'self'` por cabeçalho, carregar, hidratar, criar, editar,
@@ -276,12 +278,69 @@ test('N5 (build zone): carregar, hidratar, criar, editar e destruir sem violaç�
   expect(await page.evaluate(() => window.__styleAdds)).toEqual([]);
 });
 
+test('N5 (spec 05b1): content.css, menus, posição, tema e todos os itens da barra full sem violações nem <style>', async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  const stylesBefore = await styleCountInRawHtml(page, appUrl('/toolbar'));
+  await gotoApp(page, '/toolbar');
+  await waitForEditor(page, 'toolbar');
+  // O content.css está na página (camada `rte.content`, folha externa).
+  expect(
+    await page.evaluate(() =>
+      [...document.styleSheets].some((sheet) =>
+        [...sheet.cssRules].some(
+          (rule) =>
+            rule instanceof CSSLayerBlockRule && rule.name === 'rte.content',
+        ),
+      ),
+    ),
+  ).toBe(true);
+  expect(await takeViolations(page)).toEqual([]);
+
+  // Abrir, posicionar (rolagem e redimensionamento com o menu aberto) e fechar.
+  await loadDoc(page, 'toolbar', '<p>ab</p>');
+  await selectIn(page, 'toolbar', 'ab', 0, 1);
+  const menu = await openMenu(page, 'toolbar', 'Alignment');
+  await page.evaluate(() => window.scrollBy(0, 40));
+  const size = page.viewportSize();
+  if (size) await page.setViewportSize({ ...size, height: size.height - 100 });
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+
+  // Tema: aplicar, trocar e limpar.
+  for (const theme of [
+    { primary: '#b3261e', mode: 'dark' as const },
+    undefined,
+  ])
+    await page.evaluate((t) => window.rteE2e.setTheme('toolbar', t), theme);
+  expect(await takeViolations(page)).toEqual([]);
+
+  // Todos os itens da barra full (a lista do N11), por clique.
+  for (const c of CASES) {
+    await loadDoc(page, 'toolbar', c.doc, c.initial);
+    await selectIn(page, 'toolbar', ...c.select);
+    await c.prepare?.(page);
+    await act(page, c, 'click');
+    await expect.poll(() => rteHtml(page, 'toolbar')).toBe(c.expected);
+  }
+  expect(await takeViolations(page)).toEqual([]);
+  expect(await page.evaluate(() => window.__styleAdds)).toEqual([]);
+  expect(
+    await page.evaluate(() => document.querySelectorAll('style').length),
+  ).toBe(stylesBefore);
+});
+
 /** Editores de cada rota do app (smoke dos dois builds). */
 const ROUTES = [
   { path: '/forms', ids: ['signal', 'reactive', 'plain'] },
   { path: '/labels', ids: ['labels'] },
   { path: '/lifecycle', ids: ['lifecycle'] },
   { path: '/perf', ids: ['perf'] },
+  {
+    path: '/toolbar',
+    ids: ['toolbar', 'toolbar-alt', 'toolbar-nofeat', 'toolbar-scroll'],
+  },
 ] as const;
 
 for (const zone of [false, true]) {

@@ -13,6 +13,7 @@
         "default",
         "^production",
         "{workspaceRoot}/packages/theme/src/theme.css",
+        "{workspaceRoot}/packages/core/styles/content.css",
         "{workspaceRoot}/packages/angular/styles/editor.css"
       ],
       "outputs": ["{options.outputPath}"],
@@ -27,6 +28,7 @@
         "assets": [{ "glob": "**/*", "input": "e2e/angular/app/public" }],
         "styles": [
           "packages/theme/src/theme.css",
+          "packages/core/styles/content.css",
           "packages/angular/styles/editor.css",
           "e2e/angular/app/src/styles.css"
         ],
@@ -47,6 +49,7 @@
         "default",
         "^production",
         "{workspaceRoot}/packages/theme/src/theme.css",
+        "{workspaceRoot}/packages/core/styles/content.css",
         "{workspaceRoot}/packages/angular/styles/editor.css"
       ],
       "outputs": ["{options.outputPath}"],
@@ -68,6 +71,7 @@
         "assets": [{ "glob": "**/*", "input": "e2e/angular/app/public" }],
         "styles": [
           "packages/theme/src/theme.css",
+          "packages/core/styles/content.css",
           "packages/angular/styles/editor.css",
           "e2e/angular/app/src/styles.css"
         ],

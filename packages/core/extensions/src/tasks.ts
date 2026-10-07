@@ -102,6 +102,10 @@ export function createTaskExtensions(ctx: RteExtensionContext): AnyExtension[] {
     renderHTML() {
       return ['ul', { class: 'rt-tasks' }, 0];
     },
+    // o mesmo atalho do `TaskList` do Tiptap (K2)
+    addKeyboardShortcuts() {
+      return { 'Mod-Shift-9': () => this.editor.commands.toggleTaskList() };
+    },
     addCommands() {
       return {
         toggleTaskList:
