@@ -20,6 +20,7 @@
     "paths": {
       "@cds/rte-core": ["./packages/core/src/index.ts"],
       "@cds/rte-core/embeds": ["./packages/core/embeds/src/index.ts"],
+      "@cds/rte-core/extensions": ["./packages/core/extensions/src/index.ts"],
       "@cds/rte-core/code-languages": [
         "./packages/core/code-languages/src/index.ts"
       ],

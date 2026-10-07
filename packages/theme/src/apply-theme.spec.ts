@@ -520,6 +520,53 @@ describe('applyRteTheme plano B: sementes resolvidas no contexto do elemento', (
   });
 });
 
+describe('applyRteTheme plano B: tokens derivados sobrescritos pelo consumidor (nível 3)', () => {
+  const FORMULA =
+    'light-dark(oklch(from #8514f5 0.985 calc(min(c, 0.006) * 1) h / 1), oklch(from #8514f5 0.18 calc(min(c, 0.012) * 1) h / 1))';
+
+  it('respeita o override em CSS (.rte-root) e deriva subtle/border da superfície do consumidor', () => {
+    stubDom(false, {});
+    const el = fakeElement(
+      {
+        '--rte-surface': ' #fffdf7 ',
+        '--rte-danger': '#c62828',
+        '--rte-text': FORMULA, // fórmula do theme.css: inútil sem suporte, o plano B grava
+        '--rte-warning': 'light-dark(#8c5a00, #f0b84d)', // estático do próprio tema
+        '--rte-primary-subtle':
+          'color-mix(in oklab, oklab(from #8514f5 l a b / 1) 12%, #fffdf7)',
+      },
+      (v) =>
+        v === 'var(--rte-surface)' ? 'rgb(255, 253, 247)' : 'rgba(0, 0, 0, 0)',
+    );
+    stubComputed(el);
+    applyRteTheme(el, { primary: '#8514f5', mode: 'light' });
+    expect(el.props.has('--rte-surface')).toBe(false);
+    expect(el.props.has('--rte-danger')).toBe(false);
+    const plain = createRteTheme({ primary: '#8514f5', mode: 'light' });
+    expect(el.props.get('--rte-text')).toBe(plain['--rte-text']);
+    expect(el.props.get('--rte-warning')).toBe(plain['--rte-warning']);
+    // subtle/border saem da superfície do consumidor, como color-mix(…, var(--rte-surface)) no CSS.
+    expect(el.props.get('--rte-primary-subtle')).not.toBe(
+      plain['--rte-primary-subtle'],
+    );
+    expect(el.props.get('--rte-primary-subtle')).toMatch(/^#[0-9a-f]{6}$/);
+    expect(el.children).toEqual([]);
+  });
+
+  it('override inline do usuário num token derivado não é sobrescrito nem removido pelo cleanup', () => {
+    stubDom(false, {});
+    const el = fakeElement();
+    el.style.setProperty('--rte-focus', '#ff00ff');
+    stubComputed(el);
+    const cleanup = applyRteTheme(el, { mode: 'light' });
+    expect(el.props.get('--rte-focus')).toBe('#ff00ff');
+    expect(el.props.has('--rte-primary-text')).toBe(true);
+    cleanup();
+    expect(el.props.get('--rte-focus')).toBe('#ff00ff');
+    expect(el.props.has('--rte-primary-text')).toBe(false);
+  });
+});
+
 describe('applyRteTheme plano B: R8 (forced-colors e prefers-contrast)', () => {
   const media = (flags: { forced?: boolean; contrast?: boolean } = {}) => {
     const dark = fakeMedia(false);

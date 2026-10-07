@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { parseColor } from '../../packages/theme/src/color/parse';
 import { to8 } from '../../packages/theme/src/color/convert';
+import { createRteTheme } from '../../packages/theme/src/create-theme';
 import { loadThemePage } from './helpers/page';
 import {
   DEFAULT_SEEDS,
@@ -285,5 +286,76 @@ test('Neutros: tinted tinge a superfície, gray a deixa neutra, semente cinza nu
         `semente cinza ${ctx} ${graySeed}`,
       ).toBeLessThanOrEqual(1);
     }
+  }
+});
+
+/** Como `shown`, mas pintando sobre branco: uma cor translúcida sai diferente da opaca. */
+const overWhite = (page: Page, names: string[]) =>
+  page.evaluate((list) => {
+    const probe = document.getElementById('probe') as HTMLElement;
+    const cv = document.getElementById('cv') as HTMLCanvasElement;
+    const ctx = cv.getContext('2d', { willReadFrequently: true })!;
+    const out: Record<string, number[]> = {};
+    for (const n of list) {
+      probe.style.backgroundColor = `var(--rte-${n})`;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, 1, 1);
+      ctx.fillStyle = getComputedStyle(probe).backgroundColor;
+      ctx.fillRect(0, 0, 1, 1);
+      out[n] = [...ctx.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+    }
+    return out;
+  }, names);
+
+test('R2: semente translúcida não deixa derivado translúcido (nativo e plano B)', async ({
+  page,
+}) => {
+  const opaque = {
+    primary: '#8514f5',
+    secondary: 'rgb(246 55 227)',
+    tertiary: 'oklch(0.5 0.25 264)',
+  };
+  const translucent = {
+    primary: '#8514f580',
+    secondary: 'rgb(246 55 227 / 0.3)',
+    tertiary: 'oklch(0.5 0.25 264 / 50%)',
+  };
+  const derived = Object.keys(createRteTheme())
+    .map((k) => k.slice('--rte-'.length))
+    .filter((n) => !(ROLES as readonly string[]).includes(n));
+  const setSeeds = (seeds: Record<string, string>, mode: string) =>
+    page.evaluate(
+      ([s, m]) => {
+        const root = document.getElementById('root')!;
+        root.setAttribute('data-rte-mode', m as string);
+        for (const [k, v] of Object.entries(s as Record<string, string>))
+          root.style.setProperty(`--rte-${k}`, v);
+      },
+      [seeds, mode] as const,
+    );
+  for (const mode of ['light', 'dark'] as const) {
+    await setSeeds(opaque, mode);
+    const want = await overWhite(page, derived);
+    await setSeeds(translucent, mode);
+    const got = await overWhite(page, derived);
+    for (const n of derived)
+      expect(got[n], `nativo ${mode} ${n}`).toEqual(want[n]);
+  }
+  // Plano B: o alfa parcial também é descartado (mesmos derivados da semente opaca).
+  await page.evaluate(() =>
+    document.getElementById('root')!.removeAttribute('style'),
+  );
+  for (const mode of ['light', 'dark'] as const) {
+    await page.evaluate(
+      ([o]) =>
+        window.RteTheme.applyRteTheme(document.getElementById('root')!, o),
+      [{ ...translucent, mode, force: true }] as const,
+    );
+    const ref = createRteTheme({ ...opaque, mode });
+    const got = await shown(page, derived);
+    for (const n of derived)
+      expect(got[n], `plano B ${mode} ${n}`).toEqual(
+        to8(parseColor(ref[`--rte-${n}`]!)!),
+      );
   }
 });

@@ -16,7 +16,10 @@ Esta pasta é **autocontida**: pode ser movida para a raiz do projeto novo. Nada
 |---|---|---|---|
 | 01 | [Projeto da lib](01-projeto-da-lib.md) | Workspace, 5 pacotes vazios, ferramentas, CI mínimo, convenções | — |
 | 02 | [Tema](02-tema.md) | `@cds/rte-theme`: CSS de 3 cores, modos, plano B em JS | 01 |
-| 03 | [Core e esquema do HTML](03-core-e-esquema.md) | `@cds/rte-core`: extensões Tiptap, utilitários, esquema | 01 |
+| 03 | [Core e esquema do HTML](03-core-e-esquema.md) | `@cds/rte-core`, dividida em 3 partes: | 01 |
+| 03a | [Esquema do HTML, embeds e utilitários](03a-esquema-e-utilitarios.md) (concluída) | Contrato do HTML como dados (`getHtmlSchema`), provedores de embed, utilitários puros | 01 |
+| 03b | [Extensões de conteúdo, fábrica e teste de contrato](03b-extensoes-de-conteudo.md) (concluída; falta o CI do PR) | Extensões Tiptap que geram HTML, `createEditorExtensions`, fixture e teste de contrato | 03a |
+| 03c | Extensões de produtividade (spec a escrever) | `SearchReplace`, `SlashCommand` (lógica), `CharLimit`, placeholder | 03b |
 | 04 | [Sanitizador](04-sanitizador.md) | `@cds/rte-sanitizer`: allowlist derivada do esquema | 03 |
 | 05 | [Editor Angular](05-editor-angular.md) | `@cds/rte-angular`: componente, Signal Forms, UI, i18n, a11y, upload | 02, 03 |
 | 06 | [Renderização](06-renderizacao.md) | `@cds/rte-render`: pipe, sumário, CSS de leitura | 02, 04 |

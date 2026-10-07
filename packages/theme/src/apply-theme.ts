@@ -1,5 +1,6 @@
 import { parseColor, parseColorPure } from './color/parse';
-import { createRteTheme } from './create-theme';
+import { buildRteTheme } from './create-theme';
+import { STATIC_TOKENS } from './static-tokens';
 import type { RteTheme, RteThemeMode } from './types';
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';
@@ -7,6 +8,7 @@ const FORCED_QUERY = '(forced-colors: active)';
 const CONTRAST_QUERY = '(prefers-contrast: more)';
 const MODE_ATTR = 'data-rte-mode';
 const ROLES = ['primary', 'secondary', 'tertiary'] as const;
+const SEED_NAMES: readonly string[] = ROLES.map((role) => `--rte-${role}`);
 
 /**
  * Tokens que o bloco `@media (forced-colors: active)` do theme.css troca por cores do sistema. No
@@ -176,7 +178,9 @@ export function resolveMode(mode: RteThemeMode | undefined): 'light' | 'dark' {
  * repintura por mudança de preferência): a semente resolvida também é gravada inline, então
  * semente e derivados ficam um par consistente; se o `:root`/ancestral mudar depois, chame
  * `applyRteTheme` de novo. Exceção: um `--rte-<papel>` que o próprio usuário pôs inline no
- * elemento é respeitado (os derivados saem dele) e não é gravado nem removido pelo cleanup. Plano B, R8: sob `forced-colors: active` os tokens trocados pelo bloco
+ * elemento é respeitado (os derivados saem dele) e não é gravado nem removido pelo cleanup. O mesmo
+ * vale para um token derivado/estático sobrescrito pelo consumidor (CSS em `.rte-root` ou inline);
+ * `*-subtle`/`*-border` saem da `--rte-surface` dele, como no theme.css. Plano B, R8: sob `forced-colors: active` os tokens trocados pelo bloco
  * do theme.css não são escritos inline; sob `prefers-contrast: more` a borda recebe o valor do
  * texto secundário. Mudanças dessas preferências repintam.
  */
@@ -239,16 +243,37 @@ export function applyRteTheme(
         }
         if (seed !== null) seeds[role] = seed;
       }
-      const vars = createRteTheme({
+      // Token derivado que o consumidor sobrescreveu (CSS mirando .rte-root ou inline): é respeitado,
+      // como no caminho nativo. Valor do próprio theme.css (fórmula com `from`/`color-mix`, inútil
+      // aqui, ou o estático do tema) ou ausente é calculado e gravado.
+      const themeOptions = {
         ...(mode !== undefined && { mode }),
         ...(options.neutral !== undefined && { neutral: options.neutral }),
         ...seeds,
         dark,
-      });
+      };
+      let vars = buildRteTheme(themeOptions);
+      for (const name of Object.keys(vars)) {
+        if (SEED_NAMES.includes(name)) continue;
+        const value = computedVar(element, name).replace(/\s+/g, '');
+        const key = name.slice(6) as keyof (typeof STATIC_TOKENS)['light'];
+        if (
+          value &&
+          !/from|color-mix\(/.test(value) &&
+          value !==
+            `light-dark(${STATIC_TOKENS.light[key]},${STATIC_TOKENS.dark[key]})`
+        )
+          authored.add(name);
+      }
+      if (authored.has('--rte-surface')) {
+        const surface = resolveInContext(element, 'var(--rte-surface)');
+        const rgb = surface === null ? null : parseColor(surface);
+        if (rgb) vars = buildRteTheme(themeOptions, rgb);
+      }
       if (contrast) vars['--rte-border'] = vars['--rte-text-muted'] as string;
       for (const [name, value] of Object.entries(vars)) {
         // A semente vinda da cascata é gravada junto (par semente+derivados consistente), exceto a
-        // que o próprio usuário pôs inline no elemento.
+        // que o próprio usuário pôs inline no elemento; idem para os tokens derivados sobrescritos.
         if (authored.has(name)) continue;
         if (
           forced &&

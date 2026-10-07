@@ -2,6 +2,13 @@
 
 > Depende da spec 01. Referência: plano seções 2, 4.1, 5.6, 11 e 13. Modelo (MyPresentation): `libs/forms/src/lib/components/rich-text-editor/` (`editor-extensions.ts`, `extensions/`, `utils/`) e seus `*.spec.ts`.
 
+> **Atualização (2026-10-03).** O código do modelo foi perdido, então nada é "copiado do modelo" nem "portado": a marcação é desenhada do zero e os testes são escritos de novo. Esta spec foi dividida em três ciclos (spec → plano → implementação → verificação):
+> - **03a** — [esquema do HTML, embeds e utilitários](03a-esquema-e-utilitarios.md) (o contrato; decisões A1–A5);
+> - **03b** — extensões de conteúdo, fábrica, fixture "todos os recursos" e teste de contrato;
+> - **03c** — busca e substituição, comandos `/` (lógica), limite de caracteres e placeholder.
+>
+> Onde esta spec e a 03a divergem, vale a 03a. Os critérios "≥ 134 testes portados" e "conteúdo legado do modelo" deixam de valer; o `size-limit` é substituído pelo orçamento por cenário do repositório (`tools/check-size.mjs`).
+
 ## 1. Objetivo
 
 O **coração sem Angular** do produto: extensões Tiptap, utilitários puros e, novidade em relação ao modelo, o **esquema do HTML**, uma fonte única de dados da qual saem a allowlist do sanitizador (spec 04), a documentação do HTML gerado e os testes de contrato.
