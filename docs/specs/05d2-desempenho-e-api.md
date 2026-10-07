@@ -80,8 +80,8 @@ Em `e2e/angular/`:
 - [ ] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size,api` verde; `npm run check:rules`, `test:tools`, `check:licenses` e `typecheck:e2e` verdes.
 - [ ] N45 com `RTE_PERF_ENFORCE=1` verde no Chromium local e nos 3 motores numa rodada final (INP só Chromium); N46 verde; N1–N46 nos 3 motores no CI do PR.
 - [ ] O teste de 100 ciclos (ou o de 30, Z10) passa com o *timeout* padrão em `test` e `test-zone` sob `run-many`.
-- [ ] 15 relatórios `.api.md` versionados; o CI falha com relatório desatualizado.
-- [ ] ADR 0016 (`docs/decisions/0016-desempenho-e-api.md`) registra Z1–Z15, os *rulings*, a decisão do `updateOn` com números, a tabela por fase da criação, os orçamentos de desempenho e tamanho finais e as pendências da spec 05; READMEs, `CLAUDE.md`, `docs/specs/README.md`, `05-editor-angular.md` (§6 com evidência) e *changesets* atualizados.
+- [x] 15 relatórios `.api.md` versionados; o CI falha com relatório desatualizado.
+- [x] ADR 0016 (`docs/decisions/0016-desempenho-e-api.md`) registra Z1–Z15, os *rulings*, a decisão do `updateOn` com números, a tabela por fase da criação, os orçamentos de desempenho e tamanho finais e as pendências da spec 05; READMEs, `CLAUDE.md`, `docs/specs/README.md`, `05-editor-angular.md` (§6 com evidência) e *changesets* atualizados.
 
 ## 8. Consequências
 

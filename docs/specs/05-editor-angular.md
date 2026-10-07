@@ -89,13 +89,15 @@ Escopo original da 05d, repartido acima: libera `search` e `slashCommands` (fim 
 
 ## 6. Critérios de aceite da spec 05 (soma das partes)
 
-- [ ] 05a, 05b1, 05b2a, 05b2b, 05c1, 05c2a, 05c2b, 05d1 e 05d2 concluídas, cada uma com seu ADR e seus critérios.
-- [ ] Os 3 modos de uso funcionam em navegador real: `[formField]`, `formControlName`/`ngModel` e `[(value)]`.
-- [ ] Todos os recursos do plano 2.1 acessíveis pela UI, sem Tailwind, com o CSS do pacote e a CSP estrita.
-- [ ] Suíte verde zoneless e com zone.js; E2E verde em Chromium, Firefox e WebKit.
-- [ ] Orçamentos de desempenho e de tamanho atendidos (ou ajustados com dados em ADR); axe sem violações sérias.
-- [ ] Nenhuma string fixa fora de `RTE_LABELS`; pt-BR, en e es completos.
-- [ ] `api-extractor` sem diferenças; `attw`/`publint` verdes.
+Fechamento da 05d2 (Z14, ADR 0016). Local = jsdom (zoneless e zone.js) e Chromium; a confirmação em Firefox e WebKit é a rodada do CI do PR e, até existir, o critério fica desmarcado com dono.
+
+- [x] 05a, 05b1, 05b2a, 05b2b, 05c1, 05c2a, 05c2b, 05d1 e 05d2 concluídas, cada uma com seu ADR e seus critérios. Evidência: ADRs 0007 a 0016 em `docs/decisions/` e `docs/specs/README.md`.
+- [x] Os 3 modos de uso funcionam em navegador real: `[formField]`, `formControlName`/`ngModel` e `[(value)]`. Evidência: ADR 0007; E2E `e2e/angular/editor-forms*.spec.ts` (Chromium local; os demais motores no CI).
+- [x] Todos os recursos do plano 2.1 acessíveis pela UI, sem Tailwind, com o CSS do pacote e a CSP estrita. Evidência: ADRs 0008 a 0015; app de teste com CSP estrita (`e2e/angular/serve.mjs`); `editor-content-css.spec.ts`.
+- [ ] Suíte verde zoneless e com zone.js; E2E verde em Chromium, Firefox e WebKit. Suítes `test`/`test-zone` verdes (ver verificação da 05d2); E2E no Chromium local. **Pendente:** Firefox e WebKit = rodada do CI do PR. Dono: CI do PR da 05d2.
+- [ ] Orçamentos de desempenho e de tamanho atendidos (ou ajustados com dados em ADR); axe sem violações sérias. Tamanho: atendido, tetos refeitos pela D26 (ADR 0016, f). axe: specs `editor-*-a11y.spec.ts` (Chromium). Desempenho: N45/N46 (`editor-perf-budget.spec.ts`, `editor-lifecycle.spec.ts`); o p95 por tecla **quente** (~62 a 68 ms) passa de 50 ms nesta máquina (degrau do ambiente, ADR 0016, d). **Pendente:** confirmar no CI Linux e em máquina ociosa; leitores de tela reais. Dono: spec 08.
+- [x] Nenhuma string fixa fora de `RTE_LABELS`; pt-BR, en e es completos. Evidência: guarda de lint D25 (texto literal em template) e testes de rótulos de `/i18n`.
+- [x] `api-extractor` sem diferenças; `attw`/`publint` verdes. Evidência: alvos `api` e `verify-package`; 15 relatórios em `packages/*/api/`; ADR 0016 (b) e (c).
 
 ## 7. Riscos
 
