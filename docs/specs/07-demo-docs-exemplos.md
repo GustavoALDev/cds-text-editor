@@ -17,7 +17,7 @@ Governança e publicação (spec 09); testes de qualidade automatizados em 3 eng
 - **Playground do tema:** seletores das 3 cores, modo, raio e densidade com **pré-visualização ao vivo**, relatório de contraste (`checkRteTheme`), botões **"copiar CSS"** e **"copiar TypeScript"**, presets (Angular, Oceano, Floresta, Pôr do sol, Monocromático).
 - Consome os pacotes **como um consumidor externo** (via tarball/Verdaccio no CI), não por path alias, para provar o empacotamento.
 
-### 3.2 `examples/server-node` (Express, com variante Nest opcional)
+### 3.2 `examples/server-node` (Express, com variante Nest opcional) — **07a concluída** (sem Express: Node puro, ver `examples/server-node/README.md`; sem SQLite)
 - `POST /media/upload`: **magic bytes** (sem confiar no `Content-Type`), limites de tamanho, nome aleatório, resposta no formato esperado por `httpUploadAdapter`.
 - Sanitização do HTML com `@cds/rte-sanitizer` antes de gravar.
 - **Limpeza de órfãs**, portada do modelo: varredura de todos os textos que referenciam mídia, **carência medida no relógio do armazenamento** (lição 5), `dryRun`, limite por execução, rotas de administração.
@@ -30,8 +30,8 @@ Guia: início rápido (5 min), instalação, configuração, **tema (escada 0 a 
 
 - **R1.** Todo exemplo de código da documentação é **compilado e testado no CI** (extraído e rodado ou importado do `demo`), para não apodrecer.
 - **R2.** O playground não envia dados a terceiros; funciona offline.
-- **R3.** O servidor de exemplo tem testes de API: upload válido, rejeição por magic bytes, sanitização, limpeza de órfãs (idade, `dryRun`, limite).
-- **R4.** A documentação diz claramente que o **servidor de exemplo é referência**, não produto.
+- **R3.** O servidor de exemplo tem testes de API: upload válido, rejeição por magic bytes, sanitização, limpeza de órfãs (idade, `dryRun`, limite). _(07a: feito, `npm run test:examples`; sanitização por injeção)_
+- **R4.** A documentação diz claramente que o **servidor de exemplo é referência**, não produto. _(07a: README do servidor)_
 - **R5.** O README da raiz contém o início rápido, o aviso "não afiliado à Tiptap/ProseMirror" e links.
 
 ## 5. Critérios de aceite
