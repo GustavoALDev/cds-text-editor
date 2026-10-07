@@ -31,7 +31,7 @@ Esta pasta é **autocontida**: pode ser movida para a raiz do projeto novo. Nada
 | 05c2b | [Rascunho, salvamento e colagem externa](05c2b-rascunho-e-salvamento.md) (concluída; falta o CI do PR; ADR 0014) | Rascunho, `isDirty`/`markSaved()`, `onMediaRemoved`, `registerExternal`, URL colada → *embed*, `beforeunload` | 05c2a |
 | 05d | Menu `/`, busca, contadores e fechamento (a escrever) | UI do menu `/` e da busca, contadores e `aria-live`, orçamentos de desempenho, `api-extractor` | 05c2b |
 | 06 | [Renderização](06-renderizacao.md) (concluída; falta o CI do PR) | `@cds/rte-render`: diretiva `[rteContent]` (sanitiza com `createSanitizer` das opções do editor, rolador de tabela, estilos por CSSOM sob CSP, âncoras), sumário `rte-toc`, `render.css`; SSR sem JS; integra antes a `feat/spec-04` | 04, 05b1 |
-| 07 | [Demo, docs e servidor de exemplo](07-demo-docs-exemplos.md) | App demo/playground, site de docs, `examples/server-node` | 05, 06 |
+| 07 | [Demo, docs e servidor de exemplo](07-demo-docs-exemplos.md) (parte 07a concluída; demo e docs pendentes) | App demo/playground, site de docs, `examples/server-node` | 05, 06 |
 | 08 | [Qualidade](08-qualidade.md) | E2E em 3 engines, a11y, desempenho, visual, pacote | 05 |
 | 09 | [Release e governança](09-release-governanca.md) | Versionamento, npm com provenance, MIT, SECURITY (parte 09a concluída) | todas |
 

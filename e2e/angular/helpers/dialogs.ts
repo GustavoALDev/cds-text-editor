@@ -117,8 +117,15 @@ export async function chunkByMarker(
   let seen: (url: string) => void = () => undefined;
   const requested = new Promise<string>((resolve) => (seen = resolve));
   await page.route('**/*.js', async (route) => {
-    const response = await route.fetch();
-    const body = await response.text();
+    let response: Awaited<ReturnType<typeof route.fetch>>;
+    let body: string;
+    try {
+      response = await route.fetch();
+      body = await response.text();
+    } catch {
+      // corrida com o fim da página: a rota/resposta já não existe
+      return;
+    }
     if (!body.includes(marker)) {
       await route.fallback();
       return;

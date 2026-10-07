@@ -43,6 +43,7 @@ jobs:
       # Verificações do repositório: rodam sempre, independem do `affected`.
       - run: npm run check:rules
       - run: npm run test:tools
+      - run: npm run test:examples
       - name: THIRD-PARTY-NOTICES.md em dia
         run: |
           npm run notices
