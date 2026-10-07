@@ -4,6 +4,11 @@ import type {
   ValidatorFn,
 } from '@angular/forms';
 import { measureRteText, resolveMax } from './measure';
+import {
+  findUnsafeLinks,
+  inspectValue,
+  type RteSafeLinksOptions,
+} from './content';
 
 function textOf(control: AbstractControl): string | null {
   const value: unknown = control.value;
@@ -15,6 +20,8 @@ export const RteValidators: {
   readonly required: ValidatorFn;
   maxChars(max: number): ValidatorFn;
   maxWords(max: number): ValidatorFn;
+  safeLinks(options?: RteSafeLinksOptions): ValidatorFn;
+  noEmptyHeadings(): ValidatorFn;
 } = {
   required(control: AbstractControl): ValidationErrors | null {
     const m = measureRteText(textOf(control));
@@ -37,6 +44,20 @@ export const RteValidators: {
       const { words } = measureRteText(textOf(control));
       return words > limit
         ? { rteMaxWords: { max: limit, actual: words } }
+        : null;
+    };
+  },
+  safeLinks(options?: RteSafeLinksOptions): ValidatorFn {
+    return (control) => {
+      const bad = findUnsafeLinks(textOf(control), options?.policy);
+      return bad.count > 0 ? { rteUnsafeLinks: bad } : null;
+    };
+  },
+  noEmptyHeadings(): ValidatorFn {
+    return (control) => {
+      const { emptyHeadings } = inspectValue(textOf(control));
+      return emptyHeadings > 0
+        ? { rteEmptyHeadings: { count: emptyHeadings } }
         : null;
     };
   },

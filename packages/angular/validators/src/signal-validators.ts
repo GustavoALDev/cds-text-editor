@@ -9,6 +9,11 @@ import {
   type SchemaPath,
   type SchemaPathRules,
 } from '@angular/forms/signals';
+import {
+  findUnsafeLinks,
+  inspectValue,
+  type RteSafeLinksOptions,
+} from './content';
 import { measureRteText, resolveMax } from './measure';
 
 export type RtePath<K extends PathKind> = SchemaPath<
@@ -80,6 +85,36 @@ export function rteMaxWords<K extends PathKind = PathKind.Root>(
     const { words } = measureRteText(value());
     return words > limit
       ? { kind: 'rteMaxWords', max: limit, actual: words }
+      : undefined;
+  });
+}
+
+export type { RteSafeLinksOptions } from './content';
+
+/**
+ * Todo `href` de `<a>` do valor precisa passar em `normalizeHref(href, policy)`
+ * do core (política padrão, ou a dada em `policy`). Mede só o valor; o editor
+ * já aplica a política dele, então serve a uma política mais estrita ou a
+ * valores vindos de fora. Valor vazio passa.
+ */
+export function rteSafeLinks<K extends PathKind = PathKind.Root>(
+  path: RtePath<K>,
+  options?: RteSafeLinksOptions,
+): void {
+  validate(path, ({ value }) => {
+    const bad = findUnsafeLinks(value(), options?.policy);
+    return bad.count > 0 ? { kind: 'rteUnsafeLinks', ...bad } : undefined;
+  });
+}
+
+/** Erra com títulos `h2`–`h4` sem texto (espaços e `<br>` contam como vazio). */
+export function rteNoEmptyHeadings<K extends PathKind = PathKind.Root>(
+  path: RtePath<K>,
+): void {
+  validate(path, ({ value }) => {
+    const { emptyHeadings } = inspectValue(value());
+    return emptyHeadings > 0
+      ? { kind: 'rteEmptyHeadings', count: emptyHeadings }
       : undefined;
   });
 }
