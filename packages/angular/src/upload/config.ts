@@ -54,6 +54,10 @@ export interface RteResolvedUpload {
   readonly maxVideoBytes: number;
   readonly maxFilesPerAction: number;
   readonly preview: boolean;
+  /** Re-hospedagem ligada e com `registerExternal` (S10). */
+  readonly rehostExternal: boolean;
+  /** Hosts próprios em minúsculas (S10). */
+  readonly ownHosts: readonly string[];
   /** O objeto de entrada (identidade para abortar ao trocar, E17). */
   readonly source: RteUploadConfig;
 }
@@ -146,6 +150,14 @@ export function resolveUploadConfig(
       'maxFilesPerAction',
     ),
     preview: config.preview === true,
+    rehostExternal:
+      config.rehostExternal === true &&
+      typeof config.adapter.registerExternal === 'function',
+    ownHosts: Array.isArray(config.ownHosts)
+      ? (config.ownHosts as readonly unknown[])
+          .filter((h): h is string => typeof h === 'string')
+          .map((h) => h.trim().toLowerCase())
+      : [],
     source: config,
   };
 }

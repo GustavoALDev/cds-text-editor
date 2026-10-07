@@ -21,11 +21,15 @@ export interface FakeUploadAdapter extends RteUploadAdapter {
   reject(i: number, error: unknown): void;
   progress(i: number, fraction: number | null): void;
   signal(i: number): AbortSignal;
+  /** Chamadas de `registerExternal` (só com `external: true`). */
+  readonly externalCalls: { readonly url: string; readonly ctx: RteUploadContext }[];
+  resolveExternal(i: number, value: unknown): void;
+  rejectExternal(i: number, error: unknown): void;
 }
 
 /** `video: false` cria o adaptador sem `uploadVideo`. */
 export function createFakeUploadAdapter(
-  o: { video?: boolean } = {},
+  o: { video?: boolean; external?: boolean } = {},
 ): FakeUploadAdapter {
   const calls: FakeUploadCall[] = [];
   const settle: {
@@ -44,14 +48,29 @@ export function createFakeUploadAdapter(
     if (item === undefined) throw new Error(`sem a chamada ${i}`);
     return item;
   };
+  const externalCalls: FakeUploadAdapter['externalCalls'] = [];
+  const externalSettle: typeof settle = [];
   const adapter: FakeUploadAdapter = {
     calls,
+    externalCalls,
+    resolveExternal: (i, value) => at(externalSettle, i).resolve(value),
+    rejectExternal: (i, error) => at(externalSettle, i).reject(error),
     uploadImage: call('image'),
     resolve: (i, value) => at(settle, i).resolve(value),
     reject: (i, error) => at(settle, i).reject(error),
     progress: (i, fraction) => at(calls, i).ctx.onProgress(fraction),
     signal: (i) => at(calls, i).ctx.signal,
   };
+  if (o.external) {
+    adapter.registerExternal = (url, ctx) =>
+      new Promise((resolve, reject) => {
+        externalCalls.push({ url, ctx });
+        externalSettle.push({
+          resolve: resolve as (v: unknown) => void,
+          reject,
+        });
+      });
+  }
   if (o.video !== false) adapter.uploadVideo = call('video');
   return adapter;
 }

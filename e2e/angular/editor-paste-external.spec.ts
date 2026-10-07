@@ -26,6 +26,24 @@ function paste(page: Page, text: string): Promise<boolean> {
   }, text);
 }
 
+/** Cola `html` (com uma imagem) no editor; devolve `defaultPrevented`. */
+function pasteHtml(page: Page, html: string): Promise<boolean> {
+  return page.evaluate((html) => {
+    const target = document.querySelector(
+      'rte-editor[data-testid="paste-external"] .ProseMirror',
+    ) as HTMLElement;
+    const data = new DataTransfer();
+    data.setData('text/html', html);
+    const event = new ClipboardEvent('paste', {
+      clipboardData: data,
+      bubbles: true,
+      cancelable: true,
+    });
+    target.dispatchEvent(event);
+    return event.defaultPrevented;
+  }, html);
+}
+
 for (const zone of [false, true]) {
   test.describe(`N41 colar URL (${zone ? 'zone.js' : 'zoneless'})`, () => {
     test.skip(
@@ -63,6 +81,41 @@ for (const zone of [false, true]) {
       await expect(editable.locator('iframe')).toHaveCount(0);
       await expect(editable.locator('p').nth(1)).toContainText(YT);
       await expect(editable.locator('p a')).toHaveCount(1);
+    });
+
+    test('imagem externa colada é re-hospedada; Mod+Z remove a imagem', async ({
+      page,
+    }) => {
+      const violations: string[] = [];
+      page.on('console', (m) => {
+        if (m.text().includes('Content Security Policy')) {
+          violations.push(m.text());
+        }
+      });
+      await open(page);
+      const editable = editableOf(page, 'paste-external');
+      await editable.locator('p').nth(1).click();
+      await page.keyboard.press('End');
+      // Digitar sincroniza a seleção do ProseMirror (o clique é assíncrono).
+      await page.keyboard.type('!');
+      await expect(editable.locator('p').nth(1)).toHaveText('Texto!');
+      const external = 'https://img.example.test/fotos/gato.png';
+      await pasteHtml(page, `<img src="${external}" alt="gato">`);
+      await expect(editable.locator('img')).toHaveAttribute('src', external);
+      await expect(page.locator('.rte-uploads__name')).toHaveText('gato.png');
+      await page.evaluate(() => window.__pasteExternal?.release());
+      await expect(editable.locator('img')).toHaveAttribute(
+        'src',
+        '/e2e.png?rehosted',
+      );
+      await expect(page.locator('.rte-uploads__name')).toHaveCount(0);
+      await expect(page.getByTestId('html')).toContainText('/e2e.png?rehosted');
+      await expect(page.getByTestId('html')).not.toContainText(external);
+      expect(
+        violations.filter((v) => !v.includes('img.example.test')),
+      ).toEqual([]);
+      await page.keyboard.press('ControlOrMeta+z');
+      await expect(editable.locator('img')).toHaveCount(0);
     });
   });
 }
