@@ -63,6 +63,7 @@ class Host {
   readonly cmp = viewChild.required(RteEditor);
 }
 
+let editableRect: RteRect = EDITABLE;
 let restorePopover: () => void;
 let restoreGeometry: () => void;
 let restoreDialog: () => void;
@@ -70,11 +71,12 @@ let restoreCoords: (() => void) | undefined;
 let warn: MockInstance<typeof console.warn>;
 
 beforeEach(() => {
+  editableRect = EDITABLE;
   restoreDialog = installDialogShim();
   restorePopover = installPopoverShim();
   restoreGeometry = installGeometry({
     viewport: VIEWPORT,
-    rects: (el) => (el.classList.contains('ProseMirror') ? EDITABLE : null),
+    rects: (el) => (el.classList.contains('ProseMirror') ? editableRect : null),
     size: (el) =>
       el.classList.contains('rte-slash-menu')
         ? LIST
@@ -165,14 +167,22 @@ describe('abertura e posição (K5)', () => {
     const s = await setup();
     restoreCoords?.();
     restoreCoords = fakeCoords(s.editor, () => ({
-      top: 640,
-      bottom: 660,
+      top: 700,
+      bottom: 720,
       left: 300,
       right: 300,
     }));
     await type(s, '/');
     const el = list(s.root) as HTMLElement;
-    expect(el.style.top).toBe(`${640 - 8 - LIST.height}px`);
+    expect(el.style.top).toBe(`${700 - 8 - LIST.height}px`);
+  });
+
+  it('abaixo da linha mesmo quando a linha é a última e o editável é baixo (só a janela e os ancestrais limitam)', async () => {
+    const s = await setup();
+    editableRect = { top: 100, left: 100, right: 900, bottom: 222 };
+    await type(s, '/');
+    const el = list(s.root) as HTMLElement;
+    expect(el.style.top).toBe('228px');
   });
 
   it('sem itens (consulta sem resultado): lista não mostrada', async () => {

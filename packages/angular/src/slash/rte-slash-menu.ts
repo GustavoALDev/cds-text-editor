@@ -18,7 +18,11 @@ import { clipAncestors, readVisibleArea } from '../floating/anchor';
 import { touches } from '../floating/place';
 import { RteViewportWatch } from '../floating/viewport-watch';
 import type { RteSlashMenuLabels } from '../labels/types';
-import { positionFloating, RTE_MENU_MARGIN } from '../toolbar/position';
+import {
+  positionFloating,
+  RTE_MENU_MARGIN,
+  type RteRect,
+} from '../toolbar/position';
 import { slashListId, slashOptionId } from './state';
 import { RTE_SLASH_MENU, type RteSlashMenuApi } from './types';
 
@@ -111,7 +115,13 @@ export class RteSlashMenu implements RteSlashMenuApi {
       height: root.clientHeight || view.innerHeight,
     };
     this.ancestors ??= clipAncestors(editor.view.dom);
-    const visible = readVisibleArea(editor.view.dom, this.ancestors, viewport);
+    // A lista é `position: fixed` e pode passar da caixa do editável (a linha
+    // do `/` costuma ser a última): só a janela e os ancestrais que cortam
+    // limitam a área, não o próprio editável.
+    const [first, ...rest] = this.ancestors;
+    const visible: RteRect | null = first
+      ? readVisibleArea(first, rest, viewport)
+      : { top: 0, right: viewport.width, bottom: viewport.height, left: 0 };
     const anchor = editor.view.coordsAtPos(state.range.from);
     if (!visible || !touches(anchor, visible)) {
       this.hide();
