@@ -4,6 +4,8 @@
 // com o documento de renderização. `writeHtml` escreve pelo algoritmo de
 // serialização do HTML, sem DOM real.
 
+import { escapeHtmlAttribute, escapeHtmlText } from '../../src/schema/escape';
+
 const HTML_NS = 'http://www.w3.org/1999/xhtml';
 
 /** Elementos vazios: sem fechamento e sem `/`. */
@@ -219,46 +221,19 @@ export function createStringDocument(): Document {
 }
 
 /**
- * Pré-processamento da entrada do HTML (WHATWG 13.2.3.5) já na escrita: CR e
- * CRLF viram LF e NUL vira U+FFFD, como a releitura faria. Sem isso a saída
- * não seria ponto fixo (o CR de um bloco de código voltaria como LF).
- */
-function preprocess(text: string): string {
-  return text.replace(/\r\n?/g, '\n').replace(/\0/g, REPLACEMENT_CHAR);
-}
-
-const REPLACEMENT_CHAR = String.fromCharCode(0xfffd);
-
-function escapeText(text: string): string {
-  return preprocess(text)
-    .replace(/&/g, '&amp;')
-    .replace(/\u00a0/g, '&nbsp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-function escapeAttribute(text: string): string {
-  return preprocess(text)
-    .replace(/&/g, '&amp;')
-    .replace(/\u00a0/g, '&nbsp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-/**
  * Escreve o HTML de um nó do documento de strings. Desvio deliberado do
  * algoritmo: o texto de `script`/`style` também é escapado (nenhum dos dois
- * está no contrato), e texto e atributos passam por `preprocess`. Nó de outro documento com `nodeType: 1` é escrito pelo
- * `outerHTML`; sem ele, lança `TypeError`.
+ * está no contrato), e texto e atributos passam pelo pré-processamento dos
+ * escapes (CR/CRLF → LF, NUL → U+FFFD). Nó de outro documento com
+ * `nodeType: 1` é escrito pelo `outerHTML`; sem ele, lança `TypeError`.
  */
 export function writeHtml(node: unknown): string {
-  if (node instanceof StringText) return escapeText(node.data);
+  if (node instanceof StringText) return escapeHtmlText(node.data);
   if (node instanceof StringFragment) return writeChildren(node);
   if (node instanceof StringElement) {
     let out = `<${node.tagName}`;
     for (const [name, value] of node.attributes) {
-      out += ` ${name}="${escapeAttribute(value)}"`;
+      out += ` ${name}="${escapeHtmlAttribute(value)}"`;
     }
     out += '>';
     if (node.isHtml && VOID_ELEMENTS.has(node.tagName)) return out;
