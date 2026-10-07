@@ -23,20 +23,21 @@ K1–K15 valem como escritas na spec (fonte única; não são repetidas aqui). R
 - **Limiares:** `remaining` estrito (`<`); o estado visual `--near` é ≤ 10% do limite, enquanto o anúncio é `< max(10, 10%)`.
 - **`inspectRteHtml` com `truncated`** (revisão final): HTML com mais de 256 níveis faz os validadores falharem em vez de passarem em silêncio.
 - **axe:** `scrollable-region-focusable` desligado só na lista do `/`. É falso positivo do desenho K4: a lista nunca recebe foco; `tabindex="-1"` não resolve e `0` criaria uma parada de `Tab` que fecha o menu.
+- **Glifos dos botões da busca (↑ ↓ Aa ab ×):** ficam em `<span aria-hidden>` e o nome acessível vem dos rótulos (WCAG 2.5.3: tratados como símbolos, não como texto visível).
 - **Falha de carga da busca:** o primeiro `Mod-F` é engolido (o navegador não busca) quando o _chunk_ falha; desvio aceito do R1.
 - **A validar com leitores de tela reais na spec 08:** a região viva do `/` e o `aria-activedescendant` em `contenteditable` (K4).
 
 ### (c) Números (2026-10-07)
 
-`min+gzip`; orçamento = `ceil(medido × 1,15 / 64) × 64`.
+`min+gzip` medidos após a revisão final (`nx run angular:size`); orçamento = `ceil(medido × 1,15 / 64) × 64`, exceto `slash-menu` e `search`, que cresceram com as correções da revisão e mantêm a folga atual (147 e 207 bytes).
 
 | Cenário              | Medido | Orçamento |
 | -------------------- | ------ | --------- |
-| `slash-menu` (chunk) | 1757   | 2048      |
-| `search` (chunk)     | 2523   | 2944      |
-| `overlay-shared`     | -      | 1600      |
-| `i18n`               | -      | 6144      |
-| `validators`         | -      | 2816      |
+| `slash-menu` (chunk) | 1901   | 2048      |
+| `search` (chunk)     | 2737   | 2944      |
+| `overlay-shared`     | 1363   | 1600      |
+| `i18n`               | 5300   | 6144      |
+| `validators`         | 2438   | 2816      |
 
 Os demais cenários estão em `packages/angular/size-budget.json`; a 05d2 refaz os orçamentos finais.
 
