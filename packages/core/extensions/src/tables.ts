@@ -7,6 +7,7 @@ import {
 } from '@tiptap/extension-table';
 import type { Node as ProseMirrorNode, Schema } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { RTE_TABLE_CELL_MIN_WIDTH } from '../../src/table-sizing';
 import { changedRanges } from './changed-ranges';
 import type { RteExtensionContext } from './context';
 
@@ -330,6 +331,8 @@ export function createTableExtensions(
   }).configure({
     HTMLAttributes: {},
     resizable: true,
+    // O padrão do Tiptap, explícito: a exibição (spec 06) dimensiona a tabela com o mesmo valor.
+    cellMinWidth: RTE_TABLE_CELL_MIN_WIDTH,
     renderWrapper: false,
     allowTableNodeSelection: false,
   });

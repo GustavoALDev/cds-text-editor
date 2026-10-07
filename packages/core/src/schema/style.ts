@@ -16,8 +16,8 @@ function lowerAscii(s: string): string {
  * Sanitiza o texto de um atributo `style` pelas regras do esquema e devolve a
  * forma canônica `prop: valor; prop: valor`, na ordem das chaves de `styles`
  * (`''` se nada sobra). Barra invertida, comentário e `expression` descartam o
- * estilo inteiro; `!important`, `url(` e valor inválido descartam só a
- * declaração. Havendo repetição, a última declaração válida vale.
+ * estilo inteiro; `!important`, `(` (`url(`, `image-set(`…), `@` e valor inválido
+ * descartam só a declaração. Havendo repetição, a última declaração válida vale.
  */
 export function sanitizeStyle(
   styles: Record<string, RteAttrRule>,
@@ -39,8 +39,8 @@ export function sanitizeStyle(
     const rule = Object.hasOwn(styles, prop) ? styles[prop] : undefined;
     if (!rule) continue;
     const raw = trimAscii(decl.slice(colon + 1)).replace(ASCII_WS, ' ');
-    const lower = lowerAscii(raw);
-    if (lower.includes('!') || lower.includes('url(')) continue;
+    // `!` (`!important`), qualquer função (`url(`, `image-set(`…) e `@`.
+    if (/[!(@]/.test(raw)) continue;
     const value = normalizeAttribute(rule, raw);
     if (value === null) continue;
     found.set(prop, value);

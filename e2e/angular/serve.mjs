@@ -194,6 +194,11 @@ function receiveUpload(req, res, query) {
   });
 }
 
+// Rota `render-tt` (spec 06, pré-voo 15): a CSP do app + *Trusted Types*. `angular` é a política
+// do Angular e `angular#unsafe-bypass` a do `bypassSecurityTrustHtml` do `RteContent`.
+const CSP_TT = `${CSP}; require-trusted-types-for 'script'; trusted-types angular angular#unsafe-bypass`;
+const TT_PATH = /^(\/zone)?\/render-tt\/?$/;
+
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -240,7 +245,7 @@ const server = createServer((req, res) => {
     res.writeHead(400).end();
     return;
   }
-  res.setHeader('Content-Security-Policy', cspFor(pathname));
+  res.setHeader('Content-Security-Policy', TT_PATH.test(pathname) ? CSP_TT : cspFor(pathname));
   if (pathname === '/__upload' && req.method === 'POST') {
     receiveUpload(req, res, new URL(req.url ?? '/', 'http://x').searchParams);
     return;

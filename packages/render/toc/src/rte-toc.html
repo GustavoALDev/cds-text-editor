@@ -1,0 +1,24 @@
+@if (tree().length) {
+<nav class="rte-toc" [attr.aria-label]="effectiveLabels().toc">
+  <ng-container
+    [ngTemplateOutlet]="list"
+    [ngTemplateOutletContext]="{ $implicit: tree() }"
+  />
+</nav>
+}
+
+<ng-template #list let-nodes>
+  <ol class="rte-toc__list">
+    @for (n of nodes; track n.entry.id) {
+    <li class="rte-toc__item">
+      <a class="rte-toc__link" [href]="href(n.entry.id)">{{ n.entry.text }}</a>
+      @if (n.children.length) {
+      <ng-container
+        [ngTemplateOutlet]="list"
+        [ngTemplateOutletContext]="{ $implicit: n.children }"
+      />
+      }
+    </li>
+    }
+  </ol>
+</ng-template>

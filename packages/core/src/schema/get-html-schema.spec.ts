@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_EMBED_PROVIDERS, YOUTUBE_PROVIDER } from '../embeds/providers';
 import {
   DEFAULT_ID_PREFIX,
+  assertEnsureTokens,
   getHtmlSchema,
   mergeElements,
 } from './get-html-schema';
@@ -12,6 +13,7 @@ import { normalizeAttribute } from './rules';
 import { dangerousUrl } from './testing/dangerous-urls';
 import type {
   RteAttrRule,
+  RteElementSpec,
   RteEmbedProvider,
   RteHtmlSchema,
   RteUrlRule,
@@ -702,6 +704,58 @@ describe('getHtmlSchema: opções', () => {
     const s = getHtmlSchema({ mediaHosts: hosts });
     expect(Object.isFrozen(hosts)).toBe(false);
     expect(isDeepFrozen(s)).toBe(true);
+  });
+});
+
+describe('assertEnsureTokens', () => {
+  const rel: RteElementSpec['attributes'][string] = {
+    rule: {
+      kind: 'tokens',
+      values: ['nofollow', 'noopener', 'noreferrer'],
+      separator: ' ',
+      maxLength: 200,
+    },
+  };
+  const spec = (
+    attributes: RteElementSpec['attributes'],
+    tokens: string[] = ['noopener'],
+  ): Record<string, RteElementSpec> => ({
+    a: { attributes, ensureTokens: [{ attribute: 'rel', tokens }] },
+  });
+
+  it('aceita o esquema padrão e o com forceRel', () => {
+    expect(() =>
+      getHtmlSchema({
+        linkPolicy: { forceRel: ['nofollow', 'sponsored', 'ugc'] },
+      }),
+    ).not.toThrow();
+    expect(() => assertEnsureTokens(spec({ rel }))).not.toThrow();
+  });
+
+  it('recusa alvo sem regra tokens (o token sumiria em silêncio)', () => {
+    expect(() => assertEnsureTokens(spec({}))).toThrow(
+      'Esquema: ensureTokens de <a> aponta para "rel", que não tem regra tokens.',
+    );
+    expect(() =>
+      assertEnsureTokens(
+        spec({ rel: { rule: { kind: 'text', maxLength: 200 } } }),
+      ),
+    ).toThrow(/não tem regra tokens/);
+  });
+
+  it('recusa token fora de values', () => {
+    expect(() => assertEnsureTokens(spec({ rel }, ['ugc']))).toThrow(
+      'Esquema: ensureTokens de <a> garante "ugc", fora dos valores de "rel".',
+    );
+  });
+
+  it('recusa quando os tokens podem não caber no maxLength', () => {
+    const short = { rule: { ...rel.rule, maxLength: 30 } } as typeof rel;
+    expect(() =>
+      assertEnsureTokens(spec({ rel: short }, ['noopener', 'noreferrer'])),
+    ).toThrow(
+      'Esquema: ensureTokens de <a> pode passar do maxLength de "rel".',
+    );
   });
 });
 
