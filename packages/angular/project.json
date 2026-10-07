@@ -98,8 +98,9 @@
       "executor": "nx:run-commands",
       "dependsOn": ["build", "^build"],
       "inputs": [
-        "{workspaceRoot}/dist/packages/angular/**/*.d.ts",
+        "production",
         "^production",
+        { "dependentTasksOutputFiles": "**/*.d.ts", "transitive": true },
         "{projectRoot}/api/**/*",
         "{workspaceRoot}/tools/api-report.mjs",
         {
