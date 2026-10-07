@@ -12,7 +12,7 @@ Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
 - `@cds/rte-core`: esquema do HTML, links, títulos, texto, imagem, rascunho e paleta (sem DOM, roda em Node/SSR).
 - `@cds/rte-core/embeds`: `toEmbed` e os provedores padrão (YouTube, Vimeo, Spotify).
-- `@cds/rte-core/html`: `htmlToText`, `extractToc` e `validateHtml` sem DOM (usa `htmlparser2`, cerca de 22 kB gzip; fora do entry `/` de propósito).
+- `@cds/rte-core/html`: `htmlToText`, `extractToc`, `validateHtml` e `inspectRteHtml` (`hrefs`, `emptyHeadings`, `truncated`; base dos validadores `rteSafeLinks`/`rteNoEmptyHeadings`) sem DOM (usa `htmlparser2`, cerca de 22 kB gzip; fora do entry `/` de propósito).
 - `@cds/rte-core/extensions`: extensões Tiptap, `createEditorExtensions` e o serializador canônico (`getRteHtml`, `serializeRteHtml`). Exige os peers do Tiptap (ver abaixo).
 - `@cds/rte-core/code-languages`: catálogo de linguagens de código com gramáticas do `highlight.js` carregadas sob demanda.
 - `@cds/rte-core/styles/content.css`: arquivo CSS (sem JS) com a aparência do conteúdo; ver abaixo.
