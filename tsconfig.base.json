@@ -30,6 +30,7 @@
       "@cds/rte-angular": ["./packages/angular/src/index.ts"],
       "@cds/rte-angular/i18n": ["./packages/angular/i18n/src/index.ts"],
       "@cds/rte-angular/testing": ["./packages/angular/testing/src/index.ts"],
+      "@cds/rte-angular/upload": ["./packages/angular/upload/src/index.ts"],
       "@cds/rte-angular/validators": [
         "./packages/angular/validators/src/index.ts"
       ],

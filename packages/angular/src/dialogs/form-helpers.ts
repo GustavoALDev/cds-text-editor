@@ -1,12 +1,6 @@
-import {
-  max,
-  min,
-  required,
-  validate,
-  type FieldTree,
-  type SchemaPath,
-  type ValidationError,
-} from '@angular/forms/signals';
+// Só tipos de `@angular/forms/signals`: este módulo fica no *chunk*
+// principal (âncora, `form-kit.ts`) e não pode puxar os Signal Forms para ele.
+import type { FieldTree, ValidationError } from '@angular/forms/signals';
 import { normalizeAttribute, type RteAttrRule } from '@cds/rte-core';
 import type { RteDialogLabels } from '../labels/types';
 
@@ -36,6 +30,12 @@ export function dialogErrorText(
       return labels.errorMediaUrl;
     case 'rteEmbedUrl':
       return labels.errorEmbedUrl;
+    case 'rteFileRequired':
+      return labels.errorFileRequired;
+    case 'rteFileType':
+      return labels.errorFileType;
+    case 'rteFileSize':
+      return labels.errorFileSize(numberOf(error, 'maxMegabytes'));
     case 'min':
     case 'max':
     case 'rteInteger':
@@ -47,66 +47,28 @@ export function dialogErrorText(
   }
 }
 
-/** Erro de inteiro fora do intervalo (pré-voo 9): carrega `min` e `max`. */
-function integerError(lo: number, hi: number): ValidationError {
+/**
+ * Erro de inteiro fora do intervalo (pré-voo 9): carrega `min` e `max` (o
+ * mesmo `errorRange`). Quem chama o passa a `min`/`max` (que gravam os
+ * atributos nativos pelo `[formField]`) e a {@link nonIntegerCheck}.
+ */
+export function integerError(lo: number, hi: number): ValidationError {
   return { kind: 'rteInteger', min: lo, max: hi } as ValidationError;
 }
 
 /**
- * Inteiro obrigatório em `[lo, hi]` (pré-voo 9): vazio → `required`; fora do
- * intervalo ou não inteiro → `rteInteger` com os dois limites. `min`/`max`
- * gravam os atributos nativos pelo `[formField]` e trocam o erro padrão
- * (que só carrega um dos limites) pelo `rteInteger`.
+ * Validador (para o `validate` do chamador) que recusa número não inteiro com
+ * `error`; vazio (`null`) e `NaN` passam (o `required`/`min`/`max` cuidam).
  */
-export function integerInRange(
-  path: SchemaPath<number | null>,
-  lo: number,
-  hi: number,
-): void {
-  required(path);
-  rangeChecks(path, lo, hi);
-}
-
-/**
- * Endereço obrigatório que é aparado no `apply` (Fix 2 da revisão final):
- * `required` (mantém o atributo nativo e o `aria-required` do campo) mais
- * `required` também para o valor só de espaços, que o `apply` trataria como
- * vazio e sairia em silêncio.
- */
-export function requiredTrimmed(path: SchemaPath<string>): void {
-  required(path);
-  validate(path, ({ value }) => {
-    const v = value();
-    return v !== '' && v.trim() === '' ? { kind: 'required' } : undefined;
-  });
-}
-
-/**
- * Inteiro opcional em `[lo, hi]` (pré-voo 7): vazio passa; fora do intervalo
- * ou não inteiro → `rteInteger` com os dois limites (o mesmo `errorRange`).
- */
-export function optionalIntegerInRange(
-  path: SchemaPath<number | null>,
-  lo: number,
-  hi: number,
-): void {
-  rangeChecks(path, lo, hi);
-}
-
-function rangeChecks(
-  path: SchemaPath<number | null>,
-  lo: number,
-  hi: number,
-): void {
-  const error = integerError(lo, hi);
-  min(path, lo, { error });
-  max(path, hi, { error });
-  validate(path, ({ value }) => {
+export function nonIntegerCheck(
+  error: ValidationError,
+): (ctx: { value: () => number | null }) => ValidationError | undefined {
+  return ({ value }) => {
     const v = value();
     return v !== null && !Number.isNaN(v) && !Number.isInteger(v)
       ? error
       : undefined;
-  });
+  };
 }
 
 /** Texto de um atributo do nó; `''` se não for texto. */
@@ -133,21 +95,21 @@ export function focusFirstInvalid(fields: readonly FieldTree<unknown>[]): void {
 }
 
 /**
- * Código de idioma conforme a regra `span[lang]` do esquema (G14), a mesma do
- * `setLang`: vazio passa (o `required` cuida disso); regra nula ou código
- * recusado → `rteLangCode`. `when` desliga a checagem (ex.: idioma da lista).
+ * Validador (para o `validate` do chamador) do código de idioma conforme a
+ * regra `span[lang]` do esquema (G14), a mesma do `setLang`: vazio passa (o
+ * `required` cuida disso); regra nula ou código recusado → `rteLangCode`.
+ * `when` desliga a checagem (ex.: idioma da lista).
  */
-export function langCodeValidator(
-  path: SchemaPath<string>,
+export function langCodeCheck(
   rule: () => RteAttrRule | null,
   when?: () => boolean,
-): void {
-  validate(path, ({ value }) => {
+): (ctx: { value: () => string }) => ValidationError | undefined {
+  return ({ value }) => {
     const code = value();
     if (code === '' || (when && !when())) return undefined;
     const r = rule();
     return r === null || normalizeAttribute(r, code) === null
-      ? { kind: 'rteLangCode' }
+      ? ({ kind: 'rteLangCode' } as ValidationError)
       : undefined;
-  });
+  };
 }

@@ -10,6 +10,7 @@ import type {
   RteLabelsInput,
   RteLabelsSource,
   RteToolbarLabels,
+  RteUploadLabels,
 } from './types';
 
 type Bag = Record<string, unknown>;
@@ -123,6 +124,8 @@ function mergeErrors(base: RteLabels['errors'], given: unknown) {
   const required = own(given, 'rteRequired');
   const maxChars = own(given, 'rteMaxChars');
   const maxWords = own(given, 'rteMaxWords');
+  const pending = own(given, 'rteUploadsPending');
+  const missingAlt = own(given, 'rteImagesMissingAlt');
   return {
     rteRequired: typeof required === 'string' ? required : base.rteRequired,
     rteMaxChars:
@@ -139,6 +142,17 @@ function mergeErrors(base: RteLabels['errors'], given: unknown) {
             base.rteMaxWords,
           )
         : base.rteMaxWords,
+    rteUploadsPending:
+      typeof pending === 'function'
+        ? guard(pending as (count: number) => unknown, base.rteUploadsPending)
+        : base.rteUploadsPending,
+    rteImagesMissingAlt:
+      typeof missingAlt === 'function'
+        ? guard(
+            missingAlt as (count: number) => unknown,
+            base.rteImagesMissingAlt,
+          )
+        : base.rteImagesMissingAlt,
   };
 }
 
@@ -176,6 +190,8 @@ const DIALOG_FUNCTIONS = [
   'videoTrack',
   'videoTrackRemove',
   'embedUrlHint',
+  'fileHint',
+  'errorFileSize',
 ] as const;
 
 function mergeDialogs(base: RteDialogLabels, given: unknown): RteDialogLabels {
@@ -218,6 +234,33 @@ function mergeFloating(
   return out as unknown as RteFloatingMenuLabels;
 }
 
+/** Funções de `upload`, cada uma com `guard`; `region` é texto. */
+const UPLOAD_FUNCTIONS = [
+  'progress',
+  'queued',
+  'cancel',
+  'announceStart',
+  'announceDone',
+  'announceCancelled',
+  'announceError',
+] as const;
+
+function mergeUpload(base: RteUploadLabels, given: unknown): RteUploadLabels {
+  if (!isBag(given)) return base;
+  const out: Record<string, unknown> = { ...base };
+  const region = own(given, 'region');
+  if (typeof region === 'string') out['region'] = region;
+  for (const key of UPLOAD_FUNCTIONS) {
+    const value = own(given, key);
+    if (typeof value === 'function')
+      out[key] = guard(
+        value as (...args: never[]) => unknown,
+        base[key] as (...args: never[]) => string,
+      );
+  }
+  return out as unknown as RteUploadLabels;
+}
+
 /**
  * Mescla a entrada sobre `base` por seção e por chave: só chaves próprias com
  * o tipo esperado. Sem entrada, devolve `base` (o mesmo objeto).
@@ -255,6 +298,10 @@ export function mergeLabels(
     floating: safely(
       () => mergeFloating(base.floating, own(input, 'floating')),
       base.floating,
+    ),
+    upload: safely(
+      () => mergeUpload(base.upload, own(input, 'upload')),
+      base.upload,
     ),
   };
 }

@@ -16,10 +16,10 @@ const REFUSED = '[rte-editor] o editor recusou a mídia; nada foi aplicado.';
  * `floating/commands.ts`), então os tipos ficam aqui (pré-voo 8).
  */
 export type MediaChain = ChainedCommands & {
-  setImage(attrs: RteImageAttrs): MediaChain;
+  setImage(attrs: RteImageAttrs, options?: { at?: number }): MediaChain;
   updateImage(attrs: Partial<RteImageAttrs>): MediaChain;
   setImageSize(size: { width: number }): MediaChain;
-  setVideo(attrs: RteVideoAttrs): MediaChain;
+  setVideo(attrs: RteVideoAttrs, options?: { at?: number }): MediaChain;
   updateVideo(attrs: Partial<RteVideoAttrs>): MediaChain;
   setEmbed(url: string, options: { caption: string }): MediaChain;
   updateEmbed(attrs: { caption: string }): MediaChain;

@@ -1,5 +1,17 @@
 import { RTE_CONTENT_LABELS, RTE_SLASH_LABELS } from '@cds/rte-core/extensions';
+import type { RteUploadErrorReason } from '../upload/types';
 import type { RteLabels } from './types';
+
+const UPLOAD_REASONS: Readonly<Record<RteUploadErrorReason, string>> =
+  Object.freeze({
+    type: 'file type not accepted.',
+    size: 'file too large.',
+    count: 'too many files at once.',
+    network: 'connection failed.',
+    server: 'the server refused it.',
+    response: 'invalid server response.',
+    unavailable: 'the editor is not editable.',
+  });
 
 /** Rótulos em inglês (padrão), congelados em profundidade. */
 export const RTE_LABELS_EN: RteLabels = Object.freeze({
@@ -87,6 +99,14 @@ export const RTE_LABELS_EN: RteLabels = Object.freeze({
       `Use at most ${max} characters (${actual} now).`,
     rteMaxWords: ({ max, actual }: { max: number; actual: number }) =>
       `Use at most ${max} words (${actual} now).`,
+    rteUploadsPending: (count: number) =>
+      count === 1
+        ? 'Wait for 1 upload to finish.'
+        : `Wait for ${count} uploads to finish.`,
+    rteImagesMissingAlt: (count: number) =>
+      count === 1
+        ? '1 image has no alternative text.'
+        : `${count} images have no alternative text.`,
   }),
   dialogs: Object.freeze({
     apply: 'Apply',
@@ -168,6 +188,17 @@ export const RTE_LABELS_EN: RteLabels = Object.freeze({
     videoTrackRemove: (n: number) => `Remove track ${n}`,
     embedUrlHint: (providers: readonly string[]) =>
       `Accepted: ${providers.join(', ')}.`,
+    mediaSource: 'Source',
+    mediaSourceFile: 'File',
+    mediaSourceUrl: 'Address (URL)',
+    imageFile: 'Image file',
+    videoFile: 'Video file',
+    fileHint: (types: readonly string[], maxMegabytes: number) =>
+      `Accepted: ${types.join(', ')}. Up to ${maxMegabytes} MB.`,
+    errorFileRequired: 'Choose a file.',
+    errorFileType: 'This file type is not accepted.',
+    errorFileSize: (maxMegabytes: number) =>
+      `The file is larger than ${maxMegabytes} MB.`,
     languageNames: Object.freeze({
       en: 'English',
       es: 'Spanish',
@@ -203,5 +234,17 @@ export const RTE_LABELS_EN: RteLabels = Object.freeze({
     embedDetails: 'Embedded content details…',
     removeVideo: 'Remove video',
     removeEmbed: 'Remove embedded content',
+  }),
+  upload: Object.freeze({
+    region: 'Uploads',
+    progress: (name: string) => `Uploading ${name}`,
+    queued: (name: string) => `${name} (waiting)`,
+    cancel: (name: string) => `Cancel upload of ${name}`,
+    announceStart: (count: number) =>
+      count === 1 ? 'Uploading 1 file.' : `Uploading ${count} files.`,
+    announceDone: (name: string) => `${name} uploaded.`,
+    announceCancelled: (name: string) => `Upload of ${name} cancelled.`,
+    announceError: (name: string, reason: RteUploadErrorReason) =>
+      `Could not upload ${name}: ${UPLOAD_REASONS[reason]}`,
   }),
 });

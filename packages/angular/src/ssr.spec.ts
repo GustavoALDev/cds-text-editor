@@ -17,6 +17,7 @@ import {
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import { provideRichText, RteEditor } from '@cds/rte-angular';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { RTE_UPLOAD_LOADER } from './upload/facade';
 
 // R12 (D19): no servidor só a casca; nenhum Editor e nenhum HTML do valor.
 
@@ -43,6 +44,20 @@ class SsrHost {
 class SsrMediaHost {
   readonly secret =
     '<p>segredo</p><figure class="rt-figure rt-figure--center"><img src="/a.png" alt="A"></figure>';
+}
+
+/** Entrada `[upload]` (spec 05c2a, E8/R15): região de status vazia, sem bandeja. */
+@Component({
+  selector: 'rte-ssr-host',
+  imports: [RteEditor],
+  template: `<rte-editor [value]="secret" [upload]="upload" />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class SsrUploadHost {
+  readonly secret = '<p>segredo</p>';
+  readonly upload = {
+    adapter: { uploadImage: () => Promise.reject(new Error('servidor')) },
+  };
 }
 
 /**
@@ -252,6 +267,84 @@ describe('RteEditor no servidor (R12)', () => {
         expect(host).not.toMatch(/\sstyle=/);
       }
       expect(html).not.toContain('--rte-');
+    },
+  );
+  it(
+    'com configuração de envio, o chunk rte-upload nunca é pedido no servidor (Ruling 28)',
+    { timeout: 30_000 },
+    async () => {
+      const error = vi.spyOn(console, 'error');
+      const loader = vi.fn(() => import('./upload/rte-upload'));
+      const adapter = {
+        uploadImage: () => Promise.reject(new Error('servidor')),
+      };
+      const html = await withServerDomAdapter(() =>
+        renderApplication(
+          (context) =>
+            bootstrapApplication(
+              SsrHost,
+              {
+                providers: [
+                  provideZonelessChangeDetection(),
+                  provideServerRendering(),
+                  provideRichText({ upload: { adapter } }),
+                  { provide: RTE_UPLOAD_LOADER, useValue: loader },
+                ],
+              },
+              context,
+            ),
+          {
+            document:
+              '<!doctype html><html><head></head><body><rte-ssr-host></rte-ssr-host></body></html>',
+            url: '/',
+          },
+        ),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(html).toContain('class="rte-root rte-editor');
+      expect(html).not.toContain('rte-upload-marker');
+      expect(html).not.toMatch(/class="rte-uploads"|<section/);
+      expect(loader).not.toHaveBeenCalled();
+      expect(error).not.toHaveBeenCalled();
+    },
+  );
+  it(
+    'com [upload]: a região aria-live vazia está no HTML, sem bandeja nem marcador (E8, R15)',
+    { timeout: 30_000 },
+    async () => {
+      const error = vi.spyOn(console, 'error');
+      const loader = vi.fn(() => import('./upload/rte-upload'));
+      const html = await withServerDomAdapter(() =>
+        renderApplication(
+          (context) =>
+            bootstrapApplication(
+              SsrUploadHost,
+              {
+                providers: [
+                  provideZonelessChangeDetection(),
+                  provideServerRendering(),
+                  { provide: RTE_UPLOAD_LOADER, useValue: loader },
+                ],
+              },
+              context,
+            ),
+          {
+            document:
+              '<!doctype html><html><head></head><body><rte-ssr-host></rte-ssr-host></body></html>',
+            url: '/',
+          },
+        ),
+      );
+      const region =
+        /(<div[^>]*class="rte-uploads__status"[^>]*>)(.*?)<\/div>/s.exec(html);
+      expect(region).not.toBeNull();
+      expect(region?.[1]).toContain('aria-live="polite"');
+      expect(region?.[2]?.replace(/<!--.*?-->/gs, '').trim()).toBe('');
+      expect(html).not.toMatch(/class="rte-uploads"|<section/);
+      expect(html).not.toContain('rte-upload-marker');
+      expect(html).not.toContain('segredo');
+      expect(loader).not.toHaveBeenCalled();
+      expect(error).not.toHaveBeenCalled();
     },
   );
 });

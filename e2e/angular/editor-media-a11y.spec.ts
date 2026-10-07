@@ -13,6 +13,7 @@ import {
   cancelDialog,
   dialogField,
   dialogsChunk,
+  mediaFormsChunk,
   openDialogFrom,
   openDialogOf,
   submitDialog,
@@ -29,7 +30,8 @@ import { selectIn } from './helpers/toolbar';
 // `<fieldset>`; contraste de rótulos, dicas e erros; alvos >= 24 x 24; idioma
 // ao vivo com o diálogo de vídeo aberto; 0 violações de CSP em todas as fases;
 // HTML do servidor sem `<dialog>`/`.rte-floating`; console sem `NG05xx`; os
-// formulários de mídia no mesmo *chunk* `rte-dialogs`; e, no build zone, o
+// formulários de mídia num *chunk* próprio (`rte-media-forms`, 05c2a E2),
+// separado do `rte-dialogs`; e, no build zone, o
 // custo em turnos da zona de 20 teclas (Ruling 3). Rota `media` com CSP
 // própria: abrir `/media` direto.
 
@@ -359,7 +361,7 @@ test('N31 (R16): idioma ao vivo com o diálogo de vídeo aberto, com faixas e er
 
 for (const zone of [false, true]) {
   test.describe(`N31 (${zone ? 'zone' : 'zoneless'})`, () => {
-    test('SSR sem <dialog> nem .rte-floating; formulários de mídia no mesmo chunk do rte-dialogs, menus em outro; console sem NG05', async ({
+    test('SSR sem <dialog> nem .rte-floating; formulários de mídia num chunk próprio, fora do rte-dialogs e dos menus; console sem NG05', async ({
       page,
       request,
     }) => {
@@ -377,9 +379,11 @@ for (const zone of [false, true]) {
         if (/\.js$/.test(new URL(r.url()).pathname)) scripts.push(r.url());
       });
       const chunk = await dialogsChunk(page);
+      const media = await mediaFormsChunk(page);
       await gotoApp(page, '/media', { zone });
       await waitForEditor(page, ID);
       await chunk.requested;
+      await media.requested;
       await expect.poll(() => scripts.length).toBeGreaterThan(0);
       // O chunk dos menus só chega com a primeira mídia selecionada.
       await expect(editableOf(page, ID).locator('video')).toHaveCount(1);
@@ -390,7 +394,7 @@ for (const zone of [false, true]) {
         'rte-image-form': [],
         'rte-video-form': [],
         'rte-embed-form': [],
-        'rte-dialog__form': [],
+        'rte-link-form': [],
         'rte-floating__address': [],
       };
       for (const url of new Set(scripts)) {
@@ -399,21 +403,23 @@ for (const zone of [false, true]) {
           if (body.includes(marker)) files.push(url);
         }
       }
-      // Os três formulários de mídia e o dos outros diálogos: um só arquivo.
-      const dialogsFile = holders['rte-dialog__form'] ?? [];
+      // Os três formulários de mídia num arquivo só, diferente do dos
+      // outros diálogos (05c2a E2, Ruling 3).
+      const dialogsFile = holders['rte-link-form'] ?? [];
       expect(dialogsFile).toHaveLength(1);
       expect(chunk.url).toBe(dialogsFile[0]);
-      for (const marker of [
-        'rte-image-form',
-        'rte-video-form',
-        'rte-embed-form',
-      ]) {
-        expect(holders[marker], marker).toEqual(dialogsFile);
+      const mediaFile = holders['rte-image-form'] ?? [];
+      expect(mediaFile).toHaveLength(1);
+      expect(media.url).toBe(mediaFile[0]);
+      expect(mediaFile).not.toEqual(dialogsFile);
+      for (const marker of ['rte-video-form', 'rte-embed-form']) {
+        expect(holders[marker], marker).toEqual(mediaFile);
       }
       // Os menus de vídeo e embed ficam em outro arquivo (o dos menus).
       const menusFile = holders['rte-floating__address'] ?? [];
       expect(menusFile).toHaveLength(1);
       expect(menusFile).not.toEqual(dialogsFile);
+      expect(menusFile).not.toEqual(mediaFile);
       expect(messages.filter((m) => m.includes('NG05'))).toEqual([]);
     });
 

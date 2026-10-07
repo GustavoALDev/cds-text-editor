@@ -46,10 +46,15 @@ import {
   RteDialogController,
 } from '../dialogs/controller';
 import { RteDeferFailed } from '../dialogs/defer-failed';
+import { RTE_DIALOG_KIT } from '../dialogs/form-kit';
 import { readMediaRules, type RteMediaRules } from '../dialogs/media-rules';
 import { RteDialogs } from '../dialogs/rte-dialogs';
+// Só em `imports` e no bloco de pré-carga do template (05c2a E2): o
+// `@defer (when false; prefetch on idle)` nunca renderiza; o *chunk*
+// `rte-media-forms` chega em ocioso, sem cascata no primeiro diálogo de mídia.
+import { RteMediaForms } from '../dialogs/rte-media-forms';
 import { dialogTarget } from '../dialogs/target';
-import type { RteDialogKind } from '../dialogs/types';
+import { isMediaKind, type RteDialogKind } from '../dialogs/types';
 import { createRteUiExtension } from '../dialogs/ui-extension';
 import { createFloatingEscapeExtension } from '../floating/escape-extension';
 import {
@@ -71,6 +76,10 @@ import type { RteToolbarConfig, RteToolbarItemId } from '../toolbar/items';
 import { RteToolbar } from '../toolbar/rte-toolbar';
 import { createToolbarState, type RteToolbarState } from '../toolbar/state';
 import { mergeTheme, sameTheme, themeKey } from '../theme/instance-theme';
+import { RteEditorUploads } from '../upload/editor-bindings';
+// Só no `@defer` da bandeja: o mesmo módulo do carregador (*chunk* `rte-upload`).
+import { RteUploadTray } from '../upload/rte-upload';
+import type { RteUploadConfig, RteUploadErrorEvent } from '../upload/types';
 import {
   editableAttributes,
   presentText,
@@ -97,6 +106,13 @@ const FLOATING_FAILED =
   '[rte-editor] não foi possível carregar os menus flutuantes; o editor segue sem eles.';
 
 const NO_LANGUAGES: readonly RteCodeLanguage[] = Object.freeze([]);
+/** Itens de mídia da barra (desabilitados com `mediaFailed`, 05c2a E2). */
+const MEDIA_ITEMS: readonly RteToolbarItemId[] = Object.freeze([
+  'image',
+  'video',
+  'embed',
+]);
+const NO_ITEMS: readonly RteToolbarItemId[] = Object.freeze([]);
 
 function sameGroups(
   a: readonly (readonly string[])[],
@@ -147,8 +163,16 @@ function toCharLimit(value: number | undefined): number | null {
   selector: 'rte-editor',
   exportAs: 'rteEditor',
   templateUrl: './rte-editor.html',
-  // `RteDialogs` só aqui e no `@defer` do template (G7: senão o chunk some).
-  imports: [RteToolbar, RteFloatingMenus, RteDialogs, RteDeferFailed],
+  // `RteDialogs`, `RteMediaForms` e `RteUploadTray` só aqui e nos `@defer`
+  // do template (G7, 05c2a E2 e Ruling 28: senão o chunk some).
+  imports: [
+    RteToolbar,
+    RteFloatingMenus,
+    RteDialogs,
+    RteMediaForms,
+    RteUploadTray,
+    RteDeferFailed,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   host: {
@@ -166,6 +190,13 @@ function toCharLimit(value: number | undefined): number | null {
   },
 })
 export class RteEditor implements FormValueControl<string> {
+  /**
+   * Âncora de *chunk* (05c2a E2, ruling 20 do ADR 0011): mantém no principal
+   * os auxiliares de formulário usados pelos *chunks* `rte-dialogs` e
+   * `rte-media-forms` (sem terceiro *chunk* compartilhado).
+   */
+  protected static readonly ɵdialogKit = RTE_DIALOG_KIT;
+
   // Contrato de controle (preenchido pelo [formField]; utilizável sem formulário)
   readonly value = model('');
   readonly disabled = input(false, { transform: booleanAttribute });
@@ -190,6 +221,8 @@ export class RteEditor implements FormValueControl<string> {
   readonly theme = input<RteTheme | undefined>(undefined);
   /** Menus flutuantes: entrada > `provideRichText` por chave; ao vivo (M17). */
   readonly floatingMenus = input<RteFloatingMenusConfig | undefined>(undefined);
+  /** Envio de arquivos: entrada > `provideRichText`; `null` desliga (E3). */
+  readonly upload = input<RteUploadConfig | null | undefined>(undefined);
 
   // Saídas
   readonly editorReady = output<Editor>();
@@ -197,6 +230,8 @@ export class RteEditor implements FormValueControl<string> {
   readonly editorBlur = output<void>();
   /** Delta por transação que muda o conjunto de endereços de mídia (V13). */
   readonly mediaChange = output<RteMediaChange>();
+  /** Falha de envio, uma por arquivo, dentro da zona (E15). */
+  readonly uploadError = output<RteUploadErrorEvent>();
 
   private readonly instance = signal<Editor | null>(null);
   private readonly host =
@@ -367,6 +402,11 @@ export class RteEditor implements FormValueControl<string> {
       { equal: sameIds },
     ),
     interactive: this.interactive,
+    // Falha do *chunk* dos formulários de mídia (05c2a E2): os itens de
+    // mídia ficam desabilitados em vez de não fazer nada.
+    unavailable: computed(() =>
+      this.dialogs.mediaFailed() ? MEDIA_ITEMS : NO_ITEMS,
+    ),
   });
 
   /** Paleta do esquema; igual por valor (a criação não re-renderiza os menus). */
@@ -445,6 +485,27 @@ export class RteEditor implements FormValueControl<string> {
     () => this.schema().elements['span']?.attributes['lang']?.rule ?? null,
   );
 
+  /** Envios (E3, E4, E8, E10, E17, E23; Ruling 28): `upload/editor-bindings`. */
+  private readonly uploading = new RteEditorUploads({
+    editor: this.instance,
+    upload: this.upload,
+    provided: this.config.upload,
+    schema: this.schema,
+    interactive: this.interactive,
+    hidden: this.hidden,
+    dialog: this.dialogs.request,
+    zone: this.ngZone,
+    labels: () => this.resolvedLabels().upload,
+    emitError: (e) => this.uploadError.emit(e),
+  });
+  /** Envios em curso, na ordem do gesto (E18). */
+  readonly uploads = this.uploading.uploads;
+  readonly pendingUploads = this.uploading.pendingUploads;
+  protected readonly announcements = this.uploading.announcements;
+  protected readonly dialogUploads = this.uploading.dialogUploads;
+  /** Imagens com `alt: null` (E18), fora do portão do delta de URLs. */
+  readonly imagesMissingAlt = this.uploading.imagesMissingAlt;
+
   constructor() {
     bindRteBridge(this, this.bridge);
 
@@ -489,6 +550,7 @@ export class RteEditor implements FormValueControl<string> {
         zone.run(() => this.dialogs.cancel('cancelled'));
       }
       if (this.loading) return;
+      this.uploading.afterTransaction([transaction, ...appendedTransactions]);
       const media = this.media;
       const delta = media?.apply([transaction, ...appendedTransactions]);
       let emitted = false;
@@ -501,6 +563,8 @@ export class RteEditor implements FormValueControl<string> {
           zone.run(() => this.value.set(html));
         }
       }
+      // E18: fora do portão abaixo (trocar `alt: null` não muda URL).
+      this.uploading.setMissingAlt(media?.missingAlt() ?? 0, true);
       // Só junto de um `value` (V13; endereços canônicos: não há delta sem ele).
       if (!media || !delta || !emitted) return;
       zone.run(() => {
@@ -521,6 +585,8 @@ export class RteEditor implements FormValueControl<string> {
       untracked(() => {
         const editor = this.instance();
         if (!editor || editor.isDestroyed || value === this.lastValue) return;
+        // E17: antes do `EditorState.create`, que reinicia os marcadores
+        this.uploading.abortAll(true);
         this.loading = true;
         try {
           editor
@@ -547,6 +613,7 @@ export class RteEditor implements FormValueControl<string> {
         this.lastValue = readValue(editor);
         this.media?.reset(editor.state.doc);
         if (this.media) this.mediaState.set(this.media.session());
+        this.uploading.setMissingAlt(this.media?.missingAlt() ?? 0);
       });
     });
 
@@ -681,6 +748,7 @@ export class RteEditor implements FormValueControl<string> {
             }),
           ),
           createRteUiExtension({ openLink: () => this.openDialog('link') }),
+          this.uploading.inputExtension(),
           // `Escape` no editável (M6): o último `handleKeyDown` do ProseMirror.
           createFloatingEscapeExtension(() =>
             this.ngZone.run(
@@ -716,6 +784,7 @@ export class RteEditor implements FormValueControl<string> {
       const rules = readMediaUrlRules(untracked(this.schema));
       this.media = new RteMediaTracker(editor.state.doc, rules);
       this.mediaState.set(this.media.session());
+      this.uploading.setMissingAlt(this.media.missingAlt());
       editor.on('transaction', onTransaction);
       this.instance.set(editor);
       this.bridge.connect(editor);
@@ -727,6 +796,7 @@ export class RteEditor implements FormValueControl<string> {
 
     inject(DestroyRef).onDestroy(() => {
       const editor = untracked(this.instance);
+      this.uploading.dispose();
       this.dialogs.dispose();
       this.destroyed = true;
       this.pendingFocus = null;
@@ -867,6 +937,7 @@ export class RteEditor implements FormValueControl<string> {
       !untracked(this.interactive) ||
       untracked(this.hidden) ||
       untracked(this.dialogs.failed) ||
+      (isMediaKind(kind) && untracked(this.dialogs.mediaFailed)) ||
       untracked(this.dialogs.request) ||
       dialogBusy(this.host.ownerDocument) ||
       this.host.ownerDocument.querySelector('dialog.rte-dialog[open]')
@@ -898,6 +969,26 @@ export class RteEditor implements FormValueControl<string> {
     editor.commands.focus(null, {
       scrollIntoView: options?.preventScroll !== true,
     });
+  }
+
+  /**
+   * Envia na posição da seleção, como colar (E18); devolve os aceitos (E5).
+   * Antes de o *chunk* `rte-upload` chegar, as recusas da E5 saem na hora e
+   * os aceitos esperam (marcadores e `uploads` na chegada); falha da carga →
+   * `'unavailable'`.
+   */
+  uploadFiles(files: Iterable<File>): number {
+    return this.uploading.uploadFiles(files);
+  }
+
+  /** Cancela um envio (E8); `false` se o id não está em curso. */
+  cancelUpload(id: string): boolean {
+    return this.uploading.cancel(id);
+  }
+
+  /** Cancela todos os envios em curso (E8). */
+  cancelAllUploads(): void {
+    this.uploading.cancelAll();
   }
 
   private editableState(): RteEditableState {

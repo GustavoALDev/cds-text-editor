@@ -7,6 +7,7 @@ import {
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import {
+  provideRichText,
   RteEditor,
   type RteDialogKind,
   type RteEditorConfig,
@@ -25,6 +26,8 @@ import {
   waitForDialog,
 } from './testing-support/dialog';
 import { selectText } from './testing-support/editors';
+import { createFakeUploadAdapter } from './testing-support/fake-upload-adapter';
+import { whenUploadReady } from './testing-support/upload-runtime';
 import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
 import type { RteDialogController } from './dialogs/controller';
@@ -43,6 +46,7 @@ const DOC =
     [options]="options()"
     [disabled]="disabled()"
     [readonly]="readonly()"
+    [hidden]="hidden()"
   />`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -52,6 +56,7 @@ class Host {
   readonly options = signal<RteEditorConfig | undefined>(undefined);
   readonly disabled = signal(false);
   readonly readonly = signal(false);
+  readonly hidden = signal(false);
   readonly cmp = viewChild.required(RteEditor);
 }
 
@@ -353,5 +358,52 @@ describe('openDialog de mídia (V2, V9)', () => {
     expect(
       el.querySelector('[aria-label="Insert embedded content"]'),
     ).toBeNull();
+  });
+});
+
+describe('uploadFiles e cancelUpload (05c2a E18)', () => {
+  const png = () => new File(['x'], 'a.png', { type: 'image/png' });
+
+  it('0 antes do editorReady; cancelUpload desconhecido → false', () => {
+    const adapter = createFakeUploadAdapter();
+    TestBed.configureTestingModule({
+      providers: [provideRichText({ upload: { adapter } })],
+    });
+    const fixture = TestBed.createComponent(RteEditor);
+    const cmp = fixture.componentInstance;
+    expect(cmp.uploadFiles([png()])).toBe(0);
+    expect(cmp.cancelUpload('x')).toBe(false);
+    expect(cmp.uploads()).toEqual([]);
+    expect(cmp.pendingUploads()).toBe(0);
+    expect(adapter.calls).toEqual([]);
+  });
+
+  it.each([
+    ['hidden', (h: Host) => h.hidden.set(true)],
+    ['readonly', (h: Host) => h.readonly.set(true)],
+    ['disabled', (h: Host) => h.disabled.set(true)],
+  ] as const)('0 com %s', async (_name, init) => {
+    const adapter = createFakeUploadAdapter();
+    TestBed.configureTestingModule({
+      providers: [provideRichText({ upload: { adapter } })],
+    });
+    const { cmp } = await setup(init);
+    expect(cmp.uploadFiles([png()])).toBe(0);
+    expect(cmp.cancelUpload('x')).toBe(false);
+    expect(adapter.calls).toEqual([]);
+  });
+
+  it('editável: aceita e cancela pelo id', async () => {
+    const adapter = createFakeUploadAdapter();
+    TestBed.configureTestingModule({
+      providers: [provideRichText({ upload: { adapter } })],
+    });
+    const { cmp } = await setup();
+    await whenUploadReady(cmp);
+    expect(cmp.uploadFiles(new Set([png()]))).toBe(1);
+    const id = cmp.uploads()[0]?.id as string;
+    expect(cmp.cancelUpload(id)).toBe(true);
+    expect(adapter.signal(0).aborted).toBe(true);
+    expect(cmp.pendingUploads()).toBe(0);
   });
 });

@@ -12,12 +12,16 @@ import {
   type RteAttrRule,
 } from '@cds/rte-core';
 import { getRteHtml } from '@cds/rte-core/extensions';
+import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
 import { validateHtml } from '@cds/rte-core/html';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import {
   RteEditor,
   type RteEditorConfig,
+  type RteLabelsSource,
   type RteMediaChange,
+  type RteUploadConfig,
+  type RteUploadErrorEvent,
 } from '@cds/rte-angular';
 import type { Editor } from '@tiptap/core';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
@@ -36,6 +40,21 @@ import { selectText } from './testing-support/editors';
 import { anyMediaUrl, fcOptions } from './testing-support/media-urls';
 import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
+import {
+  chooseFile,
+  drainUploads,
+  markerPositions,
+  openKind,
+  pngFile,
+  setupUploadDialog,
+  uploadHtml,
+  webmFile,
+  type UploadDialogHost,
+  type UploadDialogSetup,
+} from './testing-support/upload-dialog';
+import { createFakeUploadAdapter } from './testing-support/fake-upload-adapter';
+import { resolveUploadConfig } from './upload/config';
+import { createDialogUploads, fileRules } from './upload/dialog-port';
 
 // Spec 05c1, Tarefa 4: diálogo de imagem (R3, R6 imagem; V4, V6, V7, V12).
 
@@ -729,6 +748,453 @@ describe('propriedade R6: o diálogo aceita ⇔ a regra img[src] do esquema acei
         expect(html(o)).toBe(o.initial);
       }),
       fcOptions(20),
+    );
+  });
+});
+
+@Component({
+  selector: 'rte-test-upload-dialog-host',
+  imports: [RteEditor],
+  template: `<rte-editor
+    [value]="value()"
+    [upload]="upload()"
+    [labels]="labels()"
+    (valueChange)="changes = changes + 1"
+    (uploadError)="errors.push($event)"
+    toolbar="full"
+  />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class UploadHost implements UploadDialogHost {
+  readonly value = signal('<p></p>');
+  readonly upload = signal<RteUploadConfig | null>(null);
+  readonly labels = signal<RteLabelsSource | undefined>(undefined);
+  changes = 0;
+  readonly errors: RteUploadErrorEvent[] = [];
+  readonly cmp = viewChild.required(RteEditor);
+}
+
+// Spec 05c2a, Tarefa 10: origem "Arquivo" ou "Endereço" (E14; R9, R7).
+
+const SOURCE = 'Source';
+const FILE = 'File';
+const URL_SOURCE = 'Address (URL)';
+const IMAGE_FILE = 'Image file';
+const IMAGE_ACCEPT =
+  'image/png,image/jpeg,image/gif,image/webp,image/avif,.png,.jpg,.jpeg,.gif,.webp,.avif';
+const IMAGE_HINT = 'Accepted: PNG, JPEG, GIF, WebP, AVIF. Up to 10 MB.';
+
+function sourceOf(dialog: HTMLElement): HTMLFieldSetElement | null {
+  return dialog.querySelector<HTMLFieldSetElement>(
+    'fieldset.rte-dialog__fieldset.rte-dialog__source',
+  );
+}
+
+function fileInput(dialog: HTMLElement): HTMLInputElement {
+  const input = dialog.querySelector<HTMLInputElement>('input[type="file"]');
+  if (!input) throw new Error('campo de arquivo ausente');
+  return input;
+}
+
+function hiddenField(input: HTMLElement): boolean | undefined {
+  return input.closest('.rte-dialog__field')?.hasAttribute('hidden');
+}
+
+async function applyUpload(
+  s: UploadDialogSetup,
+  d: HTMLDialogElement,
+): Promise<void> {
+  button(d, '.rte-dialog__apply').click();
+  await settle(s.fixture);
+}
+
+describe('origem do diálogo de imagem (05c2a E14, R9)', () => {
+  it('sem adaptador: diálogo da 05c1, sem "Origem" nem campo de arquivo', async () => {
+    const s = await setup('<p></p>');
+    const o = await openImage(s);
+    expect(sourceOf(o.dialog)).toBeNull();
+    expect(o.dialog.querySelector('input[type="file"]')).toBeNull();
+  });
+
+  it('com adaptador, inserir: "Origem" com "Arquivo" marcado, accept e dica', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'image');
+    const source = sourceOf(d);
+    expect(source).not.toBeNull();
+    expect(
+      source?.querySelector('legend.rte-dialog__legend')?.textContent?.trim(),
+    ).toBe(SOURCE);
+    const radios = [
+      ...(source?.querySelectorAll<HTMLInputElement>('input[type="radio"]') ??
+        []),
+    ];
+    expect(radios.map((r) => r.id)).toEqual([
+      expect.stringMatching(/-image-source-file$/),
+      expect.stringMatching(/-image-source-url$/),
+    ]);
+    expect(radios.map((r) => r.checked)).toEqual([true, false]);
+    expect(dialogField(d, FILE)).toBe(radios[0]);
+    expect(dialogField(d, URL_SOURCE)).toBe(radios[1]);
+    expect(radios[0]?.name).toBe(radios[1]?.name);
+    // "Arquivo" é o primeiro foco do `show()`.
+    expect(document.activeElement).toBe(radios[0]);
+    const input = fileInput(d);
+    expect(input.id).toMatch(/-image-file$/);
+    expect(dialogField(d, IMAGE_FILE)).toBe(input);
+    expect(input.accept).toBe(IMAGE_ACCEPT);
+    expect(input.multiple).toBe(false);
+    const hint = d.ownerDocument.getElementById(`${input.id}-hint`);
+    expect(hint?.textContent?.trim()).toBe(IMAGE_HINT);
+    expect(input.getAttribute('aria-describedby')).toBe(`${input.id}-hint`);
+    // O grupo do endereço fica no DOM, oculto.
+    expect(hiddenField(dialogField(d, SRC))).toBe(true);
+    expect(hiddenField(input)).toBe(false);
+  });
+
+  it('editar: sem "Origem" (só endereço)', async () => {
+    const s = await setupUploadDialog(UploadHost, EDIT_DOC);
+    selectNode(s.editor, 'rtImage');
+    const d = await openKind(s, 'image');
+    expect(sourceOf(d)).toBeNull();
+    expect(d.querySelector('input[type="file"]')).toBeNull();
+    expect(hiddenField(dialogField(d, SRC))).toBe(false);
+  });
+
+  it('erros no campo, sem uploadError e sem fechar; foco no arquivo', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'image');
+    const before = uploadHtml(s);
+    const input = fileInput(d);
+    typeInto(dialogField(d, ALT), 'Gato');
+    await applyUpload(s, d);
+    expect(d.open).toBe(true);
+    expect(errorOf(input)).toBe('Choose a file.');
+    expect(document.activeElement).toBe(input);
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe(
+      `${input.id}-hint ${input.id}-error`,
+    );
+
+    chooseFile(input, new File(['<svg/>'], 'a.svg', { type: 'image/svg+xml' }));
+    await settle(s.fixture);
+    expect(errorOf(input)).toBe('This file type is not accepted.');
+    await applyUpload(s, d);
+    expect(d.open).toBe(true);
+
+    chooseFile(input, pngFile('big.png', 11 * 1024 * 1024));
+    await settle(s.fixture);
+    expect(errorOf(input)).toBe('The file is larger than 10 MB.');
+    await applyUpload(s, d);
+    expect(d.open).toBe(true);
+
+    await drainUploads(s.fixture);
+    expect(s.host.errors).toEqual([]);
+    expect(s.adapter.calls).toHaveLength(0);
+    expect(uploadHtml(s)).toBe(before);
+    expect(s.host.changes).toBe(0);
+  });
+
+  it('texto alternativo continua obrigatório com "Arquivo" (V7)', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'image');
+    chooseFile(fileInput(d), pngFile());
+    await settle(s.fixture);
+    await applyUpload(s, d);
+    expect(d.open).toBe(true);
+    const alt = dialogField(d, ALT);
+    expect(errorOf(alt)).toBe(REQUIRED);
+    expect(document.activeElement).toBe(alt);
+    await drainUploads(s.fixture);
+    expect(s.adapter.calls).toHaveLength(0);
+  });
+
+  it('"Aplicar" válido: fecha, foco no editável, marcador no parágrafo, sem transação; chegada com alt, legenda e crédito', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'image');
+    const before = uploadHtml(s);
+    const doc = s.editor.state.doc;
+    const file = pngFile('gato.png');
+    chooseFile(fileInput(d), file);
+    typeInto(dialogField(d, ALT), ' Gato ');
+    typeInto(dialogField(d, CAPTION), 'Um gato');
+    typeInto(dialogField(d, CREDIT), 'Foto: Ana');
+    await settle(s.fixture);
+    await applyUpload(s, d);
+    expect(d.open).toBe(false);
+    expect(document.activeElement).toBe(s.editor.view.dom);
+    expect(markerPositions(s.editor)).toEqual([1]);
+    expect(s.editor.state.doc).toBe(doc);
+    expect(uploadHtml(s)).toBe(before);
+    expect(s.host.changes).toBe(0);
+    await drainUploads(s.fixture);
+    expect(s.adapter.calls).toHaveLength(1);
+    expect(s.adapter.calls[0]?.file).toBe(file);
+    expect(s.adapter.calls[0]?.type).toBe('image');
+    s.adapter.resolve(0, { url: '/gato.png' });
+    await drainUploads(s.fixture);
+    expect(uploadHtml(s)).toBe(
+      IMG(
+        'src="/gato.png" alt="Gato"',
+        'center',
+        '<figcaption>Um gato <small class="rt-credit">Foto: Ana</small></figcaption>',
+      ),
+    );
+    expect(s.host.changes).toBe(1);
+    expect(s.host.errors).toEqual([]);
+  });
+
+  it('"Decorativa" com arquivo → alt=""', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'image');
+    chooseFile(fileInput(d), pngFile());
+    setChecked(dialogField(d, DECORATIVE), true);
+    await settle(s.fixture);
+    await applyUpload(s, d);
+    await drainUploads(s.fixture);
+    s.adapter.resolve(0, { url: '/a.png' });
+    await drainUploads(s.fixture);
+    expect(uploadHtml(s)).toBe(IMG('src="/a.png" alt=""'));
+  });
+
+  it('NodeSelection de vídeo → marcador depois do vídeo', async () => {
+    const s = await setupUploadDialog(UploadHost, `<p>ab</p>${VIDEO}<p>cd</p>`);
+    const pos = selectNode(s.editor, 'rtVideo');
+    const size = s.editor.state.doc.nodeAt(pos)?.nodeSize ?? 0;
+    const d = await openKind(s, 'image');
+    expect(sourceOf(d)).not.toBeNull();
+    chooseFile(fileInput(d), pngFile());
+    typeInto(dialogField(d, ALT), 'Gato');
+    await settle(s.fixture);
+    await applyUpload(s, d);
+    expect(d.open).toBe(false);
+    expect(markerPositions(s.editor)).toEqual([pos + size]);
+  });
+
+  it('"Endereço" valida como na 05c1; voltar a "Arquivo" mantém o arquivo', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'image');
+    const input = fileInput(d);
+    const file = pngFile('mantido.png');
+    chooseFile(input, file);
+    typeInto(dialogField(d, ALT), 'Gato');
+    setChecked(dialogField(d, URL_SOURCE), true);
+    await settle(s.fixture);
+    const src = dialogField(d, SRC);
+    expect(hiddenField(src)).toBe(false);
+    expect(hiddenField(input)).toBe(true);
+    typeInto(src, 'http://example.com/a.png');
+    await settle(s.fixture);
+    await applyUpload(s, d);
+    expect(d.open).toBe(true);
+    expect(errorOf(src)).toBe(MEDIA_URL);
+    expect(document.activeElement).toBe(src);
+
+    setChecked(dialogField(d, FILE), true);
+    await settle(s.fixture);
+    expect(hiddenField(input)).toBe(false);
+    expect(input.files?.[0]).toBe(file);
+    await applyUpload(s, d);
+    expect(d.open).toBe(false);
+    await drainUploads(s.fixture);
+    expect(s.adapter.calls[0]?.file).toBe(file);
+  });
+
+  it('"Endereço" válido insere pela URL, sem envio', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'image');
+    setChecked(dialogField(d, URL_SOURCE), true);
+    await settle(s.fixture);
+    typeInto(dialogField(d, SRC), '/e2e.png');
+    typeInto(dialogField(d, ALT), 'Gato');
+    await settle(s.fixture);
+    await applyUpload(s, d);
+    expect(d.open).toBe(false);
+    expect(uploadHtml(s)).toBe(IMG('src="/e2e.png" alt="Gato"'));
+    await drainUploads(s.fixture);
+    expect(s.adapter.calls).toHaveLength(0);
+  });
+
+  it('troca de rótulos para pt-BR com arquivo escolhido: arquivo intacto', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'image');
+    const input = fileInput(d);
+    const file = pngFile('mantido.png');
+    chooseFile(input, file);
+    await settle(s.fixture);
+    s.host.labels.set(RTE_LABELS_PT_BR);
+    await settle(s.fixture);
+    expect(sourceOf(d)?.querySelector('legend')?.textContent?.trim()).toBe(
+      'Origem',
+    );
+    expect(dialogField(d, 'Arquivo')).toBe(
+      d.querySelector('input[type="radio"]'),
+    );
+    expect(dialogField(d, 'Arquivo de imagem')).toBe(input);
+    expect(fileInput(d)).toBe(input);
+    expect(input.files?.[0]).toBe(file);
+    expect(
+      d.ownerDocument.getElementById(`${input.id}-hint`)?.textContent?.trim(),
+    ).toBe('Aceitos: PNG, JPEG, GIF, WebP, AVIF. Até 10 MB.');
+    typeInto(dialogField(d, 'Texto alternativo'), 'Gato');
+    await settle(s.fixture);
+    await applyUpload(s, d);
+    expect(d.open).toBe(false);
+    await drainUploads(s.fixture);
+    expect(s.adapter.calls[0]?.file).toBe(file);
+  });
+
+  it('reabrir limpa o arquivo escolhido antes', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    let d = await openKind(s, 'image');
+    chooseFile(fileInput(d), pngFile());
+    setChecked(dialogField(d, URL_SOURCE), true);
+    await settle(s.fixture);
+    button(d, '.rte-dialog__cancel').click();
+    await settle(s.fixture);
+    d = await openKind(s, 'image');
+    const input = fileInput(d);
+    expect(input.value).toBe('');
+    expect(dialogField(d, FILE).checked).toBe(true);
+    expect(hiddenField(input)).toBe(false);
+    typeInto(dialogField(d, ALT), 'Gato');
+    await settle(s.fixture);
+    await applyUpload(s, d);
+    expect(d.open).toBe(true);
+    expect(errorOf(input)).toBe('Choose a file.');
+  });
+
+  it('regras trocadas com o diálogo aberto: o arquivo escolhido some (Ruling 36)', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p></p>');
+    const d = await openKind(s, 'image');
+    chooseFile(fileInput(d), pngFile());
+    typeInto(dialogField(d, ALT), 'Gato');
+    await settle(s.fixture);
+    s.host.upload.set(null);
+    await settle(s.fixture);
+    expect(sourceOf(d)).toBeNull();
+    expect(hiddenField(dialogField(d, SRC))).toBe(false);
+    s.host.upload.set({ adapter: s.adapter });
+    await settle(s.fixture);
+    expect(sourceOf(d)).not.toBeNull();
+    await applyUpload(s, d);
+    expect(d.open).toBe(true);
+    expect(errorOf(fileInput(d))).toBe('Choose a file.');
+    await drainUploads(s.fixture);
+    expect(s.adapter.calls).toHaveLength(0);
+  });
+
+  it('envio chegando com o diálogo de link aberto: o diálogo segue aberto, a figura entra ao fechar (R7)', async () => {
+    const s = await setupUploadDialog(UploadHost, '<p>abc</p>');
+    selectText(s.editor, 'abc', 3);
+    let d = await openKind(s, 'image');
+    chooseFile(fileInput(d), pngFile());
+    typeInto(dialogField(d, ALT), 'Gato');
+    await settle(s.fixture);
+    await applyUpload(s, d);
+    await drainUploads(s.fixture);
+    expect(s.adapter.calls).toHaveLength(1);
+    selectText(s.editor, 'abc');
+    d = await openKind(s, 'link');
+    s.adapter.resolve(0, { url: '/a.png' });
+    await drainUploads(s.fixture);
+    expect(d.open).toBe(true);
+    expect(uploadHtml(s)).toBe('<p>abc</p>');
+    button(d, '.rte-dialog__cancel').click();
+    await drainUploads(s.fixture);
+    expect(uploadHtml(s)).toBe(`<p>abc</p>${IMG('src="/a.png" alt="Gato"')}`);
+  });
+});
+
+describe('porta do diálogo (pré-voo 13, Ruling 11)', () => {
+  const cfg = (o: Record<string, unknown> = {}, video = true) => {
+    const resolved = resolveUploadConfig({
+      adapter: createFakeUploadAdapter({ video }),
+      ...o,
+    });
+    if (!resolved) throw new Error('configuração nula');
+    return resolved;
+  };
+
+  it('fileRules: accept, nomes e teto em MB (uma casa)', () => {
+    expect(fileRules(cfg(), 'image')).toEqual({
+      accept: IMAGE_ACCEPT,
+      typeNames: ['PNG', 'JPEG', 'GIF', 'WebP', 'AVIF'],
+      maxMegabytes: 10,
+    });
+    expect(fileRules(cfg(), 'video')).toEqual({
+      accept: 'video/mp4,video/webm,.mp4,.webm',
+      typeNames: ['MP4', 'WebM'],
+      maxMegabytes: 200,
+    });
+    expect(
+      fileRules(
+        cfg({
+          imageTypes: ['image/jpeg', 'image/webp'],
+          maxImageBytes: 1.25 * 1024 * 1024,
+        }),
+        'image',
+      ),
+    ).toEqual({
+      accept: 'image/jpeg,image/webp,.jpg,.jpeg,.webp',
+      typeNames: ['JPEG', 'WebP'],
+      maxMegabytes: 1.2,
+    });
+    expect(fileRules(cfg({}, false), 'video')).toBeNull();
+    // Nunca abaixo do limite, nunca "0 MB" (Ruling 36).
+    expect(fileRules(cfg({ maxImageBytes: 100 }), 'image')?.maxMegabytes).toBe(
+      0.1,
+    );
+    expect(
+      fileRules(cfg({ maxImageBytes: 1048575 }), 'image')?.maxMegabytes,
+    ).toBe(0.9);
+  });
+
+  it('createDialogUploads: sem tipo de imagem o vídeo fica; null só sem os dois (Ruling 36)', () => {
+    const start = () => 0;
+    const videoOnly = createDialogUploads({ start }, cfg({ imageTypes: [] }));
+    expect(videoOnly?.image).toBeNull();
+    expect(videoOnly?.video?.typeNames).toEqual(['MP4', 'WebM']);
+    expect(
+      createDialogUploads({ start }, cfg({ imageTypes: [] }, false)),
+    ).toBeNull();
+  });
+
+  it('createDialogUploads: regras, check pelo tipo do diálogo e start', () => {
+    const starts: unknown[] = [];
+    const port = createDialogUploads(
+      {
+        start: (files, at, text) => {
+          starts.push({ files, at, text });
+          return files.length;
+        },
+      },
+      cfg({ maxImageBytes: 100 }),
+    );
+    if (!port) throw new Error('porta nula');
+    expect(port.image?.maxMegabytes).toBe(0.1);
+    expect(port.video?.typeNames).toEqual(['MP4', 'WebM']);
+    const png = pngFile('a.png', 10);
+    expect(port.check(png, 'image')).toBeNull();
+    expect(port.check(png, 'video')).toBe('type');
+    expect(port.check(pngFile('b.png', 101), 'image')).toBe('size');
+    expect(port.check(webmFile(), 'image')).toBe('type');
+    expect(port.check(webmFile(), 'video')).toBeNull();
+    expect(
+      port.check(new File(['x'], 'a.svg', { type: 'image/svg+xml' }), 'image'),
+    ).toBe('type');
+    const text = { alt: 'A', caption: '' };
+    expect(port.start({ file: png, type: 'image', at: 3, text })).toBe(true);
+    expect(starts).toEqual([{ files: [png], at: 3, text }]);
+    expect(
+      createDialogUploads({ start: () => 0 }, cfg())?.start({
+        file: png,
+        type: 'image',
+        at: 1,
+        text,
+      }),
+    ).toBe(false);
+    expect(createDialogUploads({ start: () => 0 }, cfg({}, false))?.video).toBe(
+      null,
     );
   });
 });

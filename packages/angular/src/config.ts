@@ -13,6 +13,7 @@ import type {
 import type { RteTheme } from '@cds/rte-theme';
 import type { RteFloatingMenusConfig } from './floating/types';
 import type { RteToolbarConfig } from './toolbar/items';
+import type { RteUploadConfig } from './upload/types';
 import { RTE_LABELS_EN } from './labels/en';
 import { mergeLabels, readLabelsSource } from './labels/merge';
 import type { RteLabels, RteLabelsSource } from './labels/types';
@@ -35,6 +36,8 @@ export interface RteConfig {
   theme?: RteTheme;
   /** Menus flutuantes padrão; sem ele, todos ligados (M17). */
   floatingMenus?: RteFloatingMenusConfig;
+  /** Envio de arquivos padrão (entrada `upload` > provider); sem ele, sem arquivo (E3). */
+  upload?: RteUploadConfig;
 }
 
 /** Rótulos do provider já mesclados sobre `en` (sem a entrada da instância). */

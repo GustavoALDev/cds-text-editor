@@ -1,7 +1,43 @@
 import { untracked } from '@angular/core';
-import { validate, type SchemaPath } from '@angular/forms/signals';
+import {
+  max,
+  min,
+  required,
+  validate,
+  type SchemaPath,
+} from '@angular/forms/signals';
 import { normalizeAttribute, type RteAttrRule } from '@cds/rte-core';
 import type { CanCommands, Editor } from '@tiptap/core';
+import { integerError, nonIntegerCheck } from './form-helpers';
+
+/**
+ * Endereço obrigatório que é aparado no `apply` (Fix 2 da revisão final):
+ * `required` (mantém o atributo nativo e o `aria-required` do campo) mais
+ * `required` também para o valor só de espaços, que o `apply` trataria como
+ * vazio e sairia em silêncio.
+ */
+export function requiredTrimmed(path: SchemaPath<string>): void {
+  required(path);
+  validate(path, ({ value }) => {
+    const v = value();
+    return v !== '' && v.trim() === '' ? { kind: 'required' } : undefined;
+  });
+}
+
+/**
+ * Inteiro opcional em `[lo, hi]` (pré-voo 7): vazio passa; fora do intervalo
+ * ou não inteiro → `rteInteger` com os dois limites (o mesmo `errorRange`).
+ */
+export function optionalIntegerInRange(
+  path: SchemaPath<number | null>,
+  lo: number,
+  hi: number,
+): void {
+  const error = integerError(lo, hi);
+  min(path, lo, { error });
+  max(path, hi, { error });
+  validate(path, nonIntegerCheck(error));
+}
 
 /**
  * Endereço de mídia canônico pela regra do esquema do editor (V4, pré-voo 3):

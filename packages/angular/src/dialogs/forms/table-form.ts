@@ -11,12 +11,39 @@ import {
   form,
   FormField,
   FormRoot,
+  max,
+  min,
+  required,
+  validate,
   type FieldTree,
+  type SchemaPath,
 } from '@angular/forms/signals';
 import { applyTable } from '../apply';
 import type { RteDialogRequest } from '../controller';
+import {
+  focusFirstInvalid,
+  integerError,
+  nonIntegerCheck,
+} from '../form-helpers';
 import { RteDialogFormBase } from './form-base';
-import { focusFirstInvalid, integerInRange } from '../form-helpers';
+
+/**
+ * Inteiro obrigatório em `[lo, hi]` (pré-voo 9): vazio → `required`; fora do
+ * intervalo ou não inteiro → `rteInteger` com os dois limites. `min`/`max`
+ * gravam os atributos nativos pelo `[formField]` e trocam o erro padrão
+ * (que só carrega um dos limites) pelo `rteInteger`.
+ */
+function integerInRange(
+  path: SchemaPath<number | null>,
+  lo: number,
+  hi: number,
+): void {
+  const error = integerError(lo, hi);
+  required(path);
+  min(path, lo, { error });
+  max(path, hi, { error });
+  validate(path, nonIntegerCheck(error));
+}
 
 /** Limites da tabela nova (G16). */
 const TABLE_ROWS_MAX = 100;

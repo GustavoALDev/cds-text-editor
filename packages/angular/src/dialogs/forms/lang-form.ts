@@ -13,13 +13,14 @@ import {
   FormField,
   FormRoot,
   required,
+  validate,
   type FieldTree,
 } from '@angular/forms/signals';
 import type { RteAttrRule } from '@cds/rte-core';
 import { applyLang, removeLang } from '../apply';
 import type { RteDialogRequest } from '../controller';
 import { RteDialogFormBase } from './form-base';
-import { focusFirstInvalid, langCodeValidator } from '../form-helpers';
+import { focusFirstInvalid, langCodeCheck } from '../form-helpers';
 import { RTE_DIALOG_LANGUAGES } from '../types';
 import { markAttrs } from './request-attrs';
 
@@ -84,10 +85,12 @@ export class RteLangForm extends RteDialogFormBase {
         when: ({ valueOf }) => valueOf(p.choice) === LANG_OTHER,
       });
       // A regra `span[lang]` do esquema (G14), a mesma do `setLang`.
-      langCodeValidator(
+      validate(
         p.code,
-        () => this.langRule(),
-        () => this.model().choice === LANG_OTHER,
+        langCodeCheck(
+          () => this.langRule(),
+          () => this.model().choice === LANG_OTHER,
+        ),
       );
     },
     {

@@ -26,6 +26,7 @@ import { getRteEditor } from '@cds/rte-angular/testing';
 import type { Editor } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RteDialogController } from './dialogs/controller';
+import { installDialogShim } from './testing-support/dialog';
 import { selectText } from './testing-support/editors';
 import { installPopoverShim } from './testing-support/popover';
 import { RTE_ICONS } from './toolbar/icons';
@@ -79,11 +80,16 @@ class TwoHosts {
 }
 
 let restoreShim: () => void;
+let restoreDialog: () => void;
 beforeEach(() => {
   restoreShim = installPopoverShim();
+  // Os itens de diálogo abrem o `<dialog>` quando o *chunk* já está no cache
+  // do módulo (`isolate: false`); sem o calço, o jsdom não tem `close()`.
+  restoreDialog = installDialogShim();
 });
 afterEach(() => {
   TestBed.resetTestingModule();
+  restoreDialog();
   restoreShim();
   vi.restoreAllMocks();
 });

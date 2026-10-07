@@ -109,8 +109,10 @@ async function setup(
   const cmp = fixture.componentInstance.cmp();
   const editor = cmp.editor() as Editor;
   restoreCoords.push(fakeCoords(editor, coords));
+  // Quatro blocos: menus (o primeiro), bandeja de envios (05c2a E8),
+  // diálogos e pré-carga da mídia (05c2a E2).
   const blocks = await fixture.getDeferBlocks();
-  expect(blocks).toHaveLength(2);
+  expect(blocks).toHaveLength(4);
   const el = (fixture.nativeElement as HTMLElement).querySelector(
     'rte-editor',
   ) as HTMLElement;

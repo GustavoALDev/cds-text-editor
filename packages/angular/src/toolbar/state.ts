@@ -271,19 +271,23 @@ export interface RteToolbarState {
  * Estado da barra (U5): um `computed` sobre a versão da ponte calcula todos
  * os itens visíveis; cada item lê um `computed` próprio com igualdade por
  * campo. Sem editor ou não interativo, nada fica habilitado (o ativo e o
- * valor continuam lidos do editor, se houver).
+ * valor continuam lidos do editor, se houver). Os itens de `unavailable`
+ * ficam desabilitados (ex.: mídia depois da falha do *chunk* dos formulários,
+ * 05c2a E2).
  */
 export function createToolbarState(o: {
   editor: Signal<Editor | null>;
   version: Signal<number>;
   items: Signal<readonly RteToolbarItemId[]>;
   interactive: Signal<boolean>;
+  unavailable?: Signal<readonly RteToolbarItemId[]>;
 }): RteToolbarState {
   const all = computed<ReadonlyMap<RteToolbarItemId, RteItemState>>(() => {
     o.version();
     const editor = o.editor();
     const ids = o.items();
     const interactive = o.interactive();
+    const unavailable = o.unavailable?.() ?? [];
     if (typeof ngDevMode !== 'undefined' && ngDevMode) {
       toolbarStateProbe.computations += 1;
     }
@@ -296,7 +300,7 @@ export function createToolbarState(o: {
       const current = readItemState(editor, id);
       out.set(
         id,
-        interactive || !current.enabled
+        (interactive && !unavailable.includes(id)) || !current.enabled
           ? current
           : { ...current, enabled: false },
       );

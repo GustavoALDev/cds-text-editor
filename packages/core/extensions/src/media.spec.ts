@@ -534,6 +534,178 @@ describe('rtImage: comandos', () => {
   });
 });
 
+/** Posição dentro do primeiro bloco de texto igual a `text` (sem despachar). */
+function posIn(editor: Editor, text: string, offset = 0): number {
+  let target = -1;
+  editor.state.doc.descendants((node, pos) => {
+    if (target < 0 && node.isTextblock && node.textContent === text) {
+      target = pos + 1 + offset;
+    }
+    return target < 0;
+  });
+  if (target < 0) throw new Error(`bloco "${text}" não encontrado`);
+  return target;
+}
+
+/** Registra se alguma transação despachada pediu rolagem. */
+function scrollProbe(editor: Editor): { scrolled: boolean } {
+  const probe = { scrolled: false };
+  editor.on('transaction', ({ transaction }) => {
+    if (transaction.scrolledIntoView) probe.scrolled = true;
+  });
+  return probe;
+}
+
+describe('setImage/setVideo com { at } (05c2a E9)', () => {
+  const THREE = '<p>ab</p><p></p><p>cd</p>';
+  const FIGURE = `${FIG}<img src="/a.jpg" alt="x" ${IMG}></figure>`;
+
+  it('at no parágrafo vazio: substitui o parágrafo, sem mexer na seleção nem rolar', () => {
+    const editor = editorWith(THREE);
+    cursorIn(editor, 'ab');
+    const cursor = editor.state.selection.from;
+    const probe = scrollProbe(editor);
+    expect(
+      editor.commands.setImage(
+        { src: '/a.jpg', alt: 'x' },
+        { at: posIn(editor, '') },
+      ),
+    ).toBe(true);
+    expect(canonical(editor)).toBe(`<p>ab</p>${FIGURE}<p>cd</p>`);
+    const selection = editor.state.selection;
+    expect(selection).toBeInstanceOf(TextSelection);
+    expect(selection.empty).toBe(true);
+    expect(selection.from).toBe(cursor);
+    expect(probe.scrolled).toBe(false);
+  });
+
+  it('at dentro de um parágrafo com texto: insere depois do bloco', () => {
+    const editor = editorWith(THREE);
+    cursorIn(editor, 'cd', 1);
+    const cursor = editor.state.selection.from;
+    expect(
+      editor.commands.setImage(
+        { src: '/a.jpg', alt: 'x' },
+        { at: posIn(editor, 'ab', 1) },
+      ),
+    ).toBe(true);
+    expect(canonical(editor)).toBe(`<p>ab</p>${FIGURE}<p></p><p>cd</p>`);
+    // A seleção da pessoa é mapeada pela inserção, não substituída.
+    const selection = editor.state.selection;
+    expect(selection).toBeInstanceOf(TextSelection);
+    expect(selection.from).toBe(cursor + editor.state.doc.nodeAt(4)!.nodeSize);
+    expect(
+      editor.state.doc.textBetween(selection.from - 1, selection.from),
+    ).toBe('c');
+  });
+
+  it('at entre blocos: insere exatamente ali', () => {
+    const editor = editorWith(THREE);
+    cursorIn(editor, 'cd');
+    expect(
+      editor.commands.setImage({ src: '/a.jpg', alt: 'x' }, { at: 4 }),
+    ).toBe(true);
+    expect(canonical(editor)).toBe(`<p>ab</p>${FIGURE}<p></p><p>cd</p>`);
+    expect(
+      editor.commands.setImage({ src: '/b.jpg', alt: 'y' }, { at: 0 }),
+    ).toBe(true);
+    expect(canonical(editor)).toBe(
+      `${FIG}<img src="/b.jpg" alt="y" ${IMG}></figure><p>ab</p>${FIGURE}<p></p><p>cd</p>`,
+    );
+  });
+
+  it('at no parágrafo de uma célula: a figura entra dentro da célula', () => {
+    const editor = editorWith(
+      '<p>fora</p><table><tbody><tr><td><p>ab</p></td></tr></tbody></table>',
+      { features: { tables: true } },
+    );
+    cursorIn(editor, 'fora');
+    expect(
+      editor.commands.setImage(
+        { src: '/a.jpg', alt: 'x' },
+        { at: posIn(editor, 'ab', 1) },
+      ),
+    ).toBe(true);
+    let parent: string | null = null;
+    editor.state.doc.descendants((node, _pos, p) => {
+      if (node.type.name === 'rtImage') parent = p?.type.name ?? null;
+      return parent === null;
+    });
+    expect(parent).toBe('tableCell');
+    expect(editor.state.selection).toBeInstanceOf(TextSelection);
+    expect(editor.state.selection.from).toBe(posIn(editor, 'fora'));
+  });
+
+  it('setVideo com at: substitui o parágrafo vazio sem mexer na seleção', () => {
+    const editor = editorWith(THREE);
+    cursorIn(editor, 'ab');
+    const cursor = editor.state.selection.from;
+    const probe = scrollProbe(editor);
+    expect(
+      editor.commands.setVideo({ src: '/v.mp4' }, { at: posIn(editor, '') }),
+    ).toBe(true);
+    expect(canonical(editor)).toBe(
+      '<p>ab</p><figure class="rt-figure rt-figure--video"><video src="/v.mp4" controls="" preload="metadata" playsinline=""></video></figure><p>cd</p>',
+    );
+    expect(editor.state.selection).toBeInstanceOf(TextSelection);
+    expect(editor.state.selection.from).toBe(cursor);
+    expect(probe.scrolled).toBe(false);
+  });
+
+  it('at inválido (negativo, não inteiro, além do fim) devolve false e não muda nada', () => {
+    const editor = editorWith(THREE);
+    cursorIn(editor, 'ab');
+    const before = editor.state.doc;
+    const selection = editor.state.selection;
+    const size = before.content.size;
+    for (const at of [-1, 1.5, size + 1, Number.NaN, Infinity]) {
+      expect(
+        editor.commands.setImage({ src: '/a.jpg', alt: 'x' }, { at }),
+      ).toBe(false);
+      expect(editor.commands.setVideo({ src: '/v.mp4' }, { at })).toBe(false);
+      expect(editor.can().setImage({ src: '/a.jpg', alt: 'x' }, { at })).toBe(
+        false,
+      );
+    }
+    expect(editor.state.doc).toBe(before);
+    expect(editor.state.selection.eq(selection)).toBe(true);
+    // Os limites do intervalo valem.
+    expect(editor.can().setImage({ src: '/a.jpg', alt: 'x' }, { at: 0 })).toBe(
+      true,
+    );
+    expect(
+      editor.can().setImage({ src: '/a.jpg', alt: 'x' }, { at: size }),
+    ).toBe(true);
+  });
+
+  it('can() com at responde sem despachar', () => {
+    const editor = editorWith(THREE);
+    const before = editor.state.doc;
+    expect(
+      editor
+        .can()
+        .setImage({ src: '/a.jpg', alt: 'x' }, { at: posIn(editor, '') }),
+    ).toBe(true);
+    expect(editor.can().setVideo({ src: '/v.mp4' }, { at: 4 })).toBe(true);
+    expect(
+      editor.can().setImage({ src: 'javascript:x' }, { at: posIn(editor, '') }),
+    ).toBe(false);
+    expect(editor.state.doc).toBe(before);
+  });
+
+  it('sem at (ou com options vazio) o comportamento é o de antes', () => {
+    const editor = editorWith(THREE);
+    cursorIn(editor, '');
+    const probe = scrollProbe(editor);
+    expect(editor.commands.setImage({ src: '/a.jpg', alt: 'x' }, {})).toBe(
+      true,
+    );
+    expect(canonical(editor)).toBe(`<p>ab</p>${FIGURE}<p>cd</p>`);
+    expect(editor.state.selection).toBeInstanceOf(NodeSelection);
+    expect(probe.scrolled).toBe(true);
+  });
+});
+
 describe('figure: só mídia filha direta (A1: o texto fica)', () => {
   const fig = (src: string, extra = '') =>
     `${FIG}<img src="${src}" alt="" ${IMG}>${extra}</figure>`;

@@ -50,7 +50,19 @@
   />
   } } @placeholder {} @error {
   <ng-template [rteDeferFailed]="onFloatingFailed" />
-  }
+  } @defer (when uploads().length) {
+  <rte-upload-tray
+    [uploads]="uploads()"
+    [labels]="resolvedLabels().upload"
+    (cancelUpload)="cancelUpload($event)"
+    (focusEditor)="focus()"
+  />
+  } @placeholder {} @error {}
+  <div class="rte-uploads__status" aria-live="polite">
+    @for (a of announcements(); track a.n) {
+    <span>{{ a.text }}</span>
+    }
+  </div>
 </div>
 @defer (when dialogRequested(); prefetch on idle) {
 <rte-dialogs
@@ -61,7 +73,10 @@
   [mediaRules]="mediaRules()"
   [embedProviders]="embedProviderNames()"
   [alignNames]="alignNames()"
+  [uploads]="dialogUploads()"
 />
 } @placeholder {} @error {
 <ng-template [rteDeferFailed]="onDialogsFailed" />
-}
+} @defer (when false; prefetch on idle) {
+<rte-media-forms />
+} @error {}

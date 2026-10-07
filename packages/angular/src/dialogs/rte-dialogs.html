@@ -35,30 +35,19 @@
     [labels]="labels()"
     [idPrefix]="prefix"
   />
-  } @case ('image') {
-  <rte-image-form
+  } } @defer (when isMediaKind(req.kind); prefetch on idle) {
+  <rte-media-forms
     [request]="req"
     [controller]="controller()"
     [labels]="labels()"
     [idPrefix]="prefix"
-    [rule]="mediaRules()?.imageSrc ?? null"
+    [mediaRules]="mediaRules()"
+    [embedProviders]="embedProviders()"
     [alignNames]="alignNames()"
+    [uploads]="uploads()"
+    (ready)="mediaReady.set(true)"
   />
-  } @case ('video') {
-  <rte-video-form
-    [request]="req"
-    [controller]="controller()"
-    [labels]="labels()"
-    [idPrefix]="prefix"
-    [rules]="mediaRules()"
-  />
-  } @case ('embed') {
-  <rte-embed-form
-    [request]="req"
-    [controller]="controller()"
-    [labels]="labels()"
-    [idPrefix]="prefix"
-    [providers]="embedProviders()"
-  />
-  } } }
+  } @placeholder {} @error {
+  <ng-template [rteDeferFailed]="onMediaFailed" />
+  } }
 </dialog>
