@@ -80,6 +80,8 @@ import {
   slashAriaAttributes,
 } from '../slash/aria';
 import { createSlashAnnouncement } from '../slash/announce';
+import { buildFooter } from '../counters/footer';
+import { createLimitAnnouncer } from '../counters/limit-announcer';
 // Só em `imports` e no `@defer` (K3): o *chunk* `rte-search`.
 import { RteSearch } from '../search/rte-search';
 import { createSearchShortcutsExtension } from '../search/shortcuts-extension';
@@ -262,6 +264,10 @@ export class RteEditor implements FormValueControl<string> {
   readonly warnOnUnsaved = input<boolean | undefined>(undefined);
   /** URL colada num parágrafo vazio vira *embed*: entrada > provider; padrão desligado (S11). */
   readonly pasteEmbeds = input<boolean | undefined>(undefined);
+  /** Contador de caracteres no rodapé (K11); entrada > provider > `false`. */
+  readonly showCharCount = input<boolean | undefined>(undefined);
+  /** Contador de palavras e tempo de leitura no rodapé (K11). */
+  readonly showWordCount = input<boolean | undefined>(undefined);
 
   // Saídas
   readonly editorReady = output<Editor>();
@@ -508,6 +514,26 @@ export class RteEditor implements FormValueControl<string> {
     zone: this.ngZone,
   });
   protected readonly slashInstance = this.slashId;
+
+  /** Rodapé de contadores (K11): só com o editor pronto, nunca no servidor. */
+  protected readonly footer = computed(() =>
+    buildFooter(
+      this.bridge.textStats(),
+      {
+        chars: this.showCharCount() ?? this.config.counters?.chars ?? false,
+        words: this.showWordCount() ?? this.config.counters?.words ?? false,
+      },
+      this.resolvedLabels().counters,
+    ),
+  );
+  /** Anúncios do limite (K12), região viva própria, fora do rodapé. */
+  private readonly limitAnnouncer = createLimitAnnouncer({
+    stats: this.bridge.textStats,
+    labels: computed(() => this.resolvedLabels().counters),
+    view: this.host.ownerDocument.defaultView,
+    zone: this.ngZone,
+  });
+  protected readonly limitAnnouncements = this.limitAnnouncer.announcements;
 
   /** Barra de busca (K7–K10): o estado é do core; a barra é o *chunk* `rte-search`. */
   private readonly searchOpenState = signal(false);
@@ -1047,6 +1073,7 @@ export class RteEditor implements FormValueControl<string> {
       this.loading = false;
     }
     this.bridge.refresh();
+    this.limitAnnouncer.rebase();
     this.lastDoc = editor.state.doc;
     this.lastValue = readValue(editor);
   }

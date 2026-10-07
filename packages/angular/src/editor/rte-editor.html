@@ -54,6 +54,20 @@
   </div>
   }
   <div #mount class="rte-editor__mount"></div>
+  @if (footer(); as f) {
+  <footer class="rte-editor__footer">
+    @if (f.chars; as c) {
+    <span
+      class="rte-counter rte-counter--chars"
+      [class.rte-counter--near]="c.level === 'near'"
+      [class.rte-counter--over]="c.level === 'over'"
+      >{{ c.text }}</span
+    >
+    } @if (f.words; as w) {
+    <span class="rte-counter rte-counter--words">{{ w }}</span>
+    }
+  </footer>
+  }
   @defer (when floatingWanted()) { @if (floatingKinds().length && editor(); as
   ed) {
   <rte-floating-menus
@@ -86,6 +100,11 @@
   </div>
   <div class="rte-draft__status" aria-live="polite">{{ draftStatus() }}</div>
   <div class="rte-live" aria-live="polite">{{ slashAnnouncement() }}</div>
+  <div class="rte-live rte-live--limit" aria-live="polite">
+    @for (a of limitAnnouncements(); track a.n) {
+    <span>{{ a.text }}</span>
+    }
+  </div>
 </div>
 @defer (when dialogRequested(); prefetch on idle) {
 <rte-dialogs

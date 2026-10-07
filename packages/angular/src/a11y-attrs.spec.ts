@@ -203,6 +203,20 @@ describe('RteEditor: atributos do editável (D10, D13)', () => {
     expect(probe.transactions).toBe(0);
   });
 
+  it('o rodapé de contadores não entra no aria-describedby nem é região viva (K11)', async () => {
+    const { fixture, dom, host } = await setup();
+    await set(fixture, 'showCharCount', true);
+    await set(fixture, 'ariaDescribedBy', 'erros');
+    const footer = host.querySelector('.rte-editor__footer') as HTMLElement;
+    expect(footer).not.toBeNull();
+    expect(footer.closest('[aria-live]')).toBeNull();
+    expect(footer.hasAttribute('role')).toBe(false);
+    expect(dom.getAttribute('aria-describedby')).toBe('erros');
+    expect(host.querySelector('.rte-live--limit')?.getAttribute('aria-live')).toBe(
+      'polite',
+    );
+  });
+
   it('disabled: não editável, sem tabindex, aria-disabled e a classe', async () => {
     const { fixture, dom, editor, host, probe } = await setup((f) =>
       f.componentRef.setInput('placeholder', 'Escreva'),
