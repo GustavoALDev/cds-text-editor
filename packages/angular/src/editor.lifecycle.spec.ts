@@ -193,6 +193,8 @@ describe('RteEditor: ciclo de vida (D2, R2)', () => {
       );
       expect(destroy).toHaveBeenCalledTimes(cycles);
     },
+    // Sob carga (run-many em paralelo) os 100 ciclos passam de 30 s.
+    90_000,
   );
 
   it('criar e destruir antes de estabilizar não cria editor', async () => {
