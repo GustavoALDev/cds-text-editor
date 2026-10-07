@@ -186,6 +186,54 @@ describe('content.css (R11)', () => {
     expect(missing).toEqual([]);
   });
 
+  it('tarefas da exibição (label em flex) e legenda de tabela têm regra', () => {
+    const value = (selector: string, prop: string) => {
+      let found: string | undefined;
+      styleRules()
+        .find((r) => r.selectors.includes(selector))
+        ?.walkDecls(prop, (d) => {
+          found = d.value;
+        });
+      return found;
+    };
+    expect(value('.rte-content .rt-task > label', 'display')).toBe('flex');
+    expect(value('.rte-content .rt-task > label > input', 'accent-color')).toBe(
+      'var(--rte-primary)',
+    );
+    expect(value('.rte-content caption', 'caption-side')).toBe('top');
+    expect(value('.rte-content caption', 'color')).toBe(
+      'var(--rte-text-muted)',
+    );
+  });
+
+  it('tabela com larguras de coluna (classe da exibição) em layout fixo, como no editor', () => {
+    // Spec 06 (H20/R6): a exibição marca `table.rte-table--sized` e dá `width`/`min-width` por
+    // CSSOM; o editor tem `table-layout: fixed` no `editor.css` e nunca vê a classe.
+    const rule = styleRules().find((r) =>
+      r.selectors.includes('.rte-content table.rte-table--sized'),
+    );
+    expect(rule).toBeDefined();
+    const decls: Record<string, string> = {};
+    rule?.walkDecls((d) => {
+      decls[d.prop] = d.value;
+    });
+    expect(decls).toEqual({ 'table-layout': 'fixed' });
+  });
+
+  it('parágrafo e títulos vazios têm uma linha de altura (como no editor)', () => {
+    // Na edição o ProseMirror mantém um `br` no bloco vazio (`:empty` não casa); na página o
+    // bloco vazio colapsaria a 0 px (spec 06, H20).
+    const rule = styleRules().find((r) =>
+      r.selectors.includes('.rte-content :is(p, h1, h2, h3, h4, h5, h6):empty'),
+    );
+    expect(rule).toBeDefined();
+    const decls: Record<string, string> = {};
+    rule?.walkDecls((d) => {
+      decls[d.prop] = d.value;
+    });
+    expect(decls).toEqual({ 'min-block-size': '1lh' });
+  });
+
   it.each([
     ['span', RTE_TEXT_COLORS, '--rte-content-color'],
     ['mark', RTE_HIGHLIGHT_COLORS, '--rte-content-highlight'],

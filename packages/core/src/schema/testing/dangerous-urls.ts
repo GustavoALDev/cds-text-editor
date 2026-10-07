@@ -1,9 +1,9 @@
 // Gerador fast-check de URLs com esquema perigoso ofuscado. Só para specs;
 // fora do índice público. Os esquemas e o ruído vêm de
 // `fixtures/content/dangerous-urls.json`, compartilhado com o sanitizador.
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import * as fc from 'fast-check';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 interface DangerousUrlsFixture {
   schemes: string[];
@@ -11,12 +11,22 @@ interface DangerousUrlsFixture {
   examples: string[];
 }
 
-const FIXTURE = JSON.parse(
-  readFileSync(
-    resolve(__dirname, '../../../../../fixtures/content/dangerous-urls.json'),
-    'utf8',
-  ).replace(/\r\n?/g, '\n'),
-) as DangerousUrlsFixture;
+// Sobe a partir do `cwd` até achar o fixture: `__dirname` e `import.meta.url`
+// não valem sob o builder do angular nem no jsdom (os specs são empacotados).
+function readFixture(): DangerousUrlsFixture {
+  const rel = join('fixtures', 'content', 'dangerous-urls.json');
+  for (let dir = process.cwd(); ; dir = dirname(dir)) {
+    const file = join(dir, rel);
+    if (existsSync(file)) {
+      return JSON.parse(
+        readFileSync(file, 'utf8').replace(/\r\n?/g, '\n'),
+      ) as DangerousUrlsFixture;
+    }
+    if (dirname(dir) === dir) throw new Error(`fixture não encontrado: ${rel}`);
+  }
+}
+
+const FIXTURE = readFixture();
 
 export const DANGEROUS_SCHEMES: readonly string[] = FIXTURE.schemes;
 

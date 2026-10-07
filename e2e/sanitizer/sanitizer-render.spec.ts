@@ -45,9 +45,9 @@ test('S3: o fixture sanitizado renderiza com sandbox, sem on* e com as cores da 
       ),
       red: red === null ? null : getComputedStyle(red).color,
       yellow: yellow === null ? null : getComputedStyle(yellow).backgroundColor,
-      violations: [...window.__violations],
+      violations: [...window.__sanitizerViolations],
       calls: window.__xssCalls,
-      scriptViolations: window.__violations.filter((v) =>
+      scriptViolations: window.__sanitizerViolations.filter((v) =>
         v.startsWith('script-src'),
       ),
     };

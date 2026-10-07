@@ -14,7 +14,9 @@
         "^production",
         "{workspaceRoot}/packages/theme/src/theme.css",
         "{workspaceRoot}/packages/core/styles/content.css",
-        "{workspaceRoot}/packages/angular/styles/editor.css"
+        "{workspaceRoot}/packages/render/styles/render.css",
+        "{workspaceRoot}/packages/angular/styles/editor.css",
+        "{workspaceRoot}/fixtures/content/all-features.html"
       ],
       "outputs": ["{options.outputPath}"],
       "options": {
@@ -29,6 +31,7 @@
         "styles": [
           "packages/theme/src/theme.css",
           "packages/core/styles/content.css",
+          "packages/render/styles/render.css",
           "packages/angular/styles/editor.css",
           "e2e/angular/app/src/styles.css"
         ],
@@ -50,7 +53,9 @@
         "^production",
         "{workspaceRoot}/packages/theme/src/theme.css",
         "{workspaceRoot}/packages/core/styles/content.css",
-        "{workspaceRoot}/packages/angular/styles/editor.css"
+        "{workspaceRoot}/packages/render/styles/render.css",
+        "{workspaceRoot}/packages/angular/styles/editor.css",
+        "{workspaceRoot}/fixtures/content/all-features.html"
       ],
       "outputs": ["{options.outputPath}"],
       "options": {
@@ -72,6 +77,7 @@
         "styles": [
           "packages/theme/src/theme.css",
           "packages/core/styles/content.css",
+          "packages/render/styles/render.css",
           "packages/angular/styles/editor.css",
           "e2e/angular/app/src/styles.css"
         ],

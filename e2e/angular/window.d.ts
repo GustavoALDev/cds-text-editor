@@ -47,6 +47,10 @@ export interface RteE2eUploadError {
     | 'unavailable';
 }
 
+/** Exibições da rota `render` do app de teste. */
+export type RteE2eRenderId =
+  'render-main' | 'render-wide' | 'render-input' | 'render-keep';
+
 /** `RteToolbarConfig` do `@cds/rte-angular` (sem importar o pacote Angular aqui). */
 export type RteE2eToolbarConfig =
   'minimal' | 'article' | 'full' | readonly (readonly string[])[] | false;
@@ -113,6 +117,13 @@ declare global {
       watchFloating(id: RteE2eId): void;
       floatingMutations(id: RteE2eId): { total: number; style: number };
       zoneTurns(): number;
+      renderedHtml(id: RteE2eRenderId): string;
+      renderError(id: RteE2eRenderId): { code: string; limit: number } | null;
+      setRenderInput(html: string, mode?: 'sanitize' | 'trusted'): void;
+      probeRender(
+        htmls: readonly string[],
+        mode?: 'sanitize' | 'trusted',
+      ): { index: number; problems: string[] }[];
       /** `applyRteTheme` num elemento qualquer (referência do N12). */
       applyTheme(
         element: HTMLElement,
@@ -128,7 +139,23 @@ declare global {
     };
     /** `securitypolicyviolation` desde o início da página (`helpers/app.ts`). */
     __violations: { directive: string; blockedURI: string; sample: string }[];
+    /** Sentinela de XSS (`helpers/render.ts`): qualquer chamada é execução de código injetado. */
+    __xss: () => void;
+    __xssCalls: number;
     /** `<style>` acrescentados ao documento desde o início da página. */
     __styleAdds: string[];
+    /** Pré-voo da H10 (`helpers/render.ts`, `watchServerNodes`): nós do servidor em `render-main`. */
+    __h10?: {
+      h2: Element | null;
+      iframe: Element | null;
+      scroller: Element | null;
+      iframes: Set<Element>;
+      iframeLoads: number;
+    };
+    /** L5 (R12): o primeiro `h2` de `render-main` antes da troca de idioma. */
+    __renderH2?: Element | null;
+    /** L6: marcador que só sobrevive sem recarga, e o primeiro `iframe` antes dos cliques. */
+    __renderMarker?: string;
+    __renderIframe?: Element | null;
   }
 }

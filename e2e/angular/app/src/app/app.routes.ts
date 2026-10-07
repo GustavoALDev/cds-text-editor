@@ -68,4 +68,17 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./pages/upload.routes').then((m) => m.UPLOAD_PREVIEW_ROUTES),
   },
+  {
+    path: 'render',
+    loadComponent: () => import('./pages/render').then((m) => m.RenderPage),
+  },
+  {
+    path: 'render/artigo',
+    data: { article: true },
+    loadComponent: () => import('./pages/render').then((m) => m.RenderPage),
+  },
+  {
+    path: 'render-tt',
+    loadComponent: () => import('./pages/render').then((m) => m.RenderPage),
+  },
 ];
