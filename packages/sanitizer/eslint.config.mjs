@@ -4,6 +4,32 @@ export default [
   ...baseConfig,
   noAngularImports,
   {
+    // O sanitizador importa só o entry `.` do core e o htmlparser2 (spec 04,
+    // R12). No flat config a última ocorrência da regra substitui a anterior:
+    // o grupo de @angular/* do noAngularImports precisa ser repetido aqui.
+    files: ['src/**/*.ts'],
+    ignores: ['src/**/*.spec.ts', 'src/testing/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@angular/*'],
+              message:
+                'core, sanitizer e theme não podem importar @angular/* (spec 01, R4).',
+            },
+            {
+              group: ['@tiptap/*', '@cds/rte-core/*'],
+              message:
+                'O sanitizador importa só @cds/rte-core (entry .) e htmlparser2 (spec 04, R12).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.json'],
     rules: {
       '@nx/dependency-checks': [
@@ -14,6 +40,7 @@ export default [
             '{projectRoot}/vitest.config.{js,ts,mjs,mts}',
             '{projectRoot}/tsup.config.ts',
             '{projectRoot}/src/**/*.spec.ts',
+            '{projectRoot}/src/testing/**',
           ],
         },
       ],

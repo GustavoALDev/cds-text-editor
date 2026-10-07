@@ -42,6 +42,35 @@ isAllowedClass(code, 'language-javascript'); // true
 isAllowedClass(code, 'hljs'); // false
 ```
 
+### Interpretadores
+
+Funções puras, sem parser, que aplicam o esquema a um elemento já lido. São a base do sanitizador (`@cds/rte-sanitizer`) e podem ser reaproveitadas pela renderização. Toda busca no esquema usa `Object.hasOwn`: `constructor` e `__proto__` nunca acertam o protótipo.
+
+- `getElementSpec(schema, tag)`: a regra da tag, ou `undefined` fora do esquema.
+- `sanitizeClass(spec, value)`: as classes aceitas (separadas por espaço ASCII), na ordem da entrada e sem repetição; `null` se nenhuma.
+- `sanitizeAttributes(spec, attributes)`: mantém a ordem da entrada (com nome repetido, vale o primeiro), normaliza cada valor, aplica `default`, `ensureTokens` (`rel` de `target="_blank"` e `forceRel`) e `styleFrom`, e acrescenta o que falta ao fim. Atributo `required` sem valor válido devolve a ação de `onInvalid` (`'remove'` ou `'unwrap'`).
+- `hasRequiredChild(spec, childTags)`: `requireChild` é "um dentre" os filhos elemento diretos.
+- `escapeHtmlText(text)` e `escapeHtmlAttribute(value)`: os escapes da serialização do HTML (texto: `& nbsp < >`; atributo: também `"`), com CR/CRLF → LF e NUL → U+FFFD. O editor e o sanitizador usam os mesmos, então produzem os mesmos bytes.
+
+```ts
+import {
+  getElementSpec,
+  getHtmlSchema,
+  sanitizeAttributes,
+} from '@cds/rte-core';
+
+const a = getElementSpec(getHtmlSchema(), 'a')!;
+sanitizeAttributes(a, [
+  ['href', 'https://example.com/'],
+  ['target', '_BLANK'],
+  ['onclick', 'x'],
+]);
+// { action: 'keep', attributes: [['href', 'https://example.com/'],
+//   ['target', '_blank'], ['rel', 'noopener noreferrer']] }
+sanitizeAttributes(a, [['href', 'javascript:alert(1)']]);
+// { action: 'unwrap', attribute: 'href' }
+```
+
 ### `validateHtml`
 
 Confere um HTML contra o esquema, sem DOM, e devolve a lista de violações (vazia = conforme). O modo `canonical` (padrão) exige a forma exata que o editor produz; o modo `accepted` só exige valores aceitos (o que o sanitizador deixaria passar).

@@ -20,7 +20,7 @@ Esta pasta é **autocontida**: pode ser movida para a raiz do projeto novo. Nada
 | 03a | [Esquema do HTML, embeds e utilitários](03a-esquema-e-utilitarios.md) (concluída) | Contrato do HTML como dados (`getHtmlSchema`), provedores de embed, utilitários puros | 01 |
 | 03b | [Extensões de conteúdo, fábrica e teste de contrato](03b-extensoes-de-conteudo.md) (concluída; falta o CI do PR) | Extensões Tiptap que geram HTML, `createEditorExtensions`, fixture e teste de contrato | 03a |
 | 03c | [Extensões de produtividade](03c-extensoes-de-produtividade.md) (concluída; falta o CI do PR) | `SearchReplace`, `SlashCommand` (lógica), `CharLimit`, placeholder | 03b |
-| 04 | [Sanitizador](04-sanitizador.md) | `@cds/rte-sanitizer`: allowlist derivada do esquema | 03 |
+| 04 | [Sanitizador](04-sanitizador.md) (concluída; falta o CI do PR) | `@cds/rte-sanitizer`: allowlist derivada do esquema, engine única sobre `htmlparser2` | 03a, 03b |
 | 05 | [Editor Angular](05-editor-angular.md) | `@cds/rte-angular`: componente, Signal Forms, UI, i18n, a11y, upload | 02, 03 |
 | 06 | [Renderização](06-renderizacao.md) | `@cds/rte-render`: pipe, sumário, CSS de leitura | 02, 04 |
 | 07 | [Demo, docs e servidor de exemplo](07-demo-docs-exemplos.md) | App demo/playground, site de docs, `examples/server-node` | 05, 06 |
@@ -33,7 +33,7 @@ Esta pasta é **autocontida**: pode ser movida para a raiz do projeto novo. Nada
 
 | Decisão | Spec | Resultado |
 |---|---|---|
-| Engine do sanitizador | 04 | **`sanitize-html` no servidor/Node e `DOMPurify` no navegador**, mesma API e mesma suíte; a do servidor é a que vale |
+| Engine do sanitizador | 04 | **Uma engine só, própria, sobre o `htmlparser2` do core**, igual em Node e no navegador (revista em 2026-10-03; substitui `sanitize-html` + `DOMPurify`, ver spec 04, S1/S14); a do servidor, na gravação, é a que vale |
 | Modo padrão do pipe | 06 | **`sanitize`** |
 | Integração Tiptap × Angular | 05 | **`Editor` direto** com wrapper próprio, sem `ngx-tiptap` |
 | Nome e escopo npm | 01 | **`@cds/rte-*`** (produto `cds-text-editor`); falta o autor confirmar a organização npm `cds` |

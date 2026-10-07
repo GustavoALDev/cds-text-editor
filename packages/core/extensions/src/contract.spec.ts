@@ -4,8 +4,10 @@
 // quando uma extensão muda a marcação.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { getSchema } from '@tiptap/core';
 import type { AnyExtension, Editor } from '@tiptap/core';
 import type { DOMOutputSpec } from '@tiptap/pm/model';
+import * as fc from 'fast-check';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RTE_CODE_LANGUAGES } from '../../code-languages/src/index';
 import { validateHtml } from '../../html/src/validate-html';
@@ -19,9 +21,10 @@ import type {
 } from '../../src/schema/types';
 import { createEditorExtensions } from './factory';
 import { getSearchState } from './search';
-import { getRteHtml } from './serialize';
+import { getRteHtml, serializeRteHtml } from './serialize';
 import { getSlashMenuState } from './slash';
 import { normalizeForCompare } from './testing/compare';
+import { validDoc } from './testing/doc-arbitraries';
 import { createTestEditor, destroyTestEditors } from './testing/editor';
 import { typeText } from './testing/type-text';
 import { FIXTURE_DIR, readFixture, writeFixture } from './testing/fixtures';
@@ -29,6 +32,7 @@ import type { RteEditorOptions } from './types';
 
 const HTML = 'all-features.html';
 const JSON_FILE = 'all-features.json';
+const CORPUS_FILE = 'editor-corpus.json';
 const fixture = readFixture(HTML);
 const S = getHtmlSchema();
 const BASE: RteEditorOptions = { codeLanguages: RTE_CODE_LANGUAGES };
@@ -277,6 +281,35 @@ describe('all-features.json (drift)', () => {
     expect(
       readFixture(JSON_FILE) === json,
       'fixtures/content/all-features.json está desatualizado: regenere com `UPDATE_FIXTURES=1 npx nx test core --skip-nx-cache`',
+    ).toBe(true);
+  });
+});
+
+describe('editor-corpus.json (drift)', () => {
+  // 300 documentos válidos serializados pelo editor: o sanitizador (spec 04)
+  // os lê como JSON e confere que cada um é ponto fixo (R2).
+  const schema = getSchema(createEditorExtensions());
+  const docs = fc
+    .sample(validDoc, { numRuns: 300, seed: 20261003 })
+    .map((json) => serializeRteHtml(schema.nodeFromJSON(json)));
+
+  it('cada documento é canônico no esquema', () => {
+    expect(docs).toHaveLength(300);
+    docs.forEach((doc, i) => {
+      expect(validateHtml(doc, S), `documento ${i}`).toEqual([]);
+    });
+  });
+
+  it('o corpus gravado está em dia', () => {
+    const json = `${JSON.stringify(docs, null, 2)}
+`;
+    if (process.env['UPDATE_FIXTURES'] === '1') {
+      writeFixture(CORPUS_FILE, json);
+      return;
+    }
+    expect(
+      readFixture(CORPUS_FILE) === json,
+      'fixtures/content/editor-corpus.json está desatualizado: regenere com `UPDATE_FIXTURES=1 npx nx test core --skip-nx-cache`',
     ).toBe(true);
   });
 });
