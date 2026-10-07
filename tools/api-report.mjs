@@ -66,9 +66,8 @@ export function checkReportSet(entries, reportDir) {
 // Mapeia @cds/rte-* para os .d.ts publicados de todos os pacotes do workspace.
 // Os pacotes do workspace são expostos por junções em <stage>/node_modules/<pacote>, para o
 // compilador tratá-los como pacotes externos (referências, nunca agregados; Z8).
-export function workspacePaths(root, stage) {
+export function workspacePaths(root, stage, links = []) {
   const paths = {};
-  const links = [];
   const dirs = [];
   const pk = join(root, 'packages');
   for (const p of existsSync(pk) ? readdirSync(pk) : []) {
@@ -93,7 +92,7 @@ export function workspacePaths(root, stage) {
   return { paths, links };
 }
 
-const REPORT_MESSAGES = (level) => ({
+const REPORT_MESSAGES = () => ({
   compilerMessageReporting: { default: { logLevel: 'warning' } },
   extractorMessageReporting: {
     default: { logLevel: 'error', addToApiReportFile: false },
@@ -109,6 +108,19 @@ const REPORT_MESSAGES = (level) => ({
   },
   tsdocMessageReporting: { default: { logLevel: 'none' } },
 });
+
+// Símbolos `ɵ` no relatório público vazam detalhe de implementação: só os
+// membros estáticos gerados pelo compilador do Angular são aceitos (Z8).
+export function internalLeaks(report) {
+  const allowed = /^\s*(protected )?static ɵ(cmp|dir|fac|pipe|prov|inj|mod)\b/;
+  const out = [];
+  for (const line of report.split('\n'))
+    if (line.includes('ɵ') && !allowed.test(line))
+      out.push(
+        `símbolo ɵ fora do permitido no relatório público (marque @internal): ${line.trim()}`,
+      );
+  return out;
+}
 
 // Retorna { ok, succeeded, apiReportChanged, errors } para um entry.
 export async function runExtractor({
@@ -186,7 +198,8 @@ export async function runExtractor({
     const changed =
       next !== null && (current === null || norm(current) !== norm(next));
     if (next === null) errors.push('o api-extractor não gerou o relatório');
-    else if (changed && update) {
+    else errors.push(...internalLeaks(next));
+    if (next !== null && changed && update) {
       mkdirSync(reportDir, { recursive: true });
       writeFileSync(target, norm(next));
     } else if (changed) {
@@ -215,8 +228,9 @@ export async function main(packageDir, { update, root = process.cwd() } = {}) {
         rmSync(join(reportDir, f));
   } else errors.push(...checkReportSet(entries, reportDir));
   const stage = mkdtempSync(join(tmpdir(), 'api-stage-'));
-  const { paths, links } = workspacePaths(root, stage);
+  const links = [];
   try {
+    const { paths } = workspacePaths(root, stage, links);
     for (const entry of entries) {
       if (!existsSync(entry.dts)) {
         errors.push(`.d.ts ausente (rode o build): ${entry.dts}`);
@@ -233,7 +247,13 @@ export async function main(packageDir, { update, root = process.cwd() } = {}) {
       for (const e of r.errors) errors.push(`${entry.name}: ${e}`);
     }
   } finally {
-    for (const l of links) unlinkSync(l);
+    for (const l of links) {
+      try {
+        unlinkSync(l);
+      } catch {
+        // junção já removida: a limpeza do estágio segue
+      }
+    }
     rmSync(stage, { recursive: true, force: true });
   }
   return errors;

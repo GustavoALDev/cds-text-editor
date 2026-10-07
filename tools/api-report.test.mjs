@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import {
   checkReportSet,
+  internalLeaks,
   listEntries,
   main,
   reportFileName,
@@ -152,4 +153,30 @@ test('main: @internal fica fora do relatório', async () => {
   assert.deepEqual(await main(dir, { root: dir, update: true }), []);
   const rep = readFileSync(join(dir, 'api', 'rte-demo.api.md'), 'utf8');
   assert.ok(!rep.includes('ɵx') && rep.includes('ok'));
+});
+
+test('internalLeaks: só os static ɵ do compilador do Angular passam', () => {
+  const ok =
+    'class A {\n    static ɵcmp: X<A>;\n    protected static ɵfac: Y;\n    static ɵprov: Z;\n}\n';
+  assert.deepEqual(internalLeaks(ok), []);
+  assert.equal(
+    internalLeaks('class A {\n    protected static readonly ɵdialogKit: 1;\n}\n')
+      .length,
+    1,
+  );
+});
+
+test('main: ɵ público fora do permitido falha; com @internal passa', async () => {
+  const bad = fixture(
+    files({
+      './dist/index.d.ts': 'export declare function ɵx(): void;\n',
+      './dist/html/index.d.ts': 'export declare const h: 1;\n',
+    }),
+    EXPORTS,
+  );
+  const errs = await main(bad, { root: bad, update: true });
+  assert.ok(
+    errs.some((e) => e.includes('ɵ')),
+    JSON.stringify(errs),
+  );
 });
