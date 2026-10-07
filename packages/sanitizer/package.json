@@ -1,6 +1,6 @@
 {
   "name": "@cds/rte-sanitizer",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Sanitização do HTML do editor de texto rico cds-text-editor.",
   "license": "MIT",
   "type": "module",
@@ -35,7 +35,7 @@
     "htmlparser2": "^12.0.0"
   },
   "peerDependencies": {
-    "@cds/rte-core": "0.0.0"
+    "@cds/rte-core": "0.1.0"
   },
   "publishConfig": {
     "access": "public",

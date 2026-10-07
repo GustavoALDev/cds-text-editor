@@ -1,6 +1,6 @@
 {
   "name": "@cds/rte-theme",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Tema (CSS e tokens) do editor de texto rico cds-text-editor.",
   "license": "MIT",
   "type": "module",

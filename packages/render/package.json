@@ -1,6 +1,6 @@
 {
   "name": "@cds/rte-render",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Renderização do HTML do editor de texto rico cds-text-editor.",
   "license": "MIT",
   "exports": {
@@ -13,8 +13,8 @@
     "@angular/core": ">=22.2.1 <23",
     "@angular/common": ">=22.2.1 <23",
     "@angular/platform-browser": ">=22.2.1 <23",
-    "@cds/rte-core": "0.0.0",
-    "@cds/rte-sanitizer": "0.0.0"
+    "@cds/rte-core": "0.1.0",
+    "@cds/rte-sanitizer": "0.1.0"
   },
   "peerDependenciesMeta": {
     "@cds/rte-sanitizer": {

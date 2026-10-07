@@ -1,6 +1,6 @@
 {
   "name": "@cds/rte-core",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Núcleo do editor de texto rico cds-text-editor: extensões Tiptap, utilitários e esquema do HTML.",
   "license": "MIT",
   "type": "module",
