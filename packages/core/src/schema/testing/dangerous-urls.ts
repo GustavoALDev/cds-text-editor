@@ -1,23 +1,26 @@
 // Gerador fast-check de URLs com esquema perigoso ofuscado. Só para specs;
-// fora do índice público.
+// fora do índice público. Os esquemas e o ruído vêm de
+// `fixtures/content/dangerous-urls.json`, compartilhado com o sanitizador.
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import * as fc from 'fast-check';
 
-export const DANGEROUS_SCHEMES = [
-  'javascript',
-  'data',
-  'vbscript',
-  'file',
-] as const;
+interface DangerousUrlsFixture {
+  schemes: string[];
+  noise: string[];
+  examples: string[];
+}
 
-const noise = fc.constantFrom(
-  '\t',
-  '\n',
-  '\r',
-  ' ',
-  '\u0001',
-  '\u0000',
-  '\u001f',
-);
+const FIXTURE = JSON.parse(
+  readFileSync(
+    resolve(__dirname, '../../../../../fixtures/content/dangerous-urls.json'),
+    'utf8',
+  ).replace(/\r\n?/g, '\n'),
+) as DangerousUrlsFixture;
+
+export const DANGEROUS_SCHEMES: readonly string[] = FIXTURE.schemes;
+
+const noise = fc.constantFrom(...FIXTURE.noise);
 
 /** Esquema perigoso em capitalização aleatória, com TAB/LF/espaço/C0 inseridos, seguido de lixo. */
 export const dangerousUrl: fc.Arbitrary<string> = fc

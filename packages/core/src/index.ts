@@ -9,6 +9,14 @@ export {
 export { isAllowedUrl } from './schema/url';
 export { isAllowedClass } from './schema/classes';
 export { sanitizeStyle, applyStyleFrom } from './schema/style';
+export {
+  getElementSpec,
+  sanitizeClass,
+  sanitizeAttributes,
+  hasRequiredChild,
+} from './schema/interpret';
+export type { RteSanitizedAttributes } from './schema/interpret';
+export { escapeHtmlText, escapeHtmlAttribute } from './schema/escape';
 export { RTE_TEXT_COLORS, RTE_HIGHLIGHT_COLORS } from './schema/palette';
 export type {
   RteHtmlSchema,

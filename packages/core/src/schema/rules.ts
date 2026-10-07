@@ -2,6 +2,10 @@ import { formatSrcset, parseSrcset } from './srcset';
 import type { RteAttrRule } from './types';
 import { isAllowedUrl } from './url';
 
+/** Espaços ASCII do HTML: espaço Unicode (NBSP, U+2003…) não separa tokens. */
+const ASCII_WS = /[ \t\n\r\f]+/;
+const ASCII_TRIM = /^[ \t\n\r\f]+|[ \t\n\r\f]+$/g;
+
 type TokensRule = Extract<RteAttrRule, { kind: 'tokens' }>;
 
 /** Minúsculas só em ASCII (sem depender de locale). */
@@ -19,8 +23,8 @@ export function serializeTokens(
 ): string | null {
   if (value.length > rule.maxLength) return null;
   const given = new Set(
-    (rule.separator === ' ' ? value.split(/\s+/) : value.split(';')).map((t) =>
-      lowerAscii(t.trim()),
+    (rule.separator === ' ' ? value.split(ASCII_WS) : value.split(';')).map(
+      (t) => lowerAscii(t.replace(ASCII_TRIM, '')),
     ),
   );
   const out = rule.values.filter((v) => given.has(lowerAscii(v)));

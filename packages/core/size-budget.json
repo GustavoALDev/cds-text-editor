@@ -35,8 +35,8 @@
     }
   },
   "budgets": {
-    "whole": 9280,
-    "schema": 5824,
+    "whole": 10560,
+    "schema": 6272,
     "links": 3136,
     "draft": 896,
     "embeds": 3392,

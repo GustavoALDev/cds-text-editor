@@ -54,11 +54,13 @@ function hasUnknownToken(rule: RteAttrRule, value: string): boolean {
   if (rule.kind !== 'tokens') return false;
   const known = new Set(rule.values.map((v) => v.toLowerCase()));
   return (rule.separator === ' ' ? value.split(ASCII_WS) : value.split(';'))
-    .map((x) => x.trim().toLowerCase())
+    .map((x) => x.replace(ASCII_TRIM, '').toLowerCase())
     .some((x) => x !== '' && !known.has(x));
 }
 
 const ASCII_WS = /[ \t\n\r\f]+/;
+/** Apara só espaço ASCII, como o `serializeTokens` (NBSP faz parte do token). */
+const ASCII_TRIM = /^[ \t\n\r\f]+|[ \t\n\r\f]+$/g;
 const TEXTLESS = new Set(['script', 'style']);
 
 function splitTokens(value: string): string[] {
@@ -208,7 +210,7 @@ export function validateHtml(
       const present = new Set(
         value
           .split(separator === ' ' ? ASCII_WS : ';')
-          .map((x) => x.trim())
+          .map((x) => x.replace(ASCII_TRIM, ''))
           .filter((x) => x !== ''),
       );
       const missing = ensure.tokens.filter((token) => !present.has(token));
