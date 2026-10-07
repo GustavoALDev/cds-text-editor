@@ -59,6 +59,43 @@ export const RTE_CONTENT_LABELS: Readonly<
   ),
 });
 
+/** Função que lança ou não devolve objeto vale como ausente (lição 4). */
+function readSource(
+  source: RteContentLabelsSource | undefined,
+): Partial<RteContentLabels> | undefined {
+  let value: unknown = source;
+  if (typeof source === 'function') {
+    try {
+      value = source();
+    } catch {
+      return undefined;
+    }
+  }
+  return value !== null && typeof value === 'object'
+    ? (value as Partial<RteContentLabels>)
+    : undefined;
+}
+
+/**
+ * `taskCheckbox` do consumidor roda a cada renderização da tarefa (inclusive
+ * durante a digitação): se lançar ou não devolver texto, vale o rótulo `en`
+ * (lição 4).
+ */
+function guardTaskCheckbox(
+  fn: unknown,
+  fallback: RteContentLabels['taskCheckbox'],
+): RteContentLabels['taskCheckbox'] {
+  const consumer = fn as (text: string) => unknown;
+  return (text) => {
+    try {
+      const result = consumer(text);
+      return typeof result === 'string' ? result : fallback(text);
+    } catch {
+      return fallback(text);
+    }
+  };
+}
+
 /**
  * Resolve a fonte de rótulos sobre `en`. Uma fonte por função é chamada a
  * cada resolução; `calloutTitles` é mesclado variante a variante. Só chaves
@@ -68,8 +105,7 @@ export function resolveContentLabels(
   source?: RteContentLabelsSource,
 ): RteContentLabels {
   const base = RTE_CONTENT_LABELS.en;
-  const partial: Partial<RteContentLabels> | undefined =
-    typeof source === 'function' ? source() : source;
+  const partial = readSource(source);
   const titles = { ...base.calloutTitles };
   const given: unknown = partial?.calloutTitles;
   if (given !== null && typeof given === 'object') {
@@ -79,15 +115,21 @@ export function resolveContentLabels(
       if (typeof value === 'string') titles[variant] = value;
     }
   }
-  const readAlsoTitle: unknown = partial?.readAlsoTitle;
-  const taskCheckbox: unknown = partial?.taskCheckbox;
+  const readAlsoTitle: unknown =
+    partial && Object.hasOwn(partial, 'readAlsoTitle')
+      ? partial.readAlsoTitle
+      : undefined;
+  const taskCheckbox: unknown =
+    partial && Object.hasOwn(partial, 'taskCheckbox')
+      ? partial.taskCheckbox
+      : undefined;
   return {
     calloutTitles: titles,
     readAlsoTitle:
       typeof readAlsoTitle === 'string' ? readAlsoTitle : base.readAlsoTitle,
     taskCheckbox:
       typeof taskCheckbox === 'function'
-        ? (taskCheckbox as RteContentLabels['taskCheckbox'])
+        ? guardTaskCheckbox(taskCheckbox, base.taskCheckbox)
         : base.taskCheckbox,
   };
 }

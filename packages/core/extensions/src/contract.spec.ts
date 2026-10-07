@@ -4,7 +4,7 @@
 // quando uma extensão muda a marcação.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { AnyExtension } from '@tiptap/core';
+import type { AnyExtension, Editor } from '@tiptap/core';
 import type { DOMOutputSpec } from '@tiptap/pm/model';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RTE_CODE_LANGUAGES } from '../../code-languages/src/index';
@@ -18,9 +18,12 @@ import type {
   RteHtmlSchema,
 } from '../../src/schema/types';
 import { createEditorExtensions } from './factory';
+import { getSearchState } from './search';
 import { getRteHtml } from './serialize';
+import { getSlashMenuState } from './slash';
 import { normalizeForCompare } from './testing/compare';
 import { createTestEditor, destroyTestEditors } from './testing/editor';
+import { typeText } from './testing/type-text';
 import { FIXTURE_DIR, readFixture, writeFixture } from './testing/fixtures';
 import type { RteEditorOptions } from './types';
 
@@ -275,5 +278,49 @@ describe('all-features.json (drift)', () => {
       readFixture(JSON_FILE) === json,
       'fixtures/content/all-features.json está desatualizado: regenere com `UPDATE_FIXTURES=1 npx nx test core --skip-nx-cache`',
     ).toBe(true);
+  });
+});
+
+describe('nada da 03c chega ao HTML (R7, C19)', () => {
+  it('com busca ativa, getRteHtml continua igual ao arquivo', () => {
+    const editor = load();
+    editor.commands.setSearchQuery('a');
+    expect(getSearchState(editor)?.total).toBeGreaterThan(0);
+    expect(getRteHtml(editor)).toBe(fixture);
+  });
+
+  const WITHOUT = ['rtSearch', 'rtSlashCommand', 'rtPlaceholder'];
+
+  function pair(options: RteEditorOptions, act?: (editor: Editor) => void) {
+    const full = createTestEditor(options, '<p></p>');
+    act?.(full);
+    const list = createEditorExtensions(options).filter(
+      (e) => !WITHOUT.includes(e.name),
+    );
+    const bare = createTestEditor(options, '<p></p>', { extensions: list });
+    act?.(bare);
+    return { full, bare };
+  }
+
+  it('menu / aberto: HTML igual ao de um editor sem as extensões', () => {
+    const { full, bare } = pair({}, (editor) => {
+      editor.commands.focus();
+      typeText(editor, '/');
+    });
+    expect(getSlashMenuState(full).open).toBe(true);
+    expect(getRteHtml(full)).toBe(getRteHtml(bare));
+    expect(full.getHTML()).toBe(bare.getHTML());
+    expect(getRteHtml(full)).not.toContain('rte-');
+  });
+
+  it('documento vazio com placeholder: HTML igual e sem atributos', () => {
+    const { full, bare } = pair({ placeholder: 'P' });
+    expect(getRteHtml(full)).toBe(getRteHtml(bare));
+    expect(full.getHTML()).toBe(bare.getHTML());
+    for (const out of [getRteHtml(full), full.getHTML()]) {
+      expect(out).not.toContain('rte-');
+      expect(out).not.toContain('data-placeholder');
+      expect(out).not.toContain('aria-placeholder');
+    }
   });
 });

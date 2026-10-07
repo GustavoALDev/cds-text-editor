@@ -6,12 +6,21 @@ import * as core from '../../src/index';
 import * as html from '../../html/src/index';
 import type {
   RteCalloutVariant,
+  RteCharLimitState,
   RteContentLabels,
   RteEditorOptions,
   RteImageAlign,
   RteImageAttrs,
   RtePullquoteAttrs,
+  RteSearchOptions,
+  RteSearchState,
+  RteSlashItem,
+  RteSlashItemId,
+  RteSlashLabels,
+  RteSlashMenuState,
+  RteSlashOptions,
   RteTextDirection,
+  RteTextStats,
   RteVideoAttrs,
   RteVideoTrack,
 } from './index';
@@ -21,9 +30,15 @@ describe('API pública do /extensions (spec 03b, §6)', () => {
   it('exporta exatamente os valores previstos', () => {
     expect(Object.keys(ext).sort()).toEqual([
       'RTE_CONTENT_LABELS',
+      'RTE_SLASH_ITEMS',
+      'RTE_SLASH_LABELS',
       'createEditorExtensions',
+      'getCharLimitState',
       'getRteHeadings',
       'getRteHtml',
+      'getRteTextStats',
+      'getSearchState',
+      'getSlashMenuState',
       'serializeRteHtml',
     ]);
     expect(typeof ext.createEditorExtensions).toBe('function');
@@ -46,6 +61,14 @@ describe('API pública do /extensions (spec 03b, §6)', () => {
       'truncateText',
       'computeChangedRanges',
       'createEditor',
+      'textStatsProbe',
+      'searchProbe',
+      'foldCase',
+      'cutSlice',
+      'resolveSlashItems',
+      'searchKey',
+      'slashKey',
+      'charLimitKey',
     ]) {
       expect(names).not.toContain(internal);
     }
@@ -67,7 +90,25 @@ describe('API pública do /extensions (spec 03b, §6)', () => {
     // Usados nas assinaturas de setPullquote/updatePullquote e setLang.
     const quote: RtePullquoteAttrs = { author: 'A', role: 'Editora' };
     const dir: RteTextDirection = 'rtl';
+    const stats: RteTextStats = { characters: 0, words: 0 };
+    const limit = { ...stats, limit: null } as unknown as RteCharLimitState;
+    const searchOptions: RteSearchOptions = { caseSensitive: true };
+    const search = {} as RteSearchState;
+    const itemId: RteSlashItemId = 'table';
+    const item = {} as RteSlashItem;
+    const slashLabels = {} as RteSlashLabels;
+    const slashOptions: RteSlashOptions = {};
+    const menu = {} as RteSlashMenuState;
     expect([
+      stats,
+      limit,
+      searchOptions,
+      search,
+      itemId,
+      item,
+      slashLabels,
+      slashOptions,
+      menu,
       variant,
       align,
       track,
@@ -77,7 +118,7 @@ describe('API pública do /extensions (spec 03b, §6)', () => {
       options,
       quote,
       dir,
-    ]).toHaveLength(9);
+    ]).toHaveLength(18);
   });
 });
 

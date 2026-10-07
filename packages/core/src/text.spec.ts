@@ -1,7 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { countWords, readingTime } from './text';
+import { countCharacters, countWords, readingTime } from './text';
 
 afterEach(() => vi.unstubAllGlobals());
+
+describe('countCharacters', () => {
+  it('conta pontos de código, sem LF nem CR', () => {
+    expect(countCharacters('')).toBe(0);
+    expect(countCharacters('a\nb\r\nc')).toBe(3);
+    expect(countCharacters('😀')).toBe(1);
+    expect(countCharacters('👨‍👩‍👧')).toBe(5);
+    expect(countCharacters('e\u0301')).toBe(2);
+    expect(countCharacters('\ud800')).toBe(1);
+    expect(countCharacters(' a ')).toBe(3);
+  });
+});
 
 describe('countWords', () => {
   it('conta palavras', () => {

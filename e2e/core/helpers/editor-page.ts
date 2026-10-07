@@ -14,7 +14,9 @@ const PNG = Buffer.from(
 
 /**
  * CSS mínimo das alças do `rtImage` (o CSS de verdade é da spec 05): figura do
- * tamanho do `img`, alças 12×12 nos cantos, fora de qualquer recorte.
+ * tamanho do `img`, alças 12×12 nos cantos, fora de qualquer recorte. Mais as
+ * decorações da 03c: placeholder pelo `::before`, resultados da busca (ativo
+ * distinto) e a consulta do menu `/`.
  */
 const CSS = `
 #editor { margin: 32px; }
@@ -29,6 +31,13 @@ const CSS = `
 #editor .rte-image__handle--ne { top: -6px; right: -6px; cursor: nesw-resize; }
 #editor .rte-image__handle--sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
 #editor .rte-image__handle--se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+.rte-placeholder::before {
+  content: attr(data-placeholder); float: left; height: 0;
+  pointer-events: none; color: #6b6b6b;
+}
+.rte-search-match { background: #fff3a3; }
+.rte-search-match--active { background: #ffb74d; }
+.rte-slash-query { text-decoration: underline; }
 `;
 
 export interface EditorPageOptions {

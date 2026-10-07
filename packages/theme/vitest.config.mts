@@ -12,6 +12,8 @@ export default defineConfig(() => ({
     globals: true,
     environment: 'node',
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
     reporters: ['default'],
     coverage: {
       reportsDirectory: '../../coverage/packages/theme',

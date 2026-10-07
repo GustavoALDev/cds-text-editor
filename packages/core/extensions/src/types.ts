@@ -2,6 +2,7 @@ import type { AnyExtension } from '@tiptap/core';
 import type { RteCodeLanguage } from '../../code-languages/src/index';
 import type { RteLinkPolicy } from '../../src/links';
 import type { RteHtmlSchemaOptions } from '../../src/schema/types';
+import type { RteSlashOptions } from './slash-items';
 
 /** Variantes da caixa de destaque (`rtCallout`). */
 export type RteCalloutVariant = 'info' | 'success' | 'warning' | 'danger';
@@ -69,6 +70,15 @@ export interface RteEditorOptions extends RteHtmlSchemaOptions {
   codeLanguages?: readonly RteCodeLanguage[];
   /** Lido a cada uso (lição 4). */
   labels?: RteContentLabelsSource;
+  /** Texto do documento vazio; função lida a cada uso (lição 4). */
+  placeholder?: string | (() => string);
+  /**
+   * Limite de caracteres da entrada direta (spec 03c, C4/C6): inteiro `>= 0`
+   * ou `null` (sem limite); função lida a cada verificação (lição 4).
+   */
+  charLimit?: number | null | (() => number | null | undefined);
+  /** Comandos `/` (spec 03c): itens, rótulos e item de UI. */
+  slash?: RteSlashOptions;
   /** Padrão `minWidth: 48` (`computeResize`). */
   image?: { minWidth?: number };
   /** Extensões do consumidor, no fim da lista. */

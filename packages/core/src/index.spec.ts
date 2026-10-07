@@ -20,6 +20,7 @@ const MAIN = [
   'DEFAULT_LINK_POLICY',
   'slugify',
   'createHeadingIds',
+  'countCharacters',
   'countWords',
   'readingTime',
   'computeResize',

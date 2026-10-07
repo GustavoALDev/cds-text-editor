@@ -78,6 +78,28 @@ describe('TaskItemView: estrutura', () => {
     ).toBe('Tarefa: Ax');
   });
 
+  it('taskCheckbox que lança ou não devolve texto vale como en e não lança ao digitar', () => {
+    for (const taskCheckbox of [
+      () => {
+        throw new Error('rótulo do consumidor');
+      },
+      () => 42 as unknown as string,
+    ]) {
+      const editor = editorWith(AB, { taskCheckbox });
+      const [first] = items(editor);
+      if (!first) throw new Error('item ausente');
+      expect(checkbox(first).getAttribute('aria-label')).toBe('Task: A');
+      editor.view.dispatch(
+        editor.state.tr.setSelection(TextSelection.create(editor.state.doc, 3)),
+      );
+      expect(() => editor.commands.insertContent('x')).not.toThrow();
+      expect(
+        checkbox(items(editor)[0] as Element).getAttribute('aria-label'),
+      ).toBe('Task: Ax');
+      expect(editor.state.doc.textContent).toBe('AxB');
+    }
+  });
+
   it('rótulo padrão (en) quando não há labels', () => {
     const editor = editorWith();
     expect(
