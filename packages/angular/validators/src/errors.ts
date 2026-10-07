@@ -30,12 +30,27 @@ export interface RteImagesMissingAltError extends ValidationError {
   readonly count: number;
 }
 
+/** Links fora da política no valor (`rteSafeLinks`, K13); até 5 endereços em `hrefs`. */
+export interface RteUnsafeLinksError extends ValidationError {
+  readonly kind: 'rteUnsafeLinks';
+  readonly count: number;
+  readonly hrefs: readonly string[];
+}
+
+/** Títulos `h2`–`h4` vazios no valor (`rteNoEmptyHeadings`, K13). */
+export interface RteEmptyHeadingsError extends ValidationError {
+  readonly kind: 'rteEmptyHeadings';
+  readonly count: number;
+}
+
 export type RteValidationError =
   | RteRequiredError
   | RteMaxCharsError
   | RteMaxWordsError
   | RteUploadsPendingError
-  | RteImagesMissingAltError;
+  | RteImagesMissingAltError
+  | RteUnsafeLinksError
+  | RteEmptyHeadingsError;
 
 /**
  * Erro como o Reactive/Template Forms o entrega ao controle customizado
@@ -51,7 +66,7 @@ export interface RteReactiveValidationError {
  * `ReactiveValidationError` (`{ kind, context }`) ou o `control.errors` do
  * Reactive Forms (`{ rteMaxChars: { max, actual } }`, o primeiro erro do editor
  * presente vence). Os erros de contagem (`rteUploadsPending`,
- * `rteImagesMissingAlt`) levam `count` nas três formas.
+ * `rteImagesMissingAlt`, `rteEmptyHeadings`, `rteUnsafeLinks`) levam `count` nas três formas.
  */
 export type RteFormattableError =
   | RteValidationError
@@ -68,6 +83,8 @@ const KINDS: readonly RteKind[] = [
   'rteMaxWords',
   'rteUploadsPending',
   'rteImagesMissingAlt',
+  'rteUnsafeLinks',
+  'rteEmptyHeadings',
 ];
 
 function isKind(value: unknown): value is RteKind {
@@ -172,8 +189,18 @@ export function formatRteError(
       const detail = size(found.detail);
       return detail ? label(labels, found.kind, [detail]) : '';
     }
+    case 'rteUnsafeLinks': {
+      const count = countOf(found.detail);
+      if (count === undefined) return '';
+      const raw = read(found.detail, 'hrefs');
+      const hrefs = Array.isArray(raw)
+        ? raw.filter((h): h is string => typeof h === 'string')
+        : [];
+      return label(labels, 'rteUnsafeLinks', [{ count, hrefs }]);
+    }
     case 'rteUploadsPending':
-    case 'rteImagesMissingAlt': {
+    case 'rteImagesMissingAlt':
+    case 'rteEmptyHeadings': {
       const count = countOf(found.detail);
       return count === undefined ? '' : label(labels, found.kind, [count]);
     }

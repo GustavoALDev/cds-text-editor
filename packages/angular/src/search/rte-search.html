@@ -1,0 +1,115 @@
+<div
+  class="rte-search"
+  role="search"
+  [attr.aria-label]="labels().region"
+  (keydown)="onKeydown($event)"
+>
+  <div class="rte-search__row">
+    <input
+      #query
+      class="rte-search__input"
+      type="text"
+      autocomplete="off"
+      spellcheck="false"
+      [attr.aria-label]="labels().query"
+      (input)="onQueryInput($event)"
+      (compositionstart)="composing = true"
+      (compositionend)="onQueryCompositionEnd()"
+      (keydown)="onQueryKeydown($event)"
+    />
+    <span class="rte-search__count">{{ count() }}</span>
+    <button
+      type="button"
+      class="rte-search__button"
+      [attr.aria-label]="labels().previous"
+      [attr.title]="labels().previous"
+      [attr.aria-disabled]="noMatches() ? 'true' : null"
+      (click)="previous()"
+    >
+      <span aria-hidden="true">{{ glyphs.previous }}</span>
+    </button>
+    <button
+      type="button"
+      class="rte-search__button"
+      [attr.aria-label]="labels().next"
+      [attr.title]="labels().next"
+      [attr.aria-disabled]="noMatches() ? 'true' : null"
+      (click)="next()"
+    >
+      <span aria-hidden="true">{{ glyphs.next }}</span>
+    </button>
+    <button
+      type="button"
+      class="rte-search__button"
+      [attr.aria-label]="labels().caseSensitive"
+      [attr.title]="labels().caseSensitive"
+      [attr.aria-pressed]="state().caseSensitive"
+      (click)="toggleCase()"
+    >
+      <span aria-hidden="true">{{ glyphs.caseSensitive }}</span>
+    </button>
+    <button
+      type="button"
+      class="rte-search__button"
+      [attr.aria-label]="labels().wholeWord"
+      [attr.title]="labels().wholeWord"
+      [attr.aria-pressed]="state().wholeWord"
+      (click)="toggleWord()"
+    >
+      <span aria-hidden="true">{{ glyphs.wholeWord }}</span>
+    </button>
+    @if (canReplace()) {
+    <button
+      type="button"
+      class="rte-search__button"
+      [attr.aria-expanded]="showReplace()"
+      (click)="toggleReplace()"
+    >
+      {{ labels().replaceToggle }}
+    </button>
+    }
+    <button
+      type="button"
+      class="rte-search__button"
+      [attr.aria-label]="labels().close"
+      [attr.title]="labels().close"
+      (click)="close()"
+    >
+      <span aria-hidden="true">{{ glyphs.close }}</span>
+    </button>
+  </div>
+  @if (canReplace() && showReplace()) {
+  <div class="rte-search__row">
+    <input
+      #replacement
+      class="rte-search__input"
+      type="text"
+      autocomplete="off"
+      spellcheck="false"
+      [attr.aria-label]="labels().replace"
+      (keydown)="onReplaceKeydown($event)"
+    />
+    <button
+      type="button"
+      class="rte-search__button"
+      [attr.aria-disabled]="noMatches() ? 'true' : null"
+      (click)="replaceOne()"
+    >
+      {{ labels().replaceOne }}
+    </button>
+    <button
+      type="button"
+      class="rte-search__button"
+      [attr.aria-disabled]="noMatches() ? 'true' : null"
+      (click)="replaceAll()"
+    >
+      {{ labels().replaceAll }}
+    </button>
+  </div>
+  }
+  <div class="rte-live" aria-live="polite">
+    @for (a of announcement.items(); track a.n) {
+    <span>{{ a.text }}</span>
+    }
+  </div>
+</div>

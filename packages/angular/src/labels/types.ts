@@ -15,6 +15,8 @@ export interface RteErrorLabels {
   rteMaxWords(error: { max: number; actual: number }): string;
   rteUploadsPending(count: number): string;
   rteImagesMissingAlt(count: number): string;
+  rteUnsafeLinks(error: { count: number; hrefs: readonly string[] }): string;
+  rteEmptyHeadings(count: number): string;
 }
 
 export interface RteToolbarLabels {
@@ -68,6 +70,8 @@ export interface RteToolbarLabels {
   pullquote: string;
   readAlso: string;
   clearFormatting: string;
+  /** Item `search` (busca e substituição). */
+  search: string;
   link: string;
   editLink: string;
   lang: string;
@@ -219,6 +223,42 @@ export interface RteFloatingMenuLabels {
   removeEmbed: string;
 }
 
+export interface RteSearchLabels {
+  /** Nome acessível da região `role="search"`. */
+  region: string;
+  query: string;
+  replace: string;
+  replaceToggle: string;
+  replaceOne: string;
+  replaceAll: string;
+  previous: string;
+  next: string;
+  caseSensitive: string;
+  wholeWord: string;
+  close: string;
+  /** Posição do resultado ativo ("3 de 12"). */
+  position(index: number, total: number): string;
+  /** Posição com o teto de resultados atingido ("3 de 1000+"). */
+  capped(index: number): string;
+  none: string;
+  replaced(count: number): string;
+}
+
+export interface RteSlashMenuLabels {
+  /** Nome acessível da lista do menu `/`. */
+  listbox: string;
+  count(n: number): string;
+  empty: string;
+}
+
+export interface RteCounterLabels {
+  chars(count: number, limit: number | null): string;
+  words(count: number, minutes: number): string;
+  rejected(limit: number): string;
+  remaining(n: number): string;
+  over(n: number): string;
+}
+
 export interface RteLabels {
   readonly content: RteContentLabels;
   readonly slash: RteSlashLabels;
@@ -229,6 +269,9 @@ export interface RteLabels {
   readonly floating: RteFloatingMenuLabels;
   readonly upload: RteUploadLabels;
   readonly draft: RteDraftLabels;
+  readonly search: RteSearchLabels;
+  readonly slashMenu: RteSlashMenuLabels;
+  readonly counters: RteCounterLabels;
 }
 
 export interface RteLabelsInput {
@@ -247,6 +290,9 @@ export interface RteLabelsInput {
   floating?: Partial<RteFloatingMenuLabels>;
   upload?: Partial<RteUploadLabels>;
   draft?: Partial<RteDraftLabels>;
+  search?: Partial<RteSearchLabels>;
+  slashMenu?: Partial<RteSlashMenuLabels>;
+  counters?: Partial<RteCounterLabels>;
 }
 
 /** Objeto parcial ou função lida dentro de `computed` (pode ler signals) (D15). */

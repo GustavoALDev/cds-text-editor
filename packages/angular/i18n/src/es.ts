@@ -72,6 +72,7 @@ export const RTE_LABELS_ES: RteLabels = Object.freeze({
     removeCallout: 'Quitar recuadro',
     pullquote: 'Cita destacada',
     readAlso: 'Recuadro "Lee también"',
+    search: 'Buscar y reemplazar',
     clearFormatting: 'Borrar formato',
     image: 'Insertar imagen',
     editImage: 'Editar imagen',
@@ -106,6 +107,18 @@ export const RTE_LABELS_ES: RteLabels = Object.freeze({
       count === 1
         ? '1 imagen sin texto alternativo.'
         : `${count} imágenes sin texto alternativo.`,
+    rteUnsafeLinks: ({
+      count,
+      hrefs,
+    }: {
+      count: number;
+      hrefs: readonly string[];
+    }) =>
+      count === 1
+        ? `1 enlace no permitido: ${hrefs.join(', ')}.`
+        : `${count} enlaces no permitidos: ${hrefs.join(', ')}${hrefs.length < count ? '…' : ''}.`,
+    rteEmptyHeadings: (count: number) =>
+      count === 1 ? '1 título vacío.' : `${count} títulos vacíos.`,
   }),
   dialogs: Object.freeze({
     apply: 'Aplicar',
@@ -252,5 +265,45 @@ export const RTE_LABELS_ES: RteLabels = Object.freeze({
       `Hay un borrador guardado el ${new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' }).format(savedAt)}.`,
     restore: 'Restaurar',
     discard: 'Descartar',
+  }),
+  search: Object.freeze({
+    region: 'Buscar y reemplazar',
+    query: 'Buscar',
+    replace: 'Reemplazar por',
+    replaceToggle: 'Mostrar reemplazo',
+    replaceOne: 'Reemplazar',
+    replaceAll: 'Reemplazar todo',
+    previous: 'Resultado anterior',
+    next: 'Resultado siguiente',
+    caseSensitive: 'Distinguir mayúsculas',
+    wholeWord: 'Palabra completa',
+    close: 'Cerrar búsqueda',
+    position: (index: number, total: number) => `${index} de ${total}`,
+    capped: (index: number) => `${index} de 1000+`,
+    none: 'Sin resultados',
+    replaced: (count: number) =>
+      count === 1
+        ? '1 coincidencia reemplazada.'
+        : `${count} coincidencias reemplazadas.`,
+  }),
+  slashMenu: Object.freeze({
+    listbox: 'Insertar bloque',
+    count: (n: number) => (n === 1 ? '1 opción' : `${n} opciones`),
+    empty: 'Sin opciones',
+  }),
+  counters: Object.freeze({
+    chars: (count: number, limit: number | null) =>
+      limit === null
+        ? `${count} ${count === 1 ? 'carácter' : 'caracteres'}`
+        : `${count}/${limit}`,
+    words: (count: number, minutes: number) =>
+      `${count} ${count === 1 ? 'palabra' : 'palabras'} · ${minutes} min de lectura`,
+    rejected: (limit: number) => `Límite de ${limit} caracteres alcanzado.`,
+    remaining: (n: number) =>
+      n === 1 ? 'Queda 1 carácter.' : `Quedan ${n} caracteres.`,
+    over: (n: number) =>
+      n === 1
+        ? '1 carácter por encima del límite.'
+        : `${n} caracteres por encima del límite.`,
   }),
 });

@@ -22,7 +22,9 @@ import {
   rteMaxChars,
   rteImagesHaveAlt,
   rteMaxWords,
+  rteNoEmptyHeadings,
   rteRequired,
+  rteSafeLinks,
   rteUploadsFinished,
 } from '@cds/rte-angular/validators';
 /* eslint-enable @nx/enforce-module-boundaries */
@@ -490,4 +492,152 @@ describe('igualdade com o editor (C5)', () => {
       },
     );
   }, 120_000);
+});
+
+describe('Signal Forms e Reactive: rteSafeLinks e rteNoEmptyHeadings (K13)', () => {
+  const link = (h: string) => `<p><a href="${h}">x</a></p>`;
+
+  it('política padrão: links bons e valor vazio passam; javascript: erra', () => {
+    for (const body of [
+      '',
+      '<p>a</p>',
+      link('https://a.com/'),
+      link('mailto:a@b.com'),
+    ]) {
+      expect(
+        make((p) => rteSafeLinks(p.body), body)
+          .body()
+          .errors(),
+      ).toEqual([]);
+    }
+    const f = make((p) => rteSafeLinks(p.body), link('javascript:alert(1)'));
+    expect(f.body().errors()).toEqual([
+      expect.objectContaining({
+        kind: 'rteUnsafeLinks',
+        count: 1,
+        hrefs: ['javascript:alert(1)'],
+      }),
+    ]);
+  });
+
+  it('política estrita: host bloqueado e http: recusados', () => {
+    const body =
+      link('https://evil.com/a') +
+      link('http://ok.com/') +
+      link('https://ok.com/');
+    const f = make(
+      (p) =>
+        rteSafeLinks(p.body, {
+          policy: { blockedDomains: ['evil.com'], protocols: ['https'] },
+        }),
+      body,
+    );
+    expect(f.body().errors()).toEqual([
+      expect.objectContaining({
+        kind: 'rteUnsafeLinks',
+        count: 2,
+        hrefs: ['https://evil.com/a', 'http://ok.com/'],
+      }),
+    ]);
+    // a política padrão aceita os dois
+    expect(
+      make((p) => rteSafeLinks(p.body), body)
+        .body()
+        .errors(),
+    ).toEqual([]);
+  });
+
+  it('a lista é truncada em 5, mas count conta todos', () => {
+    const body = Array.from({ length: 8 }, (_, i) =>
+      link(`javascript:${i}`),
+    ).join('');
+    const err = make((p) => rteSafeLinks(p.body), body)
+      .body()
+      .errors()[0] as unknown as { count: number; hrefs: string[] };
+    expect(err.count).toBe(8);
+    expect(err.hrefs).toHaveLength(5);
+  });
+
+  it('rteNoEmptyHeadings erra com h2-h4 vazios e passa sem eles', () => {
+    for (const body of ['', '<h2>a</h2>', '<h1></h1>']) {
+      expect(
+        make((p) => rteNoEmptyHeadings(p.body), body)
+          .body()
+          .errors(),
+      ).toEqual([]);
+    }
+    const f = make(
+      (p) => rteNoEmptyHeadings(p.body),
+      '<h2> </h2><h3><br></h3><h4>ok</h4>',
+    );
+    expect(f.body().errors()).toEqual([
+      expect.objectContaining({ kind: 'rteEmptyHeadings', count: 2 }),
+    ]);
+  });
+
+  it('HTML aninhado além de 256 níveis não esconde javascript: nem título vazio (truncated)', () => {
+    const hostile =
+      '<div>'.repeat(257) + '<a href="javascript:alert(1)">x</a><h2></h2>';
+    expect(
+      make((p) => rteSafeLinks(p.body), hostile)
+        .body()
+        .errors(),
+    ).toEqual([expect.objectContaining({ kind: 'rteUnsafeLinks', count: 1 })]);
+    expect(
+      make((p) => rteNoEmptyHeadings(p.body), hostile)
+        .body()
+        .errors(),
+    ).toEqual([expect.objectContaining({ kind: 'rteEmptyHeadings', count: 1 })]);
+    expect(RteValidators.safeLinks()(new FormControl(hostile))).toEqual({
+      rteUnsafeLinks: { count: 1, hrefs: [] },
+    });
+    expect(RteValidators.noEmptyHeadings()(new FormControl(hostile))).toEqual({
+      rteEmptyHeadings: { count: 1 },
+    });
+  });
+
+  it('Reactive devolve o mesmo', () => {
+    const bad = link('https://evil.com/');
+    const strict = RteValidators.safeLinks({
+      policy: { blockedDomains: ['evil.com'] },
+    });
+    expect(strict(new FormControl(bad))).toEqual({
+      rteUnsafeLinks: { count: 1, hrefs: ['https://evil.com/'] },
+    });
+    expect(strict(new FormControl(null))).toBeNull();
+    expect(RteValidators.safeLinks()(new FormControl(bad))).toBeNull();
+    expect(
+      RteValidators.noEmptyHeadings()(new FormControl('<h3></h3>')),
+    ).toEqual({
+      rteEmptyHeadings: { count: 1 },
+    });
+    expect(RteValidators.noEmptyHeadings()(new FormControl(''))).toBeNull();
+  });
+
+  it('formatRteError nas três formas e nos três idiomas', () => {
+    const hrefs = ['x', 'y'];
+    for (const pack of [RTE_LABELS_EN, RTE_LABELS_PT_BR, RTE_LABELS_ES]) {
+      for (const e of [
+        { kind: 'rteUnsafeLinks', count: 3, hrefs },
+        { kind: 'rteUnsafeLinks', context: { count: 3, hrefs } },
+        { rteUnsafeLinks: { count: 3, hrefs } },
+      ]) {
+        expect(formatRteError(e as never, pack)).toBe(
+          pack.errors.rteUnsafeLinks({ count: 3, hrefs }),
+        );
+      }
+      for (const e of [
+        { kind: 'rteEmptyHeadings', count: 2 },
+        { kind: 'rteEmptyHeadings', context: { count: 2 } },
+        { rteEmptyHeadings: { count: 2 } },
+      ]) {
+        expect(formatRteError(e as never, pack)).toBe(
+          pack.errors.rteEmptyHeadings(2),
+        );
+      }
+    }
+    expect(
+      formatRteError({ kind: 'rteEmptyHeadings' } as never, RTE_LABELS_EN),
+    ).toBe('');
+  });
 });

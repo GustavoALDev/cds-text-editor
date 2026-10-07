@@ -1,8 +1,8 @@
-import { isDevMode } from '@angular/core';
 import type {
   RteContentLabels,
   RteEditorOptions,
   RteSlashLabels,
+  RteSlashOptions,
 } from '@cds/rte-core/extensions';
 import type { RteEditorConfig } from '../config';
 
@@ -37,23 +37,19 @@ export function buildEditorOptions(
     charLimit: () => number | null;
     content: () => RteContentLabels;
     slash: () => RteSlashLabels;
+    /** `slash.onUiItem` composto pelo pacote (K6); ausente = o da configuração. */
+    onUiItem?: NonNullable<RteSlashOptions['onUiItem']>;
   },
 ): RteEditorOptions {
-  if (
-    isDevMode() &&
-    (config.features?.search === true ||
-      config.features?.slashCommands === true)
-  ) {
-    console.warn(
-      '[rte-editor] features.search e features.slashCommands ficam desligados nesta versão; o valor informado foi ignorado.',
-    );
-  }
   return {
     ...config,
-    features: { ...config.features, search: false, slashCommands: false },
     placeholder: sources.placeholder,
     charLimit: sources.charLimit,
     labels: sources.content,
-    slash: { ...config.slash, labels: sources.slash },
+    slash: {
+      ...config.slash,
+      labels: sources.slash,
+      ...(sources.onUiItem ? { onUiItem: sources.onUiItem } : {}),
+    },
   };
 }

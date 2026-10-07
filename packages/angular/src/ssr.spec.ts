@@ -72,6 +72,22 @@ class SsrDraftHost {
   readonly secret = '<p>segredo</p>';
 }
 
+/** Contadores ligados (spec 05d1, K11/K12): sem rodapé no servidor, região viva do limite vazia. */
+@Component({
+  selector: 'rte-ssr-host',
+  imports: [RteEditor],
+  template: `<rte-editor
+    [value]="secret"
+    [maxLength]="50"
+    [showCharCount]="true"
+    [showWordCount]="true"
+  />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class SsrCountersHost {
+  readonly secret = '<p>segredo</p>';
+}
+
 /**
  * O setup do builder inicia o TestBed (plataforma de navegador) em todo
  * arquivo, inclusive nos de ambiente `node`, e o `@angular/common` só aceita
@@ -394,6 +410,45 @@ describe('RteEditor no servidor (R12)', () => {
       expect(html).not.toMatch(/class="rte-draft"|<section/);
       expect(html).not.toContain('segredo');
       expect(loader).not.toHaveBeenCalled();
+      expect(error).not.toHaveBeenCalled();
+    },
+  );
+
+  it(
+    'com contadores ligados não há rodapé e a região viva do limite sai vazia (K11, K12)',
+    { timeout: 30_000 },
+    async () => {
+      const error = vi.spyOn(console, 'error');
+      const html = await withServerDomAdapter(() =>
+        renderApplication(
+          (context) =>
+            bootstrapApplication(
+              SsrCountersHost,
+              {
+                providers: [
+                  provideZonelessChangeDetection(),
+                  provideServerRendering(),
+                ],
+              },
+              context,
+            ),
+          {
+            document:
+              '<!doctype html><html><head></head><body><rte-ssr-host></rte-ssr-host></body></html>',
+            url: '/',
+          },
+        ),
+      );
+      expect(html).not.toContain('rte-editor__footer');
+      expect(html).not.toContain('rte-counter');
+      const region =
+        /(<div[^>]*class="rte-live rte-live--limit"[^>]*>)(.*?)<\/div>/s.exec(
+          html,
+        );
+      expect(region).not.toBeNull();
+      expect(region?.[1]).toContain('aria-live="polite"');
+      expect(region?.[2]?.replace(/<!--.*?-->/gs, '').trim()).toBe('');
+      expect(html).not.toContain('segredo');
       expect(error).not.toHaveBeenCalled();
     },
   );

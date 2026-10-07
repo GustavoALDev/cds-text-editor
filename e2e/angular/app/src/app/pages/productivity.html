@@ -1,0 +1,24 @@
+<button id="before-productivity" type="button">before</button>
+<section>
+  <rte-editor
+    data-testid="productivity"
+    ariaLabel="Productivity editor"
+    toolbar="full"
+    [options]="options"
+    [maxLength]="200"
+    [showCharCount]="true"
+    [showWordCount]="true"
+    [(value)]="value"
+    (editorReady)="bridge.ready('productivity')"
+  />
+</section>
+<section>
+  <rte-editor
+    data-testid="productivity-free"
+    ariaLabel="Unlimited editor"
+    toolbar="full"
+    [options]="options"
+    [(value)]="freeValue"
+    (editorReady)="bridge.ready('productivity-free')"
+  />
+</section>

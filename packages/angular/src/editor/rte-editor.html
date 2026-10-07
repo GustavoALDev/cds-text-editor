@@ -13,7 +13,22 @@
     (escape)="focus()"
     (tabOut)="focus()"
     (dialog)="requestDialog($event.kind, $event.origin)"
+    [searchable]="searchable()"
+    (searchRequest)="onToolbarSearch()"
   />
+  } @defer (when searchOpen(); prefetch on idle) { @if (searchOpen() && editor();
+  as ed) { @if (searchState(); as st) {
+  <rte-search
+    [editor]="ed"
+    [state]="st"
+    [labels]="searchLabels()"
+    [canReplace]="interactive()"
+    [focusTick]="searchFocus()"
+    [stepTick]="searchStep()"
+    (closeRequest)="onSearchClose()"
+  />
+  } } } @placeholder {} @error {
+  <ng-template [rteDeferFailed]="onSearchFailed" />
   } @defer (when draftPromptAt() !== null) { @if (draftPromptAt() !== null) {
   <rte-draft-prompt
     [savedAt]="draftPromptAt() ?? 0"
@@ -40,6 +55,20 @@
   </div>
   }
   <div #mount class="rte-editor__mount"></div>
+  @if (footer(); as f) {
+  <footer class="rte-editor__footer">
+    @if (f.chars; as c) {
+    <span
+      class="rte-counter rte-counter--chars"
+      [class.rte-counter--near]="c.level === 'near'"
+      [class.rte-counter--over]="c.level === 'over'"
+      >{{ c.text }}</span
+    >
+    } @if (f.words; as w) {
+    <span class="rte-counter rte-counter--words">{{ w }}</span>
+    }
+  </footer>
+  }
   @defer (when floatingWanted()) { @if (floatingKinds().length && editor(); as
   ed) {
   <rte-floating-menus
@@ -71,6 +100,12 @@
     }
   </div>
   <div class="rte-draft__status" aria-live="polite">{{ draftStatus() }}</div>
+  <div class="rte-live" aria-live="polite">{{ slashAnnouncement() }}</div>
+  <div class="rte-live rte-live--limit" aria-live="polite">
+    @for (a of limitAnnouncements(); track a.n) {
+    <span>{{ a.text }}</span>
+    }
+  </div>
 </div>
 @defer (when dialogRequested(); prefetch on idle) {
 <rte-dialogs
@@ -88,3 +123,13 @@
 } @defer (when false; prefetch on idle) {
 <rte-media-forms />
 } @error {}
+@defer (when slashOpen(); prefetch on idle) { @if (editor(); as ed) {
+<rte-slash-menu
+  [editor]="ed"
+  [state]="slashState()"
+  [labels]="slashMenuLabels()"
+  [instance]="slashInstance"
+/>
+} } @placeholder {} @error {
+<ng-template [rteDeferFailed]="onSlashFailed" />
+}

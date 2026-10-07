@@ -848,6 +848,7 @@ describe('itens de diálogo (G11, G16, G17)', () => {
       'Quote author',
       '"Read also" box',
       'Clear formatting',
+      'Find and replace',
     ]);
   });
 

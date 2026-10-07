@@ -149,6 +149,8 @@ export class RteToolbar {
   /** Estado dos itens, criado no `RteEditor` e compartilhado (M15). */
   readonly state = input.required<RteToolbarState>();
   readonly interactive = input(false);
+  /** O item `search` fica ativo também com `readonly` (K7); padrão: segue `interactive`. */
+  readonly searchable = input<boolean | undefined>(undefined);
   readonly labels = input.required<RteToolbarLabels>();
   readonly calloutTitles = input.required<RteContentLabels['calloutTitles']>();
   readonly palette = input.required<RteHtmlSchema['palette']>();
@@ -160,6 +162,8 @@ export class RteToolbar {
   readonly tabOut = output<void>();
   /** Item de diálogo ou 'Inserir tabela…': o dono abre o diálogo (G11). */
   readonly dialog = output<RteToolbarDialogRequest>();
+  /** Item `search`: o dono abre a barra de busca (K7). */
+  readonly searchRequest = output<void>();
 
   private readonly host =
     inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -358,8 +362,15 @@ export class RteToolbar {
   }
 
   /** `aria-disabled` só quando a barra está ativa e o item não se aplica. */
-  protected ariaDisabled(enabled: boolean): 'true' | null {
-    return this.interactive() && !enabled ? 'true' : null;
+  protected ariaDisabled(enabled: boolean, id?: RteToolbarItemId): 'true' | null {
+    return this.live(id) && !enabled ? 'true' : null;
+  }
+
+  /** Botão utilizável: `interactive`, ou `searchable` no item `search` (K7). */
+  protected live(id?: RteToolbarItemId): boolean {
+    return id === 'search'
+      ? (this.searchable() ?? this.interactive())
+      : this.interactive();
   }
 
   protected tableState(menu: RteMenu): TableMenuState | null {
@@ -423,6 +434,11 @@ export class RteToolbar {
    * abertura do menu (N11).
    */
   protected run(id: RteToolbarItemId): void {
+    if (id === 'search') {
+      if (this.live(id) && this.state().item(id)().enabled)
+        this.searchRequest.emit();
+      return;
+    }
     const editor = this.canRun();
     if (!editor || !this.state().item(id)().enabled) return;
     runToolbarCommand(editor, id, null);

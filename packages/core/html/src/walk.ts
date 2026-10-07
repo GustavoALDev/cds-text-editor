@@ -27,12 +27,13 @@ export interface HtmlHandlers {
 /**
  * Percorre o HTML com o `htmlparser2` (sem DOM), entregando só texto visível.
  * Tolera HTML malformado: o parser fecha implicitamente o que ficou aberto.
+ * Devolve `true` se a leitura foi interrompida por passar de `maxDepth`.
  */
 export function walkHtml(
   html: string,
   handlers: HtmlHandlers,
   maxDepth: number = DEFAULT_MAX_DEPTH,
-): void {
+): boolean {
   let skipDepth = 0;
   let depth = 0;
   let stopped = false;
@@ -65,4 +66,5 @@ export function walkHtml(
   );
   parser.write(String(html));
   if (!stopped) parser.end();
+  return stopped;
 }

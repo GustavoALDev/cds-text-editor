@@ -27,7 +27,7 @@ import {
 // O foco entre a barra e o editável nunca emite `touch` (D11).
 
 const FIRST = 'Undo';
-const LAST = 'Clear formatting';
+const LAST = 'Find and replace';
 
 async function touched(page: Page): Promise<boolean> {
   return (await formState(page, 'toolbar')).touched;

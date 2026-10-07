@@ -83,19 +83,19 @@ async function setup(): Promise<Setup> {
   const cmp = host.cmp();
   const editor = cmp.editor() as Editor;
   selectText(editor, 'abcd');
-  // Cinco blocos (o aviso do rascunho vem primeiro, 05c2b; Tarefa 8b da 05b2b; 05c2a E2 e E8): os menus flutuantes e
+  // Sete blocos (a barra de busca é o primeiro, 05d1; a lista do menu `/` é o último; o aviso do rascunho vem primeiro, 05c2b; Tarefa 8b da 05b2b; 05c2a E2 e E8): os menus flutuantes e
   // a bandeja de envios, dentro de `.rte-editor__frame`, vêm antes; o dos
-  // diálogos é o terceiro e o de pré-carga dos formulários de mídia
-  // (`when false`), o quarto.
+  // diálogos é o quarto e o de pré-carga dos formulários de mídia
+  // (`when false`), o quinto.
   const blocks = await fixture.getDeferBlocks();
-  expect(blocks).toHaveLength(5);
+  expect(blocks).toHaveLength(7);
   return {
     fixture,
     host,
     root: fixture.nativeElement as HTMLElement,
     cmp,
     editor,
-    block: blocks[3] as DeferBlockFixture,
+    block: blocks[4] as DeferBlockFixture,
   };
 }
 

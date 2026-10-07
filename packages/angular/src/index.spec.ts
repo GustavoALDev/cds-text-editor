@@ -119,7 +119,9 @@ describe('@cds/rte-angular', () => {
       'rteImagesHaveAlt',
       'rteMaxChars',
       'rteMaxWords',
+      'rteNoEmptyHeadings',
       'rteRequired',
+      'rteSafeLinks',
       'rteUploadsFinished',
     ]);
   });

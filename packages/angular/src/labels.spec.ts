@@ -1298,7 +1298,7 @@ describe('rótulos do envio de arquivos (05c2a, E20)', () => {
   it('fixa o número de chaves das seções', () => {
     for (const [name, pack] of packs) {
       expect(Object.keys(pack.upload).length, name).toBe(8);
-      expect(Object.keys(pack.errors).length, name).toBe(5);
+      expect(Object.keys(pack.errors).length, name).toBe(7);
       expect(Object.keys(pack.dialogs).length, name).toBe(82);
     }
   });
@@ -1513,5 +1513,87 @@ describe('rótulos do rascunho (05c2b S14)', () => {
     expect(merged.draft.restore).toBe('Voltar');
     expect(merged.draft.discard).toBe('Discard');
     expect(merged.draft.available(AT)).toBe(RTE_LABELS_EN.draft.available(AT));
+  });
+});
+
+describe('rótulos de busca, menu / e contadores (05d1 K15)', () => {
+  const packs = [
+    ['en', RTE_LABELS_EN],
+    ['pt-BR', RTE_LABELS_PT_BR],
+    ['es', RTE_LABELS_ES],
+  ] as const;
+
+  it('seções completas e não vazias nos três idiomas', () => {
+    for (const [name, pack] of packs) {
+      expect(Object.keys(pack.search).sort(), name).toEqual(
+        Object.keys(RTE_LABELS_EN.search).sort(),
+      );
+      expect(Object.keys(pack.slashMenu).sort(), name).toEqual([
+        'count',
+        'empty',
+        'listbox',
+      ]);
+      expect(Object.keys(pack.counters).sort(), name).toEqual([
+        'chars',
+        'over',
+        'rejected',
+        'remaining',
+        'words',
+      ]);
+      for (const text of [
+        ...strings(pack.search),
+        ...strings(pack.slashMenu),
+        pack.toolbar.search,
+        pack.search.position(3, 12),
+        pack.search.capped(3),
+        pack.search.replaced(1),
+        pack.search.replaced(4),
+        pack.slashMenu.count(1),
+        pack.slashMenu.count(5),
+        pack.counters.chars(120, 500),
+        pack.counters.chars(120, null),
+        pack.counters.words(400, 2),
+        pack.counters.rejected(500),
+        pack.counters.remaining(1),
+        pack.counters.remaining(9),
+        pack.counters.over(1),
+        pack.counters.over(3),
+        pack.errors.rteEmptyHeadings(1),
+        pack.errors.rteEmptyHeadings(2),
+        pack.errors.rteUnsafeLinks({ count: 1, hrefs: ['x'] }),
+        pack.errors.rteUnsafeLinks({ count: 8, hrefs: ['x', 'y'] }),
+      ])
+        expect(text, name).not.toBe('');
+    }
+  });
+
+  it('textos de referência em en', () => {
+    const l = RTE_LABELS_EN;
+    expect(l.search.position(3, 12)).toBe('3 of 12');
+    expect(l.search.capped(3)).toBe('3 of 1000+');
+    expect(l.counters.chars(120, 500)).toBe('120/500');
+    expect(l.counters.chars(120, null)).toBe('120 characters');
+    expect(l.counters.words(400, 2)).toBe('400 words · 2 min read');
+    expect(l.errors.rteUnsafeLinks({ count: 1, hrefs: ['x'] })).toContain('x');
+  });
+
+  it('mesclar sobrescreve chaves próprias e protege funções que lançam', () => {
+    const merged = mergeLabels(RTE_LABELS_EN, {
+      search: {
+        close: 'Fechar',
+        position: () => {
+          throw new Error('x');
+        },
+      },
+      counters: { chars: (n: number) => `${n} c` },
+      slashMenu: { empty: 'nada' },
+    });
+    expect(merged.search.close).toBe('Fechar');
+    expect(merged.search.next).toBe(RTE_LABELS_EN.search.next);
+    expect(merged.search.position(1, 2)).toBe('1 of 2');
+    expect(merged.counters.chars(5, null)).toBe('5 c');
+    expect(merged.counters.over(2)).toBe(RTE_LABELS_EN.counters.over(2));
+    expect(merged.slashMenu.empty).toBe('nada');
+    expect(merged.slashMenu.listbox).toBe(RTE_LABELS_EN.slashMenu.listbox);
   });
 });

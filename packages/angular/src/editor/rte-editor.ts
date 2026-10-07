@@ -31,6 +31,7 @@ import type { RteCodeLanguage } from '@cds/rte-core/code-languages';
 import { DEFAULT_EMBED_PROVIDERS } from '@cds/rte-core/embeds';
 import {
   createEditorExtensions,
+  getSearchState,
   RTE_LABELS_META,
   type RteCharLimitState,
   type RteImageAlign,
@@ -73,6 +74,24 @@ import {
   type RteFloatingMenuKind,
   type RteFloatingMenusConfig,
 } from '../floating/types';
+import {
+  applySlashAria,
+  sameAttributes,
+  slashAriaAttributes,
+} from '../slash/aria';
+import { createSlashAnnouncement } from '../slash/announce';
+import { buildFooter } from '../counters/footer';
+import { createLimitAnnouncer } from '../counters/limit-announcer';
+// Só em `imports` e no `@defer` (K3): o *chunk* `rte-search`.
+import { RteSearch } from '../search/rte-search';
+import { createSearchShortcutsExtension } from '../search/shortcuts-extension';
+import { createSearchState, initialSearchQuery } from '../search/state';
+import { detectPlatform } from '../toolbar/shortcuts';
+// Só em `imports` e no `@defer` (K3): o *chunk* `rte-slash-menu`.
+import { RteSlashMenu } from '../slash/rte-slash-menu';
+import { createSlashState, nextSlashInstanceId } from '../slash/state';
+import { RTE_SLASH_MENU } from '../slash/types';
+import { composeOnUiItem } from '../slash/ui-items';
 import { mergeLabels, readLabelsSource } from '../labels/merge';
 import type { RteLabels, RteLabelsSource } from '../labels/types';
 import { pickToolbarConfig, resolveToolbarGroups } from '../toolbar/config';
@@ -112,12 +131,24 @@ const OPTIONS_IGNORED =
 const FLOATING_FAILED =
   '[rte-editor] não foi possível carregar os menus flutuantes; o editor segue sem eles.';
 
+const SLASH_FAILED =
+  '[rte-editor] não foi possível carregar a lista do menu /; o teclado do menu segue funcionando sem ela.';
+
+const SEARCH_FAILED =
+  '[rte-editor] não foi possível carregar a barra de busca; Mod-F segue com o navegador.';
+
 const NO_LANGUAGES: readonly RteCodeLanguage[] = Object.freeze([]);
 /** Itens de mídia da barra (desabilitados com `mediaFailed`, 05c2a E2). */
 const MEDIA_ITEMS: readonly RteToolbarItemId[] = Object.freeze([
   'image',
   'video',
   'embed',
+]);
+/** O item `search` fica desabilitado depois de falhar a carga da barra (05d1). */
+const SEARCH_ITEMS: readonly RteToolbarItemId[] = Object.freeze(['search']);
+const MEDIA_AND_SEARCH_ITEMS: readonly RteToolbarItemId[] = Object.freeze([
+  ...MEDIA_ITEMS,
+  'search',
 ]);
 const NO_ITEMS: readonly RteToolbarItemId[] = Object.freeze([]);
 
@@ -175,6 +206,8 @@ function toCharLimit(value: number | undefined): number | null {
   imports: [
     RteToolbar,
     RteFloatingMenus,
+    RteSlashMenu,
+    RteSearch,
     RteDialogs,
     RteMediaForms,
     RteUploadTray,
@@ -237,6 +270,10 @@ export class RteEditor implements FormValueControl<string> {
   readonly warnOnUnsaved = input<boolean | undefined>(undefined);
   /** URL colada num parágrafo vazio vira *embed*: entrada > provider; padrão desligado (S11). */
   readonly pasteEmbeds = input<boolean | undefined>(undefined);
+  /** Contador de caracteres no rodapé (K11); entrada > provider > `false`. */
+  readonly showCharCount = input<boolean | undefined>(undefined);
+  /** Contador de palavras e tempo de leitura no rodapé (K11). */
+  readonly showWordCount = input<boolean | undefined>(undefined);
 
   // Saídas
   readonly editorReady = output<Editor>();
@@ -333,6 +370,11 @@ export class RteEditor implements FormValueControl<string> {
     () => !!this.instance() && !this.effectiveDisabled() && !this.readonly(),
   );
 
+  /** O item `search` da barra vale também com `readonly` (K7). */
+  protected readonly searchable = computed(
+    () => !!this.instance() && !this.effectiveDisabled(),
+  );
+
   /** Configuração de criação: a fixada ou, antes dela, a mesclada ao vivo. */
   private readonly editorConfig = computed(
     () =>
@@ -357,6 +399,11 @@ export class RteEditor implements FormValueControl<string> {
    * a condição do item `embed`. `DEFAULT_EMBED_PROVIDERS` fica no *chunk*
    * principal; o `rte-dialogs` só recebe os nomes.
    */
+  /** `features.search` (padrão do core: ligado); entrada > provider (D20). */
+  protected readonly searchEnabled: Signal<boolean> = computed(
+    () => this.editorConfig().features?.search !== false,
+  );
+
   protected readonly embedProviderNames: Signal<readonly string[]> = computed(
     () =>
       (this.editorConfig().embedProviders ?? DEFAULT_EMBED_PROVIDERS).map(
@@ -378,6 +425,7 @@ export class RteEditor implements FormValueControl<string> {
         pickToolbarConfig(this.toolbar(), this.config.toolbar),
         {
           features: this.schema().features,
+          search: this.searchEnabled(),
           hasCodeLanguages: this.codeLanguages().length > 0,
           hasEmbedProviders: this.embedProviderNames().length > 0,
           warned: this.toolbarWarned,
@@ -418,11 +466,16 @@ export class RteEditor implements FormValueControl<string> {
       { equal: sameIds },
     ),
     interactive: this.interactive,
+    searchable: this.searchable,
     // Falha do *chunk* dos formulários de mídia (05c2a E2): os itens de
     // mídia ficam desabilitados em vez de não fazer nada.
-    unavailable: computed(() =>
-      this.dialogs.mediaFailed() ? MEDIA_ITEMS : NO_ITEMS,
-    ),
+    unavailable: computed(() => {
+      const media = this.dialogs.mediaFailed();
+      const search = this.searchFailed();
+      if (media && search) return MEDIA_AND_SEARCH_ITEMS;
+      if (media) return MEDIA_ITEMS;
+      return search ? SEARCH_ITEMS : NO_ITEMS;
+    }),
   });
 
   /** Paleta do esquema; igual por valor (a criação não re-renderiza os menus). */
@@ -443,6 +496,68 @@ export class RteEditor implements FormValueControl<string> {
   );
   private readonly slashLabels = computed(() => this.resolvedLabels().slash);
 
+  /** Menu `/` (K3–K6): estado sobre a versão da ponte; a lista é o *chunk* `rte-slash-menu`. */
+  private readonly slashId = nextSlashInstanceId();
+  protected readonly slashState = createSlashState({
+    editor: this.instance,
+    version: this.bridge.version,
+  });
+  protected readonly slashOpen = computed(() => this.slashState().open);
+  protected readonly slashMenuLabels = computed(
+    () => this.resolvedLabels().slashMenu,
+  );
+  /** Lista do menu `/`, pelo token (a classe a puxaria para o principal). */
+  protected readonly slashRef = viewChild(RTE_SLASH_MENU);
+  protected readonly slashAria = computed(
+    () =>
+      slashAriaAttributes(
+        this.slashState(),
+        this.slashId,
+        this.slashRef() !== undefined,
+      ),
+    { equal: sameAttributes },
+  );
+  protected readonly slashAnnouncement = createSlashAnnouncement({
+    state: this.slashState,
+    labels: this.slashMenuLabels,
+    view: this.host.ownerDocument.defaultView,
+    zone: this.ngZone,
+  });
+  protected readonly slashInstance = this.slashId;
+
+  /** Rodapé de contadores (K11): só com o editor pronto, nunca no servidor. */
+  protected readonly footer = computed(() =>
+    buildFooter(
+      this.bridge.textStats(),
+      {
+        chars: this.showCharCount() ?? this.config.counters?.chars ?? false,
+        words: this.showWordCount() ?? this.config.counters?.words ?? false,
+      },
+      this.resolvedLabels().counters,
+    ),
+  );
+  /** Anúncios do limite (K12), região viva própria, fora do rodapé. */
+  private readonly limitAnnouncer = createLimitAnnouncer({
+    stats: this.bridge.textStats,
+    labels: computed(() => this.resolvedLabels().counters),
+    view: this.host.ownerDocument.defaultView,
+    zone: this.ngZone,
+  });
+  protected readonly limitAnnouncements = this.limitAnnouncer.announcements;
+
+  /** Barra de busca (K7–K10): o estado é do core; a barra é o *chunk* `rte-search`. */
+  private readonly searchOpenState = signal(false);
+  readonly searchOpen: Signal<boolean> = this.searchOpenState.asReadonly();
+  protected readonly searchState = createSearchState({
+    editor: this.instance,
+    version: this.bridge.version,
+  });
+  protected readonly searchFocus = signal(0);
+  /** Sobe a cada `F3` do editável com resultados (a barra reanuncia a posição). */
+  protected readonly searchStep = signal(0);
+  private readonly searchFailed = signal(false);
+  protected readonly searchLabels = computed(() => this.resolvedLabels().search);
+
   /** Diálogos (G2–G7): o pedido e o G5 ficam aqui; a interface, no chunk. */
   protected readonly dialogs = new RteDialogController({
     editor: this.instance,
@@ -452,6 +567,16 @@ export class RteEditor implements FormValueControl<string> {
   /** `@error` do chunk dos menus (M2): o editor segue sem eles. */
   protected readonly onFloatingFailed = () => {
     if (isDevMode()) console.warn(FLOATING_FAILED);
+  };
+  /** `@error` do chunk da barra de busca (K3): sem barra, `Mod-F` é do navegador. */
+  protected readonly onSearchFailed = () => {
+    this.searchFailed.set(true);
+    this.endSearch(false);
+    if (isDevMode()) console.warn(SEARCH_FAILED);
+  };
+  /** `@error` do chunk da lista do menu `/` (K3): o teclado do core segue valendo. */
+  protected readonly onSlashFailed = () => {
+    if (isDevMode()) console.warn(SLASH_FAILED);
   };
   /** Dispara o `@defer` dos menus: editor criado e algum tipo ligado (M2). */
   protected readonly floatingWanted = computed(
@@ -465,7 +590,9 @@ export class RteEditor implements FormValueControl<string> {
   protected readonly floatingBlocked = computed(
     () =>
       this.dialogs.request() !== null ||
-      documentDialogBusy(this.host.ownerDocument)(),
+      documentDialogBusy(this.host.ownerDocument)() ||
+      // Com o menu `/` aberto, os menus flutuantes ficam ocultos (K5).
+      this.slashOpen(),
   );
   /** Política de links da criação (G9): a mesma que o editor usa. */
   protected readonly linkPolicy = computed(
@@ -598,6 +725,23 @@ export class RteEditor implements FormValueControl<string> {
 
   constructor() {
     bindRteBridge(this, this.bridge);
+
+    // ARIA do menu `/` no editável (K4), direto no DOM: um `effect` sobre a
+    // versão da ponte (que sobe fora da zona) faz o zone.js pedir outro
+    // `tick` durante o atual (NG0101); o `afterRenderEffect` não. O ProseMirror
+    // só remove os atributos que ele mesmo gravou, então estes sobrevivem.
+    let ariaEditor: Editor | null = null;
+    afterRenderEffect(() => {
+      const aria = this.slashAria();
+      const editor = this.instance();
+      untracked(() => {
+        if (ariaEditor && ariaEditor !== editor && !ariaEditor.isDestroyed) {
+          applySlashAria(ariaEditor.view.dom, {});
+        }
+        ariaEditor = editor;
+        if (editor && !editor.isDestroyed) applySlashAria(editor.view.dom, aria);
+      });
+    });
     this.dirtyState.onSaved = () => this.drafting.cleared();
 
     const host = this.host;
@@ -742,6 +886,14 @@ export class RteEditor implements FormValueControl<string> {
       },
     });
 
+    // `disabled`/`hidden` fecham a barra de busca, sem mover o foco (K9).
+    afterRenderEffect({
+      write: () => {
+        if (!this.effectiveDisabled() && !this.hidden()) return;
+        untracked(() => this.endSearch(false));
+      },
+    });
+
     // Todos os menus flutuantes saindo (`floatingMenus: false`) com o foco
     // dentro: o `@if` destrói o componente antes do efeito dele sobre
     // `kinds()`, então o foco vai ao editável daqui, antes do refresh (M11).
@@ -817,9 +969,18 @@ export class RteEditor implements FormValueControl<string> {
               charLimit: () => toCharLimit(this.maxLength()),
               content: () => this.resolvedLabels().content,
               slash: () => this.resolvedLabels().slash,
+              onUiItem: composeOnUiItem({
+                open: (kind) => this.openDialog(kind),
+                user: merged.slash?.onUiItem,
+              }),
             }),
           ),
           createRteUiExtension({ openLink: () => this.openDialog('link') }),
+          // `Mod-F` e `F3` no editável (K7, K8); `false` devolve a tecla ao navegador.
+          createSearchShortcutsExtension({
+            open: () => this.openSearch(),
+            step: (direction) => this.stepSearch(direction),
+          }),
           this.uploading.inputExtension(),
           // `Escape` no editável (M6): o último `handleKeyDown` do ProseMirror.
           createFloatingEscapeExtension(() =>
@@ -892,6 +1053,10 @@ export class RteEditor implements FormValueControl<string> {
   private loadDocument(editor: Editor, value: string): void {
     // E17: antes do `EditorState.create`, que reinicia os marcadores
     this.uploading.abortAll(true);
+    // D9: a recriação do estado zera a busca; a consulta aberta é refeita.
+    const search = untracked(this.searchOpenState)
+      ? getSearchState(editor)
+      : null;
     this.loading = true;
     try {
       editor
@@ -910,10 +1075,17 @@ export class RteEditor implements FormValueControl<string> {
           selection: state.selection,
         }),
       );
+      if (search && search.query !== '') {
+        editor.commands.setSearchQuery(search.query, {
+          caseSensitive: search.caseSensitive,
+          wholeWord: search.wholeWord,
+        });
+      }
     } finally {
       this.loading = false;
     }
     this.bridge.refresh();
+    this.limitAnnouncer.rebase();
     this.lastDoc = editor.state.doc;
     this.lastValue = readValue(editor);
   }
@@ -989,6 +1161,7 @@ export class RteEditor implements FormValueControl<string> {
 
   /** `focusout` para fora do host (ou sem destino): `editorBlur` e `touch` (D11). */
   protected onHostFocusOut(event: FocusEvent): void {
+    this.closeSlashOnLeave(event);
     if (!this.hostFocused() || this.isInsideHost(event.relatedTarget)) return;
     if (event.relatedTarget === null) {
       // Sem destino: o Chromium também dispara `focusout` ao remover do DOM o
@@ -1015,6 +1188,23 @@ export class RteEditor implements FormValueControl<string> {
       return;
     }
     this.leaveHost();
+  }
+
+  /** O foco sai do editável (inclusive para o aviso de restauração): fecha o menu `/` (K5). */
+  private closeSlashOnLeave(event: FocusEvent): void {
+    const mount = this.mount().nativeElement;
+    const target = event.target as Node | null;
+    const next = event.relatedTarget as Node | null;
+    if (!target || !mount.contains(target)) return;
+    if (next && mount.contains(next)) return;
+    this.closeSlash();
+  }
+
+  /** Fecha o menu `/` aberto (K5); sem efeito se já está fechado. */
+  private closeSlash(): void {
+    const editor = untracked(this.instance);
+    if (!editor || editor.isDestroyed || !untracked(this.slashOpen)) return;
+    editor.commands.closeSlashMenu();
   }
 
   private leaveHost(): void {
@@ -1053,6 +1243,25 @@ export class RteEditor implements FormValueControl<string> {
     const target = event.target;
     if (!(target instanceof Element)) return;
     const inEditable = this.mount().nativeElement.contains(target);
+    // `Mod-F` fora do editável, em qualquer parte do host (K7); no editável é
+    // da extensão, salvo com `readonly`: a vista não editável não chama
+    // `handleKeyDown`, então o host trata `Mod-F` e `F3` também ali. Em
+    // diálogo modal, é do navegador.
+    const frozen = inEditable && untracked(this.instance)?.isEditable === false;
+    if ((!inEditable || frozen) && this.isSearchKey(event)) {
+      if (!target.closest('dialog') && this.openSearch()) event.preventDefault();
+      return;
+    }
+    if (
+      frozen &&
+      event.key === 'F3' &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey
+    ) {
+      if (this.stepSearch(event.shiftKey ? -1 : 1)) event.preventDefault();
+      return;
+    }
     if (
       event.key !== 'F10' ||
       !event.altKey ||
@@ -1121,6 +1330,102 @@ export class RteEditor implements FormValueControl<string> {
     return this.ngZone.run(() => this.requestDialog(kind, null));
   }
 
+  /** Item `search` da barra (K7): `false` de `openSearch()` não faz nada. */
+  protected onToolbarSearch(): void {
+    this.openSearch();
+  }
+
+  /** `Mod` + F da plataforma, sem outros modificadores. */
+  private isSearchKey(event: KeyboardEvent): boolean {
+    // `code` cobre layouts em que a tecla física F não produz `f`.
+    const isF = event.key.toLowerCase() === 'f' || event.code === 'KeyF';
+    if (!isF || event.altKey || event.shiftKey) return false;
+    const mac =
+      detectPlatform(this.host.ownerDocument.defaultView?.navigator) === 'mac';
+    return mac
+      ? event.metaKey && !event.ctrlKey
+      : event.ctrlKey && !event.metaKey;
+  }
+
+  /**
+   * Abre a barra de busca e substituição (K7), com `query` (ou a seleção de 1
+   * a 200 caracteres) como consulta; com ela aberta, foca e seleciona o
+   * campo. Vale com `readonly` (só busca). `false` sem editor, com `disabled`
+   * ou oculto, com o recurso desligado (`features.search`), com um diálogo em
+   * curso ou depois de falhar a carga da barra.
+   */
+  openSearch(query?: string): boolean {
+    return this.ngZone.run(() => this.requestSearch(query));
+  }
+
+  /** Fecha a barra, limpa a busca e devolve o foco ao editável se estava nela (K9). */
+  closeSearch(): void {
+    this.ngZone.run(() => {
+      const active = this.host.ownerDocument.activeElement;
+      this.endSearch(!!active && !!active.closest('.rte-search'));
+    });
+  }
+
+  protected onSearchClose(): void {
+    this.endSearch(true);
+  }
+
+  private requestSearch(query: string | undefined): boolean {
+    const editor = untracked(this.instance);
+    if (!editor || editor.isDestroyed || this.destroyed) return false;
+    if (
+      untracked(this.effectiveDisabled) ||
+      untracked(this.hidden) ||
+      !untracked(this.searchEnabled) ||
+      untracked(this.searchFailed) ||
+      untracked(this.dialogs.request) ||
+      getSearchState(editor) === null
+    ) {
+      return false;
+    }
+    const open = untracked(this.searchOpenState);
+    const initial = query ?? (open ? '' : initialSearchQuery(editor));
+    if (initial !== '') editor.commands.setSearchQuery(initial);
+    untracked(this.toolbarRef)?.closeMenus();
+    this.closeSlash();
+    this.searchOpenState.set(true);
+    this.searchFocus.update((n) => n + 1);
+    return true;
+  }
+
+  /** `F3`/`Shift+F3` no editável: só com a barra aberta (então a tecla é nossa). */
+  private stepSearch(direction: 1 | -1): boolean {
+    const editor = untracked(this.instance);
+    if (!editor || editor.isDestroyed || !untracked(this.searchOpenState)) {
+      return false;
+    }
+    if ((getSearchState(editor)?.total ?? 0) > 0) {
+      if (direction === 1) editor.commands.nextSearchMatch();
+      else editor.commands.previousSearchMatch();
+      this.searchStep.update((n) => n + 1);
+    }
+    return true;
+  }
+
+  /**
+   * Fecha a barra: seleciona o resultado ativo (ao devolver o foco), limpa a
+   * busca (e as decorações) e, com `restoreFocus`, foca o editável.
+   */
+  private endSearch(restoreFocus: boolean): void {
+    if (!untracked(this.searchOpenState)) return;
+    const editor = untracked(this.instance);
+    if (editor && !editor.isDestroyed) {
+      const state = getSearchState(editor);
+      const active = state?.matches[state.activeIndex];
+      if (restoreFocus && active) {
+        editor.commands.setTextSelection({ from: active.from, to: active.to });
+      }
+      editor.commands.clearSearch();
+    }
+    this.searchOpenState.set(false);
+    if (restoreFocus) this.focus();
+  }
+
   /** Pedido da barra ou da API; sem origem dada, o foco no host ou o editável. */
   protected requestDialog(
     kind: RteDialogKind,
@@ -1142,6 +1447,7 @@ export class RteEditor implements FormValueControl<string> {
     const target = dialogTarget(editor, kind);
     if (!target) return false;
     untracked(this.toolbarRef)?.closeMenus();
+    this.closeSlash();
     this.dialogs.open(kind, target, origin ?? this.focusOrigin(editor));
     return true;
   }

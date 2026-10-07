@@ -2,6 +2,7 @@ import { createEditorExtensions } from '@cds/rte-core/extensions';
 import { Editor } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRteUiExtension } from './dialogs/ui-extension';
+import { createSearchShortcutsExtension } from './search/shortcuts-extension';
 import {
   ariaKeyShortcuts,
   detectPlatform,
@@ -96,9 +97,12 @@ const editors: Editor[] = [];
 /** Resposta do `openLink` da `RteUiExtension` (o `Mod-K`). */
 let linkApplicable = true;
 const openLink = vi.fn(() => linkApplicable);
+/** `Mod-F` (o `open` da extensão de busca). */
+const openSearch = vi.fn(() => true);
 beforeEach(() => {
   linkApplicable = true;
   openLink.mockClear();
+  openSearch.mockClear();
 });
 afterEach(() => {
   while (editors.length) editors.pop()?.destroy();
@@ -117,7 +121,10 @@ function make(content: string): Editor {
         embeds: true,
         newsBlocks: true,
       },
-    }).concat(createRteUiExtension({ openLink })),
+    }).concat(
+      createRteUiExtension({ openLink }),
+      createSearchShortcutsExtension({ open: openSearch, step: () => false }),
+    ),
     content,
   });
   editors.push(editor);
@@ -207,6 +214,11 @@ const CASES: Record<string, Case> = {
     select: [2, 2],
     expected: () => openLink.mock.calls.length === 1,
   },
+  search: {
+    doc: '<p>hello</p>',
+    select: [2, 2],
+    expected: () => openSearch.mock.calls.length === 1,
+  },
   alignCenter: align('center'),
   alignRight: align('right'),
   alignJustify: align('justify'),
@@ -255,6 +267,18 @@ describe('RTE_TOOLBAR_SHORTCUTS', () => {
       expect(c.expected(editor)).toBe(true);
     },
   );
+});
+
+describe('Mod-F e F3 (extensão de busca)', () => {
+  it('não agem durante composição de IME', () => {
+    const editor = make('<p>hello</p>');
+    editor.view.dom.dispatchEvent(
+      new CompositionEvent('compositionstart', { bubbles: true }),
+    );
+    expect(editor.view.composing).toBe(true);
+    expect(press(editor, 'Mod-f')).toBe(false);
+    expect(openSearch).not.toHaveBeenCalled();
+  });
 });
 
 describe('Mod-K (RteUiExtension)', () => {

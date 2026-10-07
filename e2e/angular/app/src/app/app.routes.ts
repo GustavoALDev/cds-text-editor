@@ -40,6 +40,12 @@ export const routes: Routes = [
     path: 'media',
     loadComponent: () => import('./pages/media').then((m) => m.MediaPage),
   },
+  // Menu `/`, busca e contadores (spec 05d1).
+  {
+    path: 'productivity',
+    loadComponent: () =>
+      import('./pages/productivity').then((m) => m.ProductivityPage),
+  },
   // Rascunho (spec 05c2b): `draftKey` e `clearLocalDrafts`.
   {
     path: 'draft',

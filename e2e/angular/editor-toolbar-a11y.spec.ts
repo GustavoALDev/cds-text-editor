@@ -198,11 +198,19 @@ test('N14 (R7): disabled e readonly tiram os botões da ordem de Tab; voltar rea
   await expect.poll(enabledButtons).toBeGreaterThan(25);
 
   await page.evaluate(() => window.rteE2e.toggle('readonly'));
-  await expect.poll(enabledButtons).toBe(0);
+  // Só a busca vale com `readonly` (05d1, K7): é o único botão na ordem de Tab.
+  await expect.poll(enabledButtons).toBe(1);
+  await expect(
+    host.locator('.rte-toolbar > .rte-toolbar__button:not(:disabled)'),
+  ).toHaveAttribute('aria-label', 'Find and replace');
   await before.focus();
   await page.keyboard.press('Tab');
-  // `readonly` continua focável (05a), os botões não.
+  expect(await focusedLabel(page)).toBe('Find and replace');
+  await page.keyboard.press('Tab');
+  // `readonly` continua focável (05a), os demais botões não.
   await expect(editableOf(page, 'toolbar')).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  expect(await focusedLabel(page)).toBe('Find and replace');
   await page.keyboard.press('Shift+Tab');
   await expect(before).toBeFocused();
   await page.evaluate(() => window.rteE2e.toggle('readonly'));
@@ -210,6 +218,9 @@ test('N14 (R7): disabled e readonly tiram os botões da ordem de Tab; voltar rea
 
   await before.focus();
   await page.keyboard.press('Tab');
+  // O foco itinerante lembra o último botão (a busca, o único ativo no `readonly`).
+  expect(await focusedLabel(page)).toBe('Find and replace');
+  await page.keyboard.press('Home');
   expect(await focusedLabel(page)).toBe('Undo');
 });
 

@@ -73,6 +73,7 @@ export const RTE_LABELS_EN: RteLabels = Object.freeze({
     removeCallout: 'Remove box',
     pullquote: 'Pull quote',
     readAlso: '"Read also" box',
+    search: 'Find and replace',
     clearFormatting: 'Clear formatting',
     image: 'Insert image',
     editImage: 'Edit image',
@@ -107,6 +108,18 @@ export const RTE_LABELS_EN: RteLabels = Object.freeze({
       count === 1
         ? '1 image has no alternative text.'
         : `${count} images have no alternative text.`,
+    rteUnsafeLinks: ({
+      count,
+      hrefs,
+    }: {
+      count: number;
+      hrefs: readonly string[];
+    }) =>
+      count === 1
+        ? `1 link is not allowed: ${hrefs.join(', ')}.`
+        : `${count} links are not allowed: ${hrefs.join(', ')}${hrefs.length < count ? '…' : ''}.`,
+    rteEmptyHeadings: (count: number) =>
+      count === 1 ? '1 heading is empty.' : `${count} headings are empty.`,
   }),
   dialogs: Object.freeze({
     apply: 'Apply',
@@ -253,5 +266,43 @@ export const RTE_LABELS_EN: RteLabels = Object.freeze({
       `A draft saved on ${new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(savedAt)} is available.`,
     restore: 'Restore',
     discard: 'Discard',
+  }),
+  search: Object.freeze({
+    region: 'Find and replace',
+    query: 'Find',
+    replace: 'Replace with',
+    replaceToggle: 'Show replace',
+    replaceOne: 'Replace',
+    replaceAll: 'Replace all',
+    previous: 'Previous match',
+    next: 'Next match',
+    caseSensitive: 'Match case',
+    wholeWord: 'Whole word',
+    close: 'Close search',
+    position: (index: number, total: number) => `${index} of ${total}`,
+    capped: (index: number) => `${index} of 1000+`,
+    none: 'No results',
+    replaced: (count: number) =>
+      count === 1 ? '1 match replaced.' : `${count} matches replaced.`,
+  }),
+  slashMenu: Object.freeze({
+    listbox: 'Insert block',
+    count: (n: number) => (n === 1 ? '1 option' : `${n} options`),
+    empty: 'No options',
+  }),
+  counters: Object.freeze({
+    chars: (count: number, limit: number | null) =>
+      limit === null
+        ? `${count} ${count === 1 ? 'character' : 'characters'}`
+        : `${count}/${limit}`,
+    words: (count: number, minutes: number) =>
+      `${count} ${count === 1 ? 'word' : 'words'} · ${minutes} min read`,
+    rejected: (limit: number) => `Character limit of ${limit} reached.`,
+    remaining: (n: number) =>
+      n === 1 ? '1 character left.' : `${n} characters left.`,
+    over: (n: number) =>
+      n === 1
+        ? '1 character over the limit.'
+        : `${n} characters over the limit.`,
   }),
 });

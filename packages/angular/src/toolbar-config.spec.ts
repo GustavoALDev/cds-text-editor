@@ -30,12 +30,14 @@ function ctx(
     features: readonly RteFeatureId[];
     hasCodeLanguages: boolean;
     hasEmbedProviders: boolean;
+    search: boolean;
   }> = {},
 ) {
   return {
     features: ALL,
     hasCodeLanguages: true,
     hasEmbedProviders: true,
+    search: true,
     warned: new Set<string>(),
     ...overrides,
   };
@@ -90,7 +92,7 @@ describe('RTE_TOOLBAR_PRESETS', () => {
         ['image', 'video', 'embed'],
         ['table'],
         ['callout', 'pullquote', 'quoteAuthor', 'readAlso'],
-        ['clearFormatting'],
+        ['clearFormatting', 'search'],
       ],
     });
   });
@@ -158,7 +160,7 @@ describe('resolveToolbarGroups', () => {
       'quoteAuthor',
       'readAlso',
     ]);
-    expect(full[full.length - 1]).toEqual(['clearFormatting']);
+    expect(full[full.length - 1]).toEqual(['clearFormatting', 'search']);
   });
 
   it('ignora desconhecido e repetido com um aviso por id', () => {
@@ -171,6 +173,7 @@ describe('resolveToolbarGroups', () => {
       features: ALL,
       hasCodeLanguages: true,
       hasEmbedProviders: true,
+      search: true,
       warned,
     };
     expect(resolveToolbarGroups(input, c)).toEqual([['bold'], ['italic']]);
@@ -278,6 +281,22 @@ describe('resolveToolbarGroups', () => {
     expect(before.filter((id) => !after.includes(id))).toEqual(['embed']);
     expect(after).toContain('image');
     expect(after).toContain('video');
+  });
+
+  it('search: só no full e removido com features.search desligado (K7)', () => {
+    expect(RTE_TOOLBAR_ITEMS.search).toEqual({
+      kind: 'button',
+      feature: 'search',
+    });
+    expect(RTE_TOOLBAR_PRESETS.minimal.flat()).not.toContain('search');
+    expect(RTE_TOOLBAR_PRESETS.article.flat()).not.toContain('search');
+    expect(resolveToolbarGroups('full', ctx()).flat()).toContain('search');
+    const off = resolveToolbarGroups('full', ctx({ search: false })).flat();
+    expect(off).not.toContain('search');
+    expect(off).toContain('clearFormatting');
+    expect(resolveToolbarGroups([['search']], ctx({ search: false }))).toEqual(
+      [],
+    );
   });
 
   it('itens de mídia: diálogos dos recursos media/embeds', () => {

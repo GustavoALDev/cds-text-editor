@@ -2,7 +2,7 @@
 
 Componente Angular do editor de texto rico (`rte-editor`), sobre Tiptap 3: ponte de signals, Signal Forms, Reactive/Template Forms, rótulos pt-BR/en/es, validadores de texto e CSS funcional sem injeção (compatível com CSP estrita).
 
-**Status: specs 05a (componente e formulários), 05b1 (barra e tema por instância), 05b2 (diálogos e menus flutuantes) e 05c1 (diálogos de mídia) concluídas; ainda sem versão publicada.** Upload e rascunho (05c2) e busca/comandos `/` com interface (05d) vêm nas partes seguintes. `features.search` e `features.slashCommands` ficam sempre desligados.
+**Status: specs 05a (componente e formulários), 05b1 (barra e tema por instância), 05b2 (diálogos e menus flutuantes) e 05c1 (diálogos de mídia) concluídas; ainda sem versão publicada.** Upload e rascunho (05c2) e busca/comandos `/` com interface (05d) vêm nas partes seguintes. Desde a 05d1 `features.search` e `features.slashCommands` seguem o padrão do core (ligados); a interface chega nas tarefas seguintes da 05d1.
 
 Nome do pacote provisório (escopo `@cds` ainda não confirmado). Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
@@ -281,6 +281,26 @@ Seis menus contextuais (os de vídeo e _embed_ estão em "Diálogos de mídia") 
 
 **Rótulos e classes.** Seção `floating` de `RteLabels` (pt-BR, en e es), `labels.toolbar` para os itens que já existem na barra. Classes públicas (BEM): `.rte-floating` (`popover="manual"`, `role="toolbar"`), `.rte-floating--text|--link|--table|--image|--video|--embed`, `.rte-floating--measuring` (transitória), `.rte-floating__link` e `.rte-floating__address` (o endereço do link); os itens reaproveitam `.rte-toolbar__button` e `.rte-toolbar__separator`. O CSS usa só `--rte-*` e nenhum atributo `style` (a posição vai por CSSOM). Limitações: sem menus em `readonly`; WebKit: em testes, a seleção de células por arrasto sintético é feita por `setCellSelection`.
 
+## Menu `/`, busca e contadores
+
+**Menu `/`.** Digitar `/` no início de um bloco (ou depois de espaço) abre a lista de comandos; continue digitando para filtrar. `↑`/`↓` movem, `Enter` executa, `Escape` fecha. A lista (`role="listbox"`, em `popover`, _chunk_ `rte-slash-menu` carregado sob demanda) nunca recebe o foco: o editável segue `role="textbox"` com `aria-autocomplete="list"`, `aria-controls` e `aria-activedescendant`, e uma região viva anuncia a quantidade de itens. Os itens `image`, `video` e `embed` abrem os diálogos da seção "Diálogos de mídia"; o `onUiItem` do consumidor é chamado depois, para qualquer id. Ligado por padrão; desligue com `features: { slashCommands: false }`.
+
+**Busca e substituição.** `Mod-F` (`Ctrl`/`⌘`) com o foco em qualquer parte do _host_, o item `search` da barra (_preset_ `full`) ou `openSearch(query?)` abrem a barra de busca (`role="search"`, _chunk_ `rte-search`). Uma seleção de 1 a 200 caracteres vira a consulta inicial. No campo: `Enter` próximo, `Shift+Enter` anterior; `F3`/`Shift+F3` com a barra aberta; `Escape` dentro da barra a fecha e devolve o foco ao editável (no editável, `Escape` não fecha a barra). Alternâncias de maiúsculas e palavra inteira, "Substituir" e "Substituir tudo" (um passo de desfazer; ocultos em `readonly`). A posição é anunciada ("3 de 12"; "3 de 1000+" acima do teto de 1000). Ligada por padrão: **o `Mod-F` do navegador passa ao editor** quando o foco está no _host_ (fora dele continua do navegador); desligue com `features: { search: false }`. Se o _chunk_ falhar ao carregar, o primeiro `Mod-F` é engolido e a barra não abre.
+
+**Contadores.** `showCharCount` e `showWordCount` (ou `provideRichText({ counters: { chars, words } })`) desenham o rodapé `.rte-editor__footer`: caracteres ("120/500" com limite) e palavras com tempo de leitura (`ceil(palavras / 200)` min). O rodapé não é região viva. Com limite (`maxLength`/`rteMaxChars`), mesmo sem contadores visíveis, uma região viva anuncia entrada rejeitada, proximidade do limite e excesso, sem repetir. Estados visuais `.rte-counter--near` e `--over` (também por texto). Para desenhar o próprio, use `textStats()`.
+
+**Validadores de conteúdo** (`@cds/rte-angular/validators`, medem só o valor):
+
+```ts
+import { rteNoEmptyHeadings, rteSafeLinks } from '@cds/rte-angular/validators';
+rteSafeLinks(p.body); // erro { kind: 'rteUnsafeLinks', count, hrefs } (até 5)
+rteNoEmptyHeadings(p.body); // erro { kind: 'rteEmptyHeadings', count } (h2-h4 vazios)
+```
+
+O editor já aplica a política de links dele; `rteSafeLinks` serve para uma política mais estrita (`{ policy }`) ou valores vindos de fora. Versões Reactive em `RteValidators.safeLinks()`/`noEmptyHeadings()`. HTML com mais de 256 níveis de aninhamento falha nos dois.
+
+**Desfazer.** O histórico agrupa o que se digita até 500 ms (`newGroupDelay`) depois de um item `/` ou de uma substituição no mesmo passo: um `Mod+Z` logo em seguida desfaz os dois.
+
 ## Tema por instância
 
 ```ts
@@ -338,7 +358,7 @@ Testado com `default-src 'self'; script-src 'self'; style-src 'self'` por cabeç
 
 ## O que vem depois
 
-05d: busca e comandos `/` com interface, `updateOn`/adiamento da emissão com os números de desempenho, API final. Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
+05d2: `updateOn`/adiamento da emissão com os números de desempenho, orçamentos finais e API final. Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
 
 Repositório: cds-text-editor (monorepo). Licença MIT.
 

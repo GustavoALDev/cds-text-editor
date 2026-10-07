@@ -43,7 +43,9 @@ export type RteE2eId =
   | 'upload'
   | 'upload-reactive'
   | 'upload-template'
-  | 'upload-none';
+  | 'upload-none'
+  | 'productivity'
+  | 'productivity-free';
 /** Exibições da rota `render` que os testes leem (`data-testid` igual ao id). */
 export type RteE2eRenderId =
   'render-main' | 'render-wide' | 'render-input' | 'render-keep';

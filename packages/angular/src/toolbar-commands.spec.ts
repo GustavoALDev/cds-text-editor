@@ -448,8 +448,9 @@ describe('runToolbarCommand (R5)', () => {
   it('cobre todo item da barra que roda comando (os de diálogo não rodam)', () => {
     const covered = new Set(CASES.map((c) => c.id));
     const ids = (Object.keys(RTE_TOOLBAR_ITEMS) as RteToolbarItemId[]).filter(
-      (id) => RTE_TOOLBAR_ITEMS[id].kind !== 'dialog',
+      (id) => RTE_TOOLBAR_ITEMS[id].kind !== 'dialog' && id !== 'search',
     );
+    // `search` não roda comando do editor: a barra avisa o dono (K7)
     expect([...covered].sort()).toEqual(ids.sort());
   });
 
