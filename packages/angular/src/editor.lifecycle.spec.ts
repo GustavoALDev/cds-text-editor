@@ -179,12 +179,15 @@ describe('RteEditor: ciclo de vida (D2, R2)', () => {
       const destroy = vi.spyOn(Editor.prototype, 'destroy');
       const fixture = await renderHost(ToggleHost);
       fixture.componentInstance.toolbar.set(toolbar);
+      const durations: number[] = [];
       for (let i = 0; i < cycles; i++) {
+        const start = performance.now();
         fixture.componentInstance.show.set(true);
         await settle(fixture);
         expect(document.querySelectorAll('.ProseMirror')).toHaveLength(1);
         fixture.componentInstance.show.set(false);
         await settle(fixture);
+        durations.push(performance.now() - start);
       }
 
       expect(document.querySelectorAll('.ProseMirror')).toHaveLength(0);
@@ -192,9 +195,13 @@ describe('RteEditor: ciclo de vida (D2, R2)', () => {
         0,
       );
       expect(destroy).toHaveBeenCalledTimes(cycles);
+      // Z10: o custo por ciclo não cresce (crescimento indica acúmulo).
+      const median = (xs: number[]) =>
+        [...xs].sort((a, b) => a - b)[xs.length >> 1] ?? Number.NaN;
+      const first = median(durations.slice(0, 10));
+      const last = median(durations.slice(-10));
+      expect(last).toBeLessThanOrEqual(first * 3);
     },
-    // Sob carga (run-many em paralelo) os 100 ciclos passam de 30 s.
-    90_000,
   );
 
   it('criar e destruir antes de estabilizar não cria editor', async () => {
