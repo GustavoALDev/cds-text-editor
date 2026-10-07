@@ -49,3 +49,17 @@ Mediana por ciclo (criar + estabilizar), jsdom, barra `minimal` (30 ciclos) e `f
 - N46 (Chromium, `lifecycle?full`, 100 alternâncias depois de 10): heap depois de GC 7,5 -> 8,6 -> 9,0 MB (aquecimento, 50, 100; delta 50->100 = 0,40 MB, limite 1 MB); `JSEventListeners` 316 -> 316 -> 316; DOM estável igual depois do aquecimento; `Editor` vivo 1 com o editor à mostra e 0 escondido (após GC por CDP).
 - DOM da primeira criação difere do estável (14 popovers/563 nós contra 13/533): a referência do N46 é o estado depois do aquecimento.
 - Achado externo: na página `perf` (com `[formField]`), o último `Editor` destruído continua vivo até o próximo `FormField` ser criado: caminho de retenção no heap = sinal de módulo -> `computed` do `FieldNode` (`parseErrors`/`validationState`) -> `FormField.destroyRef._lView`. É comportamento do Signal Forms (constante, não cresce: 1 vivo após 100 ciclos), não do pacote; por isso o N46 usa a página `lifecycle` sem formulário.
+
+## Revisão final: hipótese do degrau por tecla (laço síncrono)
+
+Hipótese: o degrau vinha de ~300 teclas num laço síncrono numa única tarefa longa. O `measure` do N45 passou a ceder ao navegador entre as teclas (`setTimeout(0)`, espera fora da medida). Re-medido no Chromium, `--workers=1`:
+
+| Regime (completo, p95 / mediana, ms) | com `RTE_PERF_ENFORCE=1` | sem |
+|---|---|---|
+| base N8 frio | 12,9 / 9,2 | 11,5 / 9,5 |
+| frio +render | 18,2 / 13,1 | 17,3 / 13,1 |
+| frio N8 | 14,4 / 10,6 | 15,7 / 10,7 |
+| quente +render (teclas 251-300) | 67,6 / 62,7 | 68,3 / 62,0 |
+| quente N8 | 55,7 / 51,0 | 56,2 / 50,4 |
+
+Criação completa: mediana 81 ms. O degrau permanece (quente ~62 ms contra ~13 ms frio): a hipótese do laço síncrono não explica o degrau, que segue como degrau do ambiente (CPU sob carga sustentada). Com a cessão a medida frio ficou igual; o p95 quente excede 50 ms (só falha com `RTE_PERF_ENFORCE=1`). `valueEmission` NÃO acionada.

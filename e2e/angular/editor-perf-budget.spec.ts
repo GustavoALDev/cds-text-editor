@@ -129,7 +129,11 @@ async function fresh(page: Page, { full, search }: Scenario): Promise<number> {
   return creation;
 }
 
-/** `keys` teclas (N15 com render ou N8 sem), depois de `skip` descartadas. */
+/**
+ * `keys` teclas (N15 com render ou N8 sem), depois de `skip` descartadas. Cede
+ * ao navegador entre as teclas, como uma digitação real; a espera fica fora da
+ * medida.
+ */
 function measure(
   page: Page,
   keys: number,
@@ -137,7 +141,7 @@ function measure(
   render: boolean,
 ): Promise<number[]> {
   return editorHost(page, 'perf').evaluate(
-    (host, { keys, skip, render }) => {
+    async (host, { keys, skip, render }) => {
       const editor = window.rteE2e.getRteEditor(host);
       if (!editor) throw new Error("editor 'perf' ausente");
       const { view } = editor;
@@ -155,6 +159,7 @@ function measure(
         }
         if (render) window.rteE2e.tick();
         if (i >= skip) result.push(performance.now() - start);
+        await new Promise((resolve) => setTimeout(resolve, 0));
       }
       return result;
     },
