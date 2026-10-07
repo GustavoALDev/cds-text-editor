@@ -22,7 +22,9 @@ export type RteE2eId =
   | 'upload'
   | 'upload-reactive'
   | 'upload-template'
-  | 'upload-none';
+  | 'upload-none'
+  | 'productivity'
+  | 'productivity-free';
 
 /** `RteUploadStatus` do `@cds/rte-angular` (spec 05c2a, E18). */
 export interface RteE2eUploadStatus {
