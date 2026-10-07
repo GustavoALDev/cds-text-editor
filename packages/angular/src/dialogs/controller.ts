@@ -49,7 +49,11 @@ export function documentDialogBusy(doc: Document): Signal<boolean> {
   return busyEntry(doc).view;
 }
 
-/** Pedido de diálogo aceito (G18): o alvo e o documento da abertura (G5). */
+/**
+ * Pedido de diálogo aceito (G18): o alvo e o documento da abertura (G5).
+ *
+ * @internal
+ */
 export interface RteDialogRequest {
   readonly id: number;
   readonly kind: RteDialogKind;
@@ -60,7 +64,11 @@ export interface RteDialogRequest {
   readonly range: { readonly from: number; readonly to: number };
 }
 
-/** O que o controlador precisa do `RteDialogs` (que vive no *chunk*). */
+/**
+ * O que o controlador precisa do `RteDialogs` (que vive no *chunk*).
+ *
+ * @internal
+ */
 export interface RteDialogView {
   hide(): void;
 }
@@ -70,6 +78,8 @@ export interface RteDialogView {
  * guarda o pedido, liga a seleção pendente (G13), confere o documento antes
  * de aplicar (G5) e devolve o foco no cancelamento (G4). O `RteDialogs`
  * (carregado por `@defer`) lê o pedido e registra a vista para ser fechado.
+ *
+ * @internal Exportado como valor só para o .d.ts bater com o JS.
  */
 export class RteDialogController {
   /** Editor do controlador (validação do *embed* no *chunk*, pré-voo 5). */

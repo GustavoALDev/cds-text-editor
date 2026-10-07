@@ -26,8 +26,6 @@ export const RTE_RENDER_LABELS_EN: RteRenderLabels;
 // @public
 export class RteContent implements OnInit {
     constructor();
-    // (undocumented)
-    protected readonly effectiveLabels: Signal<RteRenderLabels>;
     readonly error: Signal<RteSanitizeErrorLike | null>;
     readonly labels: _angular_core.InputSignal<Partial<RteRenderLabels> | undefined>;
     readonly mode: _angular_core.InputSignal<RteRenderMode>;
@@ -35,8 +33,6 @@ export class RteContent implements OnInit {
     ngOnInit(): void;
     readonly renderedHtml: Signal<string>;
     readonly rteContent: _angular_core.InputSignal<string | null | undefined>;
-    // (undocumented)
-    protected readonly safeHtml: Signal<SafeHtml>;
     // (undocumented)
     static ɵdir: _angular_core.ɵɵDirectiveDeclaration<RteContent, "[rteContent]", ["rteContent"], { "rteContent": { "alias": "rteContent"; "required": false; "isSignal": true; }; "mode": { "alias": "mode"; "required": false; "isSignal": true; }; "labels": { "alias": "labels"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;
     // (undocumented)

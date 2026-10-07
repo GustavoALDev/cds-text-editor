@@ -21,9 +21,9 @@ export {
 } from './signal-validators';
 export type { RtePath, RteSafeLinksOptions } from './signal-validators';
 export {
+  RteCountValidator,
   RteImagesHaveAltValidator,
   RteUploadsFinishedValidator,
 } from './upload-directives';
-export type { RteCountValidator } from './upload-directives';
 export { rteImagesHaveAlt, rteUploadsFinished } from './upload-validators';
 export type { RteEditorRef } from './upload-validators';

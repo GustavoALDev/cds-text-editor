@@ -10,7 +10,11 @@ import { calloutVariantAt, canShiftListItem } from './commands';
 import type { RteToolbarItemId } from './items';
 import { RTE_INSERT_TABLE } from './table-guard';
 
-/** Estado de um item da barra (§4, U5). */
+/**
+ * Estado de um item da barra (§4, U5).
+ *
+ * @internal
+ */
 export interface RteItemState {
   readonly active: boolean;
   readonly enabled: boolean;
@@ -262,6 +266,7 @@ export function sameItemState(a: RteItemState, b: RteItemState): boolean {
   );
 }
 
+/** @internal */
 export interface RteToolbarState {
   /** Estado de todos os itens visíveis, calculado uma vez por transação. */
   readonly all: Signal<ReadonlyMap<RteToolbarItemId, RteItemState>>;

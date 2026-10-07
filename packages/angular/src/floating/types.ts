@@ -38,6 +38,8 @@ export const RTE_FLOATING_FEATURE: Readonly<
  * do `@defer` (M2, Tarefa 8b): o editor o consulta por este token, nunca pela
  * classe, para não puxá-la para o *chunk* principal. Antes da carga a consulta
  * é `undefined` (`focusFloatingMenu()` → `false`, `Escape` não consumido).
+ *
+ * @internal
  */
 export interface RteFloatingMenusApi {
   /** Foca o item ativo do menu visível; `false` sem menu visível. */

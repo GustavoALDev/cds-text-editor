@@ -75,34 +75,12 @@ export interface RteCounterLabels {
     words(count: number, minutes: number): string;
 }
 
-// @public (undocumented)
-export type RteCounterLevel = 'normal' | 'near' | 'over';
-
 // @public
 export interface RteCountersConfig {
     // (undocumented)
     chars?: boolean;
     // (undocumented)
     words?: boolean;
-}
-
-// @public
-export class RteDialogController {
-    constructor(o: {
-        editor: Signal<Editor | null>;
-    });
-    apply(run: (editor: Editor) => boolean): boolean;
-    cancel(reason: 'cancelled' | 'state'): void;
-    dispose(): void;
-    readonly editor: Signal<Editor | null>;
-    fail(): void;
-    readonly failed: Signal<boolean>;
-    failMedia(): void;
-    readonly mediaFailed: Signal<boolean>;
-    open(kind: RteDialogKind, target: RteDialogTarget, origin: HTMLElement | null): void;
-    register(view: RteDialogView): () => void;
-    readonly request: Signal<RteDialogRequest | null>;
-    readonly requested: Signal<boolean>;
 }
 
 // @public
@@ -273,57 +251,6 @@ export interface RteDialogLabels {
 }
 
 // @public
-export type RteDialogMode = 'insert' | 'apply' | 'edit';
-
-// @public
-export interface RteDialogRequest {
-    // (undocumented)
-    readonly doc: Node_2;
-    // (undocumented)
-    readonly id: number;
-    // (undocumented)
-    readonly kind: RteDialogKind;
-    // (undocumented)
-    readonly mode: RteDialogMode;
-    readonly origin: HTMLElement | null;
-    // (undocumented)
-    readonly range: {
-        readonly from: number;
-        readonly to: number;
-    };
-}
-
-// @public
-export interface RteDialogTarget {
-    // (undocumented)
-    readonly mode: RteDialogMode;
-    // (undocumented)
-    readonly range: {
-        readonly from: number;
-        readonly to: number;
-    };
-}
-
-// @public
-export interface RteDialogUploads {
-    check(file: File, type: RteUploadType): 'type' | 'size' | null;
-    readonly image: RteFileRules | null;
-    start(o: {
-        file: File;
-        type: RteUploadType;
-        at: number;
-        text: RteUploadText;
-    }): boolean;
-    readonly video: RteFileRules | null;
-}
-
-// @public
-export interface RteDialogView {
-    // (undocumented)
-    hide(): void;
-}
-
-// @public
 export interface RteDraftAvailable {
     // (undocumented)
     readonly savedAt: number;
@@ -355,12 +282,6 @@ export interface RteDraftLabels {
 // @public
 export class RteEditor implements FormValueControl<string> {
     constructor();
-    protected readonly alignNames: Signal<Readonly<Record<RteImageAlign, string>>>;
-    // (undocumented)
-    protected readonly announcements: Signal<readonly {
-        readonly n: number;
-        readonly text: string;
-    }[]>;
     // (undocumented)
     readonly ariaDescribedBy: _angular_core.InputSignal<string | undefined>;
     // (undocumented)
@@ -371,22 +292,11 @@ export class RteEditor implements FormValueControl<string> {
     cancelUpload(id: string): boolean;
     closeSearch(): void;
     // (undocumented)
-    protected readonly codeLanguages: Signal<readonly RteCodeLanguage[]>;
-    // (undocumented)
-    protected readonly contentLabels: Signal<_cds_rte_core_extensions.RteContentLabels>;
-    // (undocumented)
-    protected readonly dialogRequested: Signal<boolean>;
-    protected readonly dialogs: RteDialogController;
-    // (undocumented)
-    protected readonly dialogUploads: Signal<_cds_rte_angular.RteDialogUploads | null>;
-    // (undocumented)
     readonly disabled: _angular_core.InputSignalWithTransform<boolean, unknown>;
     discardDraft(): void;
     readonly draftAvailable: Signal<RteDraftAvailable | null>;
     readonly draftError: _angular_core.OutputEmitterRef<RteDraftErrorEvent>;
     readonly draftKey: _angular_core.InputSignal<string | null | undefined>;
-    protected readonly draftPromptAt: Signal<number | null>;
-    protected readonly draftStatus: Signal<string>;
     // (undocumented)
     readonly editor: Signal<Editor | null>;
     // (undocumented)
@@ -395,25 +305,13 @@ export class RteEditor implements FormValueControl<string> {
     readonly editorFocus: _angular_core.OutputEmitterRef<void>;
     // (undocumented)
     readonly editorReady: _angular_core.OutputEmitterRef<Editor>;
-    protected readonly effectiveDisabled: Signal<boolean>;
-    protected readonly effectiveTheme: Signal<RteTheme | undefined>;
-    // (undocumented)
-    protected readonly embedProviderNames: Signal<readonly string[]>;
-    protected readonly floatingBlocked: Signal<boolean>;
-    protected readonly floatingEnabled: Signal<boolean>;
-    protected readonly floatingKinds: Signal<readonly RteFloatingMenuKind[]>;
     readonly floatingMenus: _angular_core.InputSignal<RteFloatingMenusConfig | undefined>;
-    protected readonly floatingRef: Signal<_cds_rte_angular.RteFloatingMenusApi | undefined>;
-    protected readonly floatingWanted: Signal<boolean>;
     focus(options?: FocusOptions): void;
     focusFloatingMenu(): boolean;
     focusToolbar(): void;
-    protected readonly footer: Signal<_cds_rte_angular.RteFooterModel | null>;
     // (undocumented)
     readonly hidden: _angular_core.InputSignalWithTransform<boolean, unknown>;
-    protected readonly hostFocused: _angular_core.WritableSignal<boolean>;
     readonly imagesMissingAlt: Signal<number>;
-    protected readonly interactive: Signal<boolean>;
     // (undocumented)
     readonly invalid: _angular_core.InputSignalWithTransform<boolean, unknown>;
     readonly isDirty: Signal<boolean>;
@@ -423,39 +321,15 @@ export class RteEditor implements FormValueControl<string> {
     readonly isFocused: Signal<boolean>;
     // (undocumented)
     readonly labels: _angular_core.InputSignal<RteLabelsSource | undefined>;
-    protected readonly langRule: Signal<_cds_rte_core.RteAttrRule | null>;
-    // (undocumented)
-    protected readonly limitAnnouncements: Signal<readonly _cds_rte_angular.RteLimitAnnouncement[]>;
-    protected readonly linkPolicy: Signal<Partial<_cds_rte_core.RteLinkPolicy> | undefined>;
     markSaved(savedHtml?: string): boolean;
     // (undocumented)
     readonly maxLength: _angular_core.InputSignal<number | undefined>;
     readonly mediaChange: _angular_core.OutputEmitterRef<RteMediaChange>;
-    protected readonly mediaRules: Signal<RteMediaRules | null>;
     readonly mediaSession: Signal<RteMediaSession>;
-    // (undocumented)
-    protected readonly onDialogsFailed: () => void;
-    protected readonly onFloatingFailed: () => void;
-    protected onHostFocusIn(event: FocusEvent): void;
-    protected onHostFocusOut(event: FocusEvent): void;
-    protected onHostKeydown(event: KeyboardEvent): void;
-    // (undocumented)
-    protected onPromptDiscard(): void;
-    // (undocumented)
-    protected onPromptRestore(): void;
-    // (undocumented)
-    protected onSearchClose(): void;
-    protected readonly onSearchFailed: () => void;
-    protected readonly onSlashFailed: () => void;
-    protected onToolbarSearch(): void;
     openDialog(kind: RteDialogKind): boolean;
     openSearch(query?: string): boolean;
     // (undocumented)
     readonly options: _angular_core.InputSignal<RteEditorConfig | undefined>;
-    protected readonly palette: Signal<{
-        text: readonly RtePaletteColor[];
-        highlight: readonly RtePaletteColor[];
-    }>;
     readonly pasteEmbeds: _angular_core.InputSignal<boolean | undefined>;
     // (undocumented)
     readonly pendingUploads: Signal<number>;
@@ -463,49 +337,17 @@ export class RteEditor implements FormValueControl<string> {
     readonly placeholder: _angular_core.InputSignal<string>;
     // (undocumented)
     readonly readonly: _angular_core.InputSignalWithTransform<boolean, unknown>;
-    protected requestDialog(kind: RteDialogKind, origin: HTMLElement | null): boolean;
     // (undocumented)
     readonly required: _angular_core.InputSignalWithTransform<boolean, unknown>;
-    protected readonly resolvedLabels: Signal<RteLabels>;
     restoreDraft(): boolean;
-    protected readonly schema: Signal<RteHtmlSchema>;
-    protected readonly searchable: Signal<boolean>;
-    protected readonly searchEnabled: Signal<boolean>;
-    // (undocumented)
-    protected readonly searchFocus: _angular_core.WritableSignal<number>;
-    // (undocumented)
-    protected readonly searchLabels: Signal<_cds_rte_angular.RteSearchLabels>;
     // (undocumented)
     readonly searchOpen: Signal<boolean>;
-    // (undocumented)
-    protected readonly searchState: Signal<_cds_rte_core_extensions.RteSearchState | null>;
-    protected readonly searchStep: _angular_core.WritableSignal<number>;
-    protected readonly shellLabel: Signal<string | null>;
-    protected readonly shellLabelledBy: Signal<string | null>;
     readonly showCharCount: _angular_core.InputSignal<boolean | undefined>;
-    // (undocumented)
-    protected readonly showShellPlaceholder: Signal<boolean>;
     readonly showWordCount: _angular_core.InputSignal<boolean | undefined>;
-    // (undocumented)
-    protected readonly slashAnnouncement: Signal<string>;
-    // (undocumented)
-    protected readonly slashAria: Signal<Readonly<Record<string, string>>>;
-    // (undocumented)
-    protected readonly slashInstance: string;
-    // (undocumented)
-    protected readonly slashMenuLabels: Signal<_cds_rte_angular.RteSlashMenuLabels>;
-    // (undocumented)
-    protected readonly slashOpen: Signal<boolean>;
-    protected readonly slashRef: Signal<_cds_rte_angular.RteSlashMenuApi | undefined>;
-    // (undocumented)
-    protected readonly slashState: Signal<_cds_rte_core_extensions.RteSlashMenuState>;
     // (undocumented)
     readonly textStats: Signal<RteCharLimitState | null>;
     readonly theme: _angular_core.InputSignal<RteTheme | undefined>;
     readonly toolbar: _angular_core.InputSignal<RteToolbarConfig | undefined>;
-    // (undocumented)
-    protected readonly toolbarGroups: Signal<readonly (readonly RteToolbarItemId[])[]>;
-    protected readonly toolbarState: RteToolbarState;
     // (undocumented)
     readonly touch: _angular_core.OutputEmitterRef<void>;
     // (undocumented)
@@ -516,11 +358,9 @@ export class RteEditor implements FormValueControl<string> {
     readonly uploads: Signal<readonly _cds_rte_angular.RteUploadStatus[]>;
     // (undocumented)
     readonly value: _angular_core.ModelSignal<string>;
-    protected readonly version: Signal<number>;
     readonly warnOnUnsaved: _angular_core.InputSignal<boolean | undefined>;
     // (undocumented)
     static ɵcmp: _angular_core.ɵɵComponentDeclaration<RteEditor, "rte-editor", ["rteEditor"], { "value": { "alias": "value"; "required": false; "isSignal": true; }; "disabled": { "alias": "disabled"; "required": false; "isSignal": true; }; "readonly": { "alias": "readonly"; "required": false; "isSignal": true; }; "hidden": { "alias": "hidden"; "required": false; "isSignal": true; }; "required": { "alias": "required"; "required": false; "isSignal": true; }; "invalid": { "alias": "invalid"; "required": false; "isSignal": true; }; "touched": { "alias": "touched"; "required": false; "isSignal": true; }; "maxLength": { "alias": "maxLength"; "required": false; "isSignal": true; }; "placeholder": { "alias": "placeholder"; "required": false; "isSignal": true; }; "ariaLabel": { "alias": "ariaLabel"; "required": false; "isSignal": true; }; "ariaLabelledBy": { "alias": "ariaLabelledBy"; "required": false; "isSignal": true; }; "ariaDescribedBy": { "alias": "ariaDescribedBy"; "required": false; "isSignal": true; }; "labels": { "alias": "labels"; "required": false; "isSignal": true; }; "options": { "alias": "options"; "required": false; "isSignal": true; }; "toolbar": { "alias": "toolbar"; "required": false; "isSignal": true; }; "theme": { "alias": "theme"; "required": false; "isSignal": true; }; "floatingMenus": { "alias": "floatingMenus"; "required": false; "isSignal": true; }; "upload": { "alias": "upload"; "required": false; "isSignal": true; }; "draftKey": { "alias": "draftKey"; "required": false; "isSignal": true; }; "warnOnUnsaved": { "alias": "warnOnUnsaved"; "required": false; "isSignal": true; }; "pasteEmbeds": { "alias": "pasteEmbeds"; "required": false; "isSignal": true; }; "showCharCount": { "alias": "showCharCount"; "required": false; "isSignal": true; }; "showWordCount": { "alias": "showWordCount"; "required": false; "isSignal": true; }; }, { "value": "valueChange"; "touch": "touch"; "editorReady": "editorReady"; "editorFocus": "editorFocus"; "editorBlur": "editorBlur"; "mediaChange": "mediaChange"; "uploadError": "uploadError"; "draftError": "draftError"; }, never, never, true, never>;
-    protected static readonly ɵdialogKit: readonly unknown[];
     // (undocumented)
     static ɵfac: _angular_core.ɵɵFactoryDeclaration<RteEditor, never>;
 }
@@ -560,13 +400,6 @@ export interface RteErrorLabels {
     }): string;
     // (undocumented)
     rteUploadsPending(count: number): string;
-}
-
-// @public
-export interface RteFileRules {
-    readonly accept: string;
-    readonly maxMegabytes: number;
-    readonly typeNames: readonly string[];
 }
 
 // @public
@@ -613,34 +446,7 @@ export interface RteFloatingMenuLabels {
 }
 
 // @public
-export interface RteFloatingMenusApi {
-    dismiss(): boolean;
-    focusActive(): boolean;
-    releaseFocus(kinds: readonly RteFloatingMenuKind[]): void;
-}
-
-// @public
 export type RteFloatingMenusConfig = boolean | Partial<Record<RteFloatingMenuKind, boolean>>;
-
-// @public (undocumented)
-export interface RteFooterModel {
-    // (undocumented)
-    readonly chars: {
-        readonly text: string;
-        readonly level: RteCounterLevel;
-    } | null;
-    // (undocumented)
-    readonly words: string | null;
-}
-
-// @public
-export interface RteItemState {
-    // (undocumented)
-    readonly active: boolean;
-    // (undocumented)
-    readonly enabled: boolean;
-    readonly value: string | null;
-}
 
 // @public (undocumented)
 export interface RteLabels {
@@ -707,34 +513,12 @@ export interface RteLabelsInput {
 // @public
 export type RteLabelsSource = RteLabelsInput | (() => RteLabelsInput);
 
-// @public (undocumented)
-export interface RteLimitAnnouncement {
-    // (undocumented)
-    readonly n: number;
-    // (undocumented)
-    readonly text: string;
-}
-
 // @public
 export interface RteMediaChange {
     // (undocumented)
     readonly added: readonly string[];
     // (undocumented)
     readonly removed: readonly string[];
-}
-
-// @public
-export interface RteMediaRules {
-    // (undocumented)
-    readonly imageSrc: RteAttrRule;
-    // (undocumented)
-    readonly trackLang: RteAttrRule;
-    // (undocumented)
-    readonly trackSrc: RteAttrRule;
-    // (undocumented)
-    readonly videoPoster: RteAttrRule;
-    // (undocumented)
-    readonly videoSrc: RteAttrRule;
 }
 
 // @public
@@ -774,11 +558,6 @@ export interface RteSearchLabels {
     replaceToggle: string;
     // (undocumented)
     wholeWord: string;
-}
-
-// @public
-export interface RteSlashMenuApi {
-    readonly ready: true;
 }
 
 // @public (undocumented)
@@ -932,12 +711,6 @@ export interface RteToolbarLabels {
 // @public (undocumented)
 export type RteToolbarPreset = 'minimal' | 'article' | 'full';
 
-// @public (undocumented)
-export interface RteToolbarState {
-    readonly all: Signal<ReadonlyMap<RteToolbarItemId, RteItemState>>;
-    item(id: RteToolbarItemId): Signal<RteItemState>;
-}
-
 // @public
 export interface RteUploadAdapter {
     // (undocumented)
@@ -1058,20 +831,6 @@ export interface RteUploadStatus {
     readonly state: 'queued' | 'uploading' | 'inserting';
     // (undocumented)
     readonly type: RteUploadType;
-}
-
-// @public
-export interface RteUploadText {
-    // (undocumented)
-    alt?: string;
-    // (undocumented)
-    caption: string;
-    // (undocumented)
-    credit?: string;
-    // (undocumented)
-    poster?: string | null;
-    // (undocumented)
-    tracks?: RteVideoTrack[];
 }
 
 // @public (undocumented)

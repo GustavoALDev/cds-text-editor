@@ -13,6 +13,7 @@ import type { RteCounterLabels } from '../labels/types';
 /** Intervalo mínimo entre anúncios de recusa (K12). */
 export const REJECTED_MIN_INTERVAL_MS = 1000;
 
+/** @internal */
 export interface RteLimitAnnouncement {
   readonly n: number;
   readonly text: string;

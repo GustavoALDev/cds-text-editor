@@ -11,15 +11,10 @@ import { Signal } from '@angular/core';
 
 // @public
 export class RteToc {
-    // (undocumented)
-    protected readonly effectiveLabels: Signal<RteRenderLabels>;
     readonly entries: Signal<readonly RteTocEntry[]>;
-    protected href(id: string): string;
     readonly html: _angular_core.InputSignal<string | null | undefined>;
     readonly labels: _angular_core.InputSignal<Partial<RteRenderLabels> | undefined>;
     readonly levels: _angular_core.InputSignal<readonly number[]>;
-    // (undocumented)
-    protected readonly tree: Signal<readonly RteTocNode[]>;
     // (undocumented)
     static ɵcmp: _angular_core.ɵɵComponentDeclaration<RteToc, "rte-toc", never, { "html": { "alias": "html"; "required": false; "isSignal": true; }; "levels": { "alias": "levels"; "required": false; "isSignal": true; }; "labels": { "alias": "labels"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;
     // (undocumented)
@@ -27,14 +22,6 @@ export class RteToc {
 }
 
 export { RteTocEntry }
-
-// @public
-export interface RteTocNode {
-    // (undocumented)
-    readonly children: readonly RteTocNode[];
-    // (undocumented)
-    readonly entry: RteTocEntry;
-}
 
 // (No @packageDocumentation comment for this package)
 

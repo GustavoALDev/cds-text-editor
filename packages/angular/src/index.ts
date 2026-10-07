@@ -61,8 +61,8 @@ export type { RteItemState, RteToolbarState } from './toolbar/state';
 export type { RteSlashMenuApi } from './slash/types';
 export type { RteCounterLevel, RteFooterModel } from './counters/footer';
 export type { RteLimitAnnouncement } from './counters/limit-announcer';
+export { RteDialogController } from './dialogs/controller';
 export type {
-  RteDialogController,
   RteDialogRequest,
   RteDialogView,
 } from './dialogs/controller';

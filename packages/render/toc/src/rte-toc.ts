@@ -59,15 +59,21 @@ export class RteToc {
     ),
   );
 
+  /** @internal */
   protected readonly tree: Signal<readonly RteTocNode[]> = computed(() =>
     buildTocTree(this.entries()),
   );
 
+  /** @internal */
   protected readonly effectiveLabels: Signal<RteRenderLabels> = computed(() =>
     mergeRenderLabels(this.providedLabels, this.labels()),
   );
 
-  /** `<base>#id`, ou `#id` com `fragmentLinks: 'keep'` (H6, H11). */
+  /**
+   * `<base>#id`, ou `#id` com `fragmentLinks: 'keep'` (H6, H11).
+   *
+   * @internal
+   */
   protected href(id: string): string {
     return (this.fragmentBase() ?? '') + '#' + id;
   }

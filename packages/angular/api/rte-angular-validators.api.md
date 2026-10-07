@@ -25,15 +25,6 @@ export function formatRteError(error: RteFormattableError, labels: RteLabels): s
 export function isRteValidationError(error: ValidationError): error is RteValidationError;
 
 // @public
-export abstract class RteCountValidator implements Validator {
-    constructor(key: 'rteUploadsPending' | 'rteImagesMissingAlt', count: Signal<number>);
-    // (undocumented)
-    registerOnValidatorChange(fn: () => void): void;
-    // (undocumented)
-    validate(): ValidationErrors | null;
-}
-
-// @public
 export type RteEditorRef = () => RteEditor | null | undefined;
 
 // @public
