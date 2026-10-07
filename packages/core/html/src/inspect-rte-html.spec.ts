@@ -28,11 +28,23 @@ describe('inspectRteHtml', () => {
   });
 
   it('vazio, sem links e HTML malformado não lançam', () => {
-    expect(inspectRteHtml('')).toEqual({ hrefs: [], emptyHeadings: 0 });
+    expect(inspectRteHtml('')).toEqual({ hrefs: [], emptyHeadings: 0, truncated: false });
     expect(inspectRteHtml('<h2><a href="x">').emptyHeadings).toBe(1);
     expect(inspectRteHtml('<h2><h3>a')).toEqual({
       hrefs: [],
       emptyHeadings: 1,
+      truncated: false,
     });
+  });
+
+  it('marca truncated quando passa de 256 níveis (o resto não foi lido)', () => {
+    const deep = (n: number) =>
+      '<div>'.repeat(n) + '<a href="javascript:alert(1)">x</a>';
+    const hostile = inspectRteHtml(deep(257));
+    expect(hostile.truncated).toBe(true);
+    expect(hostile.hrefs).toEqual([]);
+    const ok = inspectRteHtml(deep(255));
+    expect(ok.truncated).toBe(false);
+    expect(ok.hrefs).toEqual(['javascript:alert(1)']);
   });
 });

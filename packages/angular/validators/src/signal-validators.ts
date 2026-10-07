@@ -10,8 +10,8 @@ import {
   type SchemaPathRules,
 } from '@angular/forms/signals';
 import {
+  countEmptyHeadings,
   findUnsafeLinks,
-  inspectValue,
   type RteSafeLinksOptions,
 } from './content';
 import { measureRteText, resolveMax } from './measure';
@@ -112,7 +112,7 @@ export function rteNoEmptyHeadings<K extends PathKind = PathKind.Root>(
   path: RtePath<K>,
 ): void {
   validate(path, ({ value }) => {
-    const { emptyHeadings } = inspectValue(value());
+    const emptyHeadings = countEmptyHeadings(value());
     return emptyHeadings > 0
       ? { kind: 'rteEmptyHeadings', count: emptyHeadings }
       : undefined;

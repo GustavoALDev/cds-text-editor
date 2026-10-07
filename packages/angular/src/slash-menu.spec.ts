@@ -24,6 +24,7 @@ import { RteFloatingMenus } from './floating/rte-floating-menus';
 import { pressKey } from '../../core/extensions/src/testing/press-key';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- ajudante de teste do core, só teste
 import { typeText } from '../../core/extensions/src/testing/type-text';
+import { slashListId, slashOptionId } from './slash/state';
 import { installDialogShim } from './testing-support/dialog';
 import { fakeCoords, installGeometry } from './testing-support/geometry';
 import { installPopoverShim, isPopoverOpen } from './testing-support/popover';
@@ -222,7 +223,7 @@ describe('ARIA do editável (K4)', () => {
     const s = await setup();
     await type(s, '/');
     const ids = options(s.root).map((o) => o.id);
-    expect(ids[0]).toMatch(/^rte-\d+-slash-heading2$/);
+    expect(ids[0]).toMatch(/^rte-\d+-slash-opt-heading2$/);
     const prefix = (ids[0] as string).replace(/heading2$/, '');
     expect(ids.every((id) => id.startsWith(prefix))).toBe(true);
     expect(new Set(ids).size).toBe(ids.length);
@@ -257,13 +258,49 @@ describe('anúncio (K4)', () => {
   });
 });
 
+describe('ids sem colisão (K4)', () => {
+  it('uma opção cujo id de item é "list" não colide com o id da lista', () => {
+    expect(slashOptionId('rte-1', 'list')).not.toBe(slashListId('rte-1'));
+  });
+});
+
+describe('opção ativa visível e ponteiro no fundo da lista', () => {
+  it('ArrowDown rola a opção ativa para a área visível (block: nearest)', async () => {
+    const s = await setup();
+    const calls: Element[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) {
+      calls.push(this);
+    };
+    try {
+      await type(s, '/');
+      expect(calls.at(-1)).toBe(options(s.root)[0]);
+      expect(pressKey(s.editor, 'ArrowDown')).toBe(true);
+      await settle(s.fixture);
+      expect(calls.at(-1)).toBe(options(s.root)[1]);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
+  it('mousedown no fundo da lista não tira o foco (preventDefault) e o menu segue aberto', async () => {
+    const s = await setup();
+    await type(s, '/');
+    const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    (list(s.root) as HTMLElement).dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(true);
+    await settle(s.fixture);
+    expect(getSlashMenuState(s.editor).open).toBe(true);
+  });
+});
+
 describe('ponteiro (K5)', () => {
   it('mousedown roda o item sem tirar o foco; o ponteiro não troca o ativo', async () => {
     const s = await setup();
     s.editor.view.dom.focus();
     await type(s, '/');
     const target = options(s.root).find((o) =>
-      o.id.endsWith('-slash-heading2'),
+      o.id.endsWith('-slash-opt-heading2'),
     ) as HTMLElement;
     target.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
     target.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));

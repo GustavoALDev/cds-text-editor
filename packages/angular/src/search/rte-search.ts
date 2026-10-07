@@ -39,6 +39,8 @@ export class RteSearch {
   readonly canReplace = input.required<boolean>();
   /** Sobe a cada pedido de foco (`Mod-F`, `openSearch`): foca e seleciona o campo. */
   readonly focusTick = input.required<number>();
+  /** Sobe a cada `F3` no editável com resultados: reanuncia a posição (K10). */
+  readonly stepTick = input(0);
   /** Fechar (botão ou `Escape`): o dono limpa a busca e devolve o foco. */
   readonly closeRequest = output<void>();
 
@@ -58,6 +60,7 @@ export class RteSearch {
   protected readonly announcement = createSearchAnnouncement({
     state: this.state,
     labels: this.labels,
+    stepTick: this.stepTick,
     view: inject(DOCUMENT).defaultView,
     zone: inject(NgZone),
   });
@@ -128,12 +131,16 @@ export class RteSearch {
   }
 
   protected next(): void {
-    if (untracked(this.state).total > 0) this.live?.commands.nextSearchMatch();
+    if (untracked(this.state).total > 0) {
+      this.live?.commands.nextSearchMatch();
+      this.announcement.navSeq.update((n) => n + 1);
+    }
   }
 
   protected previous(): void {
     if (untracked(this.state).total > 0) {
       this.live?.commands.previousSearchMatch();
+      this.announcement.navSeq.update((n) => n + 1);
     }
   }
 

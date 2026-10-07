@@ -26,7 +26,7 @@
       [attr.aria-disabled]="noMatches() ? 'true' : null"
       (click)="previous()"
     >
-      {{ glyphs.previous }}
+      <span aria-hidden="true">{{ glyphs.previous }}</span>
     </button>
     <button
       type="button"
@@ -36,7 +36,7 @@
       [attr.aria-disabled]="noMatches() ? 'true' : null"
       (click)="next()"
     >
-      {{ glyphs.next }}
+      <span aria-hidden="true">{{ glyphs.next }}</span>
     </button>
     <button
       type="button"
@@ -46,7 +46,7 @@
       [attr.aria-pressed]="state().caseSensitive"
       (click)="toggleCase()"
     >
-      {{ glyphs.caseSensitive }}
+      <span aria-hidden="true">{{ glyphs.caseSensitive }}</span>
     </button>
     <button
       type="button"
@@ -56,7 +56,7 @@
       [attr.aria-pressed]="state().wholeWord"
       (click)="toggleWord()"
     >
-      {{ glyphs.wholeWord }}
+      <span aria-hidden="true">{{ glyphs.wholeWord }}</span>
     </button>
     @if (canReplace()) {
     <button
@@ -75,7 +75,7 @@
       [attr.title]="labels().close"
       (click)="close()"
     >
-      {{ glyphs.close }}
+      <span aria-hidden="true">{{ glyphs.close }}</span>
     </button>
   </div>
   @if (canReplace() && showReplace()) {
@@ -107,5 +107,9 @@
     </button>
   </div>
   }
-  <div class="rte-live" aria-live="polite">{{ announcement.text() }}</div>
+  <div class="rte-live" aria-live="polite">
+    @for (a of announcement.items(); track a.n) {
+    <span>{{ a.text }}</span>
+    }
+  </div>
 </div>

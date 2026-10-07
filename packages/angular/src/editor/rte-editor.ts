@@ -144,6 +144,12 @@ const MEDIA_ITEMS: readonly RteToolbarItemId[] = Object.freeze([
   'video',
   'embed',
 ]);
+/** O item `search` fica desabilitado depois de falhar a carga da barra (05d1). */
+const SEARCH_ITEMS: readonly RteToolbarItemId[] = Object.freeze(['search']);
+const MEDIA_AND_SEARCH_ITEMS: readonly RteToolbarItemId[] = Object.freeze([
+  ...MEDIA_ITEMS,
+  'search',
+]);
 const NO_ITEMS: readonly RteToolbarItemId[] = Object.freeze([]);
 
 function sameGroups(
@@ -463,9 +469,13 @@ export class RteEditor implements FormValueControl<string> {
     searchable: this.searchable,
     // Falha do *chunk* dos formulários de mídia (05c2a E2): os itens de
     // mídia ficam desabilitados em vez de não fazer nada.
-    unavailable: computed(() =>
-      this.dialogs.mediaFailed() ? MEDIA_ITEMS : NO_ITEMS,
-    ),
+    unavailable: computed(() => {
+      const media = this.dialogs.mediaFailed();
+      const search = this.searchFailed();
+      if (media && search) return MEDIA_AND_SEARCH_ITEMS;
+      if (media) return MEDIA_ITEMS;
+      return search ? SEARCH_ITEMS : NO_ITEMS;
+    }),
   });
 
   /** Paleta do esquema; igual por valor (a criação não re-renderiza os menus). */
@@ -543,6 +553,8 @@ export class RteEditor implements FormValueControl<string> {
     version: this.bridge.version,
   });
   protected readonly searchFocus = signal(0);
+  /** Sobe a cada `F3` do editável com resultados (a barra reanuncia a posição). */
+  protected readonly searchStep = signal(0);
   private readonly searchFailed = signal(false);
   protected readonly searchLabels = computed(() => this.resolvedLabels().search);
 
@@ -1232,9 +1244,22 @@ export class RteEditor implements FormValueControl<string> {
     if (!(target instanceof Element)) return;
     const inEditable = this.mount().nativeElement.contains(target);
     // `Mod-F` fora do editável, em qualquer parte do host (K7); no editável é
-    // da extensão. Em diálogo modal, é do navegador.
-    if (!inEditable && this.isSearchKey(event) && !target.closest('dialog')) {
-      if (this.openSearch()) event.preventDefault();
+    // da extensão, salvo com `readonly`: a vista não editável não chama
+    // `handleKeyDown`, então o host trata `Mod-F` e `F3` também ali. Em
+    // diálogo modal, é do navegador.
+    const frozen = inEditable && untracked(this.instance)?.isEditable === false;
+    if ((!inEditable || frozen) && this.isSearchKey(event)) {
+      if (!target.closest('dialog') && this.openSearch()) event.preventDefault();
+      return;
+    }
+    if (
+      frozen &&
+      event.key === 'F3' &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey
+    ) {
+      if (this.stepSearch(event.shiftKey ? -1 : 1)) event.preventDefault();
       return;
     }
     if (
@@ -1312,9 +1337,9 @@ export class RteEditor implements FormValueControl<string> {
 
   /** `Mod` + F da plataforma, sem outros modificadores. */
   private isSearchKey(event: KeyboardEvent): boolean {
-    if (event.key.toLowerCase() !== 'f' || event.altKey || event.shiftKey) {
-      return false;
-    }
+    // `code` cobre layouts em que a tecla física F não produz `f`.
+    const isF = event.key.toLowerCase() === 'f' || event.code === 'KeyF';
+    if (!isF || event.altKey || event.shiftKey) return false;
     const mac =
       detectPlatform(this.host.ownerDocument.defaultView?.navigator) === 'mac';
     return mac
@@ -1377,6 +1402,7 @@ export class RteEditor implements FormValueControl<string> {
     if ((getSearchState(editor)?.total ?? 0) > 0) {
       if (direction === 1) editor.commands.nextSearchMatch();
       else editor.commands.previousSearchMatch();
+      this.searchStep.update((n) => n + 1);
     }
     return true;
   }

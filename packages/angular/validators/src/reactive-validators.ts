@@ -5,8 +5,8 @@ import type {
 } from '@angular/forms';
 import { measureRteText, resolveMax } from './measure';
 import {
+  countEmptyHeadings,
   findUnsafeLinks,
-  inspectValue,
   type RteSafeLinksOptions,
 } from './content';
 
@@ -55,7 +55,7 @@ export const RteValidators: {
   },
   noEmptyHeadings(): ValidatorFn {
     return (control) => {
-      const { emptyHeadings } = inspectValue(textOf(control));
+      const emptyHeadings = countEmptyHeadings(textOf(control));
       return emptyHeadings > 0
         ? { rteEmptyHeadings: { count: emptyHeadings } }
         : null;

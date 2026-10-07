@@ -1,5 +1,7 @@
 import {
   afterRenderEffect,
+  DestroyRef,
+  inject,
   signal,
   untracked,
   type NgZone,
@@ -66,16 +68,25 @@ export function createLimitAnnouncer(o: {
   let counter = 0;
   let lastRejectedAt = Number.NEGATIVE_INFINITY;
 
+  // Temporizadores pendentes: limpos ao destruir, para não escrever num
+  // sinal de componente já destruído.
+  const timers = new Set<number>();
+  inject(DestroyRef).onDestroy(() => {
+    for (const id of timers) o.view?.clearTimeout(id);
+    timers.clear();
+  });
+
   const emit = (text: string): void => {
     const view = o.view;
     if (!view) return;
     const n = ++counter;
-    o.zone.runOutsideAngular(() =>
-      view.setTimeout(
-        () => o.zone.run(() => list.set([{ n, text }])),
-        0,
-      ),
+    const id = o.zone.runOutsideAngular(() =>
+      view.setTimeout(() => {
+        timers.delete(id);
+        o.zone.run(() => list.set([{ n, text }]));
+      }, 0),
     );
+    timers.add(id);
   };
 
   afterRenderEffect(() => {

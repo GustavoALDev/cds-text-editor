@@ -7,7 +7,11 @@ export interface RteSafeLinksOptions {
   readonly policy?: Partial<RteLinkPolicy>;
 }
 
-const EMPTY: RteHtmlInspection = { hrefs: [], emptyHeadings: 0 };
+const EMPTY: RteHtmlInspection = {
+  hrefs: [],
+  emptyHeadings: 0,
+  truncated: false,
+};
 const MAX_LISTED = 5;
 
 let lastValue: string | undefined;
@@ -24,7 +28,12 @@ export function inspectValue(
   return lastResult;
 }
 
-/** Quantos `href` a política recusa e os primeiros 5 (sem repetir). */
+/**
+ * Quantos `href` a política recusa e os primeiros 5 (sem repetir). Um HTML
+ * aninhado além do limite de leitura (`truncated`) não pôde ser verificado por
+ * inteiro: conta como mais um link inseguro (sem `href` listado), para que o
+ * aninhamento hostil não esconda `javascript:` do validador.
+ */
 export function findUnsafeLinks(
   html: string | null | undefined,
   policy: Partial<RteLinkPolicy> | undefined,
@@ -36,5 +45,15 @@ export function findUnsafeLinks(
     count++;
     if (hrefs.length < MAX_LISTED && !hrefs.includes(href)) hrefs.push(href);
   }
+  if (inspectValue(html).truncated) count++;
   return { count, hrefs };
+}
+
+/**
+ * Títulos `h2`–`h4` vazios; HTML `truncated` (aninhado além do limite de
+ * leitura) conta como mais um, pois não pôde ser verificado por inteiro.
+ */
+export function countEmptyHeadings(html: string | null | undefined): number {
+  const r = inspectValue(html);
+  return r.emptyHeadings + (r.truncated ? 1 : 0);
 }

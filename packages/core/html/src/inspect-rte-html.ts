@@ -6,6 +6,11 @@ export interface RteHtmlInspection {
   readonly hrefs: readonly string[];
   /** Quantidade de `h2`–`h4` cujo texto aparado é vazio (`<br>` e espaços contam como vazio). */
   readonly emptyHeadings: number;
+  /**
+   * `true` se a leitura parou por passar de 256 níveis de aninhamento: `hrefs`
+   * e `emptyHeadings` são só do trecho lido e não provam nada sobre o resto.
+   */
+  readonly truncated: boolean;
 }
 
 const HEADING = /^h[2-4]$/;
@@ -25,7 +30,7 @@ export function inspectRteHtml(html: string): RteHtmlInspection {
     heading = null;
   };
 
-  walkHtml(html, {
+  const truncated = walkHtml(html, {
     open(name, attributes) {
       if (name === 'a') {
         const href = attributes['href'];
@@ -44,5 +49,5 @@ export function inspectRteHtml(html: string): RteHtmlInspection {
     },
   });
   finish();
-  return { hrefs, emptyHeadings };
+  return { hrefs, emptyHeadings, truncated };
 }

@@ -27,7 +27,7 @@ export function slashListId(instance: string): string {
 }
 
 export function slashOptionId(instance: string, itemId: string): string {
-  return `${instance}-slash-${itemId}`;
+  return `${instance}-slash-opt-${itemId}`;
 }
 
 /** Igualdade por valor: só notifica quando o menu muda de fato. */

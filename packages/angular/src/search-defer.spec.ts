@@ -27,7 +27,7 @@ const SEARCH_FAILED =
 @Component({
   selector: 'rte-test-search-defer',
   imports: [RteEditor],
-  template: `<rte-editor [value]="'<p>alpha beta alpha</p>'" />`,
+  template: `<rte-editor [value]="'<p>alpha beta alpha</p>'" toolbar="full" />`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class Host {
@@ -133,5 +133,21 @@ describe('@defer da barra de busca (K3)', () => {
     expect(s.root.querySelector('.rte-search')).toBeNull();
     expect(ctrlF(s.editor).defaultPrevented).toBe(false);
     expect(s.cmp.openSearch()).toBe(false);
+  });
+
+  it('falha de carga: o item search da barra fica desabilitado', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const s = await setup();
+    const item = () =>
+      s.root.querySelector<HTMLButtonElement>(
+        '.rte-toolbar [aria-label="Find and replace"]',
+      ) as HTMLButtonElement;
+    expect(item().getAttribute('aria-disabled')).toBeNull();
+    expect(s.cmp.openSearch()).toBe(true);
+    await settle(s.fixture);
+    await s.block.render(DeferBlockState.Error);
+    await settle(s.fixture);
+    await settle(s.fixture);
+    expect(item().getAttribute('aria-disabled')).toBe('true');
   });
 });

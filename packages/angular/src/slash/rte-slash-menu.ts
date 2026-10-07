@@ -54,6 +54,7 @@ export class RteSlashMenu implements RteSlashMenuApi {
   private shown = false;
   private ancestors: HTMLElement[] | null = null;
   private placed = '';
+  private scrolledTo = -1;
 
   private readonly watch = new RteViewportWatch(
     this.document.defaultView,
@@ -82,6 +83,15 @@ export class RteSlashMenu implements RteSlashMenuApi {
 
   protected optionId(itemId: string): string {
     return slashOptionId(this.instance(), itemId);
+  }
+
+  /**
+   * `mousedown` no fundo ou na barra de rolagem da lista não tira o foco do
+   * editável (senão o `focusout` fecharia o menu); o clique numa opção tem o
+   * tratador próprio, abaixo.
+   */
+  protected onListMouseDown(event: MouseEvent): void {
+    event.preventDefault();
   }
 
   /** Roda o item sem tirar o foco do editável (K5). */
@@ -156,11 +166,23 @@ export class RteSlashMenu implements RteSlashMenuApi {
       el.style.setProperty('left', `${left}px`);
       el.style.setProperty('top', `${top}px`);
     }
+    this.scrollActive(el, state.activeIndex);
+  }
+
+  /** Mantém a opção ativa visível na lista rolável (`max-block-size`). */
+  private scrollActive(list: HTMLElement, index: number): void {
+    if (index === this.scrolledTo) return;
+    this.scrolledTo = index;
+    const option = list.children[index] as HTMLElement | undefined;
+    if (typeof option?.scrollIntoView === 'function') {
+      option.scrollIntoView({ block: 'nearest' });
+    }
   }
 
   private hide(): void {
     if (!this.shown) return;
     this.shown = false;
+    this.scrolledTo = -1;
     const el = this.list()?.nativeElement;
     if (el?.isConnected) el.hidePopover();
   }

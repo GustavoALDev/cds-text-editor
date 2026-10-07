@@ -246,6 +246,48 @@ describe('readonly e disabled (K7)', () => {
     expect(getSearchState(s.editor)?.activeIndex).toBe(1);
   });
 
+  it('readonly: Ctrl+F no editável abre a barra com a seleção como consulta e F3 anda', async () => {
+    const s = await setup((h) => h.readonly.set(true));
+    await flush(s);
+    expect(s.editor.isEditable).toBe(false);
+    s.editor.commands.setTextSelection({ from: 1, to: 6 });
+    const e = key(s.editor.view.dom, 'f', { ctrlKey: true });
+    expect(e.defaultPrevented).toBe(true);
+    await flush(s);
+    expect(s.cmp.searchOpen()).toBe(true);
+    expect(getSearchState(s.editor)?.query).toBe('alpha');
+    expect(count(s)).toBe('1 of 3');
+    s.editor.view.dom.focus();
+    expect(key(s.editor.view.dom, 'F3').defaultPrevented).toBe(true);
+    await flush(s);
+    expect(count(s)).toBe('2 of 3');
+    key(s.editor.view.dom, 'F3', { shiftKey: true });
+    await flush(s);
+    expect(count(s)).toBe('1 of 3');
+  });
+
+  it('Mod-F também por event.code (layout em que a tecla F não produz "f")', async () => {
+    const s = await setup();
+    const e = key(searchItem(s), 'ƒ', {
+      ctrlKey: true,
+      code: 'KeyF',
+    });
+    expect(e.defaultPrevented).toBe(true);
+    await flush(s);
+    expect(s.cmp.searchOpen()).toBe(true);
+  });
+
+  it('os glifos dos botões são aria-hidden: o nome acessível é o rótulo (2.5.3)', async () => {
+    const s = await setup();
+    await openWith(s, 'alpha');
+    for (const label of ['Previous match', 'Next match', 'Match case', 'Whole word', 'Close search']) {
+      const b = button(s, label);
+      const glyph = b.querySelector('[aria-hidden="true"]');
+      expect(glyph?.textContent?.trim()).not.toBe('');
+      expect(b.textContent?.replace(glyph?.textContent ?? '', '').trim()).toBe('');
+    }
+  });
+
   it('readonly: Substituir e Substituir tudo ficam ocultos e a substituição é recusada', async () => {
     const s = await setup((h) => h.readonly.set(true));
     await openWith(s, 'alpha');
@@ -508,6 +550,45 @@ describe('anúncios (K10)', () => {
     await sleep(30);
     await flush(s);
     expect(live(s)).toBe('2 of 3');
+  });
+
+  it('repete o anúncio igual: Enter com 1 resultado e Substituir duas vezes', async () => {
+    const s = await setup((h) => h.value.set('<p>solo x x</p>'));
+    await openWith(s, 'solo');
+    await sleep(560);
+    await flush(s);
+    expect(live(s)).toBe('1 of 1');
+    const node = () => s.root.querySelector('.rte-search .rte-live > *');
+    const before = node();
+    key(query(s) as Element, 'Enter');
+    await flush(s);
+    await sleep(30);
+    await flush(s);
+    expect(live(s)).toBe('1 of 1');
+    expect(node()).not.toBe(before);
+    s.root
+      .querySelector<HTMLButtonElement>('.rte-search [aria-expanded]')
+      ?.click();
+    await flush(s);
+    await typeQuery(s, 'x');
+    (
+      s.root.querySelectorAll<HTMLInputElement>('.rte-search__input')[1] as HTMLInputElement
+    ).value = 'y';
+    const one = [
+      ...s.root.querySelectorAll<HTMLButtonElement>('.rte-search__button'),
+    ].find((b) => b.textContent?.trim() === 'Replace') as HTMLButtonElement;
+    one.click();
+    await flush(s);
+    await sleep(30);
+    await flush(s);
+    expect(live(s)).toBe('1 match replaced.');
+    const first = node();
+    one.click();
+    await flush(s);
+    await sleep(30);
+    await flush(s);
+    expect(live(s)).toBe('1 match replaced.');
+    expect(node()).not.toBe(first);
   });
 
   it('sem resultado anuncia "No results"; o teto anuncia "1000+"', async () => {

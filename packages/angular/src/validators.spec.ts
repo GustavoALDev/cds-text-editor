@@ -575,6 +575,27 @@ describe('Signal Forms e Reactive: rteSafeLinks e rteNoEmptyHeadings (K13)', () 
     ]);
   });
 
+  it('HTML aninhado além de 256 níveis não esconde javascript: nem título vazio (truncated)', () => {
+    const hostile =
+      '<div>'.repeat(257) + '<a href="javascript:alert(1)">x</a><h2></h2>';
+    expect(
+      make((p) => rteSafeLinks(p.body), hostile)
+        .body()
+        .errors(),
+    ).toEqual([expect.objectContaining({ kind: 'rteUnsafeLinks', count: 1 })]);
+    expect(
+      make((p) => rteNoEmptyHeadings(p.body), hostile)
+        .body()
+        .errors(),
+    ).toEqual([expect.objectContaining({ kind: 'rteEmptyHeadings', count: 1 })]);
+    expect(RteValidators.safeLinks()(new FormControl(hostile))).toEqual({
+      rteUnsafeLinks: { count: 1, hrefs: [] },
+    });
+    expect(RteValidators.noEmptyHeadings()(new FormControl(hostile))).toEqual({
+      rteEmptyHeadings: { count: 1 },
+    });
+  });
+
   it('Reactive devolve o mesmo', () => {
     const bad = link('https://evil.com/');
     const strict = RteValidators.safeLinks({

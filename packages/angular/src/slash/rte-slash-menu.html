@@ -2,6 +2,7 @@
   #list
   class="rte-slash-menu"
   popover="manual"
+  (mousedown)="onListMouseDown($event)"
   role="listbox"
   [id]="listId()"
   [attr.aria-label]="labels().listbox"
