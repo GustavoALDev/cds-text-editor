@@ -160,6 +160,8 @@ export class RteToolbar {
   readonly tabOut = output<void>();
   /** Item de diálogo ou 'Inserir tabela…': o dono abre o diálogo (G11). */
   readonly dialog = output<RteToolbarDialogRequest>();
+  /** Item `search`: o dono abre a barra de busca (K7). */
+  readonly searchRequest = output<void>();
 
   private readonly host =
     inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -423,6 +425,11 @@ export class RteToolbar {
    * abertura do menu (N11).
    */
   protected run(id: RteToolbarItemId): void {
+    if (id === 'search') {
+      if (this.interactive() && this.state().item(id)().enabled)
+        this.searchRequest.emit();
+      return;
+    }
     const editor = this.canRun();
     if (!editor || !this.state().item(id)().enabled) return;
     runToolbarCommand(editor, id, null);

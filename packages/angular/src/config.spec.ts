@@ -121,36 +121,22 @@ describe('buildEditorOptions', () => {
     slash: () => RTE_SLASH_LABELS.en,
   };
 
-  it('liga as quatro fontes e desliga search/slashCommands', () => {
+  it('liga as quatro fontes e deixa features como o consumidor deu (K2)', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const options = buildEditorOptions(
-      { features: { tables: false }, slash: { onUiItem: () => undefined } },
+      {
+        features: { tables: false, search: true },
+        slash: { onUiItem: () => undefined },
+      },
       sources,
     );
-    expect(options.features).toMatchObject({
-      tables: false,
-      search: false,
-      slashCommands: false,
-    });
+    expect(options.features).toEqual({ tables: false, search: true });
+    expect(buildEditorOptions({}, sources).features).toBeUndefined();
     expect(options.placeholder).toBe(sources.placeholder);
     expect(options.charLimit).toBe(sources.charLimit);
     expect(options.labels).toBe(sources.content);
     expect(options.slash?.labels).toBe(sources.slash);
     expect(options.slash?.onUiItem).toBeTypeOf('function');
     expect(warn).not.toHaveBeenCalled();
-  });
-
-  it('avisa uma vez quando o consumidor liga search/slashCommands', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const options = buildEditorOptions(
-      { features: { search: true, slashCommands: true } },
-      sources,
-    );
-    expect(options.features?.search).toBe(false);
-    expect(options.features?.slashCommands).toBe(false);
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith(
-      '[rte-editor] features.search e features.slashCommands ficam desligados nesta versão; o valor informado foi ignorado.',
-    );
   });
 });

@@ -803,6 +803,41 @@ describe('editor.css: diálogos (spec 05b2a, G20)', () => {
     );
   });
 
+  it.each([
+    'rte-live',
+    'rte-search',
+    'rte-search__input',
+    'rte-search__button',
+    'rte-search__count',
+    'rte-slash-menu',
+    'rte-slash-menu__option',
+    'rte-slash-menu__option--active',
+    'rte-editor__footer',
+    'rte-counter--near',
+    'rte-counter--over',
+  ])('05d1: tem regra para %s em rte.components', (cls) => {
+    const found = styleRules().filter((r) =>
+      r.selectors.some((s) => hasClass(s, cls)),
+    );
+    expect(found.length).toBeGreaterThan(0);
+    expect(found.every((r) => layerOf(r) === 'rte.components')).toBe(true);
+  });
+
+  it('05d1: forced-colors no ativo do menu e no resultado ativo da busca', () => {
+    const rules: Rule[] = [];
+    root.walkAtRules('media', (at) => {
+      if (/forced-colors:\s*active/.test(at.params))
+        at.walkRules((r) => void rules.push(r));
+    });
+    const selectors = rules.flatMap((r) => r.selectors);
+    expect(
+      selectors.some((s) => s.endsWith('.rte-slash-menu__option--active')),
+    ).toBe(true);
+    expect(
+      selectors.some((s) => s.endsWith('.rte-search-match--active')),
+    ).toBe(true);
+  });
+
   it('forced-colors: borda CanvasText no diálogo', () => {
     const rules: Rule[] = [];
     root.walkAtRules('media', (at) => {

@@ -25,8 +25,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const SEARCH_WARNING =
-  '[rte-editor] features.search e features.slashCommands ficam desligados nesta versão; o valor informado foi ignorado.';
 const OPTIONS_WARNING =
   '[rte-editor] options só é lido na criação; a mudança foi ignorada.';
 
@@ -104,8 +102,8 @@ describe('RteEditor: ciclo de vida (D2, R2)', () => {
     expect(el.querySelector('.rte-editor__shell')).toBeNull();
     expect(editor?.options.injectCSS).toBe(false);
     expect(document.querySelector('style[data-tiptap-style]')).toBeNull();
-    expect(names(editor as Editor)).not.toContain('rtSearch');
-    expect(names(editor as Editor)).not.toContain('rtSlashCommand');
+    expect(names(editor as Editor)).toContain('rtSearch');
+    expect(names(editor as Editor)).toContain('rtSlashCommand');
     // Nenhum `clipboardParser`/`domParser` (R2); só os atributos e a seleção
     // pelo teclado em `readonly` (D10).
     expect(Object.keys(editor?.options.editorProps ?? {})).toEqual([
@@ -116,22 +114,6 @@ describe('RteEditor: ciclo de vida (D2, R2)', () => {
       Object.keys(editor?.options.editorProps.handleDOMEvents ?? {}),
     ).toEqual(['keydown']);
     expect(fixture.componentInstance.ready).toEqual([editor]);
-  });
-
-  it('search/slashCommands do consumidor ficam desligados, com um aviso', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    TestBed.configureTestingModule({});
-    const fixture = TestBed.createComponent(Host);
-    fixture.componentInstance.options.set({
-      features: { search: true, slashCommands: true },
-    });
-    fixture.autoDetectChanges();
-    await settle(fixture);
-
-    const editor = fixture.componentInstance.cmp().editor() as Editor;
-    expect(names(editor)).not.toContain('rtSearch');
-    expect(names(editor)).not.toContain('rtSlashCommand');
-    expect(warn.mock.calls).toEqual([[SEARCH_WARNING]]);
   });
 
   it('provider e options se mesclam com a instância vencendo (D20)', async () => {

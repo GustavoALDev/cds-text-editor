@@ -27,6 +27,12 @@ export type RteEditorConfig = Omit<
   slash?: Omit<RteSlashOptions, 'labels'>;
 };
 
+/** Contadores do rodapé (K11); cada um desligado por padrão. */
+export interface RteCountersConfig {
+  chars?: boolean;
+  words?: boolean;
+}
+
 export interface RteConfig {
   labels?: RteLabelsSource;
   /** Padrões de criação para toda instância (D20). */
@@ -41,6 +47,8 @@ export interface RteConfig {
   upload?: RteUploadConfig;
   /** Rascunho padrão (armazenamento, idade, aviso); só age com `draftKey` (S3). */
   draft?: RteDraftConfig;
+  /** Contadores de caracteres e palavras no rodapé; padrão desligados (entrada > provider, K11). */
+  counters?: RteCountersConfig;
   /** Aviso ao sair com alterações não salvas; padrão desligado (entrada > provider, S10). */
   warnOnUnsaved?: boolean;
   /** URL colada num parágrafo vazio vira *embed*; padrão desligado (entrada > provider, S11). */

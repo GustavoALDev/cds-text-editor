@@ -17,6 +17,8 @@ export function pickToolbarConfig(
 
 export interface ResolveToolbarContext {
   features: readonly RteFeatureId[];
+  /** `features.search` ligado (padrão do core); o item `search` depende dele. */
+  search: boolean;
   hasCodeLanguages: boolean;
   /** Algum provedor de *embed* ativo (sem ele o item `embed` sai; V9). */
   hasEmbedProviders: boolean;
@@ -105,7 +107,11 @@ export function resolveToolbarGroups(
       }
       seen.add(id);
       const { feature } = RTE_TOOLBAR_ITEMS[id];
-      if (feature !== null && !ctx.features.includes(feature)) continue;
+      if (feature === 'search') {
+        if (!ctx.search) continue;
+      } else if (feature !== null && !ctx.features.includes(feature)) {
+        continue;
+      }
       if (id === 'codeLanguage' && !ctx.hasCodeLanguages) continue;
       if (id === 'embed' && !ctx.hasEmbedProviders) continue;
       kept.push(id);

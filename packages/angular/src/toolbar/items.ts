@@ -31,7 +31,8 @@ export type RteToolbarItemId =
   | 'pullquote'
   | 'quoteAuthor'
   | 'readAlso'
-  | 'clearFormatting';
+  | 'clearFormatting'
+  | 'search';
 
 export type RteToolbarPreset = 'minimal' | 'article' | 'full';
 export type RteToolbarGroups = readonly (readonly RteToolbarItemId[])[];
@@ -41,7 +42,14 @@ export type RteToolbarItemKind = 'button' | 'toggle' | 'menu' | 'dialog';
 
 /** Recurso de `features` que, desligado, remove o item (U8). */
 export type RteToolbarItemFeature =
-  'colors' | 'tasks' | 'code' | 'tables' | 'newsBlocks' | 'media' | 'embeds';
+  | 'colors'
+  | 'tasks'
+  | 'code'
+  | 'tables'
+  | 'newsBlocks'
+  | 'media'
+  | 'embeds'
+  | 'search';
 
 const item = (
   kind: RteToolbarItemKind,
@@ -90,6 +98,7 @@ export const RTE_TOOLBAR_ITEMS: Readonly<
   quoteAuthor: item('dialog', 'newsBlocks'),
   readAlso: item('button', 'newsBlocks'),
   clearFormatting: item('button'),
+  search: item('button', 'search'),
 });
 
 function freezeGroups(groups: string[][]): RteToolbarGroups {
@@ -140,6 +149,6 @@ export const RTE_TOOLBAR_PRESETS: Readonly<
     ['image', 'video', 'embed'],
     ['table'],
     ['callout', 'pullquote', 'quoteAuthor', 'readAlso'],
-    ['clearFormatting'],
+    ['clearFormatting', 'search'],
   ]),
 });

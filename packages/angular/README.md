@@ -2,7 +2,7 @@
 
 Componente Angular do editor de texto rico (`rte-editor`), sobre Tiptap 3: ponte de signals, Signal Forms, Reactive/Template Forms, rótulos pt-BR/en/es, validadores de texto e CSS funcional sem injeção (compatível com CSP estrita).
 
-**Status: specs 05a (componente e formulários), 05b1 (barra e tema por instância), 05b2 (diálogos e menus flutuantes) e 05c1 (diálogos de mídia) concluídas; ainda sem versão publicada.** Upload e rascunho (05c2) e busca/comandos `/` com interface (05d) vêm nas partes seguintes. `features.search` e `features.slashCommands` ficam sempre desligados.
+**Status: specs 05a (componente e formulários), 05b1 (barra e tema por instância), 05b2 (diálogos e menus flutuantes) e 05c1 (diálogos de mídia) concluídas; ainda sem versão publicada.** Upload e rascunho (05c2) e busca/comandos `/` com interface (05d) vêm nas partes seguintes. Desde a 05d1 `features.search` e `features.slashCommands` seguem o padrão do core (ligados); a interface chega nas tarefas seguintes da 05d1.
 
 Nome do pacote provisório (escopo `@cds` ainda não confirmado). Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 

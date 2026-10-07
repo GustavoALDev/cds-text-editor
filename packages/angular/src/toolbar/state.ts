@@ -248,6 +248,8 @@ export function readItemState(
     }
     case 'clearFormatting':
       return itemState(false, hasAnyMark(s));
+    case 'search':
+      return itemState(false, true);
     default:
       return OFF;
   }

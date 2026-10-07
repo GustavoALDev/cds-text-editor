@@ -1,4 +1,3 @@
-import { isDevMode } from '@angular/core';
 import type {
   RteContentLabels,
   RteEditorOptions,
@@ -39,18 +38,8 @@ export function buildEditorOptions(
     slash: () => RteSlashLabels;
   },
 ): RteEditorOptions {
-  if (
-    isDevMode() &&
-    (config.features?.search === true ||
-      config.features?.slashCommands === true)
-  ) {
-    console.warn(
-      '[rte-editor] features.search e features.slashCommands ficam desligados nesta versão; o valor informado foi ignorado.',
-    );
-  }
   return {
     ...config,
-    features: { ...config.features, search: false, slashCommands: false },
     placeholder: sources.placeholder,
     charLimit: sources.charLimit,
     labels: sources.content,

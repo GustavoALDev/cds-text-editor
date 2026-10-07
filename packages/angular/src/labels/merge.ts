@@ -5,11 +5,14 @@ import type {
 import { RTE_DIALOG_LANGUAGES } from '../dialogs/types';
 import type {
   RteDialogLabels,
+  RteCounterLabels,
   RteDraftLabels,
   RteFloatingMenuLabels,
   RteLabels,
   RteLabelsInput,
   RteLabelsSource,
+  RteSearchLabels,
+  RteSlashMenuLabels,
   RteToolbarLabels,
   RteUploadLabels,
 } from './types';
@@ -127,6 +130,8 @@ function mergeErrors(base: RteLabels['errors'], given: unknown) {
   const maxWords = own(given, 'rteMaxWords');
   const pending = own(given, 'rteUploadsPending');
   const missingAlt = own(given, 'rteImagesMissingAlt');
+  const unsafeLinks = own(given, 'rteUnsafeLinks');
+  const emptyHeadings = own(given, 'rteEmptyHeadings');
   return {
     rteRequired: typeof required === 'string' ? required : base.rteRequired,
     rteMaxChars:
@@ -154,6 +159,23 @@ function mergeErrors(base: RteLabels['errors'], given: unknown) {
             base.rteImagesMissingAlt,
           )
         : base.rteImagesMissingAlt,
+    rteUnsafeLinks:
+      typeof unsafeLinks === 'function'
+        ? guard(
+            unsafeLinks as (error: {
+              count: number;
+              hrefs: readonly string[];
+            }) => unknown,
+            base.rteUnsafeLinks,
+          )
+        : base.rteUnsafeLinks,
+    rteEmptyHeadings:
+      typeof emptyHeadings === 'function'
+        ? guard(
+            emptyHeadings as (count: number) => unknown,
+            base.rteEmptyHeadings,
+          )
+        : base.rteEmptyHeadings,
   };
 }
 
@@ -280,6 +302,27 @@ function mergeDraft(base: RteDraftLabels, given: unknown): RteDraftLabels {
 }
 
 /**
+ * Seção só de textos e funções: chaves de `base` com o tipo da base; função
+ * com `guard`. Serve a `search`, `slashMenu` e `counters`.
+ */
+function mergeFlat<T extends object>(base: T, given: unknown): T {
+  if (!isBag(given)) return base;
+  const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
+  for (const [key, fallback] of Object.entries(base)) {
+    const value = own(given, key);
+    if (typeof fallback === 'string' && typeof value === 'string') {
+      out[key] = value;
+    } else if (typeof fallback === 'function' && typeof value === 'function') {
+      out[key] = guard(
+        value as (...args: never[]) => unknown,
+        fallback as (...args: never[]) => string,
+      );
+    }
+  }
+  return out as T;
+}
+
+/**
  * Mescla a entrada sobre `base` por seção e por chave: só chaves próprias com
  * o tipo esperado. Sem entrada, devolve `base` (o mesmo objeto).
  */
@@ -324,6 +367,19 @@ export function mergeLabels(
     draft: safely(
       () => mergeDraft(base.draft, own(input, 'draft')),
       base.draft,
+    ),
+    search: safely(
+      () => mergeFlat<RteSearchLabels>(base.search, own(input, 'search')),
+      base.search,
+    ),
+    slashMenu: safely(
+      () =>
+        mergeFlat<RteSlashMenuLabels>(base.slashMenu, own(input, 'slashMenu')),
+      base.slashMenu,
+    ),
+    counters: safely(
+      () => mergeFlat<RteCounterLabels>(base.counters, own(input, 'counters')),
+      base.counters,
     ),
   };
 }

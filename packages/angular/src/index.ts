@@ -1,5 +1,9 @@
 export { provideRichText, RTE_LABELS } from './config';
-export type { RteConfig, RteEditorConfig } from './config';
+export type {
+  RteConfig,
+  RteCountersConfig,
+  RteEditorConfig,
+} from './config';
 export { RTE_DIALOG_LANGUAGES } from './dialogs/types';
 export type { RteDialogKind } from './dialogs/types';
 export { clearLocalDrafts } from '@cds/rte-core';
@@ -18,6 +22,7 @@ export type {
   RteFloatingMenusConfig,
 } from './floating/types';
 export type {
+  RteCounterLabels,
   RteDialogLabels,
   RteDraftLabels,
   RteEditorLabels,
@@ -26,6 +31,8 @@ export type {
   RteLabels,
   RteLabelsInput,
   RteLabelsSource,
+  RteSearchLabels,
+  RteSlashMenuLabels,
   RteToolbarLabels,
   RteUploadLabels,
 } from './labels/types';

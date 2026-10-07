@@ -21,6 +21,8 @@
  * `embed` vêm de `image`, `video` e `square-play` (`rect`/`circle`
  * convertidos em caminhos, como acima).
  *
+ * Busca (05d1): `search` vem de `search` (`circle` convertido em caminho).
+ *
  * ISC License
  *
  * Copyright (c) 2026 Lucide Icons and Contributors
@@ -232,6 +234,10 @@ export const RTE_ICONS: Readonly<Record<RteIconName, readonly string[]>> =
     mediaDetails: [
       'M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z',
       'm15 5 4 4',
+    ],
+    search: [
+      'M19 11A8 8 0 0 1 3 11A8 8 0 0 1 19 11Z',
+      'm21 21-4.3-4.3',
     ],
     removeImage: [
       'M10 11v6',

@@ -30,7 +30,7 @@ const LABELS: Record<RteE2eLang, RteLabelsInput> = {
   es: RTE_LABELS_ES,
 };
 
-/** Todos os recursos da barra (menos `search`/`slashCommands`, D1 da 05a). */
+/** Todos os recursos da barra (a busca e o menu `/` seguem o padrão do core desde a 05d1). */
 const ALL_FEATURES: RteEditorConfig = {
   features: {
     colors: true,

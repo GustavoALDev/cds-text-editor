@@ -357,6 +357,11 @@ export class RteEditor implements FormValueControl<string> {
    * a condição do item `embed`. `DEFAULT_EMBED_PROVIDERS` fica no *chunk*
    * principal; o `rte-dialogs` só recebe os nomes.
    */
+  /** `features.search` (padrão do core: ligado); entrada > provider (D20). */
+  protected readonly searchEnabled: Signal<boolean> = computed(
+    () => this.editorConfig().features?.search !== false,
+  );
+
   protected readonly embedProviderNames: Signal<readonly string[]> = computed(
     () =>
       (this.editorConfig().embedProviders ?? DEFAULT_EMBED_PROVIDERS).map(
@@ -378,6 +383,7 @@ export class RteEditor implements FormValueControl<string> {
         pickToolbarConfig(this.toolbar(), this.config.toolbar),
         {
           features: this.schema().features,
+          search: this.searchEnabled(),
           hasCodeLanguages: this.codeLanguages().length > 0,
           hasEmbedProviders: this.embedProviderNames().length > 0,
           warned: this.toolbarWarned,
@@ -1119,6 +1125,14 @@ export class RteEditor implements FormValueControl<string> {
    */
   openDialog(kind: RteDialogKind): boolean {
     return this.ngZone.run(() => this.requestDialog(kind, null));
+  }
+
+  /**
+   * Item `search` da barra (K7). Ponto de extensão: a barra de busca chega na
+   * tarefa seguinte (`openSearch`); até lá, o clique não faz nada.
+   */
+  protected onToolbarSearch(): void {
+    // ligado por `openSearch()` na T3
   }
 
   /** Pedido da barra ou da API; sem origem dada, o foco no host ou o editável. */

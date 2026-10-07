@@ -13,6 +13,7 @@
     (escape)="focus()"
     (tabOut)="focus()"
     (dialog)="requestDialog($event.kind, $event.origin)"
+    (searchRequest)="onToolbarSearch()"
   />
   } @defer (when draftPromptAt() !== null) { @if (draftPromptAt() !== null) {
   <rte-draft-prompt
