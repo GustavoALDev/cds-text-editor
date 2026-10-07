@@ -7,7 +7,7 @@ import type { RteFloatingContext } from './visibility';
 export const RTE_FLOATING_MEASURING = 'rte-floating--measuring';
 
 /** Âncora encosta na área (intervalos fechados: cursor tem largura 0). */
-function touches(a: RteRect, b: RteRect): boolean {
+export function touches(a: RteRect, b: RteRect): boolean {
   return (
     a.top <= b.bottom &&
     a.bottom >= b.top &&

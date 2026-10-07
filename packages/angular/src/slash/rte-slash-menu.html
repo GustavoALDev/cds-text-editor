@@ -1,0 +1,21 @@
+<div
+  #list
+  class="rte-slash-menu"
+  popover="manual"
+  role="listbox"
+  [id]="listId()"
+  [attr.aria-label]="labels().listbox"
+>
+  @for (item of state().items; track item.id; let i = $index) {
+  <div
+    class="rte-slash-menu__option"
+    role="option"
+    [class.rte-slash-menu__option--active]="i === state().activeIndex"
+    [id]="optionId(item.id)"
+    [attr.aria-selected]="i === state().activeIndex"
+    (mousedown)="onMouseDown($event, i)"
+  >
+    {{ item.title }}
+  </div>
+  }
+</div>

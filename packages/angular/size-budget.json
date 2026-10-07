@@ -7,6 +7,8 @@
       "cds-rte-angular-rte-dialogs-*.mjs",
       "cds-rte-angular-rte-media-forms-*.mjs",
       "cds-rte-angular-rte-floating-menus-*.mjs",
+      "cds-rte-angular-rte-slash-menu-*.mjs",
+      "cds-rte-angular-viewport-watch-*.mjs",
       "cds-rte-angular-rte-draft-*.mjs",
       "cds-rte-angular-rte-upload-*.mjs",
       "cds-rte-angular-i18n.mjs",
@@ -36,6 +38,7 @@
         "marcador de envio sem envio correspondente",
         "rteUploadComposition",
         "rte-upload-marker__name",
+        "rte-slash-menu__option",
         "__rte_draft_probe__"
       ]
     },
@@ -59,6 +62,7 @@
         "marcador de envio sem envio correspondente",
         "rteUploadComposition",
         "rte-upload-marker__name",
+        "rte-slash-menu__option",
         "__rte_draft_probe__"
       ]
     },
@@ -96,6 +100,38 @@
     },
     "floating": {
       "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-floating-menus-*.mjs",
+      "exports": ["*"],
+      "externalChunks": true,
+      "external": [
+        "@angular/*",
+        "@tiptap/*",
+        "@cds/*",
+        "lowlight",
+        "highlight.js",
+        "highlight.js/*",
+        "rxjs",
+        "rxjs/*",
+        "tslib"
+      ]
+    },
+    "slash-menu": {
+      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-slash-menu-*.mjs",
+      "exports": ["*"],
+      "externalChunks": true,
+      "external": [
+        "@angular/*",
+        "@tiptap/*",
+        "@cds/*",
+        "lowlight",
+        "highlight.js",
+        "highlight.js/*",
+        "rxjs",
+        "rxjs/*",
+        "tslib"
+      ]
+    },
+    "overlay-shared": {
+      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-viewport-watch-*.mjs",
       "exports": ["*"],
       "externalChunks": true,
       "external": [
@@ -194,7 +230,9 @@
     "dialogs": 6464,
     "media": 8640,
     "floating": 8576,
-    "i18n": 5248,
+    "slash-menu": 2048,
+    "overlay-shared": 1600,
+    "i18n": 6144,
     "validators": 2368,
     "upload": 1152,
     "upload-runtime": 8512,

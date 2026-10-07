@@ -73,6 +73,17 @@ import {
   type RteFloatingMenuKind,
   type RteFloatingMenusConfig,
 } from '../floating/types';
+import {
+  applySlashAria,
+  sameAttributes,
+  slashAriaAttributes,
+} from '../slash/aria';
+import { createSlashAnnouncement } from '../slash/announce';
+// Só em `imports` e no `@defer` (K3): o *chunk* `rte-slash-menu`.
+import { RteSlashMenu } from '../slash/rte-slash-menu';
+import { createSlashState, nextSlashInstanceId } from '../slash/state';
+import { RTE_SLASH_MENU } from '../slash/types';
+import { composeOnUiItem } from '../slash/ui-items';
 import { mergeLabels, readLabelsSource } from '../labels/merge';
 import type { RteLabels, RteLabelsSource } from '../labels/types';
 import { pickToolbarConfig, resolveToolbarGroups } from '../toolbar/config';
@@ -111,6 +122,9 @@ const OPTIONS_IGNORED =
 
 const FLOATING_FAILED =
   '[rte-editor] não foi possível carregar os menus flutuantes; o editor segue sem eles.';
+
+const SLASH_FAILED =
+  '[rte-editor] não foi possível carregar a lista do menu /; o teclado do menu segue funcionando sem ela.';
 
 const NO_LANGUAGES: readonly RteCodeLanguage[] = Object.freeze([]);
 /** Itens de mídia da barra (desabilitados com `mediaFailed`, 05c2a E2). */
@@ -175,6 +189,7 @@ function toCharLimit(value: number | undefined): number | null {
   imports: [
     RteToolbar,
     RteFloatingMenus,
+    RteSlashMenu,
     RteDialogs,
     RteMediaForms,
     RteUploadTray,
@@ -449,6 +464,35 @@ export class RteEditor implements FormValueControl<string> {
   );
   private readonly slashLabels = computed(() => this.resolvedLabels().slash);
 
+  /** Menu `/` (K3–K6): estado sobre a versão da ponte; a lista é o *chunk* `rte-slash-menu`. */
+  private readonly slashId = nextSlashInstanceId();
+  protected readonly slashState = createSlashState({
+    editor: this.instance,
+    version: this.bridge.version,
+  });
+  protected readonly slashOpen = computed(() => this.slashState().open);
+  protected readonly slashMenuLabels = computed(
+    () => this.resolvedLabels().slashMenu,
+  );
+  /** Lista do menu `/`, pelo token (a classe a puxaria para o principal). */
+  protected readonly slashRef = viewChild(RTE_SLASH_MENU);
+  protected readonly slashAria = computed(
+    () =>
+      slashAriaAttributes(
+        this.slashState(),
+        this.slashId,
+        this.slashRef() !== undefined,
+      ),
+    { equal: sameAttributes },
+  );
+  protected readonly slashAnnouncement = createSlashAnnouncement({
+    state: this.slashState,
+    labels: this.slashMenuLabels,
+    view: this.host.ownerDocument.defaultView,
+    zone: this.ngZone,
+  });
+  protected readonly slashInstance = this.slashId;
+
   /** Diálogos (G2–G7): o pedido e o G5 ficam aqui; a interface, no chunk. */
   protected readonly dialogs = new RteDialogController({
     editor: this.instance,
@@ -458,6 +502,10 @@ export class RteEditor implements FormValueControl<string> {
   /** `@error` do chunk dos menus (M2): o editor segue sem eles. */
   protected readonly onFloatingFailed = () => {
     if (isDevMode()) console.warn(FLOATING_FAILED);
+  };
+  /** `@error` do chunk da lista do menu `/` (K3): o teclado do core segue valendo. */
+  protected readonly onSlashFailed = () => {
+    if (isDevMode()) console.warn(SLASH_FAILED);
   };
   /** Dispara o `@defer` dos menus: editor criado e algum tipo ligado (M2). */
   protected readonly floatingWanted = computed(
@@ -471,7 +519,9 @@ export class RteEditor implements FormValueControl<string> {
   protected readonly floatingBlocked = computed(
     () =>
       this.dialogs.request() !== null ||
-      documentDialogBusy(this.host.ownerDocument)(),
+      documentDialogBusy(this.host.ownerDocument)() ||
+      // Com o menu `/` aberto, os menus flutuantes ficam ocultos (K5).
+      this.slashOpen(),
   );
   /** Política de links da criação (G9): a mesma que o editor usa. */
   protected readonly linkPolicy = computed(
@@ -604,6 +654,23 @@ export class RteEditor implements FormValueControl<string> {
 
   constructor() {
     bindRteBridge(this, this.bridge);
+
+    // ARIA do menu `/` no editável (K4), direto no DOM: um `effect` sobre a
+    // versão da ponte (que sobe fora da zona) faz o zone.js pedir outro
+    // `tick` durante o atual (NG0101); o `afterRenderEffect` não. O ProseMirror
+    // só remove os atributos que ele mesmo gravou, então estes sobrevivem.
+    let ariaEditor: Editor | null = null;
+    afterRenderEffect(() => {
+      const aria = this.slashAria();
+      const editor = this.instance();
+      untracked(() => {
+        if (ariaEditor && ariaEditor !== editor && !ariaEditor.isDestroyed) {
+          applySlashAria(ariaEditor.view.dom, {});
+        }
+        ariaEditor = editor;
+        if (editor && !editor.isDestroyed) applySlashAria(editor.view.dom, aria);
+      });
+    });
     this.dirtyState.onSaved = () => this.drafting.cleared();
 
     const host = this.host;
@@ -823,6 +890,10 @@ export class RteEditor implements FormValueControl<string> {
               charLimit: () => toCharLimit(this.maxLength()),
               content: () => this.resolvedLabels().content,
               slash: () => this.resolvedLabels().slash,
+              onUiItem: composeOnUiItem({
+                open: (kind) => this.openDialog(kind),
+                user: merged.slash?.onUiItem,
+              }),
             }),
           ),
           createRteUiExtension({ openLink: () => this.openDialog('link') }),
@@ -995,6 +1066,7 @@ export class RteEditor implements FormValueControl<string> {
 
   /** `focusout` para fora do host (ou sem destino): `editorBlur` e `touch` (D11). */
   protected onHostFocusOut(event: FocusEvent): void {
+    this.closeSlashOnLeave(event);
     if (!this.hostFocused() || this.isInsideHost(event.relatedTarget)) return;
     if (event.relatedTarget === null) {
       // Sem destino: o Chromium também dispara `focusout` ao remover do DOM o
@@ -1021,6 +1093,23 @@ export class RteEditor implements FormValueControl<string> {
       return;
     }
     this.leaveHost();
+  }
+
+  /** O foco sai do editável (inclusive para o aviso de restauração): fecha o menu `/` (K5). */
+  private closeSlashOnLeave(event: FocusEvent): void {
+    const mount = this.mount().nativeElement;
+    const target = event.target as Node | null;
+    const next = event.relatedTarget as Node | null;
+    if (!target || !mount.contains(target)) return;
+    if (next && mount.contains(next)) return;
+    this.closeSlash();
+  }
+
+  /** Fecha o menu `/` aberto (K5); sem efeito se já está fechado. */
+  private closeSlash(): void {
+    const editor = untracked(this.instance);
+    if (!editor || editor.isDestroyed || !untracked(this.slashOpen)) return;
+    editor.commands.closeSlashMenu();
   }
 
   private leaveHost(): void {
@@ -1156,6 +1245,7 @@ export class RteEditor implements FormValueControl<string> {
     const target = dialogTarget(editor, kind);
     if (!target) return false;
     untracked(this.toolbarRef)?.closeMenus();
+    this.closeSlash();
     this.dialogs.open(kind, target, origin ?? this.focusOrigin(editor));
     return true;
   }

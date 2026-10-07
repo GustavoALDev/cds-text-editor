@@ -72,6 +72,7 @@
     }
   </div>
   <div class="rte-draft__status" aria-live="polite">{{ draftStatus() }}</div>
+  <div class="rte-live" aria-live="polite">{{ slashAnnouncement() }}</div>
 </div>
 @defer (when dialogRequested(); prefetch on idle) {
 <rte-dialogs
@@ -89,3 +90,13 @@
 } @defer (when false; prefetch on idle) {
 <rte-media-forms />
 } @error {}
+@defer (when slashOpen(); prefetch on idle) { @if (editor(); as ed) {
+<rte-slash-menu
+  [editor]="ed"
+  [state]="slashState()"
+  [labels]="slashMenuLabels()"
+  [instance]="slashInstance"
+/>
+} } @placeholder {} @error {
+<ng-template [rteDeferFailed]="onSlashFailed" />
+}

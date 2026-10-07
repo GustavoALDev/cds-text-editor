@@ -2,6 +2,7 @@ import type {
   RteContentLabels,
   RteEditorOptions,
   RteSlashLabels,
+  RteSlashOptions,
 } from '@cds/rte-core/extensions';
 import type { RteEditorConfig } from '../config';
 
@@ -36,6 +37,8 @@ export function buildEditorOptions(
     charLimit: () => number | null;
     content: () => RteContentLabels;
     slash: () => RteSlashLabels;
+    /** `slash.onUiItem` composto pelo pacote (K6); ausente = o da configuração. */
+    onUiItem?: NonNullable<RteSlashOptions['onUiItem']>;
   },
 ): RteEditorOptions {
   return {
@@ -43,6 +46,10 @@ export function buildEditorOptions(
     placeholder: sources.placeholder,
     charLimit: sources.charLimit,
     labels: sources.content,
-    slash: { ...config.slash, labels: sources.slash },
+    slash: {
+      ...config.slash,
+      labels: sources.slash,
+      ...(sources.onUiItem ? { onUiItem: sources.onUiItem } : {}),
+    },
   };
 }
