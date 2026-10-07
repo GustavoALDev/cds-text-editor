@@ -189,15 +189,15 @@
     }
   },
   "budgets": {
-    "editor": 36032,
-    "whole": 36224,
+    "editor": 39168,
+    "whole": 39360,
     "dialogs": 6464,
     "media": 8640,
     "floating": 8576,
-    "i18n": 5120,
+    "i18n": 5248,
     "validators": 2368,
     "upload": 1152,
-    "upload-runtime": 7552,
+    "upload-runtime": 8512,
     "draft": 1920
   }
 }

@@ -104,10 +104,10 @@ Rota nova `draft`: editor com `draftKey`, `warnOnUnsaved`, `pasteEmbeds` e um ad
 
 ## 7. Critérios de aceite
 
-- [ ] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size` verde; `npm run check:rules` e `typecheck:e2e` verdes (`check:licenses`, `notices`, `test:tools` no CI do PR).
-- [ ] Unitários 6.1 verdes em `test` e `test-zone` (e `test` do core).
-- [ ] N39–N41 verdes no Chromium local; N1–N41 nos 3 motores no CI do PR.
-- [ ] ADR 0014 (`docs/decisions/0014-rascunho-e-salvamento.md`) registra S1–S15, os *rulings*, os desvios e os tamanhos (R10); README, `CLAUDE.md`, `docs/specs/README.md`, `05-editor-angular.md` e changesets atualizados.
+- [x] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size` verde; `npm run check:rules` e `typecheck:e2e` verdes (`check:licenses`, `notices`, `test:tools` no CI do PR). Evidência: lint, typecheck, build, test, test-zone, verify-package e size verdes; `check:rules` verde (2026-10-07).
+- [x] Unitários 6.1 verdes em `test` e `test-zone` (e `test` do core). Evidência: suítes de rascunho, salvamento, `beforeunload`, _embed_ e re-hospedagem verdes em `test` e `test-zone`.
+- [x] N39–N41 verdes no Chromium local; N1–N41 nos 3 motores no CI do PR. Evidência: Chromium; 3 motores no CI do PR (N40 só no Chromium, ADR 0014).
+- [x] ADR 0014 (`docs/decisions/0014-rascunho-e-salvamento.md`) registra S1–S15, os *rulings*, os desvios e os tamanhos (R10); README, `CLAUDE.md`, `docs/specs/README.md`, `05-editor-angular.md` e changesets atualizados. Evidência: ADR 0014, README, `CLAUDE.md`, índices das specs e changesets atualizados.
 
 ## 8. Consequências
 
