@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  clearLocalDrafts,
   createDraftStore,
   createLocalDraftStorage,
   createMemoryDraftStorage,
@@ -245,5 +246,66 @@ describe('createLocalDraftStorage', () => {
     expect(store.save('x')).toBe(false);
     expect(store.load()).toBeNull();
     expect(() => store.clear()).not.toThrow();
+  });
+});
+
+describe('clearLocalDrafts', () => {
+  const g = globalThis as Record<string, unknown>;
+  afterEach(() => {
+    delete g['localStorage'];
+  });
+
+  function fakeStorage(entries: Record<string, string>) {
+    const data = new Map(Object.entries(entries));
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: {
+        get length() {
+          return data.size;
+        },
+        key: (i: number) => [...data.keys()][i] ?? null,
+        getItem: (k: string) => data.get(k) ?? null,
+        setItem: (k: string, v: string) => void data.set(k, v),
+        removeItem: (k: string) => void data.delete(k),
+      },
+    });
+    return data;
+  }
+
+  it('apaga só as chaves com o prefixo e devolve a contagem', () => {
+    const data = fakeStorage({
+      'rte-draft:a': '1',
+      'rte-draft:b': '2',
+      'rte-draft:c': '3',
+      outra: '4',
+    });
+    expect(clearLocalDrafts()).toBe(3);
+    expect([...data.keys()]).toEqual(['outra']);
+  });
+
+  it('aceita prefixo customizado', () => {
+    const data = fakeStorage({ 'x:a': '1', 'rte-draft:b': '2' });
+    expect(clearLocalDrafts('x:')).toBe(1);
+    expect([...data.keys()]).toEqual(['rte-draft:b']);
+  });
+
+  it('sem localStorage ou com getter que lança devolve 0', () => {
+    expect(clearLocalDrafts()).toBe(0);
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new Error('bloqueado');
+      },
+    });
+    expect(clearLocalDrafts()).toBe(0);
+  });
+
+  it('erro durante a varredura devolve o que apagou sem lançar', () => {
+    fakeStorage({ 'rte-draft:a': '1' });
+    const ls = g['localStorage'] as Storage;
+    ls.removeItem = () => {
+      throw new Error('x');
+    };
+    expect(() => clearLocalDrafts()).not.toThrow();
   });
 });

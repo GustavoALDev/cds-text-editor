@@ -26,6 +26,12 @@ export interface RteUploadedVideo {
 export interface RteUploadAdapter {
   uploadImage(file: File, ctx: RteUploadContext): Promise<RteUploadedImage>;
   uploadVideo?(file: File, ctx: RteUploadContext): Promise<RteUploadedVideo>;
+  /**
+   * Endereços de mídia que saíram do documento desde a base salva, entregues
+   * depois de `markSaved` (S9). Fora da zona; exceção ou rejeição é engolida.
+   * Peça exclusão com carência no servidor: o desfazer pode trazê-los de volta.
+   */
+  onMediaRemoved?(urls: readonly string[]): void | Promise<void>;
 }
 
 export type RteUploadType = 'image' | 'video';

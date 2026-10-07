@@ -86,12 +86,14 @@ import {
   type RteEditableState,
 } from './attributes';
 import { bindRteBridge, createRteBridge } from './bridge';
+import { RteDirtyState, readCanonical } from './dirty';
 import { isEmptyValue, readValue } from './empty';
 import { RTE_EDITOR_HOOK } from './hook';
 import { buildEditorOptions, mergeEditorConfig } from './options';
 import {
   EMPTY_MEDIA_SESSION,
   RteMediaTracker,
+  countMedia,
   readMediaUrlRules,
   sameMediaSession,
   type RteMediaChange,
@@ -506,6 +508,21 @@ export class RteEditor implements FormValueControl<string> {
   /** Imagens com `alt: null` (E18), fora do portão do delta de URLs. */
   readonly imagesMissingAlt = this.uploading.imagesMissingAlt;
 
+  /** Base salva, `isDirty` e a fila do `onMediaRemoved` (S8, S9). */
+  private readonly dirtyState = new RteDirtyState({
+    zone: this.ngZone,
+    pendingUploads: this.pendingUploads,
+    currentUrls: () => this.media?.session().current ?? [],
+    deliver: () => {
+      const adapter = this.uploading.adapter();
+      return adapter && typeof adapter.onMediaRemoved === 'function'
+        ? (urls) => adapter.onMediaRemoved?.(urls)
+        : null;
+    },
+  });
+  /** O valor difere da base salva (criação, carga externa ou `markSaved`). */
+  readonly isDirty: Signal<boolean> = this.dirtyState.isDirty;
+
   constructor() {
     bindRteBridge(this, this.bridge);
 
@@ -560,7 +577,10 @@ export class RteEditor implements FormValueControl<string> {
         if (html !== this.lastValue) {
           this.lastValue = html;
           emitted = true;
-          zone.run(() => this.value.set(html));
+          zone.run(() => {
+            this.dirtyState.setCurrent(html);
+            this.value.set(html);
+          });
         }
       }
       // E18: fora do portão abaixo (trocar `alt: null` não muda URL).
@@ -611,6 +631,7 @@ export class RteEditor implements FormValueControl<string> {
         this.bridge.refresh();
         this.lastDoc = editor.state.doc;
         this.lastValue = readValue(editor);
+        this.dirtyState.reset(this.lastValue);
         this.media?.reset(editor.state.doc);
         if (this.media) this.mediaState.set(this.media.session());
         this.uploading.setMissingAlt(this.media?.missingAlt() ?? 0);
@@ -781,6 +802,7 @@ export class RteEditor implements FormValueControl<string> {
       });
       this.lastDoc = editor.state.doc;
       this.lastValue = readValue(editor);
+      this.dirtyState.reset(this.lastValue);
       const rules = readMediaUrlRules(untracked(this.schema));
       this.media = new RteMediaTracker(editor.state.doc, rules);
       this.mediaState.set(this.media.session());
@@ -797,6 +819,7 @@ export class RteEditor implements FormValueControl<string> {
     inject(DestroyRef).onDestroy(() => {
       const editor = untracked(this.instance);
       this.uploading.dispose();
+      this.dirtyState.dispose();
       this.dialogs.dispose();
       this.destroyed = true;
       this.pendingFocus = null;
@@ -906,6 +929,30 @@ export class RteEditor implements FormValueControl<string> {
    * Foca o item ativo do menu flutuante visível (M12); `false` (sem mover o
    * foco) sem editor, não editável ou sem menu visível.
    */
+  /**
+   * Marca o conteúdo como salvo (S8): a base passa a ser `savedHtml` (o que o
+   * servidor confirmou; omitido, o valor atual), e o `onMediaRemoved` do
+   * adaptador recebe os endereços que saíram do documento e não estão em
+   * `savedHtml` (S9). Devolve `false` antes de `editorReady`.
+   */
+  markSaved(savedHtml?: string): boolean {
+    const editor = untracked(this.instance);
+    const media = this.media;
+    if (!editor || editor.isDestroyed || this.destroyed || !media) return false;
+    let base = this.lastValue;
+    let baseUrls = new Set(media.session().current);
+    if (savedHtml !== undefined) {
+      const saved = readCanonical(editor, savedHtml);
+      base = saved.html;
+      baseUrls = new Set(countMedia(saved.doc, media.rules).keys());
+    }
+    const removed = media.session().removed.filter((url) => !baseUrls.has(url));
+    media.rebase(baseUrls);
+    this.mediaState.set(media.session());
+    this.dirtyState.save(base, removed);
+    return true;
+  }
+
   focusFloatingMenu(): boolean {
     if (!untracked(this.interactive)) return false;
     return untracked(this.floatingRef)?.focusActive() ?? false;

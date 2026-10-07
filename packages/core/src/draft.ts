@@ -139,3 +139,28 @@ export function createDraftStore(options: DraftStoreOptions): DraftStore {
     },
   };
 }
+
+/**
+ * Apaga do `localStorage` todo rascunho cuja chave começa por `prefix`
+ * (padrão `rte-draft:`) e devolve quantos. Para o logout em computadores
+ * compartilhados. Seguro sem `localStorage` (SSR, bloqueado): devolve `0`.
+ */
+export function clearLocalDrafts(prefix = 'rte-draft:'): number {
+  let removed = 0;
+  try {
+    const ls = (globalThis as { localStorage?: Storage }).localStorage;
+    if (!ls) return 0;
+    const keys: string[] = [];
+    for (let i = 0; i < ls.length; i++) {
+      const key = ls.key(i);
+      if (key !== null && key.startsWith(prefix)) keys.push(key);
+    }
+    for (const key of keys) {
+      ls.removeItem(key);
+      removed += 1;
+    }
+  } catch {
+    // indisponível ou bloqueado
+  }
+  return removed;
+}

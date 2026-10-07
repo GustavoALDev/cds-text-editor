@@ -194,7 +194,7 @@ export class RteMediaTracker {
 
   constructor(
     doc: ProseMirrorNode,
-    private readonly rules: RteMediaUrlRules | null,
+    readonly rules: RteMediaUrlRules | null,
   ) {
     this.reset(doc);
   }
@@ -206,6 +206,16 @@ export class RteMediaTracker {
     this.base = new Set(this.counts.keys());
     this.seen = new Set();
     this.missing = countMissingAlt(doc);
+    this.cached = null;
+  }
+
+  /**
+   * Refaz a base da sessão (S8, `markSaved`): a base passa a ser `base`
+   * (endereços do HTML confirmado) e os vistos, os atuais fora dela.
+   */
+  rebase(base: ReadonlySet<string>): void {
+    this.base = new Set(base);
+    this.seen = new Set([...this.counts.keys()].filter((u) => !base.has(u)));
     this.cached = null;
   }
 
