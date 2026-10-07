@@ -51,6 +51,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/draft-save').then((m) => m.DraftSavePage),
   },
+  // Colagem externa (spec 05c2b): URL → embed.
+  {
+    path: 'paste-external',
+    loadComponent: () =>
+      import('./pages/paste-external').then((m) => m.PasteExternalPage),
+  },
   // Envio de arquivos (spec 05c2a): providers de rota sob demanda.
   {
     path: 'upload',

@@ -43,6 +43,8 @@ export interface RteConfig {
   draft?: RteDraftConfig;
   /** Aviso ao sair com alterações não salvas; padrão desligado (entrada > provider, S10). */
   warnOnUnsaved?: boolean;
+  /** URL colada num parágrafo vazio vira *embed*; padrão desligado (entrada > provider, S11). */
+  pasteEmbeds?: boolean;
 }
 
 /** Rótulos do provider já mesclados sobre `en` (sem a entrada da instância). */

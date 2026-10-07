@@ -235,6 +235,8 @@ export class RteEditor implements FormValueControl<string> {
   readonly draftKey = input<string | null | undefined>(undefined);
   /** Aviso do navegador ao sair com alterações não salvas: entrada > provider; padrão desligado (S10). */
   readonly warnOnUnsaved = input<boolean | undefined>(undefined);
+  /** URL colada num parágrafo vazio vira *embed*: entrada > provider; padrão desligado (S11). */
+  readonly pasteEmbeds = input<boolean | undefined>(undefined);
 
   // Saídas
   readonly editorReady = output<Editor>();
@@ -509,6 +511,9 @@ export class RteEditor implements FormValueControl<string> {
     hidden: this.hidden,
     dialog: this.dialogs.request,
     zone: this.ngZone,
+    pasteEmbeds: computed(
+      () => this.pasteEmbeds() ?? this.config.pasteEmbeds ?? false,
+    ),
     labels: () => this.resolvedLabels().upload,
     emitError: (e) => this.uploadError.emit(e),
   });

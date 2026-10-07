@@ -31,6 +31,8 @@ export interface RteEditorUploadDeps {
   /** Pedido de diálogo em curso; `null` sem diálogo. */
   readonly dialog: Signal<unknown>;
   readonly zone: NgZone;
+  /** `pasteEmbeds` resolvido (entrada > provider, S11). */
+  readonly pasteEmbeds: Signal<boolean>;
   readonly labels: () => RteUploadLabels;
   emitError(e: RteUploadErrorEvent): void;
 }
@@ -75,7 +77,9 @@ export class RteEditorUploads extends RteUploads {
 
   /** Colar e soltar arquivos (E12, E13): no principal, Ruling 29. */
   inputExtension(): Extension {
-    return createUploadInputExtension(this);
+    return createUploadInputExtension(this, () =>
+      untracked(this.deps.pasteEmbeds),
+    );
   }
 
   /** Envia na posição da seleção (E18); devolve os aceitos (E5). */

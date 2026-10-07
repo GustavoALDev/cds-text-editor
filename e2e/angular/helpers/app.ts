@@ -54,7 +54,7 @@ export async function gotoApp(
 /** O elemento host `rte-editor` de um editor do app. */
 export function editorHost(
   page: Page,
-  id: RteE2eId | 'lifecycle' | 'draft' | 'draft-save',
+  id: RteE2eId | 'lifecycle' | 'draft' | 'draft-save' | 'paste-external',
 ): Locator {
   return page.locator(`rte-editor[data-testid="${id}"]`);
 }
@@ -62,7 +62,7 @@ export function editorHost(
 /** Espera o `Editor` do Tiptap existir no host (depois da hidratação). */
 export async function waitForEditor(
   page: Page,
-  id: RteE2eId | 'lifecycle' | 'draft' | 'draft-save',
+  id: RteE2eId | 'lifecycle' | 'draft' | 'draft-save' | 'paste-external',
 ): Promise<void> {
   // `expect.poll` + `evaluate`, não `waitForFunction`: no WebKit, com o
   // zone.js carregando, o `waitForFunction` às vezes resolve com uma promessa
@@ -104,7 +104,7 @@ export async function settlePage(page: Page): Promise<void> {
 /** O editável (`.ProseMirror`) de um editor do app. */
 export function editableOf(
   page: Page,
-  id: RteE2eId | 'lifecycle' | 'draft' | 'draft-save',
+  id: RteE2eId | 'lifecycle' | 'draft' | 'draft-save' | 'paste-external',
 ): Locator {
   return editorHost(page, id).locator('.ProseMirror');
 }
