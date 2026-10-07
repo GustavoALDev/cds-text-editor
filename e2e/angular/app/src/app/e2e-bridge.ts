@@ -25,7 +25,9 @@ export type RteE2eId =
   | 'toolbar'
   | 'toolbar-alt'
   | 'toolbar-scroll'
-  | 'toolbar-nofeat';
+  | 'toolbar-nofeat'
+  | 'dialogs'
+  | 'dialogs-api';
 export type RteE2eToggle = 'disabled' | 'readonly' | 'hidden' | 'show';
 export type RteE2eLang = 'en' | 'pt-BR' | 'es';
 
@@ -46,6 +48,8 @@ export interface RteE2eHandle {
   setToolbar?(config: RteToolbarConfig): void;
   /** `[theme]` ao vivo (página `toolbar`). */
   setTheme?(theme: RteTheme | undefined): void;
+  /** `openDialog(kind)` do editor (página `dialogs`). */
+  openDialog?(kind: string): boolean;
 }
 
 /** `window.rteE2e`: só o que os testes leem (spec 05a, §6.2; sem `ng.getComponent`). */
@@ -61,6 +65,8 @@ export interface RteE2eApi {
   setLang(lang: RteE2eLang): void;
   setToolbar(id: RteE2eId, config: RteToolbarConfig): void;
   setTheme(id: RteE2eId, theme: RteTheme | undefined): void;
+  /** `openDialog(kind)` do editor `id` (G18); o retorno da API. */
+  openDialog(id: RteE2eId, kind: string): boolean;
   /** `applyRteTheme` num elemento qualquer (referência do N12). */
   applyTheme(element: HTMLElement, theme: RteTheme): void;
   /** Detecção de mudanças síncrona (`ApplicationRef.tick`), para medir o render (N15). */
@@ -125,6 +131,12 @@ export class E2eBridge {
     set(theme);
   }
 
+  openDialog(id: RteE2eId, kind: string): boolean {
+    const open = this.handle(id).openDialog;
+    if (!open) throw new Error(`rteE2e: editor '${id}' sem openDialog.`);
+    return open(kind);
+  }
+
   toggle(name: RteE2eToggle): void {
     this.toggledAt = performance.now();
     this[name].update((v) => !v);
@@ -161,6 +173,7 @@ export function installE2eBridge(): void {
       setLang: (lang) => run(() => bridge.lang.set(lang)),
       setToolbar: (id, config) => run(() => bridge.setToolbar(id, config)),
       setTheme: (id, theme) => run(() => bridge.setTheme(id, theme)),
+      openDialog: (id, kind) => run(() => bridge.openDialog(id, kind)),
       tick: () => run(() => appRef.tick()),
       applyTheme: (element, theme) => {
         applyRteTheme(element, theme);

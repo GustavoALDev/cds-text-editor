@@ -1,6 +1,9 @@
 import { RTE_CODE_LANGUAGES } from '@cds/rte-core/code-languages';
-import type { RteEditorOptions } from '@cds/rte-core/extensions';
-import type { Editor } from '@tiptap/core';
+import {
+  createEditorExtensions,
+  type RteEditorOptions,
+} from '@cds/rte-core/extensions';
+import type { AnyExtension, Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- ajudante de teste do core (polyfills do jsdom), só teste
@@ -11,26 +14,32 @@ export const destroyTestEditors = coreTesting.destroyTestEditors;
 /**
  * Editor com todos os recursos e o catálogo de linguagens, montado num `div`
  * anexado ao `document`. Destrua com `destroyTestEditors()` no `afterEach`.
+ * `extra` acrescenta extensões às da fábrica (ex.: a `RteUiExtension`).
  */
 export function createTestEditor(
   html: string,
   opts: Partial<RteEditorOptions> = {},
+  extra: readonly AnyExtension[] = [],
 ): Editor {
-  return coreTesting.createTestEditor(
-    {
-      features: {
-        colors: true,
-        code: true,
-        tables: true,
-        tasks: true,
-        media: true,
-        embeds: true,
-        newsBlocks: true,
-      },
-      codeLanguages: RTE_CODE_LANGUAGES,
-      ...opts,
+  const options: RteEditorOptions = {
+    features: {
+      colors: true,
+      code: true,
+      tables: true,
+      tasks: true,
+      media: true,
+      embeds: true,
+      newsBlocks: true,
     },
+    codeLanguages: RTE_CODE_LANGUAGES,
+    ...opts,
+  };
+  return coreTesting.createTestEditor(
+    options,
     html,
+    extra.length
+      ? { extensions: [...createEditorExtensions(options), ...extra] }
+      : {},
   );
 }
 

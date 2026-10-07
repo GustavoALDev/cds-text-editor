@@ -9,9 +9,10 @@ const COMMON = [/^package\.json$/, /^README\.md$/, /^LICENSE$/];
 // `styles/*.css` é CSS exportado como arquivo, versionado no próprio pacote (core, spec 05b1 U16).
 const TSUP_OUTPUT = [/^dist\//, /^styles\/[^/]+\.css$/];
 // Pacotes ng-packagr: a raiz do tarball é a pasta dist, então a saída fica na raiz
-// (fesm2022/, types/ e package.json de cada entry point secundário).
+// (fesm2022/, types/ e package.json de cada entry point secundário). No `fesm2022/` só `.mjs`
+// (e o `.map`) direto na pasta: os entries e os *chunks* do `@defer` (spec 05b2a, R1).
 const NG_OUTPUT = [
-  /^fesm2022\//,
+  /^fesm2022\/[^/]+\.mjs(?:\.map)?$/,
   /^types\//,
   /^[^/]+\/package\.json$/,
   /^[^/]+\/types\//,

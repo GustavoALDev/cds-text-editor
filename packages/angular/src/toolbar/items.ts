@@ -9,6 +9,8 @@ export type RteToolbarItemId =
   | 'code'
   | 'superscript'
   | 'subscript'
+  | 'link'
+  | 'lang'
   | 'textColor'
   | 'highlight'
   | 'bulletList'
@@ -24,6 +26,7 @@ export type RteToolbarItemId =
   | 'table'
   | 'callout'
   | 'pullquote'
+  | 'quoteAuthor'
   | 'readAlso'
   | 'clearFormatting';
 
@@ -31,7 +34,7 @@ export type RteToolbarPreset = 'minimal' | 'article' | 'full';
 export type RteToolbarGroups = readonly (readonly RteToolbarItemId[])[];
 export type RteToolbarConfig = RteToolbarPreset | RteToolbarGroups | false;
 
-export type RteToolbarItemKind = 'button' | 'toggle' | 'menu';
+export type RteToolbarItemKind = 'button' | 'toggle' | 'menu' | 'dialog';
 
 /** Recurso de `features` que, desligado, remove o item (U8). */
 export type RteToolbarItemFeature =
@@ -61,6 +64,8 @@ export const RTE_TOOLBAR_ITEMS: Readonly<
   code: item('toggle'),
   superscript: item('toggle'),
   subscript: item('toggle'),
+  link: item('dialog'),
+  lang: item('dialog', 'newsBlocks'),
   textColor: item('menu', 'colors'),
   highlight: item('menu', 'colors'),
   bulletList: item('toggle'),
@@ -76,6 +81,7 @@ export const RTE_TOOLBAR_ITEMS: Readonly<
   table: item('menu', 'tables'),
   callout: item('menu', 'newsBlocks'),
   pullquote: item('toggle', 'newsBlocks'),
+  quoteAuthor: item('dialog', 'newsBlocks'),
   readAlso: item('button', 'newsBlocks'),
   clearFormatting: item('button'),
 });
@@ -92,13 +98,13 @@ export const RTE_TOOLBAR_PRESETS: Readonly<
 > = Object.freeze({
   minimal: freezeGroups([
     ['undo', 'redo'],
-    ['bold', 'italic'],
+    ['bold', 'italic', 'link'],
     ['bulletList', 'orderedList'],
   ]),
   article: freezeGroups([
     ['undo', 'redo'],
     ['blockType'],
-    ['bold', 'italic', 'underline', 'strike'],
+    ['bold', 'italic', 'underline', 'strike', 'link'],
     ['textColor', 'highlight'],
     ['bulletList', 'orderedList', 'taskList'],
     ['align'],
@@ -114,16 +120,18 @@ export const RTE_TOOLBAR_PRESETS: Readonly<
       'italic',
       'underline',
       'strike',
+      'link',
       'code',
       'superscript',
       'subscript',
+      'lang',
     ],
     ['textColor', 'highlight'],
     ['bulletList', 'orderedList', 'taskList', 'indent', 'outdent'],
     ['align'],
     ['blockquote', 'codeBlock', 'codeLanguage', 'horizontalRule'],
     ['table'],
-    ['callout', 'pullquote', 'readAlso'],
+    ['callout', 'pullquote', 'quoteAuthor', 'readAlso'],
     ['clearFormatting'],
   ]),
 });

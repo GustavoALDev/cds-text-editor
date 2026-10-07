@@ -18,6 +18,7 @@ import {
 import {
   provideRichText,
   RteEditor,
+  RTE_DIALOG_LANGUAGES,
   RTE_LABELS_EN as EN_FROM_ROOT,
   type RteLabels,
   type RteLabelsInput,
@@ -30,6 +31,14 @@ import {
 } from '@cds/rte-angular/i18n';
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
+import {
+  dialogField,
+  installDialogShim,
+  typeInto,
+  waitForDialog,
+} from './testing-support/dialog';
+import { selectText } from './testing-support/editors';
+import { installPopoverShim } from './testing-support/popover';
 import { mergeLabels, readLabelsSource } from './labels/merge';
 import { settle } from './testing-support/render';
 
@@ -161,6 +170,66 @@ describe('pacotes de rótulos', () => {
 
   it('o /i18n reexporta o RTE_LABELS_EN do entry .', () => {
     expect(RTE_LABELS_EN).toBe(EN_FROM_ROOT);
+  });
+});
+
+describe('rótulos dos diálogos', () => {
+  const packs = [
+    ['en', RTE_LABELS_EN],
+    ['pt-BR', RTE_LABELS_PT_BR],
+    ['es', RTE_LABELS_ES],
+  ] as const;
+
+  it('dialogs: funções e languageNames nos três pacotes', () => {
+    for (const [, pack] of packs) {
+      const d = pack.dialogs;
+      expect(d.errorRange(1, 100)).toContain('1');
+      expect(d.errorRange(1, 100)).toContain('100');
+      expect(d.errorMaxLength(200)).toContain('200');
+      expect(Object.keys(d.languageNames).sort()).toEqual(
+        [...RTE_DIALOG_LANGUAGES].sort(),
+      );
+      for (const text of strings(d)) expect(text).not.toBe('');
+    }
+  });
+
+  it('dialogs: cópia da tabela', () => {
+    expect(RTE_LABELS_EN.dialogs.linkNewTab).toBe('Open in a new tab');
+    expect(RTE_LABELS_EN.toolbar.insertTable).toBe('Insert table 3 × 3');
+    expect(RTE_LABELS_EN.toolbar.insertTableCustom).toBe('Insert table…');
+    expect(RTE_LABELS_PT_BR.toolbar.insertTable).toBe('Inserir tabela 3 × 3');
+    expect(RTE_LABELS_PT_BR.toolbar.quoteAuthor).toBe('Autor da citação');
+    expect(RTE_LABELS_ES.dialogs.languageNames['he']).toBe('Hebreo');
+    expect(RTE_LABELS_ES.toolbar.editLink).toBe('Editar enlace');
+    expect(RTE_LABELS_EN.dialogs.errorRange(1, 20)).toBe(
+      'Enter a whole number from 1 to 20.',
+    );
+  });
+
+  it('mergeLabels mescla dialogs por chave e protege as funções', () => {
+    const merged = mergeLabels(RTE_LABELS_EN, {
+      dialogs: {
+        apply: 'OK',
+        languageNames: { fr: 'Français' },
+        errorRange: () => {
+          throw 1;
+        },
+      },
+    });
+    expect(merged.dialogs.apply).toBe('OK');
+    expect(merged.dialogs.languageNames['fr']).toBe('Français');
+    expect(merged.dialogs.languageNames['de']).toBe('German');
+    expect(merged.dialogs.errorRange(1, 20)).toBe(
+      'Enter a whole number from 1 to 20.',
+    );
+  });
+
+  it('mergeLabels ignora tipos errados e chaves fora de RTE_DIALOG_LANGUAGES', () => {
+    const merged = mergeLabels(RTE_LABELS_EN, {
+      dialogs: { apply: 1, languageNames: { xx: 'X' } },
+    } as unknown as RteLabelsInput);
+    expect(merged.dialogs.apply).toBe('Apply');
+    expect(Object.hasOwn(merged.dialogs.languageNames, 'xx')).toBe(false);
   });
 });
 
@@ -541,5 +610,56 @@ describe('no editor', () => {
       title: 'Atención',
       task: 'Tarea: X',
     });
+  });
+});
+
+describe('rótulos dos diálogos ao vivo (R16)', () => {
+  it('trocar o idioma com o diálogo de link aberto e erro visível atualiza os textos sem fechar nem apagar', async () => {
+    const restoreDialog = installDialogShim();
+    const restorePopover = installPopoverShim();
+    try {
+      const fixture = TestBed.createComponent(LiveLabelsHost);
+      fixture.autoDetectChanges();
+      await settle(fixture);
+      const host = fixture.componentInstance;
+      const cmp = host.editors()[0] as RteEditor;
+      const editor = cmp.editor() as Editor;
+      selectText(editor, 'corpo');
+      let transactions = 0;
+      editor.on('transaction', ({ transaction }) => {
+        if (transaction.docChanged) transactions++;
+      });
+      const doc = editor.state.doc;
+
+      expect(cmp.openDialog('link')).toBe(true);
+      const dialog = await waitForDialog(fixture);
+      const url = dialogField(dialog, 'Address (URL)');
+      typeInto(url, 'x y');
+      dialog.querySelector<HTMLButtonElement>('.rte-dialog__apply')?.click();
+      await settle(fixture);
+      const text = (selector: string) =>
+        dialog.querySelector(selector)?.textContent?.trim();
+      expect(text('.rte-dialog__error')).toBe(
+        'Address not accepted. Check the format or use another address.',
+      );
+
+      host.lang.set('pt-BR');
+      await settle(fixture);
+      expect(dialog.open).toBe(true);
+      expect(text('.rte-dialog__title')).toBe('Inserir link');
+      expect(text('.rte-dialog__apply')).toBe('Aplicar');
+      expect(text('.rte-dialog__error')).toBe(
+        'Endereço não aceito. Confira o formato ou use outro endereço.',
+      );
+      expect(dialogField(dialog, 'Endereço (URL)')).toBe(url);
+      expect(url.value).toBe('x y');
+      expect(transactions).toBe(0);
+      expect(editor.state.doc).toBe(doc);
+      expect(host.writes).toBe(0);
+    } finally {
+      TestBed.resetTestingModule();
+      restorePopover();
+      restoreDialog();
+    }
   });
 });

@@ -11,6 +11,7 @@
     [codeLanguages]="codeLanguages()"
     (escape)="focus()"
     (tabOut)="focus()"
+    (dialog)="requestDialog($event.kind, $event.origin)"
   />
   } @if (!editor()) {
   <div
@@ -32,3 +33,13 @@
   }
   <div #mount class="rte-editor__mount"></div>
 </div>
+@defer (when dialogRequested(); prefetch on idle) {
+<rte-dialogs
+  [controller]="dialogs"
+  [labels]="resolvedLabels().dialogs"
+  [linkPolicy]="linkPolicy()"
+  [langRule]="langRule()"
+/>
+} @placeholder {} @error {
+<ng-template [rteDeferFailed]="onDialogsFailed" />
+}

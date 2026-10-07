@@ -28,6 +28,7 @@ export const RTE_TOOLBAR_SHORTCUTS: Readonly<
   code: 'Mod-e',
   superscript: 'Mod-.',
   subscript: 'Mod-,',
+  link: 'Mod-k',
   bulletList: 'Mod-Shift-8',
   orderedList: 'Mod-Shift-7',
   taskList: 'Mod-Shift-9',

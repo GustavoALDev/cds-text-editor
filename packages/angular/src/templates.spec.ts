@@ -33,6 +33,8 @@ describe('findLiteralText', () => {
     ['@if (a) { <span [attr.title]="t"></span> }', 0],
     ['@if (a) { <span>x</span> }', 1],
     ['@for (i of xs; track i) { <span title="t"></span> }', 1],
+    ['@defer { <b>x</b> } @placeholder {} @error { <i>y</i> }', 2],
+    ['@let e = f(); @if (e) { <p>{{ e }}</p> }', 0],
   ])('%s → %i', (html, count) => {
     expect(findLiteralText(html)).toHaveLength(count);
   });
@@ -49,6 +51,10 @@ describe('templates do pacote (R15)', () => {
         !packagePath(f).includes('/testing-support/'),
     );
     expect(templates.length).toBeGreaterThanOrEqual(1);
+    // Os templates dos diálogos (spec 05b2a) entram na varredura.
+    expect(templates.map(packagePath)).toContain(
+      'src/dialogs/rte-dialogs.html',
+    );
     const found = templates.flatMap((f) =>
       findLiteralText(readFileSync(f, 'utf8'), packagePath(f)),
     );
@@ -86,6 +92,9 @@ describe('sem ligação de estilo (R16, CSP)', () => {
       (f) => f.endsWith('.html') && /(^|\/)src\//.test(packagePath(f)),
     );
     expect(templates.length).toBeGreaterThanOrEqual(2);
+    expect(templates.map(packagePath)).toContain(
+      'src/dialogs/rte-dialogs.html',
+    );
     const bad = templates
       .filter((f) => STYLE_BINDING.test(readFileSync(f, 'utf8')))
       .map(packagePath);

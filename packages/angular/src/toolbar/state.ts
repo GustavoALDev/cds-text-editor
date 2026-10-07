@@ -4,6 +4,8 @@ import type { Editor } from '@tiptap/core';
 import type { Mark, Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { EditorState } from '@tiptap/pm/state';
 import { isInTable } from '@tiptap/pm/tables';
+import { dialogTarget } from '../dialogs/target';
+import { can } from './can';
 import { calloutVariantAt, canShiftListItem } from './commands';
 import type { RteToolbarItemId } from './items';
 import { RTE_INSERT_TABLE } from './table-guard';
@@ -27,17 +29,6 @@ const OFF: RteItemState = Object.freeze({
  * conta em desenvolvimento (`ngDevMode` some no build de produção).
  */
 export const toolbarStateProbe = { computations: 0 };
-
-type CanCommands = Record<
-  string,
-  ((...args: unknown[]) => boolean) | undefined
->;
-
-/** `editor.can().<command>(...args)`; comando ausente (recurso desligado) = `false`. */
-function can(editor: Editor, command: string, ...args: unknown[]): boolean {
-  const fn = (editor.can() as unknown as CanCommands)[command];
-  return typeof fn === 'function' && fn(...args);
-}
 
 /** Alternâncias: nome lido por `isActive` e comando conferido por `can()`. */
 const TOGGLES: Partial<Record<RteToolbarItemId, readonly [string, string]>> = {
@@ -238,6 +229,13 @@ export function readItemState(
         value,
       );
     }
+    case 'link':
+    case 'lang': {
+      const t = dialogTarget(editor, id);
+      return itemState(t?.mode === 'edit', t !== null);
+    }
+    case 'quoteAuthor':
+      return itemState(false, dialogTarget(editor, 'quoteAuthor') !== null);
     case 'pullquote': {
       const active = editor.isActive('rtPullquote');
       return itemState(

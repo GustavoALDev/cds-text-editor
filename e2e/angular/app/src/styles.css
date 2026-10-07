@@ -10,8 +10,10 @@ main {
   padding: 0 16px;
 }
 
+/* Quebra em viewports estreitas (N19: 320 px sem rolagem horizontal). */
 nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 8px 16px;
 }

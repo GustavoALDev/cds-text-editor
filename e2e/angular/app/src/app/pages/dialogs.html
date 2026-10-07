@@ -1,0 +1,38 @@
+<button id="before-dialogs" type="button">before</button>
+<section>
+  <rte-editor
+    #main
+    data-testid="dialogs"
+    ariaLabel="Dialogs editor"
+    toolbar="full"
+    [options]="mainOptions"
+    [labels]="labels"
+    [theme]="mainTheme"
+    [formField]="f.body"
+    (editorReady)="bridge.ready('dialogs')"
+  />
+</section>
+<button id="after-dialogs" type="button">after</button>
+<section>
+  @for (kind of kinds; track kind) {
+  <button
+    type="button"
+    [attr.data-testid]="'open-' + kind"
+    [attr.data-result]="results()[kind] ?? null"
+    (click)="open(kind)"
+  >
+    {{ kind }}
+  </button>
+  }
+  <rte-editor
+    #api
+    data-testid="dialogs-api"
+    ariaLabel="API editor"
+    [toolbar]="false"
+    [options]="apiOptions"
+    [labels]="labels"
+    [theme]="altTheme"
+    [(value)]="apiValue"
+    (editorReady)="bridge.ready('dialogs-api')"
+  />
+</section>

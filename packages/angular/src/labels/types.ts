@@ -47,6 +47,7 @@ export interface RteToolbarLabels {
   horizontalRule: string;
   table: string;
   insertTable: string;
+  insertTableCustom: string;
   addRowBefore: string;
   addRowAfter: string;
   addColumnBefore: string;
@@ -64,9 +65,54 @@ export interface RteToolbarLabels {
   pullquote: string;
   readAlso: string;
   clearFormatting: string;
+  link: string;
+  editLink: string;
+  lang: string;
+  editLang: string;
+  quoteAuthor: string;
   heading(level: 2 | 3 | 4): string;
   /** Nomes da paleta (texto e marca-texto), por nome da cor. */
   colorNames: Readonly<Record<string, string>>;
+}
+
+export interface RteDialogLabels {
+  apply: string;
+  cancel: string;
+  remove: string;
+  linkInsertTitle: string;
+  linkEditTitle: string;
+  linkUrl: string;
+  linkUrlHint: string;
+  linkText: string;
+  linkNewTab: string;
+  linkRemove: string;
+  langTitle: string;
+  langEditTitle: string;
+  langLanguage: string;
+  langOther: string;
+  langCode: string;
+  langCodeHint: string;
+  langDirection: string;
+  langDirectionDefault: string;
+  langDirectionLtr: string;
+  langDirectionRtl: string;
+  langRemove: string;
+  /** Chave = código de `RTE_DIALOG_LANGUAGES`. */
+  languageNames: Readonly<Record<string, string>>;
+  quoteTitle: string;
+  quoteAuthor: string;
+  quoteRole: string;
+  tableTitle: string;
+  tableRows: string;
+  tableColumns: string;
+  tableHeaderRow: string;
+  tableHeaderColumn: string;
+  tableInsert: string;
+  errorRequired: string;
+  errorLinkUrl: string;
+  errorLangCode: string;
+  errorRange(min: number, max: number): string;
+  errorMaxLength(max: number): string;
 }
 
 export interface RteLabels {
@@ -75,6 +121,7 @@ export interface RteLabels {
   readonly editor: RteEditorLabels;
   readonly errors: RteErrorLabels;
   readonly toolbar: RteToolbarLabels;
+  readonly dialogs: RteDialogLabels;
 }
 
 export interface RteLabelsInput {
@@ -86,6 +133,9 @@ export interface RteLabelsInput {
   errors?: Partial<RteErrorLabels>;
   toolbar?: Partial<Omit<RteToolbarLabels, 'colorNames'>> & {
     colorNames?: Readonly<Record<string, string>>;
+  };
+  dialogs?: Partial<Omit<RteDialogLabels, 'languageNames'>> & {
+    languageNames?: Readonly<Record<string, string>>;
   };
 }
 
