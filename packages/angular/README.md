@@ -216,7 +216,9 @@ onSave() {
 Sem configuração, nada de arquivo: os diálogos não mostram "Arquivo", colar segue o caminho do core (que descarta `<img src="data:…">`) e soltar um arquivo é **ignorado** (o navegador não navega para ele). Com um adaptador, o editor ganha envio por diálogo, colar e soltar, marcadores no texto, uma bandeja de envios e o estado reativo `uploads`/`pendingUploads`/`imagesMissingAlt`.
 
 ```ts
-provideRichText({ upload: { adapter: httpUploadAdapter({ endpoint: '/api/media' }) } });
+provideRichText({
+  upload: { adapter: httpUploadAdapter({ endpoint: '/api/media' }) },
+});
 // ou, por instância: <rte-editor [upload]="cfg" />  (a entrada vence o provider; `null` desliga)
 ```
 
@@ -251,13 +253,14 @@ provideRichText({ upload: { adapter: httpUploadAdapter({ endpoint: '/api/media' 
 **`warnOnUnsaved`.** Entrada (ou `provideRichText({ warnOnUnsaved: true })`): pede confirmação do navegador ao sair enquanto `isDirty()` ou há envio pendente. Desligado por padrão. Para rotas do Angular use `isDirty()` num guarda de 5 linhas:
 
 ```ts
-export const leaveGuard: CanDeactivateFn<{ editor: Signal<RteEditor | undefined> }> = (c) =>
-  !c.editor()?.isDirty() || confirm('Descartar alterações?');
+export const leaveGuard: CanDeactivateFn<{
+  editor: Signal<RteEditor | undefined>;
+}> = (c) => !c.editor()?.isDirty() || confirm('Descartar alterações?');
 ```
 
 **`pasteEmbeds`.** Opt-in: colar uma única URL suportada (ex.: YouTube) num parágrafo vazio vira _embed_ (um passo de desfazer); em qualquer outro caso, a colagem segue como antes. Emite `value`, não `mediaChange`.
 
-**Re-hospedagem.** Com `upload: { adapter, rehostExternal: true, ownHosts: [...] }` e `adapter.registerExternal?(url, ctx)`, imagens `https:` externas **coladas** são enviadas ao seu servidor e o `src` é trocado (fila e bandeja dos envios; desfazer remove a imagem, não volta ao externo). Falhas mantêm a URL externa, sem `uploadError`. Não re-hospeda colagens feitas antes do _chunk_ de envio carregar, e não faz nada se `mediaHosts` for restrito (o esquema já remove a imagem externa).
+**Re-hospedagem.** Com `upload: { adapter, rehostExternal: true, ownHosts: [...] }` e `adapter.registerExternal?(url, ctx)`, imagens `https:` externas **coladas** são enviadas ao seu servidor e o `src` é trocado (fila e bandeja dos envios; desfazer remove a imagem, não volta ao externo). Falhas mantêm a URL externa, sem `uploadError`. Endereços com credenciais (`https://usuário:senha@…`) não são re-hospedados. **O servidor busca uma URL vinda da colagem:** valide-a no `registerExternal` do seu backend (só `https:`, recuse `localhost`/IPs privados e redirecionamentos para eles, limite tamanho e tipo) para não virar SSRF. Não re-hospeda colagens feitas antes do _chunk_ de envio carregar, e não faz nada se `mediaHosts` for restrito (o esquema já remove a imagem externa).
 
 ## Menus flutuantes
 

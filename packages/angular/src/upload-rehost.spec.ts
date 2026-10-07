@@ -28,6 +28,7 @@ import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
 import { whenUploadReady } from './testing-support/upload-runtime';
 import { RTE_UPLOAD_LOADER } from './upload/facade';
+import { isExternalHttps } from './upload/rehost';
 
 // Spec 05c2b, Tarefa 5: re-hospedagem de imagens externas coladas (S10, R6).
 
@@ -180,9 +181,9 @@ describe('re-hospedagem de imagens coladas (S10, R6)', () => {
     });
     await settle(s.fixture);
     expect(srcs(s.editor)).toEqual([OK.url, OK.url]);
-    expect(
-      s.editor.view.dom.querySelector('img')?.getAttribute('srcset'),
-    ).toBe(`${OK.url} 1x`);
+    expect(s.editor.view.dom.querySelector('img')?.getAttribute('srcset')).toBe(
+      `${OK.url} 1x`,
+    );
     expect(s.host.values.length - before).toBe(1);
     expect(s.cmp.uploads()).toEqual([]);
     expect(s.host.errors).toEqual([]);
@@ -258,5 +259,17 @@ describe('re-hospedagem de imagens coladas (S10, R6)', () => {
     await settle(s.fixture);
     expect(srcs(s.editor)).toEqual([]);
     expect(s.cmp.uploads()).toEqual([]);
+  });
+});
+
+describe('isExternalHttps (revisão final da 05c2b)', () => {
+  it('recusa endereço com credenciais (não as repassa ao adaptador)', () => {
+    expect(isExternalHttps('https://u:p@cdn.example/a.png', [], null)).toBe(
+      false,
+    );
+    expect(isExternalHttps('https://u@cdn.example/a.png', [], null)).toBe(
+      false,
+    );
+    expect(isExternalHttps('https://cdn.example/a.png', [], null)).toBe(true);
   });
 });

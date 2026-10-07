@@ -112,6 +112,15 @@ export async function setupDraft(
   fixture.autoDetectChanges();
   await settle(fixture);
   await drainDraft(fixture);
+  // Sob carga o `import()` do *chunk* pode passar das voltas do `drainDraft`
+  // (teste do temporizador intermitente): com chave válida, espera a chamada
+  // do carregador e a promessa dele (o `attach` é a primeira continuação).
+  const valid = typeof key === 'string' && key.length >= 1 && key.length <= 200;
+  for (let i = 0; valid && i < 50 && loader.mock.results.length === 0; i++) {
+    await drainDraft(fixture);
+  }
+  await Promise.allSettled(loader.mock.results.map((r) => r.value));
+  await drainDraft(fixture);
   const cmp = host.cmp();
   return {
     fixture,

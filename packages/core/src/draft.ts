@@ -147,6 +147,8 @@ export function createDraftStore(options: DraftStoreOptions): DraftStore {
  */
 export function clearLocalDrafts(prefix = 'rte-draft:'): number {
   let removed = 0;
+  // Prefixo vazio apagaria todo o `localStorage` da origem.
+  if (typeof prefix !== 'string' || prefix === '') return 0;
   try {
     const ls = (globalThis as { localStorage?: Storage }).localStorage;
     if (!ls) return 0;

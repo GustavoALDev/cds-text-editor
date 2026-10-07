@@ -289,6 +289,12 @@ describe('clearLocalDrafts', () => {
     expect([...data.keys()]).toEqual(['rte-draft:b']);
   });
 
+  it('prefixo vazio não apaga nada (revisão final da 05c2b)', () => {
+    const data = fakeStorage({ a: '1', 'rte-draft:b': '2' });
+    expect(clearLocalDrafts('')).toBe(0);
+    expect([...data.keys()]).toEqual(['a', 'rte-draft:b']);
+  });
+
   it('sem localStorage ou com getter que lança devolve 0', () => {
     expect(clearLocalDrafts()).toBe(0);
     Object.defineProperty(globalThis, 'localStorage', {

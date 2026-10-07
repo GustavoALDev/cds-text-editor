@@ -8,7 +8,7 @@ import type { RteUploadedAttrs } from './response';
  * `rte-upload`: escolhe os endereços e troca o `src` depois do envio.
  */
 
-/** O endereço é `https:` absoluto de fora (`ownHosts` e a origem da página)? */
+/** O endereço é `https:` absoluto, sem credenciais, de fora (`ownHosts` e a origem da página)? */
 export function isExternalHttps(
   src: unknown,
   ownHosts: readonly string[],
@@ -22,6 +22,8 @@ export function isExternalHttps(
     return false;
   }
   if (url.protocol !== 'https:') return false;
+  // Credenciais no endereço nunca vão ao adaptador (fica a URL externa).
+  if (url.username !== '' || url.password !== '') return false;
   if (origin !== null && url.origin === origin) return false;
   return !ownHosts.includes(url.host) && !ownHosts.includes(url.hostname);
 }

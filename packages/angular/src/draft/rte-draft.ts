@@ -61,7 +61,8 @@ export function createDraftRuntime(host: RteDraftHost): RteDraftRuntime {
   /** Decisão pendente: o rascunho antigo não pode ser sobrescrito (S4). */
   const deciding = (): boolean => host.available() !== null;
 
-  const flush = (): void => {
+  /** `quiet`: na destruição, sem `draftError` (a saída já foi destruída). */
+  const flush = (quiet = false): void => {
     stopTimer();
     if (!store || disposed || !host.editable() || deciding()) return;
     const html = host.current();
@@ -71,7 +72,7 @@ export function createDraftRuntime(host: RteDraftHost): RteDraftRuntime {
     }
     if (store.save(html)) {
       writeFailed = false;
-    } else if (!writeFailed) {
+    } else if (!writeFailed && !quiet) {
       writeFailed = true;
       host.emitError({ reason: 'write' });
     }
@@ -81,7 +82,7 @@ export function createDraftRuntime(host: RteDraftHost): RteDraftRuntime {
     stopTimer();
     if (!store || !view || !host.editable() || deciding()) return;
     host.zone.runOutsideAngular(() => {
-      timer = view.setTimeout(flush, SAVE_DELAY_MS);
+      timer = view.setTimeout(() => flush(), SAVE_DELAY_MS);
     });
   };
 
@@ -98,8 +99,12 @@ export function createDraftRuntime(host: RteDraftHost): RteDraftRuntime {
     }
   };
 
+  /**
+   * Sujo grava; com adiamento pendente também descarrega (limpo = de volta à
+   * base: apaga o rascunho velho em vez de deixá-lo para a próxima carga).
+   */
   const onHide = (): void => {
-    if (host.isDirty()) flush();
+    if (timer !== null || host.isDirty()) flush();
   };
   const onVisibility = (): void => {
     if (doc?.visibilityState === 'hidden') onHide();
@@ -179,6 +184,8 @@ export function createDraftRuntime(host: RteDraftHost): RteDraftRuntime {
       host.setAvailable(null);
     },
     dispose() {
+      // Destruição (ex.: troca de rota) dentro do adiamento: grava antes.
+      if (timer !== null) flush(true);
       disposed = true;
       stopTimer();
       view?.removeEventListener('pagehide', onHide);

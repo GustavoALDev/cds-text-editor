@@ -1074,10 +1074,6 @@ export class RteEditor implements FormValueControl<string> {
   }
 
   /**
-   * Foca o item ativo do menu flutuante visível (M12); `false` (sem mover o
-   * foco) sem editor, não editável ou sem menu visível.
-   */
-  /**
    * Marca o conteúdo como salvo (S8): a base passa a ser `savedHtml` (o que o
    * servidor confirmou; omitido, o valor atual), e o `onMediaRemoved` do
    * adaptador recebe os endereços que saíram do documento e não estão em
@@ -1101,6 +1097,10 @@ export class RteEditor implements FormValueControl<string> {
     return true;
   }
 
+  /**
+   * Foca o item ativo do menu flutuante visível (M12); `false` (sem mover o
+   * foco) sem editor, não editável ou sem menu visível.
+   */
   focusFloatingMenu(): boolean {
     if (!untracked(this.interactive)) return false;
     return untracked(this.floatingRef)?.focusActive() ?? false;

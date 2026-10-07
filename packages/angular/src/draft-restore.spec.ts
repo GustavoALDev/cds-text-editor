@@ -16,8 +16,9 @@ beforeEach(() => {
   restorePopover = installPopoverShim();
 });
 afterEach(() => {
-  localStorage.clear();
+  // Destruir antes de limpar: a destruição descarrega o rascunho pendente.
   TestBed.resetTestingModule();
+  localStorage.clear();
   restorePopover();
   restoreDialog();
   vi.restoreAllMocks();

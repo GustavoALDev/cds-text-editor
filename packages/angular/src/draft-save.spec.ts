@@ -27,6 +27,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   TestBed.resetTestingModule();
+  localStorage.clear();
   restorePopover();
   restoreDialog();
   vi.restoreAllMocks();
@@ -100,6 +101,27 @@ describe('gravação (S4)', () => {
     visibility('hidden');
     expect(storedDraft(s.storage, 'doc')).toContain('y');
     visibility('visible');
+  });
+
+  it('pagehide limpo com adiamento pendente apaga o rascunho velho (revisão final)', async () => {
+    const s = await setupDraft();
+    vi.useFakeTimers(FAKE);
+    type(s, 'x');
+    vi.advanceTimersByTime(1000);
+    expect(storedDraft(s.storage, 'doc')).toContain('x');
+    s.editor.commands.undo();
+    expect(s.cmp.isDirty()).toBe(false);
+    window.dispatchEvent(new Event('pagehide'));
+    expect(storedDraft(s.storage, 'doc')).toBeNull();
+  });
+
+  it('destruir com adiamento pendente grava o rascunho (revisão final)', async () => {
+    const s = await setupDraft();
+    vi.useFakeTimers(FAKE);
+    type(s, 'x');
+    s.fixture.destroy();
+    expect(storedDraft(s.storage, 'doc')).toContain('x');
+    expect(s.host.errors).toEqual([]);
   });
 
   it('limpo: pagehide e visibilitychange não gravam', async () => {
