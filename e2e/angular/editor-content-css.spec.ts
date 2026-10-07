@@ -7,6 +7,13 @@ import {
   settlePage,
   waitForEditor,
 } from './helpers/app';
+import {
+  collectStyles,
+  CONTENT_PROPS,
+  CONTENT_SELECTORS,
+  equalizeContainer,
+  type ContentStyles,
+} from './helpers/content-styles';
 
 // N13 (spec 05b1, R9, R11, R12): o fixture `all-features` no editor e a mesma
 // marcação numa página estática (`/content-static`: só `theme.css` +
@@ -18,93 +25,13 @@ import {
 // (`text-align`, larguras de coluna, `aspect-ratio` dos embeds) ficam
 // bloqueados e por isso fora da comparação.
 
-const SELECTORS = [
-  'p',
-  'h2',
-  'h3',
-  'h4',
-  'ul > li',
-  'ol',
-  'blockquote:not(.rt-pullquote blockquote)',
-  'hr',
-  ':not(pre) > code',
-  'pre',
-  'a',
-  'sup',
-  'sub',
-  'th',
-  'td',
-  'li.rt-task',
-  '.rt-figure--left',
-  '.rt-figure--center',
-  '.rt-figure--right',
-  '.rt-figure--full',
-  '.rt-figure--video',
-  'figcaption',
-  '.rt-credit',
-  '.rt-embed',
-  '.rt-pullquote',
-  '.rt-callout--info',
-  '.rt-callout--success',
-  '.rt-callout--warning',
-  '.rt-callout--danger',
-  '.rt-callout__title',
-  '.rt-read-also',
-  '.rt-read-also__title',
-  'span[data-rt-color]',
-  'mark[data-rt-color]',
-];
-
-const PROPS = [
-  'font-family',
-  'font-size',
-  'font-weight',
-  'font-style',
-  'line-height',
-  'margin-top',
-  'margin-bottom',
-  'margin-left',
-  'margin-right',
-  'color',
-  'background-color',
-  'border-top-width',
-  'border-top-style',
-  'border-top-color',
-  'border-left-width',
-  'border-left-style',
-  'border-left-color',
-  'float',
-  'list-style-type',
-];
-
-type Styles = Record<string, Record<string, string>[]>;
-
 /**
- * Estilos computados de `PROPS` para todo elemento de cada seletor dentro do
- * `.rte-content`. Antes, a geometria do contêiner é igualada por CSSOM
- * (permitido pela CSP): o editor tem `padding` e a página não, e margens
- * `auto` (figura centralizada) dependem da largura disponível.
+ * Estilos computados do N13 dentro do `.rte-content`, com a geometria do contêiner igualada
+ * antes (`helpers/content-styles.ts`).
  */
-function collectStyles(page: Page): Promise<Styles> {
-  return page.evaluate(
-    ({ selectors, props }) => {
-      const root = document.querySelector('.rte-content') as HTMLElement;
-      root.style.setProperty('box-sizing', 'border-box');
-      root.style.setProperty('width', '640px');
-      root.style.setProperty('padding', '12px 16px');
-      const out: Record<string, Record<string, string>[]> = {};
-      for (const selector of selectors) {
-        out[selector] = [...root.querySelectorAll(selector)].map((el) => {
-          const style = getComputedStyle(el);
-          return Object.fromEntries(
-            props.map((prop) => [prop, style.getPropertyValue(prop)]),
-          );
-        });
-      }
-      return out;
-    },
-    { selectors: SELECTORS, props: PROPS },
-  );
+async function collectContentStyles(page: Page): Promise<ContentStyles> {
+  await equalizeContainer(page, '.rte-content');
+  return collectStyles(page, '.rte-content', CONTENT_SELECTORS, CONTENT_PROPS);
 }
 
 /** Abre o editor `content` com o fixture carregado (carga externa, D9). */
@@ -145,13 +72,13 @@ for (const scheme of ['light', 'dark'] as const) {
     test.setTimeout(90_000);
     await page.emulateMedia({ colorScheme: scheme });
     await openEditor(page);
-    const editor = await collectStyles(page);
+    const editor = await collectContentStyles(page);
 
     await gotoApp(page, '/content-static');
     await expect(page.locator('.rte-content table')).toHaveCount(1);
-    const staticPage = await collectStyles(page);
+    const staticPage = await collectContentStyles(page);
 
-    for (const selector of SELECTORS) {
+    for (const selector of CONTENT_SELECTORS) {
       expect(
         editor[selector]?.length,
         `${selector}: ocorrências`,

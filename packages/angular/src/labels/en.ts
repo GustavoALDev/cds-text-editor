@@ -247,4 +247,11 @@ export const RTE_LABELS_EN: RteLabels = Object.freeze({
     announceError: (name: string, reason: RteUploadErrorReason) =>
       `Could not upload ${name}: ${UPLOAD_REASONS[reason]}`,
   }),
+  draft: Object.freeze({
+    region: 'Saved draft',
+    available: (savedAt: number) =>
+      `A draft saved on ${new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(savedAt)} is available.`,
+    restore: 'Restore',
+    discard: 'Discard',
+  }),
 });

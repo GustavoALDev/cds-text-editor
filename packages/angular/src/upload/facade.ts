@@ -208,7 +208,7 @@ export class RteUploads implements RteUploadInput {
     for (const p of this.pending) {
       for (const tr of transactions) p.at = tr.mapping.map(p.at, -1);
     }
-    untracked(this.runtime)?.manager.afterTransaction();
+    untracked(this.runtime)?.manager.afterTransaction(transactions);
   }
 
   /** Destruição do editor. */

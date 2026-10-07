@@ -26,6 +26,22 @@ export interface RteUploadedVideo {
 export interface RteUploadAdapter {
   uploadImage(file: File, ctx: RteUploadContext): Promise<RteUploadedImage>;
   uploadVideo?(file: File, ctx: RteUploadContext): Promise<RteUploadedVideo>;
+  /**
+   * Endereços de mídia que saíram do documento desde a base salva, entregues
+   * depois de `markSaved` (S9). Fora da zona; exceção ou rejeição é engolida.
+   * Peça exclusão com carência no servidor: o desfazer pode trazê-los de volta.
+   */
+  /**
+   * Re-hospeda uma imagem externa colada (S10): o adaptador baixa ou
+   * registra `url` do lado do servidor e devolve o endereço próprio. O
+   * editor não busca nada (sem credenciais do navegador); só roda com
+   * `rehostExternal: true`. Falha ou resposta recusada mantêm o original.
+   */
+  registerExternal?(
+    url: string,
+    ctx: RteUploadContext,
+  ): Promise<RteUploadedImage>;
+  onMediaRemoved?(urls: readonly string[]): void | Promise<void>;
 }
 
 export type RteUploadType = 'image' | 'video';
@@ -49,6 +65,10 @@ export interface RteUploadConfig {
   maxFilesPerAction?: number;
   /** Pré-visualização local (exige `img-src blob:`); padrão `false`. */
   preview?: boolean;
+  /** Re-hospeda imagens externas `https:` coladas (exige `registerExternal`); padrão `false`. */
+  rehostExternal?: boolean;
+  /** Hosts próprios, que não são re-hospedados (a origem da página também não é). */
+  ownHosts?: readonly string[];
 }
 
 export type RteUploadErrorReason =

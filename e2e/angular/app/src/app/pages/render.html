@@ -1,0 +1,30 @@
+@if (article) {
+<header class="e2e-render-header" data-testid="render-header">Header</header>
+}
+<div class="e2e-render" [class.e2e-render--article]="article">
+  <rte-toc
+    data-testid="render-toc"
+    [html]="main.renderedHtml()"
+    [labels]="labels()"
+  />
+  <article
+    data-testid="render-main"
+    #main="rteContent"
+    [rteContent]="fixture"
+    [labels]="labels()"
+  ></article>
+  <section
+    data-testid="render-wide"
+    #wideHost="rteContent"
+    [rteContent]="wide"
+    [labels]="labels()"
+  ></section>
+  <div
+    data-testid="render-input"
+    #input="rteContent"
+    [rteContent]="bridge.renderInput()"
+    [mode]="bridge.renderMode()"
+  ></div>
+  <app-render-keep />
+  <div class="e2e-spacer e2e-spacer--tall"></div>
+</div>

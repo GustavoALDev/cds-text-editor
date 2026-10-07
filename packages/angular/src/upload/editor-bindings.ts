@@ -14,7 +14,11 @@ import { createDialogUploads, type RteDialogUploads } from './dialog-port';
 import { RteUploads } from './facade';
 import { createEditorUploadHost } from './host';
 import { createUploadInputExtension } from './input';
-import type { RteUploadConfig, RteUploadErrorEvent } from './types';
+import type {
+  RteUploadAdapter,
+  RteUploadConfig,
+  RteUploadErrorEvent,
+} from './types';
 
 /** O que a ligação lê do `RteEditor`. */
 export interface RteEditorUploadDeps {
@@ -27,6 +31,8 @@ export interface RteEditorUploadDeps {
   /** Pedido de diálogo em curso; `null` sem diálogo. */
   readonly dialog: Signal<unknown>;
   readonly zone: NgZone;
+  /** `pasteEmbeds` resolvido (entrada > provider, S11). */
+  readonly pasteEmbeds: Signal<boolean>;
   readonly labels: () => RteUploadLabels;
   emitError(e: RteUploadErrorEvent): void;
 }
@@ -51,11 +57,14 @@ export class RteEditorUploads extends RteUploads {
   /** Porta dos diálogos de imagem e vídeo (E14); `null` sem adaptador. */
   readonly dialogUploads: Signal<RteDialogUploads | null>;
   private readonly deps: RteEditorUploadDeps;
+  /** Adaptador da configuração atual (S9); `null` sem configuração. */
+  readonly adapter: () => RteUploadAdapter | null;
 
   constructor(deps: RteEditorUploadDeps) {
     const host = createEditorUploadHost(deps);
     super(host);
     this.deps = deps;
+    this.adapter = () => untracked(host.config)?.adapter ?? null;
     this.announcements = announcementTexts(host, deps.labels);
     this.dialogUploads = computed(() => {
       const cfg = host.config();
@@ -68,7 +77,9 @@ export class RteEditorUploads extends RteUploads {
 
   /** Colar e soltar arquivos (E12, E13): no principal, Ruling 29. */
   inputExtension(): Extension {
-    return createUploadInputExtension(this);
+    return createUploadInputExtension(this, () =>
+      untracked(this.deps.pasteEmbeds),
+    );
   }
 
   /** Envia na posição da seleção (E18); devolve os aceitos (E5). */

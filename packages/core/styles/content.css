@@ -54,6 +54,14 @@
     font-size: 1.1em;
   }
 
+  /*
+   * Bloco de texto vazio com uma linha de altura, como na edição (o ProseMirror mantém um `br` no
+   * bloco vazio, então `:empty` só casa fora do editor): sem isso a página o colapsaria a 0 px.
+   */
+  .rte-content :is(p, h1, h2, h3, h4, h5, h6):empty {
+    min-block-size: 1lh;
+  }
+
   .rte-content ul,
   .rte-content ol {
     margin: 0 0 1em;
@@ -126,6 +134,15 @@
     border-collapse: collapse;
   }
 
+  /*
+   * Tabela com larguras de coluna na exibição (classe do `@cds/rte-render`, que lhe dá
+   * `width`/`min-width` por CSSOM): layout fixo como o do editor (`editor.css`), que nunca vê
+   * a classe.
+   */
+  .rte-content table.rte-table--sized {
+    table-layout: fixed;
+  }
+
   .rte-content th,
   .rte-content td {
     box-sizing: border-box;
@@ -140,6 +157,15 @@
     font-weight: 700;
   }
 
+  .rte-content caption {
+    caption-side: top;
+    padding-block-end: 0.4em;
+    color: var(--rte-text-muted);
+    font-size: 0.875em;
+    line-height: 1.4;
+    text-align: start;
+  }
+
   /* Tarefas (aparência; o checkbox da edição é do editor.css) */
   .rte-content .rt-tasks {
     list-style: none;
@@ -148,6 +174,24 @@
 
   .rte-content .rt-task {
     list-style: none;
+  }
+
+  /* Exibição: `<label><input>texto</label>`; o checkbox fica centrado na 1ª linha, como na edição. */
+  .rte-content .rt-task > label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5em;
+  }
+
+  .rte-content .rt-task > label > input {
+    position: relative;
+    flex: none;
+    margin: 0;
+    /* Tamanho nativo (igual ao da edição); o centro vai à meia linha pelo próprio tamanho. */
+    font: inherit; /* o UA muda fonte e `line-height` dos controles; `1lh` precisa dos herdados (o checkbox nativo não muda de tamanho) */
+    inset-block-start: 0.5lh;
+    translate: 0 -50%;
+    accent-color: var(--rte-primary);
   }
 
   /* Figuras, vídeo e legendas */

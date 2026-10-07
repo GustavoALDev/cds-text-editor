@@ -56,6 +56,8 @@ export default [
               onlyDependOnLibsWithTags: [
                 'scope:angular',
                 'scope:core',
+                'scope:render',
+                'scope:sanitizer',
                 'scope:theme',
               ],
             },

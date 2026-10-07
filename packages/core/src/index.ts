@@ -9,6 +9,15 @@ export {
 export { isAllowedUrl } from './schema/url';
 export { isAllowedClass } from './schema/classes';
 export { sanitizeStyle, applyStyleFrom } from './schema/style';
+export { RTE_STYLE_PROPERTIES } from './schema/style-properties';
+export {
+  getElementSpec,
+  sanitizeClass,
+  sanitizeAttributes,
+  hasRequiredChild,
+} from './schema/interpret';
+export type { RteSanitizedAttributes } from './schema/interpret';
+export { escapeHtmlText, escapeHtmlAttribute } from './schema/escape';
 export { RTE_TEXT_COLORS, RTE_HIGHLIGHT_COLORS } from './schema/palette';
 export type {
   RteHtmlSchema,
@@ -30,9 +39,17 @@ export { slugify, createHeadingIds } from './headings';
 export { countCharacters, countWords, readingTime } from './text';
 
 export { computeResize, parseSrcset, formatSrcset } from './image';
+
+export {
+  getTableSizing,
+  parseColWidth,
+  RTE_TABLE_CELL_MIN_WIDTH,
+} from './table-sizing';
+export type { RteTableSizing } from './table-sizing';
 export type { RteResizeCorner, RteResizeInput, SrcsetCandidate } from './image';
 
 export {
+  clearLocalDrafts,
   createDraftStore,
   createLocalDraftStorage,
   createMemoryDraftStorage,

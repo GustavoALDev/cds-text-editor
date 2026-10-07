@@ -7,6 +7,7 @@
       "cds-rte-angular-rte-dialogs-*.mjs",
       "cds-rte-angular-rte-media-forms-*.mjs",
       "cds-rte-angular-rte-floating-menus-*.mjs",
+      "cds-rte-angular-rte-draft-*.mjs",
       "cds-rte-angular-rte-upload-*.mjs",
       "cds-rte-angular-i18n.mjs",
       "cds-rte-angular-testing.mjs",
@@ -34,7 +35,8 @@
       "forbiddenContent": [
         "marcador de envio sem envio correspondente",
         "rteUploadComposition",
-        "rte-upload-marker__name"
+        "rte-upload-marker__name",
+        "__rte_draft_probe__"
       ]
     },
     "whole": {
@@ -56,7 +58,8 @@
       "forbiddenContent": [
         "marcador de envio sem envio correspondente",
         "rteUploadComposition",
-        "rte-upload-marker__name"
+        "rte-upload-marker__name",
+        "__rte_draft_probe__"
       ]
     },
     "dialogs": {
@@ -123,6 +126,22 @@
         "tslib"
       ]
     },
+    "draft": {
+      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-draft-*.mjs",
+      "exports": ["*"],
+      "externalChunks": true,
+      "external": [
+        "@angular/*",
+        "@tiptap/*",
+        "@cds/*",
+        "lowlight",
+        "highlight.js",
+        "highlight.js/*",
+        "rxjs",
+        "rxjs/*",
+        "tslib"
+      ]
+    },
     "i18n": {
       "entry": "dist/packages/angular/fesm2022/cds-rte-angular-i18n.mjs",
       "exports": ["*"],
@@ -170,14 +189,15 @@
     }
   },
   "budgets": {
-    "editor": 36032,
-    "whole": 36224,
+    "editor": 39168,
+    "whole": 39360,
     "dialogs": 6464,
     "media": 8640,
     "floating": 8576,
-    "i18n": 5120,
+    "i18n": 5248,
     "validators": 2368,
     "upload": 1152,
-    "upload-runtime": 7552
+    "upload-runtime": 8512,
+    "draft": 1920
   }
 }

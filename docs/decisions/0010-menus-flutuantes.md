@@ -159,7 +159,7 @@ Revisão Opus da branch (`de90c8c..aa52d13`): pronta com correções, sem achado
 
 ## Pendências conhecidas
 
-- **Parada de `Tab` no `.tableWrapper` (Chromium):** o `overflow-x: auto` da tabela larga vira parada de `Tab` (lacuna de acessibilidade anterior à 05b2b, **aceita**). `tabindex="-1"` no wrapper (`TableView` customizado) foi tentado na revisão final e rejeitado: o clique numa célula passa a desfocar o editável. Alternativas a avaliar depois: `overflow-x: clip`/rolagem em outro elemento, ou tratar o `focus` do wrapper devolvendo-o ao editável. O `rte-render` da spec 06 mantém o rolador focável.
+- **Parada de `Tab` no `.tableWrapper` (Chromium):** o `overflow-x: auto` da tabela larga vira parada de `Tab` (lacuna de acessibilidade anterior à 05b2b, **aceita**). `tabindex="-1"` no wrapper (`TableView` customizado) foi tentado na revisão final e rejeitado: o clique numa célula passa a desfocar o editável. Alternativas a avaliar depois: `overflow-x: clip`/rolagem em outro elemento, ou tratar o `focus` do wrapper devolvendo-o ao editável. O `rte-render` da spec 06 mantém o rolador focável. **Atendida pelo `rte-render` (spec 06, H7; ADR 0012):** o rolador da exibição recebe `tabindex="0"`, `role="region"` e rótulo só quando transborda, e `Home`/`End` o rolam; na edição a parada de `Tab` continua aceita.
 - **Menus em `readonly`** (por exemplo "Abrir" num link do modo leitura): evolução registrada.
 - **Seleção pendente com o foco no menu flutuante:** a barra da 05b1 também não a tem.
 - **Itens do consumidor nos menus** e **posição por `anchor()` do CSS:** evoluções.
