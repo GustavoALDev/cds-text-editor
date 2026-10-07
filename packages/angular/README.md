@@ -216,7 +216,9 @@ onSave() {
 Sem configuração, nada de arquivo: os diálogos não mostram "Arquivo", colar segue o caminho do core (que descarta `<img src="data:…">`) e soltar um arquivo é **ignorado** (o navegador não navega para ele). Com um adaptador, o editor ganha envio por diálogo, colar e soltar, marcadores no texto, uma bandeja de envios e o estado reativo `uploads`/`pendingUploads`/`imagesMissingAlt`.
 
 ```ts
-provideRichText({ upload: { adapter: httpUploadAdapter({ endpoint: '/api/media' }) } });
+provideRichText({
+  upload: { adapter: httpUploadAdapter({ endpoint: '/api/media' }) },
+});
 // ou, por instância: <rte-editor [upload]="cfg" />  (a entrada vence o provider; `null` desliga)
 ```
 
@@ -319,3 +321,5 @@ Testado com `default-src 'self'; script-src 'self'; style-src 'self'` por cabeç
 05c2b: rascunho, `isDirty`/`markSaved()` com `onMediaRemoved`, `registerExternal` e aviso de saída. 05d: busca e comandos `/` com interface, `updateOn`/adiamento da emissão com os números de desempenho, API final. Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
 
 Repositório: cds-text-editor (monorepo). Licença MIT.
+
+> Projeto independente, **não afiliado à Tiptap nem ao ProseMirror**.

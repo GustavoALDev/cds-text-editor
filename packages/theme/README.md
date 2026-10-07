@@ -246,3 +246,5 @@ e2e/with-browser-libs.sh npx playwright test -c e2e   # E2E em Chromium, Firefox
 No CI os navegadores são instalados com `npx playwright install --with-deps`. Os testes de navegador do tema ficam em `e2e/theme/`; ver `e2e/README.md`.
 
 Repositório: cds-text-editor (monorepo). Licença MIT.
+
+> Projeto independente, **não afiliado à Tiptap nem ao ProseMirror**.

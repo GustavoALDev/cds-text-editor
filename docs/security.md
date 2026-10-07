@@ -1,3 +1,18 @@
+# Modelo de ameaças (resumo)
+
+Escopo: XSS e abuso a partir de conteúdo não confiável. Reporte falhas conforme o [SECURITY.md](../SECURITY.md).
+
+| Ameaça                | Vetor                                             | Defesa                                                                                                                                                                   |
+| --------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| XSS via HTML          | Conteúdo salvo, importado ou exibido no site      | `@cds/rte-sanitizer` (lista de permissões do esquema, ADR 0003); `validateHtml` em `@cds/rte-core/html` e nos validadores do Angular; exibição por `@cds/rte-render`     |
+| XSS via colagem       | HTML/Markdown colado no editor                    | Esquema do Tiptap descarta o que não é do esquema; classes e estilos filtrados por `isAllowedClass`; links e URLs validados                                              |
+| Respostas de servidor | Adaptador de upload devolvendo URL ou HTML hostil | `mapResponse` do consumidor + `readUploadedMedia` validam a mídia (ADR 0011); nada da resposta vira HTML sem passar pelo esquema                                         |
+| Upload                | Tipo, tamanho e origem do arquivo                 | Limites e tipos permitidos no adaptador; verificação de tamanho/MIME no cliente é conveniência, o servidor precisa revalidar                                             |
+| CSP                   | Estilos e scripts inline                          | A lib não usa `eval`, scripts inline nem `style` inline injetado; o app de teste roda com CSP estrita (`e2e/angular/serve.mjs`); embeds exigem `frame-src` do consumidor |
+| SSR                   | Execução no servidor                              | Sem globais de DOM no código da lib (lint, D25); HTML renderizado sem `<script>`                                                                                         |
+
+Pendente (spec 09, parte seguinte): fuzzing do sanitizador, revisão do `httpUploadAdapter` e do exemplo de servidor. Dependências: `npm audit --omit=dev --audit-level=high` roda no CI (informativo).
+
 # Modelo de ameaças do sanitizador
 
 Este documento descreve o que o `@cds/rte-sanitizer` protege, o que ele não protege, as hipóteses em que a garantia vale, a CSP recomendada e como reportar vulnerabilidades. A decisão e as evidências estão no [ADR 0006](decisions/0006-sanitizador.md); o contrato, na [spec 04](specs/04-sanitizador.md).
@@ -43,6 +58,17 @@ A sanitização não substitui a CSP; as duas camadas se somam.
 - `img-src` e `media-src` alinhados a `mediaHosts` (as mesmas origens que o esquema aceita), em vez de `*`.
 - `object-src 'none'` e `base-uri 'none'`.
 - Quem já sanitiza no servidor e quer evitar o custo do pipe no navegador usa o modo `trusted` da spec 06, junto com Trusted Types, com a CSP acima como defesa em profundidade.
+
+## Exibição (`@cds/rte-render`)
+
+A exibição do HTML publicado (spec 06, [ADR 0012](decisions/0012-renderizacao.md)) é uma **segunda barreira**: a que vale continua sendo a do servidor, na gravação (hipótese 1). O que a diretiva `[rteContent]` faz e o que ela supõe:
+
+- **H4, modo padrão `sanitize`.** O HTML passa pelo sanitizador injetado por `provideRteRender({ sanitize: createSanitizer(opçõesDoEditor) })`, com as **mesmas opções do editor**. Sem sanitizador a diretiva **lança** na criação (no navegador e no servidor; no SSR com o `ErrorHandler` padrão o erro é registrado e o artigo sai vazio, o que também falha fechado). `[mode]="'trusted'"` dispensa o sanitizador e vale **só** para HTML que o servidor já sanitizou com `createSanitizer` (mesma versão maior): a pré-condição é **de segurança**: as transformações de exibição (H6) supõem a forma canônica da saída (S13), e fora dela (por exemplo `<` cru no valor de um atributo, como deixam serializadores de outros sanitizadores) a varredura pode fechar um atributo e criar marcação, isto é, **executar** script (`<img alt="<table><img src=x onerror=…>">` vira dois elementos). `trusted` só para a saída de `createSanitizer`. `RteSanitizeError` (`input-too-long`, `max-depth`) dá conteúdo vazio, `console.warn` e `error()`.
+- **H8, estilos por CSSOM.** Sob uma CSP sem `'unsafe-inline'` o atributo `style` vindo do HTML é bloqueado, mas a escrita por CSSOM não. A diretiva reaplica o `style` de cada elemento do conteúdo depois da inserção, **só com as propriedades da lista** `RTE_STYLE_PROPERTIES` do core (`text-align` de `p`/`h2`–`h4`, `width` de `col`, `aspect-ratio` de `iframe`, `color` de `span`, `background-color` de `mark`; Ruling 23), **nos dois modos**: o resto da declaração (inclusive `position`, `background-image`, qualquer `!important`, e o `style` inteiro se tiver `` ou comentário) é descartado, então a escrita por CSSOM não reabilita CSS que a CSP barrou; em `trusted` o CSS fora da lista é retirado também no navegador sem CSP. É a mesma informação que o esquema já validou, e a CSP continua sem `'unsafe-inline'`. Efeito esperado na CSP: um relatório `style-src-attr` por elemento com `style` na inserção (e outro na hidratação, que re-atribui o `innerHTML`); nenhuma violação de `script-src*`. A tabela com larguras de coluna recebe também `width`/`min-width` por CSSOM, **calculados** a partir dos `col` (a única escrita fora da lista, em px inteiros, depois da restauração; um `style` da própria `table` é zerado). Sem JS, o conteúdo aparece com a paleta e sem alinhamento, larguras de coluna e proporção de _embed_.
+- **H9, _Trusted Types_.** O HTML entra no DOM por uma única porta, a ligação de `innerHTML` do _host_ com `DomSanitizer.bypassSecurityTrustHtml` (política `angular#unsafe-bypass` do Angular), no único arquivo `src/content/rte-content.ts`. Nenhum `innerHTML`/`outerHTML`/`insertAdjacentHTML`/`document.write` nem outro `bypassSecurityTrust*` no pacote (lint e `lint-guards.spec.ts`). Cabeçalho aceito: `Content-Security-Policy: require-trusted-types-for 'script'; trusted-types angular angular#unsafe-bypass`. Medido nos três motores (Chromium, Firefox e WebKit aplicam _Trusted Types_): 0 violações na rota de teste.
+- **H6, transformações.** O rolador de tabela e a reescrita de `href="#x"` são varreduras de _tags_ sobre o HTML canônico; a propriedade da R4 (gerador hostil e `editor-corpus`) confere que nada fora de `table` e de `a[href^="#"]` muda. A base do fragmento é escapada por `escapeHtmlAttribute` e o `pathname` sai com uma só barra inicial (`//outro.host/x` viraria link protocolo-relativo para outro _host_). Mudar a H6 ou a H8 é mudança que afeta a segurança e exige changeset que a descreva.
+- **Evidência.** Corpus de XSS do sanitizador (290 casos) e 2000 casos do gerador hostil exibidos pela diretiva: nenhum `<script>`, `on*`, `javascript:`/`data:` nem `srcdoc` no DOM, nenhuma violação `script-src*` (com controle positivo), nos três motores e nos dois _builds_ do app de teste.
+- **Profundidade (hipótese 3).** Manter `maxDepth` no padrão (256) e o conteúdo a menos de ~250 níveis da raiz do documento.
 
 ## Como reportar
 

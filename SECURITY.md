@@ -4,14 +4,22 @@
 
 **Não abra issue pública** para vulnerabilidades.
 
-1. Canal principal: **GitHub Private Vulnerability Reporting**. Na aba **Security** do repositório, clique em **Report a vulnerability**.
-2. Alternativa: e-mail para `TODO-AUTOR (e-mail de contato)`.
+Use o canal privado do GitHub: na aba **Security** do repositório, clique em **Report a vulnerability** (private advisories). Não há canal por e-mail.
 
 Inclua a versão do pacote, o passo a passo para reproduzir e o impacto estimado.
 
 ## Prazos
 
 - Confirmação de recebimento: em até **5 dias úteis**.
-- Avaliação inicial e plano de correção: em até **15 dias úteis**.
+- Plano de correção: em até **30 dias**.
+- A divulgação é coordenada: o advisory é publicado junto com a versão corrigida.
 
-O projeto está em construção e ainda não tem versões publicadas; o prazo vale para o que estiver na branch `main`.
+## Versões suportadas
+
+| Versão                         | Correções de segurança |
+| ------------------------------ | ---------------------- |
+| `main` (pré-1.0, tag `next`)   | Sim                    |
+| Última `1.x` (a partir da 1.0) | Sim                    |
+| `1.x` anterior à última        | Não                    |
+
+Detalhes da política em [docs/support.md](docs/support.md); modelo de ameaças em [docs/security.md](docs/security.md).
