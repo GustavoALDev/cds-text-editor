@@ -45,6 +45,12 @@ export const routes: Routes = [
     path: 'draft',
     loadComponent: () => import('./pages/draft').then((m) => m.DraftPage),
   },
+  // Aviso ao sair e salvamento (spec 05c2b).
+  {
+    path: 'draft-save',
+    loadComponent: () =>
+      import('./pages/draft-save').then((m) => m.DraftSavePage),
+  },
   // Envio de arquivos (spec 05c2a): providers de rota sob demanda.
   {
     path: 'upload',

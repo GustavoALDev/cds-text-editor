@@ -90,6 +90,7 @@ import {
   type RteEditableState,
 } from './attributes';
 import { bindRteBridge, createRteBridge } from './bridge';
+import { RteBeforeUnload } from './before-unload';
 import { RteDirtyState, readCanonical } from './dirty';
 import { isEmptyValue, readValue } from './empty';
 import { RTE_EDITOR_HOOK } from './hook';
@@ -232,6 +233,8 @@ export class RteEditor implements FormValueControl<string> {
   readonly upload = input<RteUploadConfig | null | undefined>(undefined);
   /** Rascunho automático (S3): 1 a 200 caracteres; `null` desliga. */
   readonly draftKey = input<string | null | undefined>(undefined);
+  /** Aviso do navegador ao sair com alterações não salvas: entrada > provider; padrão desligado (S10). */
+  readonly warnOnUnsaved = input<boolean | undefined>(undefined);
 
   // Saídas
   readonly editorReady = output<Editor>();
@@ -531,6 +534,17 @@ export class RteEditor implements FormValueControl<string> {
   });
   /** O valor difere da base salva (criação, carga externa ou `markSaved`). */
   readonly isDirty: Signal<boolean> = this.dirtyState.isDirty;
+
+  /** `beforeunload` só enquanto sujo ou com envio em curso (S10, R8). */
+  private readonly beforeUnload = new RteBeforeUnload({
+    zone: this.ngZone,
+    view: this.host.ownerDocument.defaultView,
+    enabled: computed(
+      () => this.warnOnUnsaved() ?? this.config.warnOnUnsaved ?? false,
+    ),
+    isDirty: this.isDirty,
+    pendingUploads: this.pendingUploads,
+  });
 
   /** Rascunho (S2–S7): a fachada fica aqui; o agendador, no *chunk* `rte-draft`. */
   private readonly drafting: RteDraft = new RteDraft(
@@ -852,6 +866,7 @@ export class RteEditor implements FormValueControl<string> {
       const editor = untracked(this.instance);
       this.uploading.dispose();
       this.dirtyState.dispose();
+      this.beforeUnload.dispose();
       this.drafting.dispose();
       this.dialogs.dispose();
       this.destroyed = true;

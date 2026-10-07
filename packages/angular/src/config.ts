@@ -41,6 +41,8 @@ export interface RteConfig {
   upload?: RteUploadConfig;
   /** Rascunho padrão (armazenamento, idade, aviso); só age com `draftKey` (S3). */
   draft?: RteDraftConfig;
+  /** Aviso ao sair com alterações não salvas; padrão desligado (entrada > provider, S10). */
+  warnOnUnsaved?: boolean;
 }
 
 /** Rótulos do provider já mesclados sobre `en` (sem a entrada da instância). */

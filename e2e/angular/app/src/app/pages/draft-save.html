@@ -1,0 +1,11 @@
+<rte-editor
+  data-testid="draft-save"
+  ariaLabel="Draft save"
+  [warnOnUnsaved]="true"
+  [upload]="upload"
+  [(value)]="value"
+/>
+<button type="button" data-testid="save" (click)="save()">Save</button>
+<button type="button" data-testid="send" (click)="send()">Send</button>
+<output data-testid="dirty">{{ editor().isDirty() }}</output>
+<output data-testid="pending">{{ editor().pendingUploads() }}</output>
