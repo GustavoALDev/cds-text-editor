@@ -93,6 +93,25 @@
         "command": "node tools/check-pack.mjs dist/packages/angular",
         "cwd": "{workspaceRoot}"
       }
+    },
+    "api": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build", "^build"],
+      "inputs": [
+        "{workspaceRoot}/dist/packages/angular/**/*.d.ts",
+        "^production",
+        "{projectRoot}/api/**/*",
+        "{workspaceRoot}/tools/api-report.mjs",
+        {
+          "env": "UPDATE_API"
+        }
+      ],
+      "outputs": ["{projectRoot}/api"],
+      "cache": true,
+      "options": {
+        "command": "node tools/api-report.mjs dist/packages/angular",
+        "cwd": "{workspaceRoot}"
+      }
     }
   }
 }
