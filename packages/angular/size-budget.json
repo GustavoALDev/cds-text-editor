@@ -244,13 +244,13 @@
     }
   },
   "budgets": {
-    "editor": 39168,
-    "whole": 39360,
+    "editor": 43520,
+    "whole": 43712,
     "dialogs": 6464,
     "media": 8640,
-    "floating": 8576,
-    "slash-menu": 2048,
-    "search": 2944,
+    "floating": 7424,
+    "slash-menu": 2240,
+    "search": 3200,
     "overlay-shared": 1600,
     "i18n": 6144,
     "validators": 2816,

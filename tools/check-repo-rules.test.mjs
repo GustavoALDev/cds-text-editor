@@ -157,3 +157,66 @@ test('ignores ɵ in spec files', () => {
   });
   assert.deepEqual(checkRepoRules(root), []);
 });
+
+const CORE_PKG = {
+  'packages/core/package.json': JSON.stringify({
+    name: '@cds/rte-core',
+    exports: {
+      '.': { types: './dist/index.d.ts', default: './dist/index.js' },
+      './html': {
+        types: './dist/html/index.d.ts',
+        default: './dist/html/index.js',
+      },
+      './styles/content.css': './styles/content.css',
+    },
+  }),
+};
+
+test('rejects a public entry (exports with types) missing from the README', () => {
+  const root = fixture({
+    ...CORE_PKG,
+    'packages/core/README.md': 'Use `@cds/rte-core`.\n',
+  });
+  const errors = checkRepoRules(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /@cds\/rte-core\/html.*não é citado/);
+});
+
+test('accepts when every public entry is cited (css export is not an entry)', () => {
+  const root = fixture({
+    ...CORE_PKG,
+    'packages/core/README.md': '`@cds/rte-core` e `@cds/rte-core/html`.\n',
+  });
+  assert.deepEqual(checkRepoRules(root), []);
+});
+
+test('a longer subpath does not satisfy a shorter one', () => {
+  const root = fixture({
+    ...CORE_PKG,
+    'packages/core/README.md':
+      '`@cds/rte-core` e `@cds/rte-core/html-extra`.\n',
+  });
+  assert.equal(checkRepoRules(root).length, 1);
+});
+
+test('rejects a secondary entry (ng-package.json) missing from the README', () => {
+  const files = {
+    'packages/angular/package.json': JSON.stringify({
+      name: '@cds/rte-angular',
+    }),
+    'packages/angular/upload/ng-package.json': '{}',
+  };
+  const errors = checkRepoRules(
+    fixture({ ...files, 'packages/angular/README.md': '@cds/rte-angular\n' }),
+  );
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /@cds\/rte-angular\/upload/);
+  const ok = checkRepoRules(
+    fixture({
+      ...files,
+      'packages/angular/README.md':
+        '@cds/rte-angular e @cds/rte-angular/upload\n',
+    }),
+  );
+  assert.deepEqual(ok, []);
+});

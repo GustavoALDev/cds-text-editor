@@ -110,6 +110,61 @@ function checkInternalExports(pkgDir, pkg) {
   return errors;
 }
 
+// Spec 05d2 (Z13): todo entry público (subcaminho do `exports` com `types`, ou subdiretório
+// com ng-package.json nos pacotes do ng-packagr) é citado no README do pacote.
+function publicEntries(pkgDir, name) {
+  const subpaths = ['.'];
+  const manifest = JSON.parse(
+    readFileSync(join(pkgDir, 'package.json'), 'utf8'),
+  );
+  for (const [sub, target] of Object.entries(manifest.exports ?? {})) {
+    if (
+      sub !== '.' &&
+      sub.startsWith('.') &&
+      typeof target === 'object' &&
+      target?.types
+    )
+      subpaths.push(sub.slice(2));
+  }
+  for (const dir of readdirSync(pkgDir)) {
+    const full = join(pkgDir, dir);
+    if (
+      dir !== 'node_modules' &&
+      dir !== 'dist' &&
+      statSync(full).isDirectory() &&
+      existsSync(join(full, 'ng-package.json'))
+    )
+      subpaths.push(dir);
+  }
+  return [...new Set(subpaths)].map((sub) =>
+    sub === '.' ? name : `${name}/${sub}`,
+  );
+}
+
+function checkReadmeEntries(pkgDir, pkg) {
+  const manifestPath = join(pkgDir, 'package.json');
+  if (!existsSync(manifestPath)) return [];
+  const { name } = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  if (!name) return [];
+  const entries = publicEntries(pkgDir, name);
+  const readmePath = join(pkgDir, 'README.md');
+  if (!existsSync(readmePath)) return [];
+  const readme = readFileSync(readmePath, 'utf8');
+  const errors = [];
+  for (const entry of entries) {
+    // Cita o entry inteiro: o caractere seguinte não pode continuar o nome (`/html` não cobre `/html-extra`).
+    const cited = readme
+      .split(entry)
+      .slice(1)
+      .some((rest) => !/^[\w/-]/.test(rest));
+    if (!cited)
+      errors.push(
+        `packages/${pkg}/README.md: o entry público ${entry} não é citado (spec 05d2, Z13)`,
+      );
+  }
+  return errors;
+}
+
 export function checkRepoRules(rootDir) {
   const errors = [];
   // Só no repositório real (com package.json na raiz); fixtures parciais de teste ficam de fora.
@@ -128,6 +183,7 @@ export function checkRepoRules(rootDir) {
   for (const pkg of readdirSync(packagesDir)) {
     if (!statSync(join(packagesDir, pkg)).isDirectory()) continue;
     errors.push(...checkInternalExports(join(packagesDir, pkg), pkg));
+    errors.push(...checkReadmeEntries(join(packagesDir, pkg), pkg));
     const manifestPath = join(packagesDir, pkg, 'package.json');
     if (NO_ANGULAR.includes(pkg) && existsSync(manifestPath)) {
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));

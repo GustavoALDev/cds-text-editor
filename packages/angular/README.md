@@ -2,7 +2,7 @@
 
 Componente Angular do editor de texto rico (`rte-editor`), sobre Tiptap 3: ponte de signals, Signal Forms, Reactive/Template Forms, rótulos pt-BR/en/es, validadores de texto e CSS funcional sem injeção (compatível com CSP estrita).
 
-**Status: specs 05a (componente e formulários), 05b1 (barra e tema por instância), 05b2 (diálogos e menus flutuantes) e 05c1 (diálogos de mídia) concluídas; ainda sem versão publicada.** Upload e rascunho (05c2) e busca/comandos `/` com interface (05d) vêm nas partes seguintes. Desde a 05d1 `features.search` e `features.slashCommands` seguem o padrão do core (ligados); a interface chega nas tarefas seguintes da 05d1.
+**Status: specs 05a a 05d2 (componente e formulários, barra e tema, diálogos e menus, mídia, upload e rascunho, busca, comandos `/` e contadores, desempenho e API) implementadas; a confirmação nos três navegadores é a rodada do CI do PR. Ainda sem versão publicada.** `features.search` e `features.slashCommands` seguem o padrão do core (ligados).
 
 Nome do pacote provisório (escopo `@cds` ainda não confirmado). Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
@@ -356,9 +356,48 @@ Testado com `default-src 'self'; script-src 'self'; style-src 'self'` por cabeç
 
 `@cds/rte-angular/testing` exporta `getRteEditor(host)`, que lê o `Editor` do Tiptap do elemento `rte-editor` pelo gancho `Symbol.for('@cds/rte-angular/editor')` (funciona em _build_ de produção); `null` antes da criação ou depois de destruir.
 
+## Desempenho e limites conhecidos
+
+**Números preliminares.** Medidos no Chromium local (Windows, `--workers=1`, máquina com carga leve), no cenário completo da página `perf?full` do app de teste: documento de 20 mil palavras com tabela e 20 imagens, `[formField]` com `rteMaxChars`, `rteSafeLinks` e `rteNoEmptyHeadings`, barra `full`, menus flutuantes, mídia, busca aberta com consulta ativa, contadores e `draftKey`. A confirmação nos três motores é a rodada do CI; até lá, leia os valores como ordem de grandeza.
+
+| Medida                                           | Mediana (ms) | p95 (ms)  | Orçamento (ms)  |
+| ------------------------------------------------ | ------------ | --------- | --------------- |
+| Tecla, cenário completo, frio (com _render_)     | 15,2 a 16,1  | 20 a 25   | 50 (p95)        |
+| Tecla, cenário completo, quente (teclas 251–300) | 45,7 a 49,9  | 62 a 65   | 50 (p95)        |
+| Tecla com busca capada ("1000+")                 | 14,4 a 16,2  | 21 a 22   | 50 (p95)        |
+| Linha de base (só `[formField]` + `rteMaxChars`) | 10,8 a 13,0  | 16 a 26   | n/a             |
+| Criação do cenário completo                      | 90 a 102     | 100 a 143 | 300             |
+| Criação de um editor vazio, barra `minimal`      | 9,3 a 9,5    | 12 a 14   | 50 (provisório) |
+| INP com teclado real (50 ms entre teclas)        | 56 a 96      | n/a       | 200             |
+| Gravação do rascunho                             | 0,9 a 2,5    | n/a       | 16              |
+
+Os orçamentos são verificados por `e2e/angular/editor-perf-budget.spec.ts` (com `RTE_PERF_ENFORCE=1` falham de verdade; sem a variável, apenas informam).
+
+**Emissão do valor e o modelo.** O valor é emitido de forma síncrona a cada transação que altera o documento; não há `updateOn` nem adiamento (`valueEmission` não foi criado, porque o orçamento de 50 ms por tecla foi cumprido no cenário completo). O contrato do ADR 0007 continua valendo: **devolva ao modelo o que recebeu do editor, ou o valor canônico** (`getRteHtml`). Todo valor diferente do último canônico emitido é tratado como carga externa: um valor equivalente mas não canônico (por exemplo, HTML que um assinante normaliza, ou a ida e volta assíncrona a um _store_ concorrendo com a digitação) recarrega o documento e perde o cursor e o histórico.
+
+**Salto depois de ~150 a 200 transações.** Na sessão contínua de digitação o custo por tecla sobe cerca de 3,5 vezes (por exemplo, `dispatch` de 3,6 para 12 ms) perto da transação 150 (cenário completo) ou 200 (linha de base). Não é coleta de lixo (forçá-la a cada 50 teclas não remove o degrau) nem crescimento do pacote: um laço de CPU sem relação com o editor, intercalado com as teclas, também passou de 2,0 para 7,5 ms no mesmo ponto. A leitura é de degrau do ambiente (CPU e processo do navegador sob carga sustentada). Por isso o teto de 50 ms foi mantido e a medida deve ser repetida com a máquina ociosa e no CI Linux (guarda de 2x).
+
+**Criação e destruição.** Em 100 alternâncias do editor (`@if`) o heap, depois da coleta, fica estável (delta de 0,4 MB entre as alternâncias 50 e 100), os ouvintes de eventos e o DOM não crescem e nenhum `Editor` fica vivo depois de escondido. Nenhum ouvinte de `document`/`window` nem temporizador sobrevive à destruição. Na página com `[formField]`, o último `Editor` destruído pode continuar referenciado até o próximo campo do Signal Forms ser criado (comportamento do Signal Forms, constante, não cresce).
+
+**Histórico.** O `newGroupDelay` do Tiptap fica em 500 ms: o que se digita dentro dessa janela depois de um item `/` ou de uma substituição forma um único passo do `Mod+Z`.
+
+**Limites.** Documentos muito grandes (dezenas de milhares de palavras) são aceitos, mas a busca é limitada a 1000 ocorrências ("1000+") Os diálogos, os menus flutuantes, o menu `/` e a busca são carregados sob demanda em _chunks_ separados. O tamanho de cada cenário é guardado por `npm run check:size` (orçamento por cenário em `size-budget.json`).
+
+## API
+
+Os relatórios da superfície pública (gerados pelo `api-extractor` e conferidos pelo alvo `nx run angular:api`; para regenerar após uma mudança intencional, `UPDATE_API=1 npx nx run angular:api`) ficam em `packages/angular/api/`:
+
+- [`rte-angular.api.md`](api/rte-angular.api.md): `@cds/rte-angular`
+- [`rte-angular-i18n.api.md`](api/rte-angular-i18n.api.md): `@cds/rte-angular/i18n`
+- [`rte-angular-validators.api.md`](api/rte-angular-validators.api.md): `@cds/rte-angular/validators`
+- [`rte-angular-upload.api.md`](api/rte-angular-upload.api.md): `@cds/rte-angular/upload`
+- [`rte-angular-testing.api.md`](api/rte-angular-testing.api.md): `@cds/rte-angular/testing`
+
+Exports com prefixo `ɵ` e tudo marcado `@internal` ficam fora dos relatórios e não são API pública.
+
 ## O que vem depois
 
-05d2: `updateOn`/adiamento da emissão com os números de desempenho, orçamentos finais e API final. Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
+Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
 
 Repositório: cds-text-editor (monorepo). Licença MIT.
 

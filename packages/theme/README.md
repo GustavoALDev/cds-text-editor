@@ -245,6 +245,14 @@ e2e/with-browser-libs.sh npx playwright test -c e2e   # E2E em Chromium, Firefox
 
 No CI os navegadores são instalados com `npx playwright install --with-deps`. Os testes de navegador do tema ficam em `e2e/theme/`; ver `e2e/README.md`.
 
+## API
+
+Os relatórios da superfície pública (gerados pelo `api-extractor` e conferidos pelo alvo `nx run theme:api`; após uma mudança intencional, `UPDATE_API=1 npx nx run theme:api`) ficam em `packages/theme/api/`:
+
+- [`rte-theme.api.md`](api/rte-theme.api.md): `@cds/rte-theme`
+
+Exports com prefixo `ɵ` e tudo marcado `@internal` ficam fora dos relatórios e não são API pública.
+
 Repositório: cds-text-editor (monorepo). Licença MIT.
 
 > Projeto independente, **não afiliado à Tiptap nem ao ProseMirror**.

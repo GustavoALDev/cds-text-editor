@@ -81,6 +81,14 @@ const minutes = readingTime(htmlToText(html));
 
 O que ele protege, o que não protege, as hipóteses de uso e a CSP recomendada estão em [`docs/security.md`](../../docs/security.md). A decisão e os números estão no [ADR 0006](../../docs/decisions/0006-sanitizador.md).
 
+## API
+
+Os relatórios da superfície pública (gerados pelo `api-extractor` e conferidos pelo alvo `nx run sanitizer:api`; após uma mudança intencional, `UPDATE_API=1 npx nx run sanitizer:api`) ficam em `packages/sanitizer/api/`:
+
+- [`rte-sanitizer.api.md`](api/rte-sanitizer.api.md): `@cds/rte-sanitizer`
+
+Exports com prefixo `ɵ` e tudo marcado `@internal` ficam fora dos relatórios e não são API pública.
+
 Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
 Repositório: cds-text-editor (monorepo). Licença MIT.

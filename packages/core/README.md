@@ -255,6 +255,18 @@ drafts.load(); // { html, savedAt } | null (expirado, inválido ou ausente)
 drafts.clear(); // chame no logout em computadores compartilhados
 ```
 
+## API
+
+Os relatórios da superfície pública (gerados pelo `api-extractor` e conferidos pelo alvo `nx run core:api`; após uma mudança intencional, `UPDATE_API=1 npx nx run core:api`) ficam em `packages/core/api/`:
+
+- [`rte-core.api.md`](api/rte-core.api.md): `@cds/rte-core`
+- [`rte-core-embeds.api.md`](api/rte-core-embeds.api.md): `@cds/rte-core/embeds`
+- [`rte-core-html.api.md`](api/rte-core-html.api.md): `@cds/rte-core/html`
+- [`rte-core-extensions.api.md`](api/rte-core-extensions.api.md): `@cds/rte-core/extensions`
+- [`rte-core-code-languages.api.md`](api/rte-core-code-languages.api.md): `@cds/rte-core/code-languages`
+
+Exports com prefixo `ɵ` e tudo marcado `@internal` ficam fora dos relatórios e não são API pública.
+
 Repositório: cds-text-editor (monorepo). Licença MIT.
 
 > Projeto independente, **não afiliado à Tiptap nem ao ProseMirror**.
