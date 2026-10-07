@@ -7,6 +7,7 @@ import {
   detectPlatform,
   formatShortcut,
   RTE_TOOLBAR_SHORTCUTS,
+  shortcutTitle,
   type RteShortcutTarget,
 } from './toolbar/shortcuts';
 
@@ -22,6 +23,15 @@ describe('formatShortcut', () => {
     expect(formatShortcut('Ctrl-Alt-Shift-Meta-x', 'mac')).toBe('⌃⌥⇧⌘X');
     expect(formatShortcut('Mod-k', 'mac')).toBe('⌘K');
     expect(formatShortcut('Mod-k', 'other')).toBe('Ctrl+K');
+  });
+});
+
+describe('shortcutTitle (pré-voo 13)', () => {
+  it('rótulo com o atalho da plataforma, ou só o rótulo', () => {
+    expect(shortcutTitle('Bold', 'bold', 'mac')).toBe('Bold (⌘B)');
+    expect(shortcutTitle('Bold', 'bold', 'other')).toBe('Bold (Ctrl+B)');
+    expect(shortcutTitle('X', null, 'other')).toBe('X');
+    expect(shortcutTitle('Table', 'table', 'other')).toBe('Table');
   });
 });
 

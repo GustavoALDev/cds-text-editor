@@ -854,3 +854,136 @@ describe('editor.css: diálogos (spec 05b2a, G20)', () => {
     );
   });
 });
+
+describe('editor.css: menus flutuantes (spec 05b2b, M18)', () => {
+  function floatingRules(): Rule[] {
+    return styleRules().filter((r) =>
+      r.selectors.some((s) =>
+        /\.rte-floating(?:__[\w-]+|--[\w-]+)?(?![\w-])/.test(s),
+      ),
+    );
+  }
+
+  function declsEndingWith(suffix: string): Declaration[] {
+    return styleRules()
+      .filter((r) => r.selectors.some((s) => s.trim().endsWith(suffix)))
+      .flatMap((r) => declarations(r));
+  }
+
+  it.each(['rte-floating', 'rte-floating--measuring', 'rte-floating__link'])(
+    'tem regra para %s',
+    (cls) => {
+      expect(
+        styleRules().some((r) => r.selectors.some((s) => hasClass(s, cls))),
+      ).toBe(true);
+    },
+  );
+
+  it('as regras ficam em rte.components, sob .rte-editor, com cores só de --rte-*/CanvasText', () => {
+    const rules = floatingRules();
+    expect(rules.length).toBeGreaterThan(2);
+    const misplaced = rules
+      .filter(
+        (r) =>
+          layerOf(r) !== 'rte.components' ||
+          !r.selectors.every((s) => /^\.rte-editor\s/.test(s.trim())),
+      )
+      .map((r) => r.selector);
+    expect(misplaced).toEqual([]);
+    const colors = rules
+      .flatMap((r) => declarations(r))
+      .filter((d) => COLOR_PROPS.test(d.prop))
+      .filter((d) => !COLOR_VALUE.test(d.value) && !SYSTEM_COLOR.test(d.value))
+      .map((d) => `${d.prop}: ${d.value}`);
+    expect(colors).toEqual([]);
+  });
+
+  it('o menu é fixo, sem inset/margem do UA, em linha que quebra e com cores do tema', () => {
+    const decls = declsEndingWith('.rte-floating');
+    for (const [prop, value] of [
+      ['position', 'fixed'],
+      ['inset', 'auto'],
+      ['margin', '0'],
+      ['display', 'flex'],
+      ['flex-wrap', 'wrap'],
+      ['max-inline-size', 'calc(100vw - 16px)'],
+      ['color', 'var(--rte-text)'],
+      ['background-color', 'var(--rte-surface)'],
+      ['border', '1px solid var(--rte-border)'],
+      ['border-radius', 'var(--rte-radius)'],
+    ])
+      expect(decls).toContainEqual(expect.objectContaining({ prop, value }));
+    expect(decls.some((d) => d.prop === 'gap')).toBe(true);
+    expect(decls.some((d) => d.prop === 'padding')).toBe(true);
+  });
+
+  it('o menu fechado fica fora do leiaute (o display do autor vence o display:none do UA)', () => {
+    const closed = styleRules().filter((r) =>
+      r.selectors.some((s) =>
+        /\.rte-floating:not\(:popover-open\)\s*$/.test(s.trim()),
+      ),
+    );
+    expect(closed.flatMap((r) => declarations(r))).toContainEqual(
+      expect.objectContaining({ prop: 'display', value: 'none' }),
+    );
+  });
+
+  it('--measuring esconde sem tirar do leiaute', () => {
+    expect(declsEndingWith('.rte-floating--measuring')).toContainEqual(
+      expect.objectContaining({ prop: 'visibility', value: 'hidden' }),
+    );
+  });
+
+  it('o endereço do link trunca com reticências, em --rte-primary-text (contraste de texto no escuro), alvo ≥ 24 px e foco visível', () => {
+    const decls = declsEndingWith('.rte-floating__link');
+    for (const [prop, value] of [
+      ['max-inline-size', '20rem'],
+      ['overflow', 'hidden'],
+      ['color', 'var(--rte-primary-text)'],
+      ['min-block-size', '24px'],
+    ])
+      expect(decls).toContainEqual(expect.objectContaining({ prop, value }));
+    expect(decls).not.toContainEqual(
+      expect.objectContaining({ prop: 'text-overflow' }),
+    );
+    // As reticências ficam no `span` do endereço (filho de um contêiner flex).
+    expect(declsEndingWith('.rte-floating__address')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ prop: 'text-overflow', value: 'ellipsis' }),
+        expect.objectContaining({ prop: 'overflow', value: 'hidden' }),
+        expect.objectContaining({ prop: 'white-space', value: 'nowrap' }),
+        expect.objectContaining({ prop: 'min-inline-size', value: '0' }),
+      ]),
+    );
+    expect(declsEndingWith('.rte-floating__link:focus-visible')).toContainEqual(
+      expect.objectContaining({
+        prop: 'outline',
+        value: 'var(--rte-focus-width) solid var(--rte-focus)',
+      }),
+    );
+  });
+
+  it('forced-colors: borda CanvasText no menu flutuante', () => {
+    const rules: Rule[] = [];
+    root.walkAtRules('media', (at) => {
+      if (/forced-colors:\s*active/.test(at.params))
+        at.walkRules((r) => void rules.push(r));
+    });
+    const floating = rules.filter((r) =>
+      r.selectors.some((s) => s.trim().endsWith('.rte-floating')),
+    );
+    expect(
+      floating
+        .flatMap((r) => declarations(r))
+        .some((d) => d.prop === 'border-color' && d.value === 'CanvasText'),
+    ).toBe(true);
+  });
+
+  it('sem animation/transition', () => {
+    const moving = floatingRules()
+      .flatMap((r) => declarations(r))
+      .filter((d) => /^(?:animation|transition)(?:-|$)/.test(d.prop))
+      .map((d) => `${d.prop}: ${d.value}`);
+    expect(moving).toEqual([]);
+  });
+});

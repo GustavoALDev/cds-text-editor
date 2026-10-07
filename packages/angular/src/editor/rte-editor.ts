@@ -38,17 +38,35 @@ import { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { RTE_CONFIG, RTE_LABELS, type RteEditorConfig } from '../config';
-import { dialogBusy, RteDialogController } from '../dialogs/controller';
+import {
+  dialogBusy,
+  documentDialogBusy,
+  RteDialogController,
+} from '../dialogs/controller';
 import { RteDeferFailed } from '../dialogs/defer-failed';
 import { RteDialogs } from '../dialogs/rte-dialogs';
 import { dialogTarget } from '../dialogs/target';
 import type { RteDialogKind } from '../dialogs/types';
 import { createRteUiExtension } from '../dialogs/ui-extension';
+import { createFloatingEscapeExtension } from '../floating/escape-extension';
+import {
+  floatingItemIds,
+  resolveFloatingKinds,
+  sameKinds,
+} from '../floating/config';
+// Só em `imports`: o `@defer` do template põe a classe num chunk à parte (M2).
+import { RteFloatingMenus } from '../floating/rte-floating-menus';
+import {
+  RTE_FLOATING_MENUS,
+  type RteFloatingMenuKind,
+  type RteFloatingMenusConfig,
+} from '../floating/types';
 import { mergeLabels, readLabelsSource } from '../labels/merge';
 import type { RteLabels, RteLabelsSource } from '../labels/types';
 import { pickToolbarConfig, resolveToolbarGroups } from '../toolbar/config';
 import type { RteToolbarConfig, RteToolbarItemId } from '../toolbar/items';
 import { RteToolbar } from '../toolbar/rte-toolbar';
+import { createToolbarState, type RteToolbarState } from '../toolbar/state';
 import { mergeTheme, sameTheme, themeKey } from '../theme/instance-theme';
 import {
   editableAttributes,
@@ -64,6 +82,9 @@ import { readonlySelectionKeydown } from './readonly-selection';
 const OPTIONS_IGNORED =
   '[rte-editor] options só é lido na criação; a mudança foi ignorada.';
 
+const FLOATING_FAILED =
+  '[rte-editor] não foi possível carregar os menus flutuantes; o editor segue sem eles.';
+
 const NO_LANGUAGES: readonly RteCodeLanguage[] = Object.freeze([]);
 
 function sameGroups(
@@ -78,6 +99,13 @@ function sameGroups(
         group.every((id, j) => id === b[i]?.[j]),
     )
   );
+}
+
+function sameIds(
+  a: readonly RteToolbarItemId[],
+  b: readonly RteToolbarItemId[],
+): boolean {
+  return a.length === b.length && a.every((id, i) => id === b[i]);
 }
 
 function samePalette(
@@ -112,7 +140,7 @@ function toCharLimit(value: number | undefined): number | null {
   exportAs: 'rteEditor',
   templateUrl: './rte-editor.html',
   // `RteDialogs` só aqui e no `@defer` do template (G7: senão o chunk some).
-  imports: [RteToolbar, RteDialogs, RteDeferFailed],
+  imports: [RteToolbar, RteFloatingMenus, RteDialogs, RteDeferFailed],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   host: {
@@ -152,6 +180,8 @@ export class RteEditor implements FormValueControl<string> {
   readonly toolbar = input<RteToolbarConfig | undefined>(undefined);
   /** Tema: mesclado por chave sobre o de `provideRichText`; ao vivo (U15). */
   readonly theme = input<RteTheme | undefined>(undefined);
+  /** Menus flutuantes: entrada > `provideRichText` por chave; ao vivo (M17). */
+  readonly floatingMenus = input<RteFloatingMenusConfig | undefined>(undefined);
 
   // Saídas
   readonly editorReady = output<Editor>();
@@ -219,6 +249,12 @@ export class RteEditor implements FormValueControl<string> {
 
   private readonly mount = viewChild.required<ElementRef<HTMLElement>>('mount');
   private readonly toolbarRef = viewChild(RteToolbar);
+  /**
+   * Menus flutuantes (M2), pelo token: a classe no `viewChild` a puxaria
+   * para o chunk principal. `undefined` antes da criação, sem tipos ou antes
+   * de o chunk do `@defer` chegar.
+   */
+  protected readonly floatingRef = viewChild(RTE_FLOATING_MENUS);
 
   private readonly config = inject(RTE_CONFIG);
   /** Configuração fixada na criação (`null` antes dela). */
@@ -268,6 +304,40 @@ export class RteEditor implements FormValueControl<string> {
     { equal: sameGroups },
   );
 
+  private readonly floatingWarned = new Set<string>();
+  /** Tipos de menu flutuante ligados (M17), na ordem de prioridade. */
+  protected readonly floatingKinds: Signal<readonly RteFloatingMenuKind[]> =
+    computed(
+      () =>
+        resolveFloatingKinds(
+          this.floatingMenus(),
+          this.config.floatingMenus,
+          this.schema().features,
+          this.floatingWarned,
+        ),
+      { equal: sameKinds },
+    );
+
+  /**
+   * Estado único da barra e dos menus flutuantes (M15, pré-voo 1): união sem
+   * repetição dos itens da barra e dos do menu de texto, calculada uma vez
+   * por transação mesmo com `toolbar: false`.
+   */
+  protected readonly toolbarState: RteToolbarState = createToolbarState({
+    editor: this.instance,
+    version: this.bridge.version,
+    items: computed(
+      () => [
+        ...new Set([
+          ...this.toolbarGroups().flat(),
+          ...floatingItemIds(this.floatingKinds()),
+        ]),
+      ],
+      { equal: sameIds },
+    ),
+    interactive: this.interactive,
+  });
+
   /** Paleta do esquema; igual por valor (a criação não re-renderiza os menus). */
   protected readonly palette = computed(() => this.schema().palette, {
     equal: samePalette,
@@ -292,6 +362,24 @@ export class RteEditor implements FormValueControl<string> {
   });
   protected readonly dialogRequested = this.dialogs.requested;
   protected readonly onDialogsFailed = () => this.dialogs.fail();
+  /** `@error` do chunk dos menus (M2): o editor segue sem eles. */
+  protected readonly onFloatingFailed = () => {
+    if (isDevMode()) console.warn(FLOATING_FAILED);
+  };
+  /** Dispara o `@defer` dos menus: editor criado e algum tipo ligado (M2). */
+  protected readonly floatingWanted = computed(
+    () => this.editor() !== null && this.floatingKinds().length > 0,
+  );
+  /** Menus flutuantes só com editor interativo e visível (M5). */
+  protected readonly floatingEnabled = computed(
+    () => this.interactive() && !this.hidden(),
+  );
+  /** Pedido de diálogo deste editor ou de outro do documento (M5, G6). */
+  protected readonly floatingBlocked = computed(
+    () =>
+      this.dialogs.request() !== null ||
+      documentDialogBusy(this.host.ownerDocument)(),
+  );
   /** Política de links da criação (G9): a mesma que o editor usa. */
   protected readonly linkPolicy = computed(
     () => this.editorConfig().linkPolicy,
@@ -434,6 +522,17 @@ export class RteEditor implements FormValueControl<string> {
       },
     });
 
+    // Todos os menus flutuantes saindo (`floatingMenus: false`) com o foco
+    // dentro: o `@if` destrói o componente antes do efeito dele sobre
+    // `kinds()`, então o foco vai ao editável daqui, antes do refresh (M11).
+    effect(() => {
+      const kinds = this.floatingKinds();
+      const editor = this.instance();
+      untracked(() => {
+        if (!kinds.length || !editor) this.floatingRef()?.releaseFocus([]);
+      });
+    });
+
     // G5: a troca de `toolbar` que tira a origem do DOM cancela (foco ao
     // editável, G4).
     afterRenderEffect({
@@ -501,6 +600,12 @@ export class RteEditor implements FormValueControl<string> {
             }),
           ),
           createRteUiExtension({ openLink: () => this.openDialog('link') }),
+          // `Escape` no editável (M6): o último `handleKeyDown` do ProseMirror.
+          createFloatingEscapeExtension(() =>
+            this.ngZone.run(
+              () => untracked(this.floatingRef)?.dismiss() ?? false,
+            ),
+          ),
         ];
         const element = this.mount().nativeElement;
         const content = this.value() || '';
@@ -612,25 +717,44 @@ export class RteEditor implements FormValueControl<string> {
     );
   }
 
-  /** `Alt+F10` no editável leva o foco à barra (U3). */
+  /**
+   * Teclado do host (U3, M12; pré-voo 10). `Alt+F10` no editável foca o menu
+   * flutuante visível ou, sem ele, a barra; dentro de um `.rte-floating`, a
+   * barra. O `Escape` do editável (M6) é tratado dentro do ProseMirror
+   * (`createFloatingEscapeExtension`), depois dos atalhos do editor.
+   */
   protected onHostKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented) return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const inEditable = this.mount().nativeElement.contains(target);
     if (
       event.key !== 'F10' ||
       !event.altKey ||
       event.ctrlKey ||
       event.metaKey ||
-      event.shiftKey ||
-      event.defaultPrevented
+      event.shiftKey
     )
       return;
-    const target = event.target;
-    if (
-      !(target instanceof Node) ||
-      !this.mount().nativeElement.contains(target)
-    )
+    if (inEditable) {
+      event.preventDefault();
+      if (!this.focusFloatingMenu()) this.focusToolbar();
       return;
-    event.preventDefault();
-    this.focusToolbar();
+    }
+    const floating = target.closest('.rte-floating');
+    if (floating && this.host.contains(floating)) {
+      event.preventDefault();
+      this.focusToolbar();
+    }
+  }
+
+  /**
+   * Foca o item ativo do menu flutuante visível (M12); `false` (sem mover o
+   * foco) sem editor, não editável ou sem menu visível.
+   */
+  focusFloatingMenu(): boolean {
+    if (!untracked(this.interactive)) return false;
+    return untracked(this.floatingRef)?.focusActive() ?? false;
   }
 
   /** Leva o foco ao item ativo da barra (U3); sem barra ou sem editor, nada. */

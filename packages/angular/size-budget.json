@@ -3,7 +3,7 @@
     "editor": {
       "entry": "dist/packages/angular/fesm2022/cds-rte-angular.mjs",
       "exports": ["RteEditor", "provideRichText"],
-      "externalChunks": true,
+      "externalChunks": "dynamic",
       "external": [
         "@angular/*",
         "@tiptap/*",
@@ -19,7 +19,7 @@
     "whole": {
       "entry": "dist/packages/angular/fesm2022/cds-rte-angular.mjs",
       "exports": ["*"],
-      "externalChunks": true,
+      "externalChunks": "dynamic",
       "external": [
         "@angular/*",
         "@tiptap/*",
@@ -33,7 +33,23 @@
       ]
     },
     "dialogs": {
-      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-*-*.mjs",
+      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-dialogs-*.mjs",
+      "exports": ["*"],
+      "externalChunks": true,
+      "external": [
+        "@angular/*",
+        "@tiptap/*",
+        "@cds/*",
+        "lowlight",
+        "highlight.js",
+        "highlight.js/*",
+        "rxjs",
+        "rxjs/*",
+        "tslib"
+      ]
+    },
+    "floating": {
+      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-floating-menus-*.mjs",
       "exports": ["*"],
       "externalChunks": true,
       "external": [
@@ -80,10 +96,11 @@
     }
   },
   "budgets": {
-    "editor": 24384,
-    "whole": 24448,
+    "editor": 26688,
+    "whole": 26752,
     "dialogs": 5824,
-    "i18n": 2880,
+    "floating": 8192,
+    "i18n": 3072,
     "validators": 1344
   }
 }

@@ -151,7 +151,9 @@ describe('tabela nova (R11)', () => {
   it('pelo menu Insert table…: título, valores padrão e botão Insert', async () => {
     const { fixture, host, el, editor } = await setup();
     const trigger = [
-      ...el.querySelectorAll<HTMLButtonElement>('.rte-toolbar__button'),
+      ...el.querySelectorAll<HTMLButtonElement>(
+        '.rte-toolbar .rte-toolbar__button',
+      ),
     ].find((b) => b.getAttribute('aria-label') === 'Table');
     trigger?.click();
     await settle(fixture);

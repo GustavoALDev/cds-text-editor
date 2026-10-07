@@ -41,3 +41,10 @@ section {
 .e2e-scroller__spacer {
   height: 240px;
 }
+
+/* Página `floating` (N21): contêiner com rolagem de altura fixa. */
+.e2e-floating-scroller {
+  height: 480px;
+  overflow: auto;
+  border: 1px solid #888;
+}

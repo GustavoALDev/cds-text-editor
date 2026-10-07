@@ -1,5 +1,11 @@
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import * as api from '@cds/rte-angular';
+// eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
+import type {
+  RteFloatingMenuKind,
+  RteFloatingMenuLabels,
+  RteFloatingMenusConfig,
+} from '@cds/rte-angular';
 import * as i18n from '@cds/rte-angular/i18n';
 import * as testing from '@cds/rte-angular/testing';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
@@ -16,6 +22,14 @@ describe('@cds/rte-angular', () => {
       'RteEditor',
       'provideRichText',
     ]);
+  });
+
+  it('exporta os tipos dos menus flutuantes', () => {
+    const kind: RteFloatingMenuKind = 'image';
+    const config: RteFloatingMenusConfig = { [kind]: false };
+    const labels: Partial<RteFloatingMenuLabels> = { textMenu: 'x' };
+    expect(config).toEqual({ image: false });
+    expect(labels.textMenu).toBe('x');
   });
 
   it('RTE_DIALOG_LANGUAGES é congelado', () => {

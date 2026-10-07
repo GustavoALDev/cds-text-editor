@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   signal,
   viewChild,
   viewChildren,
@@ -12,6 +13,7 @@ import { getRteHtml } from '@cds/rte-core/extensions';
 import { RteEditor, type RteToolbarConfig } from '@cds/rte-angular';
 import type { Editor } from '@tiptap/core';
 import { EditorState } from '@tiptap/pm/state';
+import { documentDialogBusy } from './dialogs/controller';
 import {
   afterEach,
   beforeEach,
@@ -135,7 +137,9 @@ async function setup(init: (host: Host) => void = () => undefined): Promise<{
 
 function button(el: ParentNode, label: string): HTMLButtonElement {
   const found = [
-    ...el.querySelectorAll<HTMLButtonElement>('.rte-toolbar__button'),
+    ...el.querySelectorAll<HTMLButtonElement>(
+      '.rte-toolbar .rte-toolbar__button',
+    ),
   ].find((b) => b.getAttribute('aria-label') === label);
   if (!found) throw new Error(`botão ${label} ausente`);
   return found;
@@ -303,6 +307,37 @@ describe('base do diálogo (R3)', () => {
     // encerrado o pedido de A, B pode abrir
     expect(b.openDialog('quoteAuthor')).toBe(true);
     await waitForDialog(fixture);
+  });
+
+  it('documentDialogBusy: reativo, por documento, igual nas duas instâncias (pré-voo 3)', async () => {
+    const fixture = TestBed.createComponent(TwoHosts);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const [a, b] = fixture.componentInstance.cmps();
+    if (!a || !b) throw new Error('instâncias ausentes');
+    const busy = documentDialogBusy(document);
+    expect(documentDialogBusy(document)).toBe(busy);
+    // lido por um `computed`: só muda se o signal notificar
+    const seen = computed(() => busy());
+    expect(seen()).toBe(false);
+    expect(busy()).toBe(false);
+    inQuote(a.editor() as Editor);
+    expect(a.openDialog('quoteAuthor')).toBe(true);
+    expect(busy()).toBe(true);
+    const dialog = await waitForDialog(fixture);
+    expect(busy()).toBe(true);
+    expect(seen()).toBe(true);
+    action(dialog, 'Cancel').click();
+    await settle(fixture);
+    expect(busy()).toBe(false);
+    expect(seen()).toBe(false);
+    inQuote(b.editor() as Editor);
+    expect(b.openDialog('quoteAuthor')).toBe(true);
+    expect(busy()).toBe(true);
+    expect(documentDialogBusy(document)()).toBe(true);
+    escapeDialog(await waitForDialog(fixture));
+    await settle(fixture);
+    expect(busy()).toBe(false);
   });
 
   it('hidden: openDialog → false e nenhum modal', async () => {

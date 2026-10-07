@@ -1,0 +1,189 @@
+<ng-template #iconTpl let-name>
+  <svg
+    class="rte-icon"
+    aria-hidden="true"
+    focusable="false"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    @for (d of icon(name); track $index) {
+    <path [attr.d]="d" />
+    }
+  </svg>
+</ng-template>
+@for (kind of kinds(); track kind) {
+<div
+  #floating
+  class="rte-floating"
+  [class]="'rte-floating--' + kind"
+  popover="manual"
+  role="toolbar"
+  aria-orientation="horizontal"
+  [attr.aria-label]="menuLabel(kind)"
+  [attr.data-rte-kind]="kind"
+  rteRovingFocus
+  [rteRovingTabStop]="false"
+>
+  @switch (kind) { @case ('text') { @for (id of textMarks; track id) { @let s =
+  state().item(id)();
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    [attr.aria-label]="markLabel(id)"
+    [attr.title]="title(markLabel(id), id)"
+    [attr.aria-pressed]="s.active"
+    [attr.aria-disabled]="s.enabled ? null : 'true'"
+    [class.rte-toolbar__button--pressed]="s.active"
+    (mousedown)="$event.preventDefault()"
+    (click)="act.mark(id)"
+  >
+    <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: id }" />
+  </button>
+  }
+  <div
+    class="rte-toolbar__separator"
+    role="separator"
+    aria-orientation="vertical"
+  ></div>
+  @let link = state().item('link')(); @let linkName = link.active ?
+  toolbarLabels().editLink : toolbarLabels().link;
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    aria-haspopup="dialog"
+    [attr.aria-label]="linkName"
+    [attr.title]="title(linkName, 'link')"
+    [attr.aria-disabled]="link.enabled ? null : 'true'"
+    [class.rte-toolbar__button--active]="link.active"
+    (mousedown)="$event.preventDefault()"
+    (click)="act.link()"
+  >
+    <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: 'link' }" />
+  </button>
+  } @case ('link') { @let address = href(); @if (address !== null) {
+  <a
+    class="rte-floating__link"
+    rteRovingItem
+    target="_blank"
+    rel="noopener noreferrer"
+    [href]="address"
+    [attr.title]="labels().openLink"
+    (mousedown)="$event.preventDefault()"
+    ><span class="rte-floating__address">{{ address }}</span
+    ><ng-container
+      *ngTemplateOutlet="iconTpl; context: { $implicit: 'openLink' }"
+  /></a>
+  }
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    aria-haspopup="dialog"
+    [attr.aria-label]="toolbarLabels().editLink"
+    [attr.title]="title(toolbarLabels().editLink, 'link')"
+    (mousedown)="$event.preventDefault()"
+    (click)="act.link()"
+  >
+    <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: 'link' }" />
+  </button>
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    [attr.aria-label]="labels().removeLink"
+    [attr.title]="labels().removeLink"
+    (mousedown)="$event.preventDefault()"
+    (click)="act.exec(commands.removeLinkAt)"
+  >
+    <ng-container
+      *ngTemplateOutlet="iconTpl; context: { $implicit: 'removeLink' }"
+    />
+  </button>
+  } @case ('table') { @let ops = tableOps(); @for (op of tableOpIds; track op) {
+  @let st = ops?.[op];
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    [attr.aria-label]="toolbarLabels()[op]"
+    [attr.title]="title(toolbarLabels()[op], null, st?.spanLimited)"
+    [attr.aria-disabled]="!st || st.enabled ? null : 'true'"
+    (mousedown)="$event.preventDefault()"
+    (click)="act.table(op)"
+  >
+    <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: op }" />
+  </button>
+  }
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    aria-haspopup="menu"
+    [rteMenuTrigger]="more"
+    [attr.aria-label]="labels().tableMore"
+    [attr.title]="labels().tableMore"
+    (mousedown)="$event.preventDefault()"
+  >
+    <ng-container
+      *ngTemplateOutlet="iconTpl; context: { $implicit: 'tableMore' }"
+    />
+  </button>
+  <div
+    rteMenu
+    #more="rteMenu"
+    [attr.aria-label]="labels().tableMore"
+    (tabOut)="tabOut()"
+  >
+    @let entries = moreOps(); @for (op of tableMoreIds; track op) { @let st =
+    entries?.[op];
+    <button
+      type="button"
+      class="rte-menu__item"
+      tabindex="-1"
+      role="menuitem"
+      [attr.aria-disabled]="st?.enabled ? null : 'true'"
+      [attr.title]="title(toolbarLabels()[op], null, st?.spanLimited)"
+      (click)="act.table(op, more)"
+    >
+      <span class="rte-menu__label">{{ toolbarLabels()[op] }}</span>
+    </button>
+    }
+  </div>
+  } @case ('image') { @let align = imageAlign(); @for (a of imageAligns; track
+  a[0]) {
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    [attr.aria-label]="labels()[a[1]]"
+    [attr.title]="labels()[a[1]]"
+    [attr.aria-pressed]="align === a[0]"
+    [class.rte-toolbar__button--pressed]="align === a[0]"
+    (mousedown)="$event.preventDefault()"
+    (click)="act.exec(commands.alignImage, a[0])"
+  >
+    <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: a[2] }" />
+  </button>
+  }
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    [attr.aria-label]="labels().removeImage"
+    [attr.title]="labels().removeImage"
+    (mousedown)="$event.preventDefault()"
+    (click)="act.exec(commands.removeImage)"
+  >
+    <ng-container
+      *ngTemplateOutlet="iconTpl; context: { $implicit: 'removeImage' }"
+    />
+  </button>
+  } }
+</div>
+}

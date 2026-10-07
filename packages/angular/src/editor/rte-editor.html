@@ -4,6 +4,7 @@
     [editor]="editor()"
     [version]="version"
     [groups]="toolbarGroups()"
+    [state]="toolbarState"
     [interactive]="interactive()"
     [labels]="resolvedLabels().toolbar"
     [calloutTitles]="contentLabels().calloutTitles"
@@ -32,6 +33,24 @@
   </div>
   }
   <div #mount class="rte-editor__mount"></div>
+  @defer (when floatingWanted()) { @if (floatingKinds().length && editor(); as
+  ed) {
+  <rte-floating-menus
+    [editor]="ed"
+    [version]="version"
+    [state]="toolbarState"
+    [kinds]="floatingKinds()"
+    [enabled]="floatingEnabled()"
+    [blocked]="floatingBlocked()"
+    [focused]="isFocused()"
+    [labels]="resolvedLabels().floating"
+    [toolbarLabels]="resolvedLabels().toolbar"
+    [linkPolicy]="linkPolicy()"
+    (dialog)="requestDialog($event, ed.view.dom)"
+  />
+  } } @placeholder {} @error {
+  <ng-template [rteDeferFailed]="onFloatingFailed" />
+  }
 </div>
 @defer (when dialogRequested(); prefetch on idle) {
 <rte-dialogs

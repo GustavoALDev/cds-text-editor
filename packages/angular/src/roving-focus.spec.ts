@@ -47,7 +47,32 @@ class Host {
   readonly roving = viewChild.required(RteRovingFocus);
 }
 
-function item(fixture: ComponentFixture<Host>, id: string): HTMLElement {
+// Grupo sem parada de Tab (M11, pré-voo 2): a, b, c (disabled)
+@Component({
+  selector: 'rte-test-roving-no-tab-host',
+  imports: [RteRovingFocus, RteRovingItem],
+  template: `
+    <div rteRovingFocus [rteRovingTabStop]="false">
+      @for (id of ids; track id) {
+        <button
+          type="button"
+          rteRovingItem
+          [attr.data-id]="id"
+          [disabled]="id === 'c'"
+        >
+          {{ id }}
+        </button>
+      }
+    </div>
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class NoTabHost {
+  readonly ids = ['a', 'b', 'c', 'd'];
+  readonly roving = viewChild.required(RteRovingFocus);
+}
+
+function item(fixture: ComponentFixture<unknown>, id: string): HTMLElement {
   const el = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
     `[data-id="${id}"]`,
   );
@@ -55,7 +80,7 @@ function item(fixture: ComponentFixture<Host>, id: string): HTMLElement {
   return el;
 }
 
-function tabStops(fixture: ComponentFixture<Host>): string[] {
+function tabStops(fixture: ComponentFixture<unknown>): string[] {
   return [
     ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(
       '[rteRovingItem][tabindex="0"]',
@@ -68,7 +93,7 @@ function focusedId(): string | undefined {
 }
 
 async function press(
-  fixture: ComponentFixture<Host>,
+  fixture: ComponentFixture<unknown>,
   key: string,
 ): Promise<KeyboardEvent> {
   const target = document.activeElement as HTMLElement;
@@ -278,5 +303,58 @@ describe('RteRovingFocus (U3)', () => {
     item(fixture, 'a').focus();
     await press(fixture, 'ArrowRight');
     expect(focusedId()).toBe('d');
+  });
+});
+
+describe('RteRovingFocus sem parada de Tab (M11)', () => {
+  function allMinusOne(fixture: ComponentFixture<unknown>): void {
+    for (const id of ['a', 'b', 'c', 'd']) {
+      expect(item(fixture, id).getAttribute('tabindex')).toBe('-1');
+    }
+  }
+
+  it('todos os itens com tabindex="-1", antes e depois de focusActive() e das setas', async () => {
+    const fixture = await renderHost(NoTabHost);
+    allMinusOne(fixture);
+    expect(tabStops(fixture)).toEqual([]);
+    expect(fixture.componentInstance.roving().focusActive()).toBe(true);
+    expect(focusedId()).toBe('a');
+    await settle(fixture);
+    allMinusOne(fixture);
+    const event = await press(fixture, 'ArrowRight');
+    expect(event.defaultPrevented).toBe(true);
+    expect(focusedId()).toBe('b');
+    allMinusOne(fixture);
+  });
+
+  it('→, ←, Home e End andam entre os focáveis', async () => {
+    const fixture = await renderHost(NoTabHost);
+    fixture.componentInstance.roving().focusActive();
+    await press(fixture, 'ArrowRight');
+    expect(focusedId()).toBe('b');
+    await press(fixture, 'ArrowRight');
+    expect(focusedId()).toBe('d');
+    await press(fixture, 'ArrowLeft');
+    expect(focusedId()).toBe('b');
+    await press(fixture, 'End');
+    expect(focusedId()).toBe('d');
+    await press(fixture, 'Home');
+    expect(focusedId()).toBe('a');
+    allMinusOne(fixture);
+  });
+
+  it('focusActive() foca o último focado', async () => {
+    const fixture = await renderHost(NoTabHost);
+    item(fixture, 'd').focus();
+    await settle(fixture);
+    (document.activeElement as HTMLElement).blur();
+    expect(fixture.componentInstance.roving().focusActive()).toBe(true);
+    expect(focusedId()).toBe('d');
+    allMinusOne(fixture);
+  });
+
+  it('o grupo padrão continua com um tabindex="0"', async () => {
+    const fixture = await renderHost(Host);
+    expect(tabStops(fixture)).toEqual(['a']);
   });
 });

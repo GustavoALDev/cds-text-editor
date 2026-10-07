@@ -5,15 +5,20 @@ import {
   signal,
   type Signal,
 } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteEditor } from '@cds/rte-angular';
+import { RteEditor, type RteToolbarConfig } from '@cds/rte-angular';
 import { getRteEditor } from '@cds/rte-angular/testing';
 import type { Editor } from '@tiptap/core';
 import { DOMSerializer } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
 import { CellSelection } from '@tiptap/pm/tables';
 import { createRteBridge } from './editor/bridge';
+import type {
+  RteFloatingMenuKind,
+  RteFloatingMenusConfig,
+} from './floating/types';
 import {
   createTestEditor,
   destroyTestEditors,
@@ -27,7 +32,10 @@ import {
   sameItemState,
   toolbarStateProbe,
   type RteItemState,
+  type RteToolbarState,
 } from './toolbar/state';
+import { fakeCoords, installGeometry } from './testing-support/geometry';
+import { installPopoverShim, isPopoverOpen } from './testing-support/popover';
 import { renderHost, settle } from './testing-support/render';
 import { readTableMenuState } from './toolbar/table-guard';
 
@@ -644,5 +652,245 @@ describe('MutationObserver na barra do componente (R6)', () => {
     expect(new Set(records.map((r) => r.attributeName))).toEqual(
       new Set(['aria-pressed', 'class']),
     );
+  });
+});
+
+/** Campos protegidos do `RteEditor` lidos pelos testes (M15, M17). */
+interface EditorInternals {
+  readonly toolbarState: RteToolbarState;
+  readonly floatingKinds: Signal<readonly RteFloatingMenuKind[]>;
+}
+
+function internals(fixture: ComponentFixture<unknown>): EditorInternals {
+  return fixture.debugElement.query(By.directive(RteEditor))
+    .componentInstance as unknown as EditorInternals;
+}
+
+@Component({
+  selector: 'rte-test-shared-state',
+  imports: [RteEditor],
+  template: `<rte-editor
+    [value]="value"
+    [toolbar]="toolbar()"
+    [floatingMenus]="floatingMenus()"
+  />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class SharedStateHost {
+  readonly value = '<p>ab<strong>cd</strong></p>';
+  readonly toolbar = signal<RteToolbarConfig | undefined>('full');
+  readonly floatingMenus = signal<RteFloatingMenusConfig | undefined>(
+    undefined,
+  );
+}
+
+describe('estado único da barra e dos menus (M15, R12)', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  async function setup(
+    toolbar: RteToolbarConfig,
+    floatingMenus?: RteFloatingMenusConfig,
+  ) {
+    TestBed.configureTestingModule({});
+    const fixture = TestBed.createComponent(SharedStateHost);
+    fixture.componentInstance.toolbar.set(toolbar);
+    fixture.componentInstance.floatingMenus.set(floatingMenus);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const editor = getRteEditor(
+      el.querySelector('rte-editor') as Element,
+    ) as Editor;
+    return { fixture, el, editor, state: internals(fixture).toolbarState };
+  }
+
+  it('barra full e menus padrão: uma transação → um cálculo', async () => {
+    const { fixture, editor } = await setup('full');
+    toolbarStateProbe.computations = 0;
+    editor.view.dispatch(editor.state.tr.setMeta('x', 1));
+    await settle(fixture);
+    expect(toolbarStateProbe.computations).toBe(1);
+  });
+
+  it('itens = união sem repetição da barra e do menu de texto', async () => {
+    const { state } = await setup([['undo', 'bold']]);
+    expect([...state.all().keys()]).toEqual([
+      'undo',
+      'bold',
+      'italic',
+      'underline',
+      'strike',
+      'code',
+      'link',
+    ]);
+  });
+
+  it('toolbar: false com menus padrão: um cálculo por transação e bold reflete <strong>', async () => {
+    const { fixture, el, editor, state } = await setup(false);
+    expect(el.querySelector('.rte-toolbar')).toBeNull();
+    selectText(editor, 'ab', 1);
+    expect(state.item('bold')().active).toBe(false);
+    toolbarStateProbe.computations = 0;
+    selectText(editor, 'cd', 1);
+    await settle(fixture);
+    expect(state.item('bold')()).toEqual({
+      active: true,
+      enabled: true,
+      value: null,
+    });
+    state.all();
+    expect(toolbarStateProbe.computations).toBe(1);
+  });
+
+  it('toolbar: false e floatingMenus: false → nenhum item', async () => {
+    const { state } = await setup(false, false);
+    expect(state.all().size).toBe(0);
+  });
+});
+
+describe('floatingMenus ao vivo (M17, R11)', () => {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.restoreAllMocks();
+  });
+
+  it('{ text: false } ao vivo: tipo sai, sem recriar o editor nem emitir valor', async () => {
+    TestBed.configureTestingModule({});
+    const fixture = TestBed.createComponent(RteEditor);
+    const ready: Editor[] = [];
+    let changes = 0;
+    fixture.componentInstance.editorReady.subscribe((e) => ready.push(e));
+    fixture.componentInstance.value.subscribe(() => (changes += 1));
+    fixture.componentRef.setInput('value', '<p>ab</p>');
+    fixture.componentRef.setInput('toolbar', false);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const cmp = fixture.componentInstance as unknown as EditorInternals;
+    expect(cmp.floatingKinds()).toEqual(['image', 'link', 'text', 'table']);
+    expect([...cmp.toolbarState.all().keys()]).toContain('bold');
+    changes = 0;
+    fixture.componentRef.setInput('floatingMenus', { text: false });
+    await fixture.whenStable();
+    expect(cmp.floatingKinds()).toEqual(['image', 'link', 'table']);
+    expect(cmp.toolbarState.all().size).toBe(0);
+    expect(ready).toHaveLength(1);
+    expect(changes).toBe(0);
+  });
+});
+
+@Component({
+  selector: 'rte-test-observed-floating',
+  imports: [RteEditor],
+  template: `<rte-editor
+    [value]="value"
+    [toolbar]="toolbar"
+    [options]="options"
+  />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class ObservedFloatingHost {
+  // Só o `bold` na barra: outros itens (ex.: limpar formatação) mudam de estado com a seleção.
+  readonly toolbar: RteToolbarConfig = [['bold']];
+  readonly options = { features: { tables: true } };
+  readonly value =
+    '<p>ab<strong>cd</strong>ef</p>' +
+    '<table><tbody><tr><td><p>c1</p></td><td><p>c2</p></td></tr></tbody></table>';
+}
+
+describe('MutationObserver nos menus flutuantes (R12)', () => {
+  let restorePopover: () => void;
+  let restoreGeometry: () => void;
+  let restoreCoords: () => void;
+  beforeEach(() => {
+    restorePopover = installPopoverShim();
+    restoreGeometry = installGeometry({
+      viewport: { width: 1000, height: 800 },
+      rects: (el) =>
+        el.classList.contains('rte-floating')
+          ? null
+          : { top: 100, left: 100, right: 900, bottom: 700 },
+      size: (el) =>
+        el.classList.contains('rte-floating')
+          ? { width: 200, height: 40 }
+          : { width: 800, height: 600 },
+    });
+  });
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    restoreCoords?.();
+    restoreGeometry();
+    restorePopover();
+  });
+
+  async function setupObserved(select: [string, number?, number?]) {
+    const fixture = await renderHost(ObservedFloatingHost);
+    const el = fixture.nativeElement as HTMLElement;
+    const editor = getRteEditor(
+      el.querySelector('rte-editor') as Element,
+    ) as Editor;
+    // Geometria fixa: a posição do menu não muda entre as transações.
+    restoreCoords = fakeCoords(editor, () => ({
+      top: 200,
+      bottom: 220,
+      left: 300,
+      right: 300,
+    }));
+    editor.view.dom.focus();
+    selectText(editor, ...select);
+    await settle(fixture);
+    return { fixture, el, editor };
+  }
+
+  function observe(targets: Element[]) {
+    const records: MutationRecord[] = [];
+    const observer = new MutationObserver((list) => records.push(...list));
+    for (const target of targets)
+      observer.observe(target, {
+        subtree: true,
+        attributes: true,
+        childList: true,
+        characterData: true,
+      });
+    return { records, observer };
+  }
+
+  it('menu de tabela visível: 20 insertText numa célula → 0 registros', async () => {
+    const { fixture, el, editor } = await setupObserved(['c1', 1]);
+    const table = el.querySelector('.rte-floating--table') as HTMLElement;
+    expect(isPopoverOpen(table)).toBe(true);
+    const { records, observer } = observe([
+      el.querySelector('rte-floating-menus') as Element,
+    ]);
+    for (let i = 0; i < 20; i += 1) {
+      const { from, to } = editor.state.selection;
+      editor.view.dispatch(editor.state.tr.insertText('y', from, to));
+      await settle(fixture);
+      records.push(...observer.takeRecords());
+    }
+    observer.disconnect();
+    expect(records).toEqual([]);
+  });
+
+  it('estender a seleção para dentro de <strong> → registros só nos Bold do menu e da barra', async () => {
+    const { fixture, el, editor } = await setupObserved(['ab', 0, 1]);
+    const text = el.querySelector('.rte-floating--text') as HTMLElement;
+    expect(isPopoverOpen(text)).toBe(true);
+    const toolbar = el.querySelector('.rte-toolbar') as HTMLElement;
+    const { records, observer } = observe([
+      el.querySelector('rte-floating-menus') as Element,
+      toolbar,
+    ]);
+    selectText(editor, 'cd', 0, 2);
+    await settle(fixture);
+    records.push(...observer.takeRecords());
+    observer.disconnect();
+    expect(records.length).toBeGreaterThan(0);
+    const boldMenu = text.querySelector('[aria-label="Bold"]');
+    const boldBar = toolbar.querySelector('[aria-label="Bold"]');
+    expect(boldMenu).not.toBeNull();
+    for (const record of records) {
+      expect([boldMenu, boldBar]).toContain(record.target);
+      expect(record.type).toBe('attributes');
+    }
   });
 });

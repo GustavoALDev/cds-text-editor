@@ -12,9 +12,14 @@ export type {
   RteToolbarPreset,
 } from './toolbar/items';
 export type {
+  RteFloatingMenuKind,
+  RteFloatingMenusConfig,
+} from './floating/types';
+export type {
   RteDialogLabels,
   RteEditorLabels,
   RteErrorLabels,
+  RteFloatingMenuLabels,
   RteLabels,
   RteLabelsInput,
   RteLabelsSource,

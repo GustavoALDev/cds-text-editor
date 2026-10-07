@@ -115,6 +115,23 @@ export interface RteDialogLabels {
   errorMaxLength(max: number): string;
 }
 
+export interface RteFloatingMenuLabels {
+  /** Nome acessível do menu de texto. */
+  textMenu: string;
+  linkMenu: string;
+  tableMenu: string;
+  imageMenu: string;
+  /** Dica do endereço do link. */
+  openLink: string;
+  removeLink: string;
+  tableMore: string;
+  imageAlignLeft: string;
+  imageAlignCenter: string;
+  imageAlignRight: string;
+  imageAlignFull: string;
+  removeImage: string;
+}
+
 export interface RteLabels {
   readonly content: RteContentLabels;
   readonly slash: RteSlashLabels;
@@ -122,6 +139,7 @@ export interface RteLabels {
   readonly errors: RteErrorLabels;
   readonly toolbar: RteToolbarLabels;
   readonly dialogs: RteDialogLabels;
+  readonly floating: RteFloatingMenuLabels;
 }
 
 export interface RteLabelsInput {
@@ -137,6 +155,7 @@ export interface RteLabelsInput {
   dialogs?: Partial<Omit<RteDialogLabels, 'languageNames'>> & {
     languageNames?: Readonly<Record<string, string>>;
   };
+  floating?: Partial<RteFloatingMenuLabels>;
 }
 
 /** Objeto parcial ou função lida dentro de `computed` (pode ler signals) (D15). */

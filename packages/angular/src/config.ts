@@ -11,6 +11,7 @@ import type {
   RteSlashOptions,
 } from '@cds/rte-core/extensions';
 import type { RteTheme } from '@cds/rte-theme';
+import type { RteFloatingMenusConfig } from './floating/types';
 import type { RteToolbarConfig } from './toolbar/items';
 import { RTE_LABELS_EN } from './labels/en';
 import { mergeLabels, readLabelsSource } from './labels/merge';
@@ -32,6 +33,8 @@ export interface RteConfig {
   toolbar?: RteToolbarConfig;
   /** Tema padrão; sem ele, o CSS em cascata. */
   theme?: RteTheme;
+  /** Menus flutuantes padrão; sem ele, todos ligados (M17). */
+  floatingMenus?: RteFloatingMenusConfig;
 }
 
 /** Rótulos do provider já mesclados sobre `en` (sem a entrada da instância). */

@@ -136,4 +136,18 @@ export const RTE_LABELS_ES: RteLabels = Object.freeze({
       he: 'Hebreo',
     }),
   }),
+  floating: Object.freeze({
+    textMenu: 'Formato del texto',
+    linkMenu: 'Enlace',
+    tableMenu: 'Tabla',
+    imageMenu: 'Imagen',
+    openLink: 'Se abre en una pestaña nueva',
+    removeLink: 'Quitar enlace',
+    tableMore: 'Más operaciones de tabla',
+    imageAlignLeft: 'Alinear a la izquierda',
+    imageAlignCenter: 'Centrar',
+    imageAlignRight: 'Alinear a la derecha',
+    imageAlignFull: 'Ancho completo',
+    removeImage: 'Quitar imagen',
+  }),
 });

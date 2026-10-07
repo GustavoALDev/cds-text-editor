@@ -55,6 +55,10 @@ describe('templates do pacote (R15)', () => {
     expect(templates.map(packagePath)).toContain(
       'src/dialogs/rte-dialogs.html',
     );
+    // Os templates dos menus flutuantes (spec 05b2b) também.
+    expect(templates.map(packagePath)).toContain(
+      'src/floating/rte-floating-menus.html',
+    );
     const found = templates.flatMap((f) =>
       findLiteralText(readFileSync(f, 'utf8'), packagePath(f)),
     );
@@ -95,10 +99,21 @@ describe('sem ligação de estilo (R16, CSP)', () => {
     expect(templates.map(packagePath)).toContain(
       'src/dialogs/rte-dialogs.html',
     );
+    expect(templates.map(packagePath)).toContain(
+      'src/floating/rte-floating-menus.html',
+    );
     const bad = templates
       .filter((f) => STYLE_BINDING.test(readFileSync(f, 'utf8')))
       .map(packagePath);
     expect(bad).toEqual([]);
+  });
+
+  it('o template dos menus flutuantes não tem atributo style', () => {
+    const html = readFileSync(
+      join(PACKAGE_DIR, 'src/floating/rte-floating-menus.html'),
+      'utf8',
+    );
+    expect(html).not.toMatch(/\sstyle\s*=/);
   });
 
   const HOST_STYLE =

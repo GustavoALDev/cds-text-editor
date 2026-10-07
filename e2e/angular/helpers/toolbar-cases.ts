@@ -405,6 +405,12 @@ export async function act(page: Page, c: Case, mode: Mode): Promise<void> {
     return;
   }
   await page.keyboard.press('Alt+F10');
+  // Com texto selecionado o menu flutuante (05b2b) vê o primeiro Alt+F10; o
+  // segundo vai dele à barra (M12).
+  const inFloating = await page.evaluate(
+    () => !!document.activeElement?.closest('.rte-floating'),
+  );
+  if (inFloating) await page.keyboard.press('Alt+F10');
   await arrowToButton(page, c.button);
   await page.keyboard.press('Enter');
   if (!c.item) return;
