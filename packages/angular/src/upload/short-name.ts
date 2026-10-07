@@ -12,3 +12,14 @@ export function shortName(name: string): string {
     ? `${chars.slice(0, MAX_SHOWN).join('')}…`
     : name;
 }
+
+/** Último segmento do caminho do endereço (ou o host) como nome na bandeja (S10). */
+export function externalName(url: string): string {
+  try {
+    const u = new URL(url);
+    const last = u.pathname.split('/').filter(Boolean).at(-1);
+    return decodeURIComponent(last ?? u.host);
+  } catch {
+    return url;
+  }
+}

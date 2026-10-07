@@ -1476,3 +1476,42 @@ describe('erros do campo de arquivo no diálogo (05c2a E14, Tarefa 10)', () => {
     }
   });
 });
+
+describe('rótulos do rascunho (05c2b S14)', () => {
+  const packs = [
+    ['en', RTE_LABELS_EN],
+    ['pt-BR', RTE_LABELS_PT_BR],
+    ['es', RTE_LABELS_ES],
+  ] as const;
+  const AT = Date.UTC(2026, 9, 7, 15, 30);
+
+  it('seção completa nos três idiomas', () => {
+    for (const [name, pack] of packs) {
+      expect(Object.keys(pack.draft).sort(), name).toEqual([
+        'available',
+        'discard',
+        'region',
+        'restore',
+      ]);
+      expect(pack.draft.region, name).not.toBe('');
+      expect(pack.draft.restore, name).not.toBe('');
+      expect(pack.draft.discard, name).not.toBe('');
+      expect(pack.draft.available(AT), name).toMatch(/2026/);
+    }
+    expect(deepKeys(RTE_LABELS_PT_BR.draft)).toEqual(
+      deepKeys(RTE_LABELS_EN.draft),
+    );
+    expect(RTE_LABELS_PT_BR.draft.restore).toBe('Restaurar');
+    expect(RTE_LABELS_ES.draft.discard).toBe('Descartar');
+    expect(RTE_LABELS_EN.draft.restore).toBe('Restore');
+  });
+
+  it('mergeLabels mescla draft e protege a função', () => {
+    const merged = mergeLabels(RTE_LABELS_EN, {
+      draft: { restore: 'Voltar', available: () => 7 as never },
+    });
+    expect(merged.draft.restore).toBe('Voltar');
+    expect(merged.draft.discard).toBe('Discard');
+    expect(merged.draft.available(AT)).toBe(RTE_LABELS_EN.draft.available(AT));
+  });
+});

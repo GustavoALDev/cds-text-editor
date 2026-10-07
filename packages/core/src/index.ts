@@ -41,6 +41,7 @@ export { computeResize, parseSrcset, formatSrcset } from './image';
 export type { RteResizeCorner, RteResizeInput, SrcsetCandidate } from './image';
 
 export {
+  clearLocalDrafts,
   createDraftStore,
   createLocalDraftStorage,
   createMemoryDraftStorage,

@@ -31,6 +31,7 @@ describe('@cds/rte-angular', () => {
       'RTE_TOOLBAR_PRESETS',
       'RteEditor',
       'RteUploadError',
+      'clearLocalDrafts',
       'provideRichText',
     ]);
   });

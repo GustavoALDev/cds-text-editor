@@ -242,6 +242,26 @@ provideRichText({
 
 **Classes (API pública, BEM).** `.rte-uploads` (`__list`, `__item`, `__name`, `__progress`, `__cancel`, `__status`), `.rte-upload-marker` (`__name`, `__progress`, `__preview`, `--queued`, `--image`, `--video`) e `.rte-dialog__source`.
 
+## Rascunho e salvamento
+
+**Rascunho (`draftKey`).** Opt-in: `<rte-editor draftKey="doc-42" />` (1 a 200 caracteres; use usuário **e** documento na chave, ex.: `user-7:doc-42`). Grava no `localStorage` (`rte-draft:<chave>`) 1 s depois da última alteração e ao ocultar a página; nunca grava `readonly`/`disabled`. Ao carregar, se há rascunho diferente do valor, aparece um aviso acessível (`section.rte-draft`) com data e botões "Restaurar"/"Descartar"; **nunca restaura sozinho**. Sinais e métodos: `draftAvailable` (`{ savedAt }` ou `null`), `restoreDraft()`, `discardDraft()` e a saída `draftError` (`'write'` | `'unavailable'`). `provideRichText({ draft: { storage, maxAgeMs, prompt } })`: `storage` próprio (`DraftStorage` do core), validade (7 dias) e `prompt: false` para construir a sua interface. O código é um _chunk_ (`rte-draft`) carregado só com `draftKey`. **Privacidade:** o rascunho fica no navegador em texto claro; no logout chame `clearLocalDrafts()` (de `@cds/rte-angular`; aceita um prefixo e devolve quantos apagou).
+
+**`isDirty` e `markSaved(savedHtml?)`.** `isDirty()` é `true` quando o valor difere da base salva (a de criação ou da última carga externa). Depois de salvar no servidor chame `editor.markSaved(htmlSalvo)`: a base passa a ser esse HTML (sem argumento, o valor atual) e o rascunho é apagado.
+
+**`onMediaRemoved`.** Adaptador opcional: `onMediaRemoved?(urls)` recebe os endereços de mídia removidos desde a base, **só depois** de `markSaved` e de não haver envios pendentes, já refiltrados contra o documento salvo. Desfazer pode trazer a mídia de volta, e outro documento pode usá-la: **apague com carência**, nunca na hora.
+
+**`warnOnUnsaved`.** Entrada (ou `provideRichText({ warnOnUnsaved: true })`): pede confirmação do navegador ao sair enquanto `isDirty()` ou há envio pendente. Desligado por padrão. Para rotas do Angular use `isDirty()` num guarda de 5 linhas:
+
+```ts
+export const leaveGuard: CanDeactivateFn<{
+  editor: Signal<RteEditor | undefined>;
+}> = (c) => !c.editor()?.isDirty() || confirm('Descartar alterações?');
+```
+
+**`pasteEmbeds`.** Opt-in: colar uma única URL suportada (ex.: YouTube) num parágrafo vazio vira _embed_ (um passo de desfazer); em qualquer outro caso, a colagem segue como antes. Emite `value`, não `mediaChange`.
+
+**Re-hospedagem.** Com `upload: { adapter, rehostExternal: true, ownHosts: [...] }` e `adapter.registerExternal?(url, ctx)`, imagens `https:` externas **coladas** são enviadas ao seu servidor e o `src` é trocado (fila e bandeja dos envios; desfazer remove a imagem, não volta ao externo). Falhas mantêm a URL externa, sem `uploadError`. Endereços com credenciais (`https://usuário:senha@…`) não são re-hospedados. **O servidor busca uma URL vinda da colagem:** valide-a no `registerExternal` do seu backend (só `https:`, recuse `localhost`/IPs privados e redirecionamentos para eles, limite tamanho e tipo) para não virar SSRF. Não re-hospeda colagens feitas antes do _chunk_ de envio carregar, e não faz nada se `mediaHosts` for restrito (o esquema já remove a imagem externa).
+
 ## Menus flutuantes
 
 Seis menus contextuais (os de vídeo e _embed_ estão em "Diálogos de mídia") aparecem junto ao conteúdo, sem tirar o foco do editável: **texto** (seleção de texto não vazia: `bold italic underline strike code` e `link`, os mesmos itens, estados e atalhos da barra; `link` abre o diálogo), **link** (cursor num link: o endereço, que abre em nova aba com `rel="noopener noreferrer"`, "Editar link" e "Remover link"), **tabela** (cursor ou células selecionadas: inserir linha abaixo, inserir coluna depois, excluir linha, excluir coluna e um menu "Mais operações de tabela" com as demais) e **imagem** (imagem selecionada: "Detalhes da imagem…", que abre o diálogo de imagem, alinhar à esquerda, centro, direita ou largura total, e "Remover imagem"). Prioridade quando mais de um se aplica: imagem > vídeo > _embed_ > link > texto > tabela. `Ctrl+A` não mostra o menu de texto.
@@ -318,7 +338,7 @@ Testado com `default-src 'self'; script-src 'self'; style-src 'self'` por cabeç
 
 ## O que vem depois
 
-05c2b: rascunho, `isDirty`/`markSaved()` com `onMediaRemoved`, `registerExternal` e aviso de saída. 05d: busca e comandos `/` com interface, `updateOn`/adiamento da emissão com os números de desempenho, API final. Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
+05d: busca e comandos `/` com interface, `updateOn`/adiamento da emissão com os números de desempenho, API final. Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
 
 Repositório: cds-text-editor (monorepo). Licença MIT.
 

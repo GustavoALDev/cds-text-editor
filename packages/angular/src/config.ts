@@ -11,6 +11,7 @@ import type {
   RteSlashOptions,
 } from '@cds/rte-core/extensions';
 import type { RteTheme } from '@cds/rte-theme';
+import type { RteDraftConfig } from './draft/types';
 import type { RteFloatingMenusConfig } from './floating/types';
 import type { RteToolbarConfig } from './toolbar/items';
 import type { RteUploadConfig } from './upload/types';
@@ -38,6 +39,12 @@ export interface RteConfig {
   floatingMenus?: RteFloatingMenusConfig;
   /** Envio de arquivos padrão (entrada `upload` > provider); sem ele, sem arquivo (E3). */
   upload?: RteUploadConfig;
+  /** Rascunho padrão (armazenamento, idade, aviso); só age com `draftKey` (S3). */
+  draft?: RteDraftConfig;
+  /** Aviso ao sair com alterações não salvas; padrão desligado (entrada > provider, S10). */
+  warnOnUnsaved?: boolean;
+  /** URL colada num parágrafo vazio vira *embed*; padrão desligado (entrada > provider, S11). */
+  pasteEmbeds?: boolean;
 }
 
 /** Rótulos do provider já mesclados sobre `en` (sem a entrada da instância). */

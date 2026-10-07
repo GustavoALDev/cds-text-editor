@@ -680,6 +680,72 @@
     border: 0;
   }
 
+  /* Aviso de restauração do rascunho (05c2b S6, S14): antes do editável, sem mostrar o conteúdo. */
+  .rte-editor .rte-draft-host {
+    display: contents;
+  }
+
+  .rte-editor .rte-draft {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: calc(0.5rem * var(--rte-density)) 0.75rem;
+    padding: calc(0.5rem * var(--rte-density))
+      calc(0.75rem * var(--rte-density));
+    border-block-end: 1px solid var(--rte-border);
+    background-color: var(--rte-surface-raised);
+    color: var(--rte-text);
+  }
+
+  .rte-editor .rte-draft__text {
+    flex: 1 1 12rem;
+    min-inline-size: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .rte-editor .rte-draft__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .rte-editor .rte-draft__actions > button {
+    box-sizing: border-box;
+    min-inline-size: 24px;
+    min-block-size: max(24px, calc(2rem * var(--rte-density)));
+    margin: 0;
+    padding: 0 0.75rem;
+    color: var(--rte-text);
+    background-color: transparent;
+    border: 1px solid var(--rte-border);
+    border-radius: var(--rte-radius);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .rte-editor .rte-draft__actions > button:hover {
+    background-color: var(--rte-surface);
+  }
+
+  .rte-editor .rte-draft__actions > button:focus-visible {
+    outline: var(--rte-focus-width) solid var(--rte-focus);
+    outline-offset: 1px;
+  }
+
+  /* Região aria-live sempre presente (S6): fora da tela, ainda lida pelo leitor. */
+  .rte-editor .rte-draft__status {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
   /* Marcador de envio (05c2a E7): widget fora do documento, onde a mídia vai cair. */
   .rte-editor .rte-upload-marker {
     display: inline-flex;

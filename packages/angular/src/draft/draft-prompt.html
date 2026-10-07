@@ -1,0 +1,11 @@
+<section class="rte-draft" role="region" [attr.aria-label]="labels().region">
+  <p class="rte-draft__text">{{ labels().available(savedAt()) }}</p>
+  <div class="rte-draft__actions">
+    <button type="button" (click)="restoreDraft.emit()">
+      {{ labels().restore }}
+    </button>
+    <button type="button" (click)="discardDraft.emit()">
+      {{ labels().discard }}
+    </button>
+  </div>
+</section>

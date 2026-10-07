@@ -1161,6 +1161,49 @@ describe('editor.css: envio de arquivos (spec 05c2a, E21)', () => {
     expect(content).not.toMatch(/rte-upload|rte-dialog__source/);
   });
 
+  const DRAFT_CLASSES = [
+    'rte-draft',
+    'rte-draft__text',
+    'rte-draft__actions',
+    'rte-draft__status',
+  ];
+
+  it.each(DRAFT_CLASSES)(
+    '%s (rascunho): regras em rte.components, sob .rte-editor',
+    (cls) => {
+      const rules = rulesOf(cls);
+      expect(rules.length).toBeGreaterThan(0);
+      for (const r of rules) {
+        expect(layerOf(r)).toBe('rte.components');
+        for (const s of r.selectors) expect(s.trim()).toMatch(/^\.rte-editor /);
+      }
+    },
+  );
+
+  it('rascunho: nada no content.css, cores só em --rte-*, alvos de 24 px', () => {
+    const content = readFileSync(CONTENT_CSS_FILE, 'utf8');
+    expect(content).not.toMatch(/rte-draft/);
+    const button = styleRules().filter((r) =>
+      r.selectors.some((x) =>
+        /\.rte-draft__actions > button(?::[\w-]+)?$/.test(x.trim()),
+      ),
+    );
+    expect(button.length).toBeGreaterThan(0);
+    for (const d of declsOf([...DRAFT_CLASSES.flatMap(rulesOf), ...button])) {
+      if (!/color|^border|^background|^outline/.test(d.prop)) continue;
+      const colors = d.value
+        .split(/\s+/)
+        .filter((t) => !NON_COLOR_TOKEN.test(t));
+      for (const c of colors)
+        expect(c, `${d.prop}: ${d.value}`).toMatch(COLOR_VALUE);
+    }
+    expect(
+      declsOf(button).some(
+        (d) => d.prop === 'min-block-size' && /24px/.test(d.value),
+      ),
+    ).toBe(true);
+  });
+
   it('cores do envio só em --rte-* (CanvasText/Highlight em forced-colors), inclusive accent-color', () => {
     const rules = CLASSES.flatMap(rulesOf);
     for (const d of declsOf(rules)) {

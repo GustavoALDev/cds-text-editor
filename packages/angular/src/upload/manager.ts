@@ -1,5 +1,6 @@
 import { isDevMode, signal, untracked, type Signal } from '@angular/core';
 import type { Editor } from '@tiptap/core';
+import type { Transaction } from '@tiptap/pm/state';
 import { insertArrival } from './arrival';
 import type {
   RteUploadAnnouncement,
@@ -13,6 +14,7 @@ import {
   type RteUploadMeta,
 } from './markers';
 import { clampProgress, moved, RteFramePublisher } from './progress';
+import { pastedExternalImages, replaceExternalImages } from './rehost';
 import { createPreview, revokePreview } from './preview';
 import { readUploadedMedia, type RteUploadedAttrs } from './response';
 import { uploadReason } from './reason';
@@ -25,15 +27,22 @@ import type {
   RteUploadType,
 } from './types';
 import { displayName, validateUploadFile } from './validate';
+import { externalName } from './short-name';
 
 export type { RteUploadAnnouncement, RteUploadHost } from './host';
+
+const REHOST_FAILED =
+  '[rte-editor] a re-hospedagem da imagem colada falhou; o endereço externo foi mantido:';
 
 const MISSING_ELEMENT =
   '[rte-editor] marcador de envio sem envio correspondente; usando um elemento vazio.';
 
 interface Job {
   readonly id: string;
-  readonly file: File;
+  /** Arquivo do envio; `null` na re-hospedagem (S10). */
+  readonly file: File | null;
+  /** Endereço externo a re-hospedar (S10); `null` num envio. */
+  readonly external: string | null;
   readonly type: RteUploadType;
   readonly name: string;
   readonly text: RteUploadText | undefined;
@@ -202,7 +211,8 @@ export class RteUploadManager {
    * nada mais a impedir (motor que não dispara `compositionend`), tenta numa
    * microtarefa, fora do despacho em curso.
    */
-  afterTransaction(): void {
+  afterTransaction(transactions: readonly Transaction[] = []): void {
+    this.rehost(transactions);
     if (this.flushQueued || !this.jobs.some((j) => j.attrs && !j.done)) return;
     if (this.host.mustWait()) return;
     this.flushQueued = true;
@@ -210,6 +220,36 @@ export class RteUploadManager {
       this.flushQueued = false;
       if (!this.disposed) this.flush();
     });
+  }
+
+  /**
+   * Re-hospedagem (S10): as imagens externas que as colagens inseriram viram
+   * trabalhos na mesma fila, um por endereço (sem repetir um em curso).
+   */
+  private rehost(transactions: readonly Transaction[]): void {
+    const editor = untracked(this.host.editor);
+    const cfg = untracked(this.host.config);
+    if (
+      this.disposed ||
+      !cfg?.rehostExternal ||
+      !editor ||
+      editor.isDestroyed ||
+      !this.host.canInsert()
+    ) {
+      return;
+    }
+    const urls = pastedExternalImages(
+      transactions,
+      cfg,
+      this.host.view?.location.origin ?? null,
+    ).filter((url) => !this.jobs.some((j) => j.external === url));
+    if (!urls.length) return;
+    const doc = editor.view.dom.ownerDocument;
+    this.jobs.push(
+      ...urls.map((url) => this.createExternalJob(doc, url, cfg.adapter)),
+    );
+    this.host.zone.run(() => this.publish());
+    this.pump();
   }
 
   /** Elemento do marcador `id` (o *plugin* o põe no *widget*). */
@@ -231,6 +271,33 @@ export class RteUploadManager {
     this.frames.cancel();
   }
 
+  /** Trabalho de re-hospedagem (S10): sem arquivo, marcador nem miniatura. */
+  private createExternalJob(
+    doc: Document,
+    url: string,
+    adapter: RteUploadAdapter,
+  ): Job {
+    const name = externalName(url);
+    return {
+      id: `${this.prefix}${++this.seq}`,
+      file: null,
+      external: url,
+      type: 'image',
+      name,
+      text: undefined,
+      adapter,
+      abort: new AbortController(),
+      element: createMarkerElement(doc, 'image', name, null),
+      preview: null,
+      state: 'queued',
+      progress: null,
+      shown: null,
+      attrs: null,
+      settled: false,
+      done: false,
+    };
+  }
+
   private createJob(
     doc: Document,
     file: File,
@@ -247,6 +314,7 @@ export class RteUploadManager {
     return {
       id: `${this.prefix}${++this.seq}`,
       file,
+      external: null,
       type,
       name,
       text,
@@ -294,12 +362,18 @@ export class RteUploadManager {
       job.type === 'video' ? job.adapter.uploadVideo : job.adapter.uploadImage;
     this.host.zone.runOutsideAngular(() => {
       new Promise<unknown>((resolve) =>
-        resolve(upload?.call(job.adapter, job.file, ctx)),
+        resolve(
+          job.external !== null
+            ? job.adapter.registerExternal?.(job.external, ctx)
+            : upload?.call(job.adapter, job.file as File, ctx),
+        ),
       ).then(
         (value) => this.arrive(job, value),
         (error: unknown) => {
           job.settled = true;
-          if (!job.done) this.fail(job, uploadReason(error), error);
+          if (job.done) return;
+          if (job.external !== null) this.keepOriginal(job, error);
+          else this.fail(job, uploadReason(error), error);
         },
       );
     });
@@ -334,7 +408,8 @@ export class RteUploadManager {
     const rules = untracked(this.host.rules);
     const read = rules ? readUploadedMedia(job.type, value, rules) : null;
     if (!read?.ok) {
-      this.fail(job, 'response', undefined);
+      if (job.external !== null) this.keepOriginal(job, 'resposta recusada');
+      else this.fail(job, 'response', undefined);
       return;
     }
     job.attrs = read.attrs;
@@ -344,6 +419,10 @@ export class RteUploadManager {
   }
 
   private insert(job: Job, attrs: RteUploadedAttrs): void {
+    if (job.external !== null) {
+      this.swapExternal(job, attrs);
+      return;
+    }
     const outcome = insertArrival(this.host, {
       id: job.id,
       type: job.type,
@@ -358,11 +437,39 @@ export class RteUploadManager {
     this.finish([job], { kind: 'done', names: [job.name] });
   }
 
+  /** Troca o endereço externo pelo próprio (S10); nunca emite `uploadError`. */
+  private swapExternal(job: Job, attrs: RteUploadedAttrs): void {
+    const editor = untracked(this.host.editor);
+    if (!editor || editor.isDestroyed || !this.host.canInsert()) {
+      this.keepOriginal(job, 'editor indisponível');
+      return;
+    }
+    if (this.host.mustWait()) return;
+    let swapped = false;
+    try {
+      swapped = this.host.zone.runOutsideAngular(() =>
+        replaceExternalImages(editor, job.external as string, attrs),
+      );
+    } catch (cause) {
+      this.keepOriginal(job, cause);
+      return;
+    }
+    if (swapped) this.finish([job], null);
+    else this.keepOriginal(job, 'imagem já removida');
+  }
+
+  /** Falha da re-hospedagem: mantém o original, só avisa em `isDevMode()`. */
+  private keepOriginal(job: Job, cause: unknown): void {
+    if (isDevMode()) console.warn(REHOST_FAILED, job.external, cause);
+    this.finish([job], null);
+  }
+
   private fail(job: Job, reason: RteUploadErrorReason, cause: unknown): void {
+    const fileName = job.file?.name ?? job.name;
     const event: RteUploadErrorEvent =
       cause === undefined
-        ? { fileName: job.file.name, type: job.type, reason }
-        : { fileName: job.file.name, type: job.type, reason, cause };
+        ? { fileName, type: job.type, reason }
+        : { fileName, type: job.type, reason, cause };
     this.removeMarkers([job]);
     this.finish([job], { kind: 'error', names: [job.name], reason }, event);
   }

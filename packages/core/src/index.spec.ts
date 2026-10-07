@@ -32,6 +32,7 @@ const MAIN = [
   'computeResize',
   'parseSrcset',
   'formatSrcset',
+  'clearLocalDrafts',
   'createDraftStore',
   'createLocalDraftStorage',
   'createMemoryDraftStorage',
