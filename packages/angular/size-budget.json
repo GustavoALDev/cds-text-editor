@@ -96,11 +96,11 @@
     }
   },
   "budgets": {
-    "editor": 26688,
-    "whole": 26752,
-    "dialogs": 5824,
-    "floating": 8192,
-    "i18n": 3072,
+    "editor": 30144,
+    "whole": 30208,
+    "dialogs": 11584,
+    "floating": 8576,
+    "i18n": 4352,
     "validators": 1344
   }
 }

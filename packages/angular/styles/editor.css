@@ -472,7 +472,9 @@
 
   .rte-editor .rte-dialog__apply,
   .rte-editor .rte-dialog__cancel,
-  .rte-editor .rte-dialog__remove {
+  .rte-editor .rte-dialog__remove,
+  .rte-editor .rte-dialog__track-add,
+  .rte-editor .rte-dialog__track-remove {
     box-sizing: border-box;
     min-inline-size: 24px;
     min-block-size: max(24px, calc(2rem * var(--rte-density)));
@@ -492,7 +494,9 @@
   }
 
   .rte-editor .rte-dialog__cancel:hover,
-  .rte-editor .rte-dialog__remove:hover {
+  .rte-editor .rte-dialog__remove:hover,
+  .rte-editor .rte-dialog__track-add:hover,
+  .rte-editor .rte-dialog__track-remove:hover {
     background-color: var(--rte-surface-raised);
   }
 
@@ -512,9 +516,52 @@
   .rte-editor .rte-dialog__checkbox:focus-visible,
   .rte-editor .rte-dialog__apply:focus-visible,
   .rte-editor .rte-dialog__cancel:focus-visible,
-  .rte-editor .rte-dialog__remove:focus-visible {
+  .rte-editor .rte-dialog__remove:focus-visible,
+  .rte-editor .rte-dialog__track-add:focus-visible,
+  .rte-editor .rte-dialog__track-remove:focus-visible {
     outline: var(--rte-focus-width) solid var(--rte-focus);
     outline-offset: 1px;
+  }
+
+  /* Mídia (05c1): faixas de legenda em grupos com borda; o botão de remover alinha à direita. */
+  .rte-editor .rte-dialog__tracks {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin: 0;
+  }
+
+  .rte-editor .rte-dialog__subtitle {
+    margin: 0;
+    font-size: 1em;
+    font-weight: 600;
+  }
+
+  .rte-editor .rte-dialog__fieldset {
+    display: grid;
+    gap: 0.75rem;
+    align-self: stretch;
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--rte-border);
+    border-radius: var(--rte-radius);
+  }
+
+  .rte-editor .rte-dialog__legend {
+    padding: 0 0.25rem;
+    font-weight: 500;
+  }
+
+  .rte-editor .rte-dialog__track-remove {
+    justify-self: end;
+  }
+
+  .rte-editor .rte-dialog__readonly {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--rte-text-muted);
   }
 
   /* Seleção pendente (G13): o alvo do diálogo aberto continua visível sem o foco no editável. */
@@ -551,13 +598,16 @@
     }
 
     .rte-editor .rte-dialog,
-    .rte-editor .rte-floating {
+    .rte-editor .rte-floating,
+    .rte-editor .rte-dialog__fieldset {
       border-color: CanvasText;
     }
 
-    /* A dica não é texto inaplicável: o GrayText do --rte-text-muted fica abaixo de 4,5:1 sobre
-     * Canvas nos motores que não forçam as cores (WebKit). */
-    .rte-editor .rte-dialog__hint {
+    /* A dica e a URL somente leitura (05c1) não são texto inaplicável: o GrayText do
+     * --rte-text-muted fica abaixo de 4,5:1 sobre Canvas nos motores que não forçam as cores
+     * (WebKit). */
+    .rte-editor .rte-dialog__hint,
+    .rte-editor .rte-dialog__readonly {
       color: CanvasText;
     }
 
@@ -674,6 +724,12 @@
   /* O título vazio de caixa mostra o rótulo da variante; em itálico, para não parecer digitado. */
   .rte-content .rte-placeholder:not(.rte-placeholder--doc)::before {
     font-style: italic;
+  }
+
+  /* V11: com o editável ligado, o clique no vídeo/iframe seleciona o nó (o menu abre) em vez de tocar. */
+  .rte-editor .rte-content[contenteditable='true'] .rt-figure--video video,
+  .rte-editor .rte-content[contenteditable='true'] .rt-embed iframe {
+    pointer-events: none;
   }
 
   /* Tarefas: o checkbox fica fora da área editável (`contenteditable=false`). */

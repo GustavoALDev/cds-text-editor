@@ -25,6 +25,7 @@ import { RTE_LABELS_ES, RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
 import { getRteEditor } from '@cds/rte-angular/testing';
 import type { Editor } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { RteDialogController } from './dialogs/controller';
 import { selectText } from './testing-support/editors';
 import { installPopoverShim } from './testing-support/popover';
 import { RTE_ICONS } from './toolbar/icons';
@@ -105,6 +106,8 @@ const ARTICLE_LABELS = [
   'Quote',
   'Code block',
   'Horizontal line',
+  'Insert image',
+  'Insert embedded content',
   'Table',
   'Clear formatting',
 ];
@@ -255,7 +258,7 @@ describe('estrutura (U2, U8, U9)', () => {
     const separators = toolbar.querySelectorAll(
       '.rte-toolbar__separator[role=separator][aria-orientation=vertical]',
     );
-    expect(separators).toHaveLength(8);
+    expect(separators).toHaveLength(9);
     for (const sep of separators) {
       expect(sep.hasAttribute('tabindex')).toBe(false);
       expect(sep.previousElementSibling).not.toBeNull();
@@ -830,6 +833,9 @@ describe('itens de diálogo (G11, G16, G17)', () => {
       'Quote',
       'Code block',
       'Horizontal line',
+      'Insert image',
+      'Insert video',
+      'Insert embedded content',
       'Table',
       'Callout box',
       'Pull quote',
@@ -945,6 +951,12 @@ describe('itens de diálogo (G11, G16, G17)', () => {
   });
 
   it('escolher Insert table… fecha o menu, foca o gatilho e emite table', async () => {
+    // O pedido não abre o diálogo: com o chunk já carregado no worker
+    // (`isolate: false`), o <dialog> abriria durante o `settle`, sem o calço,
+    // roubaria o foco e vazaria o pedido para os arquivos seguintes.
+    const open = vi
+      .spyOn(RteDialogController.prototype, 'open')
+      .mockImplementation(() => undefined);
     const { el, fixture } = await setup();
     const spy = vi.fn();
     toolbarCmp(fixture).dialog.subscribe(spy);
@@ -959,6 +971,13 @@ describe('itens de diálogo (G11, G16, G17)', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
     expect(document.activeElement).toBe(trigger);
     expect(spy).toHaveBeenCalledWith({ kind: 'table', origin: trigger });
+    // O pedido chega ao controlador (Fix 7 da revisão final).
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledWith(
+      'table',
+      expect.objectContaining({ mode: 'insert' }),
+      trigger,
+    );
   });
 
   it('newsBlocks desligado: sem Language nem Quote author, com Link', async () => {

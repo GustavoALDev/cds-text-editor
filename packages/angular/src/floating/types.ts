@@ -1,16 +1,24 @@
 import { InjectionToken } from '@angular/core';
 import type { RteFeatureId } from '@cds/rte-core';
 
-/** Tipos de menu flutuante (a 05c acrescenta os de mídia). */
-export type RteFloatingMenuKind = 'text' | 'link' | 'table' | 'image';
+/**
+ * Tipos de menu flutuante. Vídeo e *embed* são chaves separadas (V10), para a
+ * configuração por chave (M17) desligar só um deles.
+ */
+export type RteFloatingMenuKind =
+  'text' | 'link' | 'table' | 'image' | 'video' | 'embed';
 
 /** `true`/`false` para todos, ou chave a chave (M17). */
 export type RteFloatingMenusConfig =
   boolean | Partial<Record<RteFloatingMenuKind, boolean>>;
 
-/** Ordem de prioridade: `image > link > text > table`. */
+/**
+ * Ordem de prioridade: `image > video > embed > link > text > table`. As
+ * seleções de nó das três mídias são exclusivas; a ordem entre elas só
+ * documenta (V10).
+ */
 export const RTE_FLOATING_KINDS: readonly RteFloatingMenuKind[] = Object.freeze(
-  ['image', 'link', 'text', 'table'] as const,
+  ['image', 'video', 'embed', 'link', 'text', 'table'] as const,
 );
 
 /** Recurso do core de que cada tipo depende (`null`: sempre disponível). */
@@ -18,6 +26,8 @@ export const RTE_FLOATING_FEATURE: Readonly<
   Record<RteFloatingMenuKind, RteFeatureId | null>
 > = Object.freeze({
   image: 'media',
+  video: 'media',
+  embed: 'embeds',
   link: null,
   text: null,
   table: 'tables',

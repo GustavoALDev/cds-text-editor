@@ -288,11 +288,26 @@ export class RteToolbar {
     return this.labels()[id] as string;
   }
 
-  /** Nome do botão de diálogo: 'Editar …' quando já há link/idioma sob a seleção. */
+  /**
+   * Nome do botão de diálogo: 'Editar …' quando já há link/idioma sob a
+   * seleção ou a mídia do item está selecionada.
+   */
   protected dialogLabel(id: RteToolbarItemId, active: boolean): string {
     const l = this.labels();
-    if (active && id === 'link') return l.editLink;
-    if (active && id === 'lang') return l.editLang;
+    if (active) {
+      switch (id) {
+        case 'link':
+          return l.editLink;
+        case 'lang':
+          return l.editLang;
+        case 'image':
+          return l.editImage;
+        case 'video':
+          return l.editVideo;
+        case 'embed':
+          return l.editEmbed;
+      }
+    }
     return this.label(id);
   }
 

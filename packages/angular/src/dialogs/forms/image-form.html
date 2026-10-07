@@ -1,0 +1,157 @@
+<form
+  class="rte-dialog__form"
+  [formRoot]="form"
+  (mousedown)="keepFocus($event)"
+>
+  @let srcError = error(form.src);
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().src"
+      >{{ labels().imageUrl }}</label
+    >
+    <input
+      class="rte-dialog__input"
+      type="text"
+      inputmode="url"
+      autocomplete="off"
+      spellcheck="false"
+      [id]="ids().src"
+      [formField]="form.src"
+      [attr.aria-invalid]="srcError ? 'true' : null"
+      [attr.aria-describedby]="
+          ids().src + '-hint' + (srcError ? ' ' + ids().src + '-error' : '')
+        "
+    />
+    <p class="rte-dialog__hint" [id]="ids().src + '-hint'">
+      {{ labels().imageUrlHint }}
+    </p>
+    @if (srcError) {
+    <p class="rte-dialog__error" [id]="ids().src + '-error'">{{ srcError }}</p>
+    }
+  </div>
+  @let altError = error(form.alt);
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().alt"
+      >{{ labels().imageAlt }}</label
+    >
+    <input
+      class="rte-dialog__input"
+      type="text"
+      [id]="ids().alt"
+      [formField]="form.alt"
+      [attr.aria-invalid]="altError ? 'true' : null"
+      [attr.aria-describedby]="
+          ids().alt + '-hint' + (altError ? ' ' + ids().alt + '-error' : '')
+        "
+    />
+    <p class="rte-dialog__hint" [id]="ids().alt + '-hint'">
+      {{ labels().imageAltHint }}
+    </p>
+    @if (altError) {
+    <p class="rte-dialog__error" [id]="ids().alt + '-error'">{{ altError }}</p>
+    }
+  </div>
+  <div class="rte-dialog__field">
+    <input
+      class="rte-dialog__checkbox"
+      type="checkbox"
+      [id]="ids().decorative"
+      [formField]="form.decorative"
+      (change)="onDecorative()"
+    />
+    <label class="rte-dialog__label" [for]="ids().decorative"
+      >{{ labels().imageDecorative }}</label
+    >
+  </div>
+  @let captionError = error(form.caption);
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().caption"
+      >{{ labels().imageCaption }}</label
+    >
+    <input
+      class="rte-dialog__input"
+      type="text"
+      [id]="ids().caption"
+      [formField]="form.caption"
+      [attr.aria-invalid]="captionError ? 'true' : null"
+      [attr.aria-describedby]="captionError ? ids().caption + '-error' : null"
+    />
+    @if (captionError) {
+    <p class="rte-dialog__error" [id]="ids().caption + '-error'">
+      {{ captionError }}
+    </p>
+    }
+  </div>
+  @let creditError = error(form.credit);
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().credit"
+      >{{ labels().imageCredit }}</label
+    >
+    <input
+      class="rte-dialog__input"
+      type="text"
+      [id]="ids().credit"
+      [formField]="form.credit"
+      [attr.aria-invalid]="creditError ? 'true' : null"
+      [attr.aria-describedby]="creditError ? ids().credit + '-error' : null"
+    />
+    @if (creditError) {
+    <p class="rte-dialog__error" [id]="ids().credit + '-error'">
+      {{ creditError }}
+    </p>
+    }
+  </div>
+  @if (request().mode === 'edit') {
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().align"
+      >{{ labels().imageAlign }}</label
+    >
+    <select
+      class="rte-dialog__select"
+      [id]="ids().align"
+      [formField]="form.align"
+    >
+      @for (align of aligns; track align) {
+      <option [value]="align">{{ alignNames()[align] }}</option>
+      }
+    </select>
+  </div>
+  @let widthError = error(form.width);
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().width"
+      >{{ labels().imageWidth }}</label
+    >
+    <input
+      class="rte-dialog__input"
+      type="number"
+      step="1"
+      [id]="ids().width"
+      [formField]="form.width"
+      [attr.aria-invalid]="widthError ? 'true' : null"
+      [attr.aria-describedby]="
+          ids().width + '-hint' + (widthError ? ' ' + ids().width + '-error' : '')
+        "
+    />
+    <p class="rte-dialog__hint" [id]="ids().width + '-hint'">
+      {{ labels().imageWidthHint }}
+    </p>
+    @if (widthError) {
+    <p class="rte-dialog__error" [id]="ids().width + '-error'">
+      {{ widthError }}
+    </p>
+    }
+  </div>
+  }
+  <div class="rte-dialog__actions">
+    @if (request().mode === 'edit') {
+    <button type="button" class="rte-dialog__remove" (click)="remove()">
+      {{ labels().remove }}
+    </button>
+    }
+    <button type="button" class="rte-dialog__cancel" (click)="cancel()">
+      {{ labels().cancel }}
+    </button>
+    <button type="submit" class="rte-dialog__apply">
+      {{ labels().apply }}
+    </button>
+  </div>
+</form>

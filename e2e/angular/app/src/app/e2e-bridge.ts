@@ -8,7 +8,11 @@ import {
   NgZone,
   signal,
 } from '@angular/core';
-import type { RteToolbarConfig } from '@cds/rte-angular';
+import type {
+  RteMediaChange,
+  RteMediaSession,
+  RteToolbarConfig,
+} from '@cds/rte-angular';
 import { getRteEditor } from '@cds/rte-angular/testing';
 import { getRteHtml } from '@cds/rte-core/extensions';
 import { applyRteTheme, type RteTheme } from '@cds/rte-theme';
@@ -29,7 +33,10 @@ export type RteE2eId =
   | 'dialogs'
   | 'dialogs-api'
   | 'floating'
-  | 'floating-alt';
+  | 'floating-alt'
+  | 'media'
+  | 'media-alt'
+  | 'media-key';
 export type RteE2eToggle = 'disabled' | 'readonly' | 'hidden' | 'show';
 export type RteE2eLang = 'en' | 'pt-BR' | 'es';
 
@@ -56,6 +63,11 @@ export interface RteE2eHandle {
   setFloatingMenus?(config: unknown): void;
   /** `focusFloatingMenu()` do editor (página `floating`). */
   focusFloatingMenu?(): boolean;
+  /** Último `mediaChange` e contagem (página `media`). */
+  lastMediaChange?(): RteMediaChange | null;
+  mediaChanges?(): number;
+  /** `mediaSession()` do editor (página `media`). */
+  mediaSession?(): RteMediaSession;
 }
 
 /** `window.rteE2e`: só o que os testes leem (spec 05a, §6.2; sem `ng.getComponent`). */
@@ -77,6 +89,12 @@ export interface RteE2eApi {
   setFloatingMenus(id: RteE2eId, config: unknown): void;
   /** `focusFloatingMenu()` do editor `id` (N9, N24). */
   focusFloatingMenu(id: RteE2eId): boolean;
+  /** Último `mediaChange` do editor `id` (`null` antes do primeiro). */
+  lastMediaChange(id: RteE2eId): RteMediaChange | null;
+  /** Quantos `mediaChange` o editor `id` emitiu. */
+  mediaChanges(id: RteE2eId): number;
+  /** `mediaSession()` do editor `id`. */
+  mediaSession(id: RteE2eId): RteMediaSession;
   /** Passa a contar as mutações do `rte-floating-menus` do editor `id` (R16). */
   watchFloating(id: RteE2eId): void;
   /** Mutações (`total`) e as de `style` desde o `watchFloating(id)`. */
@@ -93,6 +111,17 @@ export interface RteE2eApi {
   toolbarMutations(id: RteE2eId): number;
   readonly readyAt: Partial<Record<RteE2eId, number>>;
   readonly toggledAt: number | null;
+}
+
+function mediaOf(bridge: E2eBridge, id: RteE2eId) {
+  const h = bridge.handle(id);
+  if (!h.lastMediaChange || !h.mediaChanges || !h.mediaSession)
+    throw new Error(`rteE2e: editor '${id}' sem mídia.`);
+  return {
+    last: h.lastMediaChange,
+    count: h.mediaChanges,
+    session: h.mediaSession,
+  };
 }
 
 /** Estado sem formulário (`[(value)]`): sempre válido, nunca tocado. */
@@ -282,6 +311,9 @@ export function installE2eBridge(): void {
         count(entry, entry.observer.takeRecords());
         return { total: entry.total, style: entry.style };
       },
+      lastMediaChange: (id) => run(() => mediaOf(bridge, id).last()),
+      mediaChanges: (id) => run(() => mediaOf(bridge, id).count()),
+      mediaSession: (id) => run(() => mediaOf(bridge, id).session()),
       zoneTurns: () => turns,
       readyAt: bridge.readyAt,
       get toggledAt() {

@@ -378,4 +378,42 @@ describe('readFloatingAnchor (M7)', () => {
       restore();
     }
   });
+
+  it.each([
+    [
+      'video',
+      '<figure class="rt-figure rt-figure--video"><video src="https://x.com/v.mp4" controls=""></video></figure>',
+      'video',
+    ],
+    [
+      'embed',
+      '<figure class="rt-embed rt-embed--youtube" data-rt-provider="youtube"><iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" title="YouTube" width="560" height="315"></iframe></figure>',
+      'iframe',
+    ],
+  ] as const)(
+    '%s: o retângulo do <figure> do nó (V10)',
+    (kind, html, inner) => {
+      const editor = createTestEditor(`<p>a</p>${html}`);
+      const pos = editor.state.doc.child(0).nodeSize;
+      const figure = editor.view.dom.querySelector('figure');
+      const child = figure?.querySelector(inner);
+      expect(figure).not.toBeNull();
+      expect(child).not.toBeNull();
+      const r = rect(7, 77, 3, 303);
+      const restore = installGeometry({
+        viewport,
+        rects: (el) => (el === figure ? r : null),
+      });
+      const real = editor.view.nodeDOM.bind(editor.view);
+      try {
+        expect(readFloatingAnchor(editor, ctx(kind, pos, pos + 1))).toEqual(r);
+        // nodeDOM num descendente (vista de nó própria) sobe ao figure
+        editor.view.nodeDOM = () => child ?? null;
+        expect(readFloatingAnchor(editor, ctx(kind, pos, pos + 1))).toEqual(r);
+      } finally {
+        editor.view.nodeDOM = real;
+        restore();
+      }
+    },
+  );
 });

@@ -1,16 +1,20 @@
+import type { Signal } from '@angular/core';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import * as api from '@cds/rte-angular';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import type {
+  RteDialogKind,
   RteFloatingMenuKind,
   RteFloatingMenuLabels,
   RteFloatingMenusConfig,
+  RteMediaChange,
+  RteMediaSession,
 } from '@cds/rte-angular';
 import * as i18n from '@cds/rte-angular/i18n';
 import * as testing from '@cds/rte-angular/testing';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import * as validators from '@cds/rte-angular/validators';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 
 describe('@cds/rte-angular', () => {
   it('exporta só a API pública do entry .', () => {
@@ -30,6 +34,27 @@ describe('@cds/rte-angular', () => {
     const labels: Partial<RteFloatingMenuLabels> = { textMenu: 'x' };
     expect(config).toEqual({ image: false });
     expect(labels.textMenu).toBe('x');
+  });
+
+  it('RteDialogKind aceita os três tipos de mídia (05c1)', () => {
+    expectTypeOf<RteDialogKind>().toEqualTypeOf<
+      'link' | 'lang' | 'quoteAuthor' | 'table' | 'image' | 'video' | 'embed'
+    >();
+  });
+
+  it('exporta os tipos da sessão de mídia (05c1)', () => {
+    expectTypeOf<RteMediaChange>().toEqualTypeOf<{
+      readonly added: readonly string[];
+      readonly removed: readonly string[];
+    }>();
+    expectTypeOf<RteMediaSession>().toEqualTypeOf<{
+      readonly current: readonly string[];
+      readonly added: readonly string[];
+      readonly removed: readonly string[];
+    }>();
+    expectTypeOf<api.RteEditor['mediaSession']>().toEqualTypeOf<
+      Signal<RteMediaSession>
+    >();
   });
 
   it('RTE_DIALOG_LANGUAGES é congelado', () => {

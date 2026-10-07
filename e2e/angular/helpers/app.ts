@@ -65,15 +65,21 @@ export async function waitForEditor(
   // zone.js carregando, o `waitForFunction` às vezes resolve com uma promessa
   // da zona (valor "verdadeiro") antes de o predicado valer.
   await expect
-    .poll(() =>
-      page.evaluate((testId) => {
-        const host = document.querySelector(
-          `rte-editor[data-testid="${testId}"]`,
-        );
-        return (
-          !!host && !!window.rteE2e && window.rteE2e.getRteEditor(host) !== null
-        );
-      }, id),
+    .poll(
+      () =>
+        page.evaluate((testId) => {
+          const host = document.querySelector(
+            `rte-editor[data-testid="${testId}"]`,
+          );
+          return (
+            !!host &&
+            !!window.rteE2e &&
+            window.rteE2e.getRteEditor(host) !== null
+          );
+        }, id),
+      // Firefox sob carga (2 workers) às vezes passa de 5 s para criar o editor
+      // da página `media` (vídeo e iframes no documento).
+      { timeout: 20_000 },
     )
     .toBe(true);
 }

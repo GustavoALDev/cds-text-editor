@@ -14,6 +14,7 @@ import {
 } from '@cds/rte-angular';
 import { getRteHtml } from '@cds/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
+import { NodeSelection } from '@tiptap/pm/state';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   chooseOption,
@@ -26,6 +27,7 @@ import {
 import { selectText } from './testing-support/editors';
 import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
+import type { RteDialogController } from './dialogs/controller';
 
 // Spec 05b2a, Tarefas 4 e 6: `openDialog` (R17).
 
@@ -45,7 +47,7 @@ const DOC =
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class Host {
-  readonly value = DOC;
+  value = DOC;
   readonly toolbar = signal<RteToolbarConfig | undefined>('full');
   readonly options = signal<RteEditorConfig | undefined>(undefined);
   readonly disabled = signal(false);
@@ -231,5 +233,125 @@ describe('openDialog com toolbar: false (R17)', () => {
     expect(event.defaultPrevented).toBe(true);
     const dialog = await waitForDialog(fixture);
     expect(title(dialog)).toBe('Insert link');
+  });
+});
+
+describe('openDialog de mídia (V2, V9)', () => {
+  const MEDIA =
+    '<p>texto</p>' +
+    '<figure class="rt-figure rt-figure--center"><img src="/a.png" alt="A"></figure>' +
+    '<figure class="rt-figure rt-figure--video"><video src="/v.webm" controls=""></video></figure>' +
+    '<figure class="rt-embed rt-embed--youtube" data-rt-provider="youtube"><iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" title="YouTube"></iframe></figure>';
+
+  function controller(cmp: RteEditor): RteDialogController {
+    return (cmp as unknown as { dialogs: RteDialogController }).dialogs;
+  }
+
+  function selectNode(editor: Editor, typeName: string): number {
+    let found = -1;
+    editor.state.doc.descendants((node, pos) => {
+      if (found >= 0) return false;
+      if (node.type.name === typeName) found = pos;
+      return found < 0;
+    });
+    editor.view.dispatch(
+      editor.state.tr.setSelection(
+        NodeSelection.create(editor.state.doc, found),
+      ),
+    );
+    return found;
+  }
+
+  async function setupMedia(init: (host: Host) => void = () => undefined) {
+    const fixture = TestBed.createComponent(Host);
+    fixture.componentInstance.value = MEDIA;
+    init(fixture.componentInstance);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const cmp = fixture.componentInstance.cmp();
+    return { fixture, cmp, editor: cmp.editor() as Editor };
+  }
+
+  it.each(['image', 'video', 'embed'] as const)(
+    '%s: true no editável com o cursor no texto → insert',
+    async (kind) => {
+      const { cmp, editor } = await setupMedia();
+      selectText(editor, 'texto', 2);
+      const from = editor.state.selection.from;
+      expect(cmp.openDialog(kind)).toBe(true);
+      const req = controller(cmp).request();
+      expect(req?.kind).toBe(kind);
+      expect(req?.mode).toBe('insert');
+      expect(req?.range).toEqual({ from, to: from });
+    },
+  );
+
+  it.each([
+    ['image', 'rtImage'],
+    ['video', 'rtVideo'],
+    ['embed', 'rtEmbed'],
+  ] as const)(
+    '%s: com o próprio nó selecionado → edit sobre o nó',
+    async (kind, typeName) => {
+      const { cmp, editor } = await setupMedia();
+      const pos = selectNode(editor, typeName);
+      expect(cmp.openDialog(kind)).toBe(true);
+      const req = controller(cmp).request();
+      expect(req?.kind).toBe(kind);
+      expect(req?.mode).toBe('edit');
+      expect(req?.range).toEqual({ from: pos, to: pos + 1 });
+    },
+  );
+
+  it.each([
+    ['readonly', (h: Host) => h.readonly.set(true)],
+    ['disabled', (h: Host) => h.disabled.set(true)],
+  ] as const)('false com %s', async (_name, init) => {
+    const { cmp, editor } = await setupMedia(init);
+    selectText(editor, 'texto', 2);
+    for (const kind of ['image', 'video', 'embed'] as const)
+      expect(cmp.openDialog(kind)).toBe(false);
+    expect(controller(cmp).request()).toBeNull();
+  });
+
+  it('false com outro diálogo aberto', async () => {
+    const { fixture, cmp, editor } = await setupMedia();
+    selectText(editor, 'texto');
+    expect(cmp.openDialog('link')).toBe(true);
+    await waitForDialog(fixture);
+    for (const kind of ['image', 'video', 'embed'] as const)
+      expect(cmp.openDialog(kind)).toBe(false);
+    expect(controller(cmp).request()?.kind).toBe('link');
+  });
+
+  it('false com media: false (image, video); embed segue', async () => {
+    const { cmp, editor } = await setupMedia((h) =>
+      h.options.set({ features: { media: false } }),
+    );
+    selectText(editor, 'texto', 2);
+    expect(cmp.openDialog('image')).toBe(false);
+    expect(cmp.openDialog('video')).toBe(false);
+    expect(cmp.openDialog('embed')).toBe(true);
+  });
+
+  it('false com embedProviders: [] (embed); image segue', async () => {
+    const { cmp, editor } = await setupMedia((h) =>
+      h.options.set({ embedProviders: [] }),
+    );
+    selectText(editor, 'texto', 2);
+    expect(cmp.openDialog('embed')).toBe(false);
+    expect(cmp.openDialog('image')).toBe(true);
+  });
+
+  it('a barra full ganha image/video/embed; sem provedores, sem embed', async () => {
+    const { fixture } = await setupMedia((h) =>
+      h.options.set({ embedProviders: [] }),
+    );
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[aria-label="Insert image"]')).not.toBeNull();
+    expect(el.querySelector('[aria-label="Insert video"]')).not.toBeNull();
+    expect(
+      el.querySelector('[aria-label="Insert embedded content"]'),
+    ).toBeNull();
   });
 });

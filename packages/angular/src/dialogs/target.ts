@@ -2,6 +2,7 @@ import { getMarkRange, type Editor } from '@tiptap/core';
 import type { MarkType } from '@tiptap/pm/model';
 import {
   AllSelection,
+  NodeSelection,
   TextSelection,
   type EditorState,
   type Selection,
@@ -9,7 +10,11 @@ import {
 import { isInTable } from '@tiptap/pm/tables';
 import { can } from '../toolbar/can';
 import { RTE_INSERT_TABLE } from '../toolbar/table-guard';
-import type { RteDialogKind } from './types';
+import {
+  RTE_MEDIA_NODES,
+  type RteDialogKind,
+  type RteMediaDialogKind,
+} from './types';
 
 /** Modo de um diálogo: criar algo novo, aplicar à seleção ou editar o existente. */
 export type RteDialogMode = 'insert' | 'apply' | 'edit';
@@ -111,6 +116,28 @@ function tableTarget(editor: Editor): RteDialogTarget | null {
 }
 
 /**
+ * Mídia (pré-voo 2): nó ausente no esquema do editor → `null` (`rtEmbed` só
+ * existe com `embeds` e algum provedor); `NodeSelection` do próprio nó →
+ * `edit` sobre ele; qualquer outra seleção → `insert` sobre a seleção.
+ */
+function mediaTarget(
+  editor: Editor,
+  kind: RteMediaDialogKind,
+): RteDialogTarget | null {
+  const { schema, selection } = editor.state;
+  const type = schema.nodes[RTE_MEDIA_NODES[kind]];
+  if (!type) return null;
+  if (selection instanceof NodeSelection && selection.node.type === type) {
+    return target(
+      'edit',
+      selection.from,
+      selection.from + selection.node.nodeSize,
+    );
+  }
+  return target('insert', selection.from, selection.to);
+}
+
+/**
  * Alvo do diálogo `kind` para a seleção atual, pela tabela de aplicabilidade
  * da §4 (vale para o item da barra, o `Mod-K` e `openDialog`); `null` =
  * inaplicável. Não confere se o editor é editável nem se há diálogo aberto.
@@ -128,5 +155,9 @@ export function dialogTarget(
       return quoteAuthorTarget(editor);
     case 'table':
       return tableTarget(editor);
+    case 'image':
+    case 'video':
+    case 'embed':
+      return mediaTarget(editor, kind);
   }
 }

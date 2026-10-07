@@ -6,10 +6,12 @@ import type {} from '@tiptap/extension-link';
 import { NodeSelection } from '@tiptap/pm/state';
 import { dialogTarget } from '../dialogs/target';
 import type { RteDialogKind } from '../dialogs/types';
+import type { RteFloatingMenuLabels } from '../labels/types';
 import { runTableOp, runToolbarCommand } from '../toolbar/commands';
 import type { RteToolbarItemId } from '../toolbar/items';
 import type { RteMenu } from '../toolbar/menu';
 import type { RteToolbarState } from '../toolbar/state';
+import type { RteFloatingMenuKind } from './types';
 import {
   readTableOpState,
   RTE_TABLE_OPS,
@@ -33,6 +35,49 @@ export const RTE_FLOATING_IMAGE_ALIGNS = [
   ['right', 'imageAlignRight', 'alignRight'],
   ['full', 'imageAlignFull', 'imageAlignFull'],
 ] as const satisfies readonly (readonly [RteImageAlign, string, string])[];
+
+/** Tipos de menu de mídia: "Detalhes…" abre o diálogo do mesmo nome (V10). */
+export type RteFloatingMediaKind = 'image' | 'video' | 'embed';
+
+/** Itens comuns de um menu de mídia: nó, "Detalhes…" e "Remover". */
+export interface RteFloatingMedia {
+  readonly kind: RteFloatingMediaKind;
+  /** Nome do nó do core (`NodeSelection`). */
+  readonly node: string;
+  readonly details: keyof RteFloatingMenuLabels;
+  readonly remove: keyof RteFloatingMenuLabels;
+}
+
+/**
+ * Menus de mídia (pré-voo 10): "Detalhes…" · (alinhamentos, só imagem) ·
+ * "Remover". Os demais tipos não têm entrada. O `satisfies` exige uma
+ * entrada por tipo de mídia (com o `kind` da própria chave): uma mídia nova
+ * esquecida aqui não compila, em vez de renderizar um menu vazio.
+ */
+export const RTE_FLOATING_MEDIA: Readonly<
+  Partial<Record<RteFloatingMenuKind, RteFloatingMedia>>
+> = Object.freeze({
+  image: {
+    kind: 'image',
+    node: 'rtImage',
+    details: 'imageDetails',
+    remove: 'removeImage',
+  },
+  video: {
+    kind: 'video',
+    node: 'rtVideo',
+    details: 'videoDetails',
+    remove: 'removeVideo',
+  },
+  embed: {
+    kind: 'embed',
+    node: 'rtEmbed',
+    details: 'embedDetails',
+    remove: 'removeEmbed',
+  },
+} satisfies {
+  readonly [K in RteFloatingMediaKind]: RteFloatingMedia & { readonly kind: K };
+});
 
 /** Operações de tabela do menu flutuante como botões (M13, M16). */
 export const RTE_FLOATING_TABLE_OPS = [
@@ -71,22 +116,21 @@ type ImageChain = ChainedCommands & {
   setImageAlign(align: RteImageAlign): ImageChain;
 };
 
-function imageSelection(editor: Editor): NodeSelection | null {
+/** `NodeSelection` de um nó do tipo `typeName` ou `null`. */
+export function selectedMedia(
+  editor: Editor,
+  typeName: string,
+): NodeSelection | null {
   const { selection } = editor.state;
   return selection instanceof NodeSelection &&
-    selection.node.type.name === 'rtImage'
+    selection.node.type.name === typeName
     ? selection
     : null;
 }
 
-/** Posição da imagem selecionada (`NodeSelection` de `rtImage`) ou `null`. */
-function selectedImage(editor: Editor): number | null {
-  return imageSelection(editor)?.from ?? null;
-}
-
 /** Alinhamento da imagem selecionada (`aria-pressed`); `null` sem imagem. */
 export function imageAlignAt(editor: Editor): string | null {
-  const selection = imageSelection(editor);
+  const selection = selectedMedia(editor, 'rtImage');
   return selection ? String(selection.node.attrs['align'] ?? '') : null;
 }
 
@@ -95,16 +139,19 @@ export function imageAlignAt(editor: Editor): string | null {
  * de imagem continua visível com o novo `aria-pressed`. Um passo de desfazer.
  */
 export function alignImage(editor: Editor, align: RteImageAlign): boolean {
-  const pos = selectedImage(editor);
+  const pos = selectedMedia(editor, 'rtImage')?.from ?? null;
   if (pos === null) return false;
   // o `declare module` do core (`setImageAlign`) não chega ao `.d.ts` do build
   const chain = editor.chain().focus() as ImageChain;
   return chain.setImageAlign(align).setNodeSelection(pos).run();
 }
 
-/** Remove a imagem selecionada (`deleteSelection()`, M13). */
-export function removeImage(editor: Editor): boolean {
-  if (selectedImage(editor) === null) return false;
+/**
+ * Remove o nó de mídia selecionado (`deleteSelection()`, M13): um passo de
+ * desfazer; `false` se a seleção não for uma `NodeSelection` de `typeName`.
+ */
+export function removeMedia(editor: Editor, typeName: string): boolean {
+  if (!selectedMedia(editor, typeName)) return false;
   return editor.chain().focus().deleteSelection().run();
 }
 
@@ -161,7 +208,9 @@ export interface RteFloatingActions {
   mark(id: RteToolbarItemId): void;
   /** `link`/`editLink`: o dono pede o diálogo com origem no editável (M14). */
   link(): void;
-  /** Comando puro deste arquivo (remover link, alinhar/remover imagem). */
+  /** "Detalhes…" de uma mídia: o dono pede o diálogo do tipo (V10, M14). */
+  details(kind: RteFloatingMediaKind): void;
+  /** Comando puro deste arquivo (remover link/mídia, alinhar imagem). */
   exec<A extends unknown[]>(
     command: (editor: Editor, ...args: A) => boolean,
     ...args: A
@@ -193,6 +242,9 @@ export function createFloatingActions(o: {
     },
     link() {
       if (ready()) o.dialog('link');
+    },
+    details(kind) {
+      if (ready()) o.dialog(kind);
     },
     exec(command, ...args) {
       const editor = ready();

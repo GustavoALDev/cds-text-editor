@@ -29,11 +29,13 @@ function ctx(
   overrides: Partial<{
     features: readonly RteFeatureId[];
     hasCodeLanguages: boolean;
+    hasEmbedProviders: boolean;
   }> = {},
 ) {
   return {
     features: ALL,
     hasCodeLanguages: true,
+    hasEmbedProviders: true,
     warned: new Set<string>(),
     ...overrides,
   };
@@ -63,6 +65,7 @@ describe('RTE_TOOLBAR_PRESETS', () => {
         ['bulletList', 'orderedList', 'taskList'],
         ['align'],
         ['blockquote', 'codeBlock', 'horizontalRule'],
+        ['image', 'embed'],
         ['table'],
         ['clearFormatting'],
       ],
@@ -84,6 +87,7 @@ describe('RTE_TOOLBAR_PRESETS', () => {
         ['bulletList', 'orderedList', 'taskList', 'indent', 'outdent'],
         ['align'],
         ['blockquote', 'codeBlock', 'codeLanguage', 'horizontalRule'],
+        ['image', 'video', 'embed'],
         ['table'],
         ['callout', 'pullquote', 'quoteAuthor', 'readAlso'],
         ['clearFormatting'],
@@ -163,7 +167,12 @@ describe('resolveToolbarGroups', () => {
       ['bold', 'x', 'bold'],
       ['italic', 'bold'],
     ] as unknown as RteToolbarConfig;
-    const c = { features: ALL, hasCodeLanguages: true, warned };
+    const c = {
+      features: ALL,
+      hasCodeLanguages: true,
+      hasEmbedProviders: true,
+      warned,
+    };
     expect(resolveToolbarGroups(input, c)).toEqual([['bold'], ['italic']]);
     expect(warn).toHaveBeenCalledTimes(2);
     expect(warn).toHaveBeenCalledWith(
@@ -215,6 +224,8 @@ describe('resolveToolbarGroups', () => {
     ['tasks', 'tasks', ['taskList']],
     ['code', 'code', ['codeBlock', 'codeLanguage']],
     ['tables', 'tables', ['table']],
+    ['media', 'media', ['image', 'video']],
+    ['embeds', 'embeds', ['embed']],
     [
       'newsBlocks',
       'newsBlocks',
@@ -256,6 +267,52 @@ describe('resolveToolbarGroups', () => {
     ).flat();
     expect(out).not.toContain('codeLanguage');
     expect(out).toContain('codeBlock');
+  });
+
+  it('sem provedores de embed (hasEmbedProviders: false) remove só embed', () => {
+    const before = RTE_TOOLBAR_PRESETS.full.flat();
+    const after = resolveToolbarGroups(
+      'full',
+      ctx({ hasEmbedProviders: false }),
+    ).flat();
+    expect(before.filter((id) => !after.includes(id))).toEqual(['embed']);
+    expect(after).toContain('image');
+    expect(after).toContain('video');
+  });
+
+  it('itens de mídia: diálogos dos recursos media/embeds', () => {
+    expect(RTE_TOOLBAR_ITEMS.image).toEqual({
+      kind: 'dialog',
+      feature: 'media',
+    });
+    expect(RTE_TOOLBAR_ITEMS.video).toEqual({
+      kind: 'dialog',
+      feature: 'media',
+    });
+    expect(RTE_TOOLBAR_ITEMS.embed).toEqual({
+      kind: 'dialog',
+      feature: 'embeds',
+    });
+  });
+
+  it('article: media e embeds desligados tiram o grupo de mídia inteiro', () => {
+    const features = ALL.filter((f) => f !== 'media' && f !== 'embeds');
+    const out = resolveToolbarGroups('article', ctx({ features }));
+    expect(out).toEqual(
+      RTE_TOOLBAR_PRESETS.article.filter(
+        (g) => !(g.includes('image') || g.includes('embed')),
+      ),
+    );
+  });
+
+  it('minimal não muda com mídia ligada ou desligada', () => {
+    const on = resolveToolbarGroups('minimal', ctx());
+    const off = resolveToolbarGroups(
+      'minimal',
+      ctx({ features: ['base', 'links'], hasEmbedProviders: false }),
+    );
+    expect(on).toEqual(RTE_TOOLBAR_PRESETS.minimal);
+    expect(off).toEqual(RTE_TOOLBAR_PRESETS.minimal);
   });
 
   it('grupo que fica vazio some', () => {

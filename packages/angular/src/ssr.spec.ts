@@ -33,6 +33,18 @@ class SsrHost {
   readonly secret = '<p>segredo</p>';
 }
 
+/** Barra `full` (spec 05c1): botões de mídia, nenhum diálogo de mídia. */
+@Component({
+  selector: 'rte-ssr-host',
+  imports: [RteEditor],
+  template: `<rte-editor [value]="secret" toolbar="full" />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class SsrMediaHost {
+  readonly secret =
+    '<p>segredo</p><figure class="rt-figure rt-figure--center"><img src="/a.png" alt="A"></figure>';
+}
+
 /**
  * O setup do builder inicia o TestBed (plataforma de navegador) em todo
  * arquivo, inclusive nos de ambiente `node`, e o `@angular/common` só aceita
@@ -139,6 +151,71 @@ describe('RteEditor no servidor (R12)', () => {
       // Os menus da barra (`popover="auto"`) existem no servidor; os flutuantes (`manual`) não.
       expect(html).not.toContain('popover="manual"');
       expect(html).not.toContain('Text formatting');
+    },
+  );
+  it(
+    'barra full: botões de mídia presentes, nenhum diálogo nem texto de diálogo de mídia (05c1)',
+    { timeout: 30_000 },
+    async () => {
+      const error = vi.spyOn(console, 'error');
+      const html = await withServerDomAdapter(() =>
+        renderApplication(
+          (context) =>
+            bootstrapApplication(
+              SsrMediaHost,
+              {
+                providers: [
+                  provideZonelessChangeDetection(),
+                  provideServerRendering(),
+                ],
+              },
+              context,
+            ),
+          {
+            document:
+              '<!doctype html><html><head></head><body><rte-ssr-host></rte-ssr-host></body></html>',
+            url: '/',
+          },
+        ),
+      );
+
+      const toolbar =
+        /<rte-toolbar\b[\s\S]*?<\/rte-toolbar>/.exec(html)?.[0] ?? '';
+      const buttons = [...toolbar.matchAll(/<button\b[^>]*>/g)].map(([m]) => m);
+      for (const label of [
+        'Insert image',
+        'Insert video',
+        'Insert embedded content',
+      ]) {
+        const button = buttons.find((b) => b.includes(`aria-label="${label}"`));
+        expect(button, label).toBeDefined();
+        expect(button).toMatch(/\sdisabled(?:=""|\s|>)/);
+      }
+
+      expect(html).not.toContain('<dialog');
+      expect(html).not.toContain('rte-dialog');
+      for (const tag of ['rte-image-form', 'rte-video-form', 'rte-embed-form'])
+        expect(html).not.toContain(tag);
+      for (const text of [
+        'Image details',
+        'Image address (URL)',
+        'Alternative text',
+        'Decorative image',
+        'Video details',
+        'Video address (URL)',
+        'Text tracks',
+        'Add track',
+        'Embedded content details',
+        'Page address (URL)',
+        'Accepted:',
+        'Apply',
+      ])
+        expect(html).not.toContain(text);
+      // Nem o menu flutuante da imagem do valor.
+      expect(html).not.toContain('rte-floating');
+      expect(html).not.toContain('Image details…');
+      expect(html).not.toContain('segredo');
+      expect(error).not.toHaveBeenCalled();
     },
   );
   it(

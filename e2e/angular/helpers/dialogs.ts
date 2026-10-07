@@ -5,13 +5,17 @@ import { menuItem, openMenu, toolbarButton } from './toolbar';
 
 // Ajudantes dos diálogos (spec 05b2a, N16–N20) na página `/dialogs`.
 
-export type DialogKind = 'link' | 'lang' | 'quoteAuthor' | 'table';
+export type DialogKind =
+  'link' | 'lang' | 'quoteAuthor' | 'table' | 'image' | 'video' | 'embed';
 
 /** Rótulos (en) do item da barra de cada diálogo, fora e dentro do trecho. */
 const TOOLBAR_LABELS: Record<Exclude<DialogKind, 'table'>, string[]> = {
   link: ['Link', 'Edit link'],
   lang: ['Language', 'Edit language'],
   quoteAuthor: ['Quote author'],
+  image: ['Insert image', 'Edit image'],
+  video: ['Insert video', 'Edit video'],
+  embed: ['Insert embedded content', 'Edit embedded content'],
 };
 
 /** O `<dialog>` aberto (`showModal`) dentro do host do editor `id`. */

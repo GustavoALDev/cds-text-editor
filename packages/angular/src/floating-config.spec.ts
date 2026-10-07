@@ -25,14 +25,25 @@ const ALL: readonly RteFeatureId[] = [
   'newsBlocks',
 ];
 
-const FOUR: RteFloatingMenuKind[] = ['image', 'link', 'text', 'table'];
+const SIX: RteFloatingMenuKind[] = [
+  'image',
+  'video',
+  'embed',
+  'link',
+  'text',
+  'table',
+];
+const without = (...out: RteFloatingMenuKind[]) =>
+  SIX.filter((k) => !out.includes(k));
 
 describe('tipos dos menus flutuantes', () => {
   it('RTE_FLOATING_KINDS e RTE_FLOATING_FEATURE', () => {
-    expect([...RTE_FLOATING_KINDS]).toEqual(FOUR);
+    expect([...RTE_FLOATING_KINDS]).toEqual(SIX);
     expect(Object.isFrozen(RTE_FLOATING_KINDS)).toBe(true);
     expect(RTE_FLOATING_FEATURE).toEqual({
       image: 'media',
+      video: 'media',
+      embed: 'embeds',
       link: null,
       text: null,
       table: 'tables',
@@ -62,19 +73,25 @@ describe('resolveFloatingKinds', () => {
     );
 
   it('tabela de casos', () => {
-    expect(run(undefined, undefined)).toEqual(FOUR);
+    expect(run(undefined, undefined)).toEqual(SIX);
     expect(run(false, undefined)).toEqual([]);
-    expect(run(true, { table: false })).toEqual(FOUR);
-    expect(run({ table: false }, undefined)).toEqual(['image', 'link', 'text']);
-    expect(run({ text: true }, { text: false, link: false })).toEqual([
-      'image',
-      'text',
-      'table',
-    ]);
+    expect(run(true, { table: false })).toEqual(SIX);
+    expect(run({ table: false }, undefined)).toEqual(without('table'));
+    expect(run({ text: true }, { text: false, link: false })).toEqual(
+      without('link'),
+    );
     expect(run({ link: true }, false)).toEqual(['link']);
     expect(run({ table: 'x' }, { table: false })).not.toContain('table');
     expect(run(undefined, false)).toEqual([]);
-    expect(run(undefined, { image: false })).toEqual(['link', 'text', 'table']);
+    expect(run(undefined, { image: false })).toEqual(without('image'));
+  });
+
+  it('vídeo e embed desligam só o próprio tipo (R8)', () => {
+    expect(run({ video: false }, undefined)).toEqual(without('video'));
+    expect(run(undefined, { embed: false })).toEqual(without('embed'));
+    expect(run({ video: true }, { video: false, embed: false })).toEqual(
+      without('embed'),
+    );
   });
 
   it('tipo com recurso desligado fica fora', () => {
@@ -84,20 +101,27 @@ describe('resolveFloatingKinds', () => {
         undefined,
         ALL.filter((f) => f !== 'media'),
       ),
-    ).toEqual(['link', 'text', 'table']);
+    ).toEqual(['embed', 'link', 'text', 'table']);
+    expect(
+      run(
+        undefined,
+        undefined,
+        ALL.filter((f) => f !== 'embeds'),
+      ),
+    ).toEqual(without('embed'));
     expect(
       run(
         undefined,
         undefined,
         ALL.filter((f) => f !== 'tables'),
       ),
-    ).toEqual(['image', 'link', 'text']);
+    ).toEqual(without('table'));
     expect(run(true, undefined, ['base'])).toEqual(['link', 'text']);
   });
 
   it('configuração inválida liga todos e avisa uma vez', () => {
     const warned = new Set<string>();
-    expect(run('x', undefined, ALL, warned)).toEqual(FOUR);
+    expect(run('x', undefined, ALL, warned)).toEqual(SIX);
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith(
       '[rte-editor] floatingMenus inválido; usando todos ligados.',
@@ -107,8 +131,8 @@ describe('resolveFloatingKinds', () => {
   });
 
   it('camada inválida é ignorada sozinha; a válida vale (m2)', () => {
-    expect(run('x', { table: false })).toEqual(['image', 'link', 'text']);
-    expect(run({ link: false }, null)).toEqual(['image', 'text', 'table']);
+    expect(run('x', { table: false })).toEqual(without('table'));
+    expect(run({ link: false }, null)).toEqual(without('link'));
     expect(warn).toHaveBeenCalledTimes(2);
   });
 });

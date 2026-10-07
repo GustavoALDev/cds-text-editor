@@ -14,7 +14,7 @@ import {
   getSlashMenuState,
 } from '@cds/rte-core/extensions';
 import { Editor } from '@tiptap/core';
-import { Plugin } from '@tiptap/pm/state';
+import { NodeSelection, Plugin } from '@tiptap/pm/state';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFloatingEscapeExtension } from './floating/escape-extension';
 import { selectText } from './testing-support/editors';
@@ -571,5 +571,75 @@ describe('focusFloatingMenu() (M12)', () => {
     expect(document.activeElement).toBe(editorA.view.dom);
     expect(menu(elA, 'text').contains(document.activeElement)).toBe(false);
     expect(fixture.componentInstance.events).toBe(0);
+  });
+});
+
+// Spec 05c1, Tarefa 8: os menus de mídia também são alcançados (R8, V10).
+
+const MEDIA_DOC =
+  '<p>antes</p><figure class="rt-figure"><img src="https://example.com/a.jpg" alt="A"></figure>' +
+  '<figure class="rt-figure rt-figure--video"><video src="https://example.com/v.webm" controls="" preload="metadata" playsinline=""></video></figure>' +
+  '<figure class="rt-embed rt-embed--youtube" data-rt-provider="youtube"><iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" title="YouTube" width="560" height="315"></iframe></figure>' +
+  '<p>depois</p>';
+
+function withMedia(h: Host): void {
+  (h as { options: unknown }).options = {
+    features: { code: true, tables: true, media: true, embeds: true },
+  };
+  h.value.set(MEDIA_DOC);
+}
+
+function selectNode(editor: Editor, name: string): void {
+  let pos = -1;
+  editor.state.doc.descendants((node, at) => {
+    if (pos < 0 && node.type.name === name) pos = at;
+    return pos < 0;
+  });
+  if (pos < 0) throw new Error(`${name} ausente`);
+  editor.view.dispatch(
+    editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, pos)),
+  );
+}
+
+describe('menus de mídia pelo teclado (R8)', () => {
+  it('Alt+F10 com vídeo selecionado → foco em Video details…; Escape → editável', async () => {
+    const s = await setup(withMedia);
+    await focusAnd(s, () => selectNode(s.editor, 'rtVideo'));
+    expect(openKinds(s.el)).toEqual(['video']);
+    const ev = altF10(s.editor.view.dom);
+    await settle(s.fixture);
+    expect(ev.defaultPrevented).toBe(true);
+    expect(active()).toBe('Video details…');
+    expect(menu(s.el, 'video').contains(document.activeElement)).toBe(true);
+    key(document.activeElement as HTMLElement, 'ArrowRight');
+    expect(active()).toBe('Remove video');
+    key(document.activeElement as HTMLElement, 'Escape');
+    await settle(s.fixture);
+    expect(document.activeElement).toBe(s.editor.view.dom);
+    expect(openKinds(s.el)).toEqual(['video']);
+    expectQuiet(s);
+  });
+
+  // Ruling 13: o primeiro item do menu de imagem passou a ser "Image details…"
+  it('Alt+F10 com imagem selecionada → foco em Image details…', async () => {
+    const s = await setup(withMedia);
+    await focusAnd(s, () => selectNode(s.editor, 'rtImage'));
+    expect(openKinds(s.el)).toEqual(['image']);
+    altF10(s.editor.view.dom);
+    await settle(s.fixture);
+    expect(active()).toBe('Image details…');
+    key(document.activeElement as HTMLElement, 'ArrowRight');
+    expect(active()).toBe('Align left');
+    expectQuiet(s);
+  });
+
+  it('focusFloatingMenu() → true com o menu de embed (foco em Embedded content details…)', async () => {
+    const s = await setup(withMedia);
+    await focusAnd(s, () => selectNode(s.editor, 'rtEmbed'));
+    expect(openKinds(s.el)).toEqual(['embed']);
+    expect(s.cmp.focusFloatingMenu()).toBe(true);
+    expect(active()).toBe('Embedded content details…');
+    expect(menu(s.el, 'embed').contains(document.activeElement)).toBe(true);
+    expectQuiet(s);
   });
 });

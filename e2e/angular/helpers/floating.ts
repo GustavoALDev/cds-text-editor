@@ -4,9 +4,17 @@ import { editorHost } from './app';
 
 // Ajudantes dos menus flutuantes (spec 05b2b, N21–N24) na página `/floating`.
 
-export type FloatingKind = 'text' | 'link' | 'table' | 'image';
+export type FloatingKind =
+  'text' | 'link' | 'table' | 'image' | 'video' | 'embed';
 
-const KINDS: readonly FloatingKind[] = ['image', 'link', 'text', 'table'];
+const KINDS: readonly FloatingKind[] = [
+  'image',
+  'video',
+  'embed',
+  'link',
+  'text',
+  'table',
+];
 
 /** O `.rte-floating--<kind>` do editor `id` (visível ou não). */
 export function floatingMenu(

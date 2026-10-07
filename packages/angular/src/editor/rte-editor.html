@@ -58,6 +58,9 @@
   [labels]="resolvedLabels().dialogs"
   [linkPolicy]="linkPolicy()"
   [langRule]="langRule()"
+  [mediaRules]="mediaRules()"
+  [embedProviders]="embedProviderNames()"
+  [alignNames]="alignNames()"
 />
 } @placeholder {} @error {
 <ng-template [rteDeferFailed]="onDialogsFailed" />

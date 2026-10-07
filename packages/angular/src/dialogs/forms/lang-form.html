@@ -1,0 +1,77 @@
+<form
+  class="rte-dialog__form"
+  [formRoot]="form"
+  (mousedown)="keepFocus($event)"
+>
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().language"
+      >{{ labels().langLanguage }}</label
+    >
+    <select
+      class="rte-dialog__select"
+      [id]="ids().language"
+      [formField]="form.choice"
+      (change)="onChoice()"
+    >
+      @for (code of languages; track code) {
+      <option [value]="code">{{ labels().languageNames[code] }}</option>
+      }
+      <option [value]="langOther">{{ labels().langOther }}</option>
+    </select>
+  </div>
+  @if (form.choice().value() === langOther) { @let codeError = error(form.code);
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().code"
+      >{{ labels().langCode }}</label
+    >
+    <input
+      class="rte-dialog__input"
+      type="text"
+      autocomplete="off"
+      spellcheck="false"
+      [id]="ids().code"
+      [formField]="form.code"
+      [attr.aria-invalid]="codeError ? 'true' : null"
+      [attr.aria-describedby]="
+          ids().code + '-hint' + (codeError ? ' ' + ids().code + '-error' : '')
+        "
+    />
+    <p class="rte-dialog__hint" [id]="ids().code + '-hint'">
+      {{ labels().langCodeHint }}
+    </p>
+    @if (codeError) {
+    <p class="rte-dialog__error" [id]="ids().code + '-error'">
+      {{ codeError }}
+    </p>
+    }
+  </div>
+  }
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().direction"
+      >{{ labels().langDirection }}</label
+    >
+    <select
+      class="rte-dialog__select"
+      [id]="ids().direction"
+      [formField]="form.dir"
+      (change)="onDir()"
+    >
+      <option value="">{{ labels().langDirectionDefault }}</option>
+      <option value="ltr">{{ labels().langDirectionLtr }}</option>
+      <option value="rtl">{{ labels().langDirectionRtl }}</option>
+    </select>
+  </div>
+  <div class="rte-dialog__actions">
+    @if (request().mode === 'edit') {
+    <button type="button" class="rte-dialog__remove" (click)="remove()">
+      {{ labels().langRemove }}
+    </button>
+    }
+    <button type="button" class="rte-dialog__cancel" (click)="cancel()">
+      {{ labels().cancel }}
+    </button>
+    <button type="submit" class="rte-dialog__apply">
+      {{ labels().apply }}
+    </button>
+  </div>
+</form>

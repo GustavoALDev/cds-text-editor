@@ -15,11 +15,27 @@ export type RteE2eId =
   | 'dialogs'
   | 'dialogs-api'
   | 'floating'
-  | 'floating-alt';
+  | 'floating-alt'
+  | 'media'
+  | 'media-alt'
+  | 'media-key';
 
 /** `RteToolbarConfig` do `@cds/rte-angular` (sem importar o pacote Angular aqui). */
 export type RteE2eToolbarConfig =
   'minimal' | 'article' | 'full' | readonly (readonly string[])[] | false;
+
+/** `RteMediaChange` do `@cds/rte-angular`. */
+export interface RteE2eMediaChange {
+  readonly added: readonly string[];
+  readonly removed: readonly string[];
+}
+
+/** `RteMediaSession` do `@cds/rte-angular`. */
+export interface RteE2eMediaSession {
+  readonly current: readonly string[];
+  readonly added: readonly string[];
+  readonly removed: readonly string[];
+}
 
 export interface RteE2eState {
   valid: boolean;
@@ -50,6 +66,9 @@ declare global {
       openDialog(id: RteE2eId, kind: string): boolean;
       setFloatingMenus(id: RteE2eId, config: unknown): void;
       focusFloatingMenu(id: RteE2eId): boolean;
+      lastMediaChange(id: RteE2eId): RteE2eMediaChange | null;
+      mediaChanges(id: RteE2eId): number;
+      mediaSession(id: RteE2eId): RteE2eMediaSession;
       watchFloating(id: RteE2eId): void;
       floatingMutations(id: RteE2eId): { total: number; style: number };
       zoneTurns(): number;

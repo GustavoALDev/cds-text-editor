@@ -28,15 +28,17 @@ import {
   type RtePaletteColor,
 } from '@cds/rte-core';
 import type { RteCodeLanguage } from '@cds/rte-core/code-languages';
+import { DEFAULT_EMBED_PROVIDERS } from '@cds/rte-core/embeds';
 import {
   createEditorExtensions,
   RTE_LABELS_META,
   type RteCharLimitState,
+  type RteImageAlign,
 } from '@cds/rte-core/extensions';
 import { applyRteTheme, warnIfPoorTheme, type RteTheme } from '@cds/rte-theme';
 import { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import { EditorState } from '@tiptap/pm/state';
+import { EditorState, type Transaction } from '@tiptap/pm/state';
 import { RTE_CONFIG, RTE_LABELS, type RteEditorConfig } from '../config';
 import {
   dialogBusy,
@@ -44,6 +46,7 @@ import {
   RteDialogController,
 } from '../dialogs/controller';
 import { RteDeferFailed } from '../dialogs/defer-failed';
+import { readMediaRules, type RteMediaRules } from '../dialogs/media-rules';
 import { RteDialogs } from '../dialogs/rte-dialogs';
 import { dialogTarget } from '../dialogs/target';
 import type { RteDialogKind } from '../dialogs/types';
@@ -77,6 +80,14 @@ import { bindRteBridge, createRteBridge } from './bridge';
 import { isEmptyValue, readValue } from './empty';
 import { RTE_EDITOR_HOOK } from './hook';
 import { buildEditorOptions, mergeEditorConfig } from './options';
+import {
+  EMPTY_MEDIA_SESSION,
+  RteMediaTracker,
+  readMediaUrlRules,
+  sameMediaSession,
+  type RteMediaChange,
+  type RteMediaSession,
+} from './media-session';
 import { readonlySelectionKeydown } from './readonly-selection';
 
 const OPTIONS_IGNORED =
@@ -101,10 +112,7 @@ function sameGroups(
   );
 }
 
-function sameIds(
-  a: readonly RteToolbarItemId[],
-  b: readonly RteToolbarItemId[],
-): boolean {
+function sameIds(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((id, i) => id === b[i]);
 }
 
@@ -187,6 +195,8 @@ export class RteEditor implements FormValueControl<string> {
   readonly editorReady = output<Editor>();
   readonly editorFocus = output<void>();
   readonly editorBlur = output<void>();
+  /** Delta por transação que muda o conjunto de endereços de mídia (V13). */
+  readonly mediaChange = output<RteMediaChange>();
 
   private readonly instance = signal<Editor | null>(null);
   private readonly host =
@@ -205,6 +215,11 @@ export class RteEditor implements FormValueControl<string> {
   private lastValue = '';
   private lastDoc: ProseMirrorNode | null = null;
   private loading = false;
+  /** Sessão de mídia (V13): criada com o editor, rebaseada na carga externa. */
+  private media: RteMediaTracker | null = null;
+  private readonly mediaState = signal<RteMediaSession>(EMPTY_MEDIA_SESSION, {
+    equal: sameMediaSession,
+  });
   private pendingFocus: FocusOptions | null = null;
   private destroyed = false;
 
@@ -213,6 +228,8 @@ export class RteEditor implements FormValueControl<string> {
   readonly isEmpty: Signal<boolean> = this.bridge.isEmpty;
   readonly isFocused: Signal<boolean> = this.bridge.isFocused;
   readonly textStats: Signal<RteCharLimitState | null> = this.bridge.textStats;
+  /** Líquido da sessão de mídia (V13). */
+  readonly mediaSession: Signal<RteMediaSession> = this.mediaState.asReadonly();
 
   private readonly providerLabels = inject(RTE_LABELS);
 
@@ -284,6 +301,19 @@ export class RteEditor implements FormValueControl<string> {
     }
   });
 
+  /**
+   * Nomes dos provedores de *embed* ativos (pré-voo 4): a dica do diálogo e
+   * a condição do item `embed`. `DEFAULT_EMBED_PROVIDERS` fica no *chunk*
+   * principal; o `rte-dialogs` só recebe os nomes.
+   */
+  protected readonly embedProviderNames: Signal<readonly string[]> = computed(
+    () =>
+      (this.editorConfig().embedProviders ?? DEFAULT_EMBED_PROVIDERS).map(
+        (p) => p.name,
+      ),
+    { equal: sameIds },
+  );
+
   protected readonly codeLanguages = computed(
     () => this.editorConfig().codeLanguages ?? NO_LANGUAGES,
   );
@@ -298,6 +328,7 @@ export class RteEditor implements FormValueControl<string> {
         {
           features: this.schema().features,
           hasCodeLanguages: this.codeLanguages().length > 0,
+          hasEmbedProviders: this.embedProviderNames().length > 0,
           warned: this.toolbarWarned,
         },
       ),
@@ -384,6 +415,31 @@ export class RteEditor implements FormValueControl<string> {
   protected readonly linkPolicy = computed(
     () => this.editorConfig().linkPolicy,
   );
+  /** Regras de URL/idioma das mídias do esquema (V4); `null` sem `media`. */
+  protected readonly mediaRules: Signal<RteMediaRules | null> = computed(() =>
+    readMediaRules(this.schema()),
+  );
+  /** Nomes dos alinhamentos de imagem no diálogo, de `floating` (V14). */
+  protected readonly alignNames: Signal<
+    Readonly<Record<RteImageAlign, string>>
+  > = computed(
+    () => {
+      const f = this.resolvedLabels().floating;
+      return {
+        left: f.imageAlignLeft,
+        center: f.imageAlignCenter,
+        right: f.imageAlignRight,
+        full: f.imageAlignFull,
+      };
+    },
+    {
+      equal: (a, b) =>
+        a.left === b.left &&
+        a.center === b.center &&
+        a.right === b.right &&
+        a.full === b.full,
+    },
+  );
   /** Regra do `span[lang]` do esquema (G14). */
   protected readonly langRule = computed(
     () => this.schema().elements['span']?.attributes['lang']?.rule ?? null,
@@ -413,7 +469,17 @@ export class RteEditor implements FormValueControl<string> {
 
     // Emissão síncrona (D8): só transações que mudam o documento fora de uma
     // carga externa; as anexadas por `appendTransaction` vêm no mesmo evento.
-    const onTransaction = ({ editor }: { editor: Editor }) => {
+    // A mídia (V13, V17) é contada fora da zona; só o delta não vazio entra
+    // nela, depois do `value`.
+    const onTransaction = ({
+      editor,
+      transaction,
+      appendedTransactions,
+    }: {
+      editor: Editor;
+      transaction: Transaction;
+      appendedTransactions: Transaction[];
+    }) => {
       // G5: documento diferente do da abertura (carga externa, `setContent`,
       // API do consumidor) fecha o diálogo como cancelamento. Na própria
       // transação, não num `effect` sobre a versão: no zone.js o efeito
@@ -422,12 +488,25 @@ export class RteEditor implements FormValueControl<string> {
       if (req && editor.state.doc !== req.doc) {
         zone.run(() => this.dialogs.cancel('cancelled'));
       }
-      if (this.loading || editor.state.doc === this.lastDoc) return;
-      this.lastDoc = editor.state.doc;
-      const html = readValue(editor);
-      if (html === this.lastValue) return;
-      this.lastValue = html;
-      zone.run(() => this.value.set(html));
+      if (this.loading) return;
+      const media = this.media;
+      const delta = media?.apply([transaction, ...appendedTransactions]);
+      let emitted = false;
+      if (editor.state.doc !== this.lastDoc) {
+        this.lastDoc = editor.state.doc;
+        const html = readValue(editor);
+        if (html !== this.lastValue) {
+          this.lastValue = html;
+          emitted = true;
+          zone.run(() => this.value.set(html));
+        }
+      }
+      // Só junto de um `value` (V13; endereços canônicos: não há delta sem ele).
+      if (!media || !delta || !emitted) return;
+      zone.run(() => {
+        this.mediaState.set(media.session());
+        this.mediaChange.emit(delta);
+      });
     };
 
     // Valor externo (D9): fora do histórico, sem emitir, sem focar e sem
@@ -466,6 +545,8 @@ export class RteEditor implements FormValueControl<string> {
         this.bridge.refresh();
         this.lastDoc = editor.state.doc;
         this.lastValue = readValue(editor);
+        this.media?.reset(editor.state.doc);
+        if (this.media) this.mediaState.set(this.media.session());
       });
     });
 
@@ -632,6 +713,9 @@ export class RteEditor implements FormValueControl<string> {
       });
       this.lastDoc = editor.state.doc;
       this.lastValue = readValue(editor);
+      const rules = readMediaUrlRules(untracked(this.schema));
+      this.media = new RteMediaTracker(editor.state.doc, rules);
+      this.mediaState.set(this.media.session());
       editor.on('transaction', onTransaction);
       this.instance.set(editor);
       this.bridge.connect(editor);

@@ -230,7 +230,10 @@ export function readItemState(
       );
     }
     case 'link':
-    case 'lang': {
+    case 'lang':
+    case 'image':
+    case 'video':
+    case 'embed': {
       const t = dialogTarget(editor, id);
       return itemState(t?.mode === 'edit', t !== null);
     }

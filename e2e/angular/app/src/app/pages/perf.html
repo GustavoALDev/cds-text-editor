@@ -2,6 +2,7 @@
 <rte-editor
   data-testid="perf"
   ariaLabel="Performance"
+  [options]="options"
   [formField]="f.body"
   [toolbar]="toolbar()"
   (editorReady)="bridge.ready('perf')"

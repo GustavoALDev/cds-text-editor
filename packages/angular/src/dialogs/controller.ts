@@ -72,7 +72,8 @@ export interface RteDialogView {
  * (carregado por `@defer`) lê o pedido e registra a vista para ser fechado.
  */
 export class RteDialogController {
-  private readonly editor: Signal<Editor | null>;
+  /** Editor do controlador (validação do *embed* no *chunk*, pré-voo 5). */
+  readonly editor: Signal<Editor | null>;
   private readonly current = signal<RteDialogRequest | null>(null);
   private readonly wanted = signal(false);
   private readonly broken = signal(false);
@@ -137,7 +138,9 @@ export class RteDialogController {
   /**
    * Aplica (G5): com outro documento no estado, cancela e devolve `false`;
    * senão fecha o diálogo, limpa a seleção pendente, roda o comando (que
-   * devolve o foco ao editável) e encerra o pedido.
+   * devolve o foco ao editável) e encerra o pedido. Comando que devolve
+   * `false` encerra como cancelamento: foco na origem ou no editável (V9),
+   * se o documento não mudou.
    */
   apply(run: (editor: Editor) => boolean): boolean {
     const req = untracked(this.current);
@@ -148,13 +151,22 @@ export class RteDialogController {
       return false;
     }
     this.settling = true;
+    let ok = false;
     try {
       this.view?.hide();
       setPendingSelection(editor, null);
-      return run(editor);
+      ok = run(editor);
+      return ok;
     } finally {
       this.clear();
       this.settling = false;
+      // Comando recusado: fecha como cancelamento (V9, Ruling 4), com o
+      // foco de volta à origem ou ao editável (G4) — só com o documento
+      // intacto: a cadeia do Tiptap despacha mesmo com um passo `false`, e
+      // então o foco fica onde o comando o deixou.
+      if (!ok && !this.disposed && editor.state.doc === req.doc) {
+        restoreFocus(req.origin, editor);
+      }
     }
   }
 
@@ -212,6 +224,15 @@ function restoreFocus(origin: HTMLElement | null, editor: Editor | null): void {
     origin.isConnected &&
     origin !== editor?.view.dom &&
     !(origin as HTMLButtonElement).disabled;
-  if (usable) origin.focus();
-  else editor?.commands.focus();
+  if (usable) {
+    origin.focus();
+    return;
+  }
+  if (!editor) return;
+  editor.commands.focus();
+  // O `close()` nativo do `<dialog>` já pode ter devolvido o foco ao editável:
+  // o `focus()` do Tiptap então não faz nada, e o Firefox (que põe o cursor no
+  // início ao focar) vence a seleção de nó (vídeo, *embed*, imagem) quando o
+  // ProseMirror lê o DOM. `view.focus()` regrava a seleção no DOM já.
+  if (editor.view.hasFocus()) editor.view.focus();
 }

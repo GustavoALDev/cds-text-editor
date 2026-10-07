@@ -70,6 +70,12 @@ export interface RteToolbarLabels {
   lang: string;
   editLang: string;
   quoteAuthor: string;
+  image: string;
+  editImage: string;
+  video: string;
+  editVideo: string;
+  embed: string;
+  editEmbed: string;
   heading(level: 2 | 3 | 4): string;
   /** Nomes da paleta (texto e marca-texto), por nome da cor. */
   colorNames: Readonly<Record<string, string>>;
@@ -113,6 +119,45 @@ export interface RteDialogLabels {
   errorLangCode: string;
   errorRange(min: number, max: number): string;
   errorMaxLength(max: number): string;
+  imageInsertTitle: string;
+  imageEditTitle: string;
+  imageUrl: string;
+  imageUrlHint: string;
+  imageAlt: string;
+  imageAltHint: string;
+  imageDecorative: string;
+  imageCaption: string;
+  imageCredit: string;
+  /** Os nomes dos valores vêm de `floating.imageAlign*`. */
+  imageAlign: string;
+  imageWidth: string;
+  imageWidthHint: string;
+  videoInsertTitle: string;
+  videoEditTitle: string;
+  videoUrl: string;
+  videoUrlHint: string;
+  videoPoster: string;
+  videoCaption: string;
+  videoTracks: string;
+  videoTrack(n: number): string;
+  videoTrackKind: string;
+  videoTrackCaptions: string;
+  videoTrackSubtitles: string;
+  videoTrackUrl: string;
+  videoTrackLang: string;
+  videoTrackLabel: string;
+  videoTrackDefault: string;
+  videoTrackAdd: string;
+  videoTrackRemove(n: number): string;
+  /** Lembrete da WCAG 1.2.2 (não bloqueia). */
+  videoCaptionsHint: string;
+  embedInsertTitle: string;
+  embedEditTitle: string;
+  embedUrl: string;
+  embedUrlHint(providers: readonly string[]): string;
+  embedCaption: string;
+  errorMediaUrl: string;
+  errorEmbedUrl: string;
 }
 
 export interface RteFloatingMenuLabels {
@@ -130,6 +175,13 @@ export interface RteFloatingMenuLabels {
   imageAlignRight: string;
   imageAlignFull: string;
   removeImage: string;
+  videoMenu: string;
+  embedMenu: string;
+  imageDetails: string;
+  videoDetails: string;
+  embedDetails: string;
+  removeVideo: string;
+  removeEmbed: string;
 }
 
 export interface RteLabels {

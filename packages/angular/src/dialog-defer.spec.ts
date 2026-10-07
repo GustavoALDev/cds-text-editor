@@ -14,6 +14,7 @@ import {
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import { RteEditor } from '@cds/rte-angular';
 import type { Editor } from '@tiptap/core';
+import { NodeSelection } from '@tiptap/pm/state';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { dialogField, installDialogShim } from './testing-support/dialog';
 import { selectText } from './testing-support/editors';
@@ -26,6 +27,12 @@ import { settle } from './testing-support/render';
 const DEFER_FAILED =
   '[rte-editor] não foi possível carregar os diálogos; o pedido foi descartado.';
 
+const VIDEO_DOC =
+  '<p>abcd efgh</p><figure class="rt-figure rt-figure--video"><video src="/v.webm" controls="" preload="metadata" playsinline=""></video></figure>';
+
+/** Documento do próximo `Host` (lido na criação). */
+let hostValue = '<p>abcd efgh</p>';
+
 @Component({
   selector: 'rte-test-defer-host',
   imports: [RteEditor],
@@ -37,7 +44,7 @@ const DEFER_FAILED =
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class Host {
-  readonly value = '<p>abcd efgh</p>';
+  readonly value = hostValue;
   readonly disabled = signal(false);
   readonly cmp = viewChild.required(RteEditor);
 }
@@ -56,6 +63,7 @@ let restorePopover: () => void;
 beforeEach(() => {
   restoreDialog = installDialogShim();
   restorePopover = installPopoverShim();
+  hostValue = '<p>abcd efgh</p>';
   TestBed.configureTestingModule({
     deferBlockBehavior: DeferBlockBehavior.Manual,
   });
@@ -204,5 +212,53 @@ describe('@defer dos diálogos (R12 unitário, G7)', () => {
     expect(key.defaultPrevented).toBe(false);
     await settle(s.fixture);
     expect(pending(s.editor)).toBeNull();
+  });
+});
+
+// Spec 05c1, Tarefa 6: pedido de mídia antes da carga do *chunk* (R7).
+describe('@defer com diálogo de mídia (05c1)', () => {
+  function title(root: HTMLElement): string | undefined {
+    return root.querySelector('.rte-dialog__title')?.textContent?.trim();
+  }
+
+  it("openDialog('video') antes da carga: abre no modo inserir quando o @defer resolve", async () => {
+    const s = await setup();
+    expect(s.cmp.openDialog('video')).toBe(true);
+    await settle(s.fixture);
+    expect(s.root.querySelector('dialog')).toBeNull();
+
+    await render(s, DeferBlockState.Complete);
+    const dialog = s.root.querySelector<HTMLDialogElement>('.rte-dialog');
+    expect(dialog?.open).toBe(true);
+    expect(title(s.root)).toBe('Insert video');
+    expect(dialog?.querySelector('.rte-dialog__remove')).toBeNull();
+    const src = dialogField(dialog as HTMLDialogElement, 'Video address (URL)');
+    expect(document.activeElement).toBe(src);
+  });
+
+  it("openDialog('video') antes da carga com o vídeo selecionado: abre no modo editar", async () => {
+    hostValue = VIDEO_DOC;
+    const s = await setup();
+    let pos = -1;
+    s.editor.state.doc.descendants((node, at) => {
+      if (node.type.name === 'rtVideo') pos = at;
+    });
+    s.editor.view.dispatch(
+      s.editor.state.tr.setSelection(
+        NodeSelection.create(s.editor.state.doc, pos),
+      ),
+    );
+    expect(s.cmp.openDialog('video')).toBe(true);
+    await settle(s.fixture);
+    expect(s.root.querySelector('dialog')).toBeNull();
+
+    await render(s, DeferBlockState.Complete);
+    const dialog = s.root.querySelector<HTMLDialogElement>('.rte-dialog');
+    expect(dialog?.open).toBe(true);
+    expect(title(s.root)).toBe('Video details');
+    expect(dialog?.querySelector('.rte-dialog__remove')).not.toBeNull();
+    const src = dialogField(dialog as HTMLDialogElement, 'Video address (URL)');
+    expect(src.value).toBe('/v.webm');
+    expect(document.activeElement).toBe(src);
   });
 });
