@@ -1,7 +1,8 @@
 name: Release
+# Só manual até a spec 09b (publicação a partir do `dist`, NPM_TOKEN e a opção do
+# repositório que deixa o Actions abrir PRs). Depois volta a ser `push` em `main`.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 # Versão independente por pacote: o changesets/action abre/atualiza o PR "Version Packages"
 # e, quando ele é mesclado, publica com provenance. Nenhum token fica no repositório.
