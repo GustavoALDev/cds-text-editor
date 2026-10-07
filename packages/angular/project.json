@@ -22,10 +22,37 @@
       },
       "dependsOn": ["copy-license", "^build"]
     },
+    "unit-test-build": {
+      "executor": "@nx/angular:application",
+      "options": {
+        "outputPath": "dist/out-tsc/angular-unit-test",
+        "tsConfig": "packages/angular/tsconfig.spec.json"
+      },
+      "configurations": {
+        "zoneless": {
+          "polyfills": []
+        },
+        "zone": {
+          "polyfills": ["zone.js"]
+        }
+      }
+    },
     "test": {
       "executor": "@nx/angular:unit-test",
       "options": {
-        "watch": false
+        "watch": false,
+        "runnerConfig": "packages/angular/vitest-base.config.mts",
+        "buildTarget": "angular:unit-test-build:zoneless",
+        "providersFile": "packages/angular/src/testing-support/providers.zoneless.ts"
+      }
+    },
+    "test-zone": {
+      "executor": "@nx/angular:unit-test",
+      "options": {
+        "watch": false,
+        "runnerConfig": "packages/angular/vitest-base.config.mts",
+        "buildTarget": "angular:unit-test-build:zone",
+        "providersFile": "packages/angular/src/testing-support/providers.zone.ts"
       }
     },
     "copy-license": {
@@ -36,6 +63,21 @@
       "options": {
         "command": "cp ../../LICENSE .",
         "cwd": "packages/angular"
+      }
+    },
+    "size": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "inputs": [
+        "production",
+        "^production",
+        "{workspaceRoot}/tools/check-size.mjs",
+        "{projectRoot}/size-budget.json"
+      ],
+      "cache": true,
+      "options": {
+        "command": "node tools/check-size.mjs --config packages/angular/size-budget.json",
+        "cwd": "{workspaceRoot}"
       }
     },
     "verify-package": {

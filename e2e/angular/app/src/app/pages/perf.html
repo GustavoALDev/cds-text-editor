@@ -1,0 +1,8 @@
+@if (bridge.show()) {
+<rte-editor
+  data-testid="perf"
+  ariaLabel="Performance"
+  [formField]="f.body"
+  (editorReady)="bridge.ready('perf')"
+/>
+}

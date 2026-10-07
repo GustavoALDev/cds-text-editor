@@ -1,0 +1,390 @@
+@layer rte.reset, rte.base, rte.theme, rte.components, rte.content;
+
+/*
+ * @cds/rte-angular — CSS funcional do editor (spec 05a, D16–D18).
+ *
+ * Incluir depois de `@cds/rte-theme/theme.css` (por exemplo em `angular.json` → `styles`). Nada é
+ * injetado em tempo de execução (Tiptap com `injectCSS: false`): funciona com
+ * `style-src 'self'` sem nonce. A ordem das camadas é a do tema, então não depende de qual arquivo
+ * carrega primeiro, e o CSS do consumidor sem camada sempre vence. Cores só por tokens `--rte-*`.
+ *
+ * - `rte.components`: a moldura (`.rte-editor`, `__frame`, `__shell`, `__mount` e modificadores).
+ * - `rte.content`: tudo dentro do editável `.rte-content` (o CSS base do Tiptap portado, sem
+ *   `!important`, mais placeholder, tarefas, alças da imagem, tabelas em edição, `hljs-*`, busca
+ *   e comandos `/`). A aparência dos blocos `rt-*` (caixas, citação, figuras) é da spec 05b.
+ */
+
+@layer rte.components {
+  .rte-editor {
+    display: block;
+  }
+
+  .rte-editor[hidden] {
+    display: none;
+  }
+
+  /* `position: relative`: o cursor de soltar do ProseMirror é posicionado no `offsetParent` do
+   * editável; sem cor própria ele usa `currentColor`. */
+  .rte-editor .rte-editor__frame {
+    position: relative;
+    box-sizing: border-box;
+    color: var(--rte-text);
+    background-color: var(--rte-surface);
+    border: 1px solid var(--rte-border);
+    border-radius: var(--rte-radius);
+    font-family: var(--rte-font-sans);
+    font-size: var(--rte-font-size);
+    line-height: var(--rte-line-height);
+    transition: border-color 120ms ease-out;
+  }
+
+  .rte-editor .rte-editor__shell {
+    cursor: progress;
+  }
+
+  .rte-editor .rte-editor__mount {
+    display: block;
+    min-width: 0;
+  }
+
+  .rte-editor.rte-editor--focused .rte-editor__frame {
+    border-color: var(--rte-primary-border);
+  }
+
+  .rte-editor.rte-editor--invalid .rte-editor__frame {
+    border-color: var(--rte-danger);
+  }
+
+  .rte-editor.rte-editor--readonly .rte-editor__frame {
+    background-color: var(--rte-surface-raised);
+  }
+
+  .rte-editor.rte-editor--disabled .rte-editor__frame {
+    color: var(--rte-text-muted);
+    background-color: var(--rte-surface-raised);
+    cursor: not-allowed;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rte-editor .rte-editor__frame {
+      transition: none;
+      animation: none;
+    }
+  }
+}
+
+@layer rte.content {
+  /* CSS base do Tiptap (`@tiptap/core/src/style.ts`) com `.rte-content` no lugar de `.ProseMirror`. */
+  .rte-content {
+    position: relative;
+    box-sizing: border-box;
+    min-height: 6em;
+    padding: calc(0.75rem * var(--rte-density)) calc(1rem * var(--rte-density));
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    white-space: break-spaces;
+    -webkit-font-variant-ligatures: none;
+    font-variant-ligatures: none;
+    font-feature-settings: 'liga' 0;
+  }
+
+  .rte-content:focus-visible {
+    outline: var(--rte-focus-width) solid var(--rte-focus);
+    outline-offset: 2px;
+  }
+
+  .rte-content [contenteditable='false'] {
+    white-space: normal;
+  }
+
+  .rte-content [contenteditable='false'] [contenteditable='true'] {
+    white-space: pre-wrap;
+  }
+
+  .rte-content pre {
+    white-space: pre-wrap;
+  }
+
+  /* Sem `!important` (pré-voo 15): a camada basta contra as regras deste arquivo. */
+  .rte-content img.ProseMirror-separator {
+    display: inline;
+    border: none;
+    margin: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .rte-content .ProseMirror-gapcursor {
+    display: none;
+    pointer-events: none;
+    position: absolute;
+    margin: 0;
+  }
+
+  .rte-content .ProseMirror-gapcursor::after {
+    content: '';
+    display: block;
+    position: absolute;
+    top: -2px;
+    width: 20px;
+    border-top: 1px solid var(--rte-text);
+    animation: rte-gapcursor-blink 1.1s steps(2, start) infinite;
+  }
+
+  @keyframes rte-gapcursor-blink {
+    to {
+      visibility: hidden;
+    }
+  }
+
+  .rte-content.ProseMirror-focused .ProseMirror-gapcursor {
+    display: block;
+  }
+
+  .rte-content.ProseMirror-hideselection *::selection {
+    background-color: transparent;
+  }
+
+  .rte-content.ProseMirror-hideselection *::-moz-selection {
+    background-color: transparent;
+  }
+
+  .rte-content.ProseMirror-hideselection * {
+    caret-color: transparent;
+  }
+
+  .rte-content .ProseMirror-selectednode {
+    outline: var(--rte-focus-width) solid var(--rte-focus);
+    outline-offset: 2px;
+  }
+
+  /* Placeholder do documento vazio e dos títulos de caixa sem texto (spec 03c, C2/C3). */
+  .rte-content .rte-placeholder::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    color: var(--rte-text-muted);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* O título vazio de caixa mostra o rótulo da variante; em itálico, para não parecer digitado. */
+  .rte-content .rte-placeholder:not(.rte-placeholder--doc)::before {
+    font-style: italic;
+  }
+
+  /* Tarefas: o checkbox fica fora da área editável (`contenteditable=false`). */
+  .rte-content .rt-tasks {
+    list-style: none;
+    padding-inline-start: 0;
+  }
+
+  .rte-content .rt-task {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5em;
+  }
+
+  .rte-content .rte-task__check {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    height: calc(1em * var(--rte-line-height));
+    user-select: none;
+  }
+
+  .rte-content .rte-task__check input {
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--rte-primary);
+  }
+
+  .rte-content .rte-task__check input:disabled {
+    cursor: default;
+  }
+
+  .rte-content .rte-task__text {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* Imagem: a figura acompanha o `img` para as alças ficarem nos cantos dele. */
+  .rte-content .rt-figure {
+    position: relative;
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .rte-content .rt-figure img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  .rte-content .rte-image--selected img {
+    outline: var(--rte-focus-width) solid var(--rte-focus);
+    outline-offset: 2px;
+  }
+
+  .rte-content .rte-image__handle {
+    display: none;
+    position: absolute;
+    z-index: 1;
+    box-sizing: border-box;
+    width: 12px;
+    height: 12px;
+    background-color: var(--rte-focus);
+    border: 2px solid var(--rte-surface);
+    border-radius: 2px;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .rte-content .rte-image--selected .rte-image__handle {
+    display: block;
+  }
+
+  .rte-content[contenteditable='false'] .rte-image__handle {
+    display: none;
+  }
+
+  .rte-content .rte-image__handle--nw {
+    top: -6px;
+    left: -6px;
+    cursor: nwse-resize;
+  }
+
+  .rte-content .rte-image__handle--ne {
+    top: -6px;
+    right: -6px;
+    cursor: nesw-resize;
+  }
+
+  .rte-content .rte-image__handle--sw {
+    bottom: -6px;
+    left: -6px;
+    cursor: nesw-resize;
+  }
+
+  .rte-content .rte-image__handle--se {
+    bottom: -6px;
+    right: -6px;
+    cursor: nwse-resize;
+  }
+
+  /* Tabelas em edição (prosemirror-tables com `resizable`). */
+  .rte-content .tableWrapper {
+    overflow-x: auto;
+  }
+
+  .rte-content table {
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .rte-content td,
+  .rte-content th {
+    position: relative;
+    box-sizing: border-box;
+    min-width: 1em;
+    vertical-align: top;
+    border: 1px solid var(--rte-border);
+  }
+
+  .rte-content .selectedCell {
+    background-color: var(--rte-primary-subtle);
+  }
+
+  .rte-content .column-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    bottom: -2px;
+    z-index: 2;
+    width: 4px;
+    background-color: var(--rte-focus);
+    pointer-events: none;
+  }
+
+  .rte-content.resize-cursor {
+    cursor: col-resize;
+  }
+
+  /* Bloco de código e realce (`hljs-*`) sobre os tokens `--rte-code-*` do tema. */
+  .rte-content pre {
+    padding: 0.75em 1em;
+    overflow-x: auto;
+    color: var(--rte-code-text);
+    background-color: var(--rte-code-bg);
+    border-radius: var(--rte-radius);
+    font-family: var(--rte-font-mono);
+  }
+
+  .rte-content pre code {
+    font-family: inherit;
+  }
+
+  .rte-content .hljs-keyword,
+  .rte-content .hljs-built_in,
+  .rte-content .hljs-literal,
+  .rte-content .hljs-type,
+  .rte-content .hljs-selector-tag,
+  .rte-content .hljs-meta {
+    color: var(--rte-code-keyword);
+  }
+
+  .rte-content .hljs-string,
+  .rte-content .hljs-regexp,
+  .rte-content .hljs-symbol,
+  .rte-content .hljs-template-tag,
+  .rte-content .hljs-attr,
+  .rte-content .hljs-attribute {
+    color: var(--rte-code-string);
+  }
+
+  .rte-content .hljs-number {
+    color: var(--rte-code-number);
+  }
+
+  .rte-content .hljs-comment,
+  .rte-content .hljs-quote {
+    color: var(--rte-code-comment);
+    font-style: italic;
+  }
+
+  .rte-content .hljs-title,
+  .rte-content .hljs-function,
+  .rte-content .hljs-section,
+  .rte-content .hljs-name {
+    color: var(--rte-code-function);
+  }
+
+  /* Busca (spec 03c): o resultado ativo se distingue por fundo e contorno, não só pela cor. */
+  .rte-content .rte-search-match {
+    color: var(--rte-text);
+    background-color: var(--rte-secondary-subtle);
+  }
+
+  .rte-content .rte-search-match--active {
+    background-color: var(--rte-tertiary-subtle);
+    outline: 2px solid var(--rte-tertiary-text);
+  }
+
+  /* Consulta do menu `/` (spec 03c). */
+  .rte-content .rte-slash-query {
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--rte-primary-text);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rte-content,
+    .rte-content *,
+    .rte-content *::before,
+    .rte-content *::after {
+      transition: none;
+      animation: none;
+    }
+  }
+}

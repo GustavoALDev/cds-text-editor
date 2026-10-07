@@ -40,8 +40,14 @@ async function caret(page: Page, text: string): Promise<void> {
     if (target < 0) throw new Error(`texto "${text}" não encontrado`);
     editor.commands.focus(target);
   }, text);
-  // O `focus` do Tiptap é assíncrono (lição 17).
+  // O `focus` do Tiptap é assíncrono (lição 17): foca num quadro seguinte. Com
+  // o editor já focado, o `toBeFocused` passa antes desse quadro e um `Tab`
+  // logo depois seria desfeito por ele; espera o quadro.
   await expect(page.locator('#editor .ProseMirror')).toBeFocused();
+  await page.evaluate(
+    () =>
+      new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+  );
 }
 
 const cellText = (page: Page) =>

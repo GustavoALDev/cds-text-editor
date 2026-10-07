@@ -62,6 +62,16 @@ test('ng-packagr: rejects sources, specs, tsbuildinfo and dist/', () => {
   assert.equal(errors.length, 5);
 });
 
+test('ng-packagr: accepts CSS files under styles/ (spec 05a, D16)', () => {
+  assert.deepEqual(checkPackFiles(['styles/editor.css'], 'ng-packagr'), []);
+});
+
+test('ng-packagr: rejects non-CSS files and nested paths under styles/', () => {
+  assert.equal(checkPackFiles(['styles/x.js'], 'ng-packagr').length, 1);
+  assert.equal(checkPackFiles(['styles/a/b.css'], 'ng-packagr').length, 1);
+  assert.equal(checkPackFiles(['styles/editor.css'], 'tsup').length, 1);
+});
+
 test('checkRequiredFiles reports missing package.json, README.md and LICENSE', () => {
   assert.equal(checkRequiredFiles(['dist/index.js']).length, 3);
   assert.deepEqual(

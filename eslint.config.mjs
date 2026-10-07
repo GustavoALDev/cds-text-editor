@@ -51,6 +51,10 @@ export default [
               sourceTag: 'scope:render',
               onlyDependOnLibsWithTags: ['scope:core', 'scope:sanitizer'],
             },
+            {
+              sourceTag: 'scope:e2e',
+              onlyDependOnLibsWithTags: ['scope:angular', 'scope:core'],
+            },
           ],
         },
       ],

@@ -14,7 +14,7 @@ spec → plano (`writing-plans`) → implementação → verificação. As specs
 
 ```bash
 npm ci                                                  # instalar (use o lockfile); exige npm >= 11 (engine-strict)
-npx nx run-many -t lint,typecheck,build,test,verify-package       # lint, build, testes e npm pack + publint + attw
+npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size       # lint, build, testes e npm pack + publint + attw
 npm run check:rules                                     # regras do repositório (tools/check-repo-rules.mjs)
 npm run check:licenses                                  # gate de licenças
 npm run check:pack                                      # verify-package em todos os pacotes
@@ -53,6 +53,15 @@ Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp`
 - `theme.css` e o plano B em TypeScript (`derive.ts`, `create-theme.ts`) **precisam andar juntos**: qualquer mudança de fórmula ou constante vai nos dois. As constantes de calibração (ganho e limiar do degrau, tetos L/C dos neutros `NEUTRAL_SPEC`, `STATE_AMOUNTS`, `TEXT_TARGETS`, `MIX_PCT`, tokens estáticos) são conferidas literal a literal entre CSS e TS por `theme-css.spec.ts`; as fórmulas, pelo golden (`tools/gen-theme-golden.mjs`) mais o E2E de equivalência (`e2e/theme/fallback-equivalence.spec.ts`), que sozinho não enxerga mudanças abaixo da quantização de 8 bits.
 - As fórmulas de `docs/specs/referencias/t6-tema` têm 4 desvios documentados (matriz OKLab, degrau do `on-*`, limiar 0,1791005, mistura em OKLab): ver ADR 0002, "Desvios da fórmula do spike".
 - Orçamento de tamanho por cenário em `packages/theme/size-budget.json` (`npm run check:size`).
+
+## Angular (`packages/angular`)
+
+- Entries: `.` (`RteEditor`, `provideRichText`, `RTE_LABELS`, `RTE_LABELS_EN`), `/i18n`, `/validators` (único que importa `@cds/rte-core/html`), `/testing` (`getRteEditor`) e o arquivo `styles/editor.css`. Sem CVA: Reactive/Template Forms usam o caminho nativo do `FormValueControl` (Angular >= 22.2.1).
+- Comandos: `npx nx test angular` (zoneless) e `npx nx test-zone angular` (a mesma suíte com `zone.js`); um arquivo: `npx nx test angular --include=<arquivo>.spec.ts` (relativo a `packages/angular/src`); `npx nx run angular:size` (orçamento em `packages/angular/size-budget.json`); app de teste: `npx nx run angular-e2e-app:serve-static` (build + servidor com CSP estrita; `e2e/angular/serve.mjs`). O `vitest-base.config.mts` do pacote (`runnerConfig`) dá 30 s de `testTimeout`/`hookTimeout`.
+- Todos os testes unitários ficam em `packages/angular/src/**/*.spec.ts` (inclusive os de `/i18n`, `/validators` e `/testing`, importando pelo alias público); ajudantes em `src/testing-support/` (fora do build). Arquivo que precisa de Node puro começa com `// @vitest-environment node`. O builder roda com `isolate: false`: estado de módulo é compartilhado, então testes zeram as sondas que leem.
+- Navegador real: `e2e/angular/editor-*.spec.ts` contra o app de teste em `e2e/angular/app`. O `webServer` do Playwright compila os dois apps (zoneless e zone.js) a cada rodada: a frio leva até ~10 min; use `--workers=4`.
+- Grafo inalterado: `angular` depende só de `core` (tag `scope:angular`); `render` de `core` e `sanitizer`. Guardas por lint (D25): sem `@Input`/`@Output`/`@HostListener`/`@HostBinding`, `ngOnChanges`, `zone.js`, globais de DOM, texto literal em template; componentes OnPush, `ViewEncapsulation.None`, `templateUrl`, sem `styles`.
+- Decisões: ADR 0007 (`docs/decisions/0007-componente-e-formularios.md`).
 
 ## Convenções
 
