@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getHtmlSchema } from '../../src/schema/get-html-schema';
+import { normalizeAttribute } from '../../src/schema/rules';
+import type { RteAttrRule, RteHtmlSchema } from '../../src/schema/types';
 import { validateHtml } from './validate-html';
 
 const s = getHtmlSchema();
@@ -149,6 +151,45 @@ describe('validateHtml', () => {
       expect(kinds(f('rt-figure  rt-figure--left'))).toEqual(['invalid-class']);
       expect(kinds(f('rt-figure rt-figure--left'), 'accepted')).toEqual([]);
       expect(kinds('<p class="">a</p>')).toEqual(['invalid-class']);
+    });
+
+    it('tokens só aparam espaço ASCII, como o serializeTokens', () => {
+      // NBSP não é espaço do HTML: "ugc\u00a0" é outro token, que o
+      // serializeTokens descarta; o oráculo não pode aceitá-lo.
+      const rel = s.elements['a']?.attributes['rel']?.rule;
+      if (!rel) throw new Error('sem rel no a');
+      expect(normalizeAttribute(rel, 'nofollow ugc\u00a0')).toBe('nofollow');
+      const a = '<a href="https://a.com/" rel="nofollow ugc\u00a0">a</a>';
+      expect(kinds(a, 'accepted')).toEqual(['invalid-attribute']);
+      expect(kinds(a)).toEqual(['invalid-attribute']);
+
+      // Separador ";": mesmo tratamento (esquema de teste com `allow` em tokens).
+      const allowRule: RteAttrRule = {
+        kind: 'tokens',
+        values: ['encrypted-media', 'fullscreen', 'picture-in-picture'],
+        separator: '; ',
+        maxLength: 200,
+      };
+      const schema: RteHtmlSchema = {
+        ...s,
+        elements: {
+          ...s.elements,
+          span: { attributes: { allow: { rule: allowRule } } },
+        },
+      };
+      const allow = (value: string) =>
+        validateHtml(`<span allow="${value}">a</span>`, schema, {
+          mode: 'accepted',
+        }).map((v) => v.kind);
+      expect(normalizeAttribute(allowRule, 'fullscreen\u00a0')).toBeNull();
+      expect(allow('fullscreen\u00a0')).toEqual(['invalid-attribute']);
+      expect(
+        normalizeAttribute(allowRule, 'encrypted-media; fullscreen\u00a0'),
+      ).toBe('encrypted-media');
+      expect(allow('encrypted-media; fullscreen\u00a0')).toEqual([
+        'invalid-attribute',
+      ]);
+      expect(allow(' fullscreen ;encrypted-media')).toEqual([]);
     });
 
     it('token desconhecido em tokens nunca é descartado', () => {

@@ -63,6 +63,17 @@ describe('sanitizeStyle', () => {
     ).toBe('');
   });
 
+  it('descarta valor com parêntese ou @ (image-set, @import, URL)', () => {
+    const color: Record<string, RteAttrRule> = {
+      color: { kind: 'text', maxLength: 50 },
+    };
+    expect(sanitizeStyle(color, 'color: image-set(x)')).toBe('');
+    expect(sanitizeStyle(color, 'color: a(b)')).toBe('');
+    expect(sanitizeStyle(color, 'color: @import')).toBe('');
+    expect(sanitizeStyle(color, '@import "x"; color: red')).toBe('color: red');
+    expect(sanitizeStyle(color, 'COLOR: URL(x)')).toBe('');
+  });
+
   it('valida valores por padrão e segue a ordem das chaves do esquema', () => {
     expect(sanitizeStyle(withWidth, 'width: 120px')).toBe('width: 120px');
     expect(sanitizeStyle(withWidth, 'width: 0px')).toBe('');

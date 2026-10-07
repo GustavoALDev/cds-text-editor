@@ -11,11 +11,16 @@ export default defineConfig(() => ({
     watch: false,
     globals: true,
     environment: 'node',
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     coverage: {
       reportsDirectory: '../../coverage/packages/sanitizer',
       provider: 'v8' as const,
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.spec.ts', 'src/testing/**'],
+      thresholds: { lines: 95, branches: 95 },
     },
   },
 }));

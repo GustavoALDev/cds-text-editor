@@ -72,6 +72,19 @@ describe('normalizeAttribute', () => {
     );
   });
 
+  it('tokens com separador " " só separam por espaço ASCII', () => {
+    const rel: Extract<RteAttrRule, { kind: 'tokens' }> = {
+      kind: 'tokens',
+      values: ['nofollow', 'sponsored', 'ugc', 'noopener', 'noreferrer'],
+      separator: ' ',
+      maxLength: 200,
+    };
+    expect(serializeTokens(rel, 'nofollow\u00a0ugc')).toBeNull();
+    expect(serializeTokens(rel, 'ugc\u2003nofollow ugc')).toBe('ugc');
+    expect(serializeTokens(rel, '\u00a0ugc')).toBeNull();
+    expect(serializeTokens(rel, ' ugc\t\n\fnofollow\r')).toBe('nofollow ugc');
+  });
+
   it('matchesRule', () => {
     expect(matchesRule({ kind: 'enum', values: ['a'] }, 'A')).toBe(true);
     expect(matchesRule({ kind: 'enum', values: ['a'] }, 'b')).toBe(false);
