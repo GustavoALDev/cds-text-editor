@@ -1,6 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import { editableOf, gotoApp, waitForEditor } from './helpers/app';
 
+declare global {
+  interface Window {
+    __pasteExternal?: { registered: string[]; release(): void };
+  }
+}
+
 // N41 (spec 05c2b, S11, R7): URL colada num parágrafo vazio vira embed; no
 // meio do texto segue como hoje. Rota `paste-external`, CSP estrita, nos
 // builds zoneless e zone.js. Chromium. (O iframe do provedor é bloqueado pela
@@ -111,9 +117,9 @@ for (const zone of [false, true]) {
       await expect(page.locator('.rte-uploads__name')).toHaveCount(0);
       await expect(page.getByTestId('html')).toContainText('/e2e.png?rehosted');
       await expect(page.getByTestId('html')).not.toContainText(external);
-      expect(
-        violations.filter((v) => !v.includes('img.example.test')),
-      ).toEqual([]);
+      expect(violations.filter((v) => !v.includes('img.example.test'))).toEqual(
+        [],
+      );
       await page.keyboard.press('ControlOrMeta+z');
       await expect(editable.locator('img')).toHaveCount(0);
     });
