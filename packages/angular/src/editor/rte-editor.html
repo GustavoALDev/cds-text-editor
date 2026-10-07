@@ -13,8 +13,21 @@
     (escape)="focus()"
     (tabOut)="focus()"
     (dialog)="requestDialog($event.kind, $event.origin)"
+    [searchable]="searchable()"
     (searchRequest)="onToolbarSearch()"
   />
+  } @defer (when searchOpen(); prefetch on idle) { @if (searchOpen() && editor();
+  as ed) { @if (searchState(); as st) {
+  <rte-search
+    [editor]="ed"
+    [state]="st"
+    [labels]="searchLabels()"
+    [canReplace]="interactive()"
+    [focusTick]="searchFocus()"
+    (closeRequest)="onSearchClose()"
+  />
+  } } } @placeholder {} @error {
+  <ng-template [rteDeferFailed]="onSearchFailed" />
   } @defer (when draftPromptAt() !== null) { @if (draftPromptAt() !== null) {
   <rte-draft-prompt
     [savedAt]="draftPromptAt() ?? 0"

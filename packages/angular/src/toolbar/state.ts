@@ -282,6 +282,8 @@ export function createToolbarState(o: {
   version: Signal<number>;
   items: Signal<readonly RteToolbarItemId[]>;
   interactive: Signal<boolean>;
+  /** Editor existente e não `disabled`: o item `search` vale também com `readonly` (K7). */
+  searchable?: Signal<boolean>;
   unavailable?: Signal<readonly RteToolbarItemId[]>;
 }): RteToolbarState {
   const all = computed<ReadonlyMap<RteToolbarItemId, RteItemState>>(() => {
@@ -289,6 +291,7 @@ export function createToolbarState(o: {
     const editor = o.editor();
     const ids = o.items();
     const interactive = o.interactive();
+    const searchable = o.searchable?.() ?? interactive;
     const unavailable = o.unavailable?.() ?? [];
     if (typeof ngDevMode !== 'undefined' && ngDevMode) {
       toolbarStateProbe.computations += 1;
@@ -302,7 +305,9 @@ export function createToolbarState(o: {
       const current = readItemState(editor, id);
       out.set(
         id,
-        (interactive && !unavailable.includes(id)) || !current.enabled
+        ((id === 'search' ? searchable : interactive) &&
+          !unavailable.includes(id)) ||
+        !current.enabled
           ? current
           : { ...current, enabled: false },
       );

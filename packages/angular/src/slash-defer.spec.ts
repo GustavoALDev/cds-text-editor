@@ -82,17 +82,17 @@ async function setup(): Promise<{
     right: 100,
   }));
   editor.commands.setTextSelection(1);
-  // Seis blocos: aviso do rascunho, menus flutuantes, bandeja, diálogos,
+  // Sete blocos: barra de busca, aviso do rascunho, menus flutuantes, bandeja, diálogos,
   // pré-carga da mídia e, por último, a lista do menu `/`.
   const blocks = await fixture.getDeferBlocks();
-  expect(blocks).toHaveLength(6);
+  expect(blocks).toHaveLength(7);
   return {
     fixture,
     root: (fixture.nativeElement as HTMLElement).querySelector(
       'rte-editor',
     ) as HTMLElement,
     editor,
-    block: blocks[5] as DeferBlockFixture,
+    block: blocks[6] as DeferBlockFixture,
   };
 }
 

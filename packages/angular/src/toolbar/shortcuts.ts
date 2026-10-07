@@ -42,6 +42,7 @@ export const RTE_TOOLBAR_SHORTCUTS: Readonly<
   alignCenter: 'Mod-Shift-e',
   alignRight: 'Mod-Shift-r',
   alignJustify: 'Mod-Shift-j',
+  search: 'Mod-f',
 });
 
 export type RtePlatform = 'mac' | 'other';

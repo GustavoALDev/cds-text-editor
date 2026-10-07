@@ -8,6 +8,7 @@
       "cds-rte-angular-rte-media-forms-*.mjs",
       "cds-rte-angular-rte-floating-menus-*.mjs",
       "cds-rte-angular-rte-slash-menu-*.mjs",
+      "cds-rte-angular-rte-search-*.mjs",
       "cds-rte-angular-viewport-watch-*.mjs",
       "cds-rte-angular-rte-draft-*.mjs",
       "cds-rte-angular-rte-upload-*.mjs",
@@ -39,6 +40,7 @@
         "rteUploadComposition",
         "rte-upload-marker__name",
         "rte-slash-menu__option",
+        "rte-search__input",
         "__rte_draft_probe__"
       ]
     },
@@ -63,6 +65,7 @@
         "rteUploadComposition",
         "rte-upload-marker__name",
         "rte-slash-menu__option",
+        "rte-search__input",
         "__rte_draft_probe__"
       ]
     },
@@ -116,6 +119,22 @@
     },
     "slash-menu": {
       "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-slash-menu-*.mjs",
+      "exports": ["*"],
+      "externalChunks": true,
+      "external": [
+        "@angular/*",
+        "@tiptap/*",
+        "@cds/*",
+        "lowlight",
+        "highlight.js",
+        "highlight.js/*",
+        "rxjs",
+        "rxjs/*",
+        "tslib"
+      ]
+    },
+    "search": {
+      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-search-*.mjs",
       "exports": ["*"],
       "externalChunks": true,
       "external": [
@@ -231,6 +250,7 @@
     "media": 8640,
     "floating": 8576,
     "slash-menu": 2048,
+    "search": 2944,
     "overlay-shared": 1600,
     "i18n": 6144,
     "validators": 2368,

@@ -44,3 +44,14 @@ describe('histórico do menu / (K14)', () => {
     expect(getRteHtml(editor)).toBe('<p>/</p>');
   });
 });
+
+describe('histórico da busca (K14, C10)', () => {
+  it('substituir tudo é um passo só de desfazer', () => {
+    const editor = createTestEditor('<p>alpha beta alpha</p><p>alpha</p>');
+    editor.commands.setSearchQuery('alpha');
+    expect(editor.commands.replaceAllSearchMatches('x')).toBe(true);
+    expect(getRteHtml(editor)).toBe('<p>x beta x</p><p>x</p>');
+    expect(editor.commands.undo()).toBe(true);
+    expect(getRteHtml(editor)).toBe('<p>alpha beta alpha</p><p>alpha</p>');
+  });
+});

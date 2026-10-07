@@ -156,11 +156,11 @@ track id) { @let s = state().item(id)(); @let kind = kindOf(id); @if (kind ===
   type="button"
   class="rte-toolbar__button"
   rteRovingItem
-  [disabled]="!interactive()"
+  [disabled]="!live(id)"
   [attr.aria-label]="label(id)"
   [attr.title]="title(label(id), id)"
   [attr.aria-keyshortcuts]="keyShortcuts(id)"
-  [attr.aria-disabled]="ariaDisabled(s.enabled)"
+  [attr.aria-disabled]="ariaDisabled(s.enabled, id)"
   [attr.aria-pressed]="kind === 'toggle' ? s.active : null"
   [class.rte-toolbar__button--pressed]="kind === 'toggle' && s.active"
   (mousedown)="$event.preventDefault()"
