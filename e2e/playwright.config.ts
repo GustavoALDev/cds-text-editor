@@ -4,6 +4,7 @@ const chrome = process.env['CHROME'];
 
 export default defineConfig({
   testDir: '.',
+  retries: process.env['CI'] ? 2 : 0,
   // App de teste Angular (spec 05a, D22): builds zoneless e zone pré-renderizados
   // (em cache do Nx), servidos com CSP estrita por `e2e/angular/serve.mjs`.
   webServer: {
