@@ -40,6 +40,13 @@ Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp`
 - `docs/html-schema.md` é gerado do esquema e conferido por teste; regenerar: `UPDATE_SCHEMA_DOC=1 npx nx test core --skip-nx-cache`.
 - Orçamento de tamanho por cenário em `packages/core/size-budget.json` (`nx run core:size`). Decisões: ADR 0003 (esquema) e ADR 0004 (extensões).
 
+## Sanitizador (`packages/sanitizer`)
+
+- Entry único `.` (`sanitizeRichText`, `createSanitizer`, `RteSanitizeError`); engine própria sobre `htmlparser2`, sem allowlist própria (tudo vem do esquema do core pelos interpretadores do entry `.`). Importa só `@cds/rte-core` (`.`) e `htmlparser2`; os testes podem usar `@cds/rte-core/html`.
+- Testes em `packages/sanitizer/src/*.spec.ts` (ambiente `node`; `xss.spec.ts` com o corpus de `src/testing/xss-corpus.ts`; `properties.spec.ts` com `FC_SEED`/`FC_RUNS`); cobertura mínima 95% (`cd packages/sanitizer && npx vitest run --coverage`); navegador real em `e2e/sanitizer/`.
+- Orçamento de tamanho por cenário em `packages/sanitizer/size-budget.json` (`npx nx run sanitizer:size`; o `npm run check:size` só confere o tema). `fixtures/content/editor-corpus.json` é gerado pelo core: `UPDATE_FIXTURES=1 npx nx test core --skip-nx-cache`.
+- Decisões: ADR 0006; modelo de ameaças em `docs/security.md`. Mudar o esquema, `sanitizeStyle` ou `serializeTokens` afeta a segurança e exige changeset.
+
 ## Tema (`packages/theme`)
 
 - Testes de navegador do tema: `e2e/theme/*.spec.ts` (contraste, ΔE plano B × nativo, comportamentos, CSP, SSR); o harness/fixtures ficam em `e2e/theme/helpers/` e `e2e/fixtures/`.
