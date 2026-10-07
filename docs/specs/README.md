@@ -33,7 +33,7 @@ Esta pasta é **autocontida**: pode ser movida para a raiz do projeto novo. Nada
 | 06 | [Renderização](06-renderizacao.md) | `@cds/rte-render`: pipe, sumário, CSS de leitura | 02, 04 |
 | 07 | [Demo, docs e servidor de exemplo](07-demo-docs-exemplos.md) | App demo/playground, site de docs, `examples/server-node` | 05, 06 |
 | 08 | [Qualidade](08-qualidade.md) | E2E em 3 engines, a11y, desempenho, visual, pacote | 05 |
-| 09 | [Release e governança](09-release-governanca.md) | Versionamento, npm com provenance, MIT, SECURITY | todas |
+| 09 | [Release e governança](09-release-governanca.md) | Versionamento, npm com provenance, MIT, SECURITY (parte 09a concluída) | todas |
 
 ## Decisões
 

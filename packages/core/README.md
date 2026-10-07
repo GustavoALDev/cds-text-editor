@@ -227,3 +227,5 @@ drafts.clear(); // chame no logout em computadores compartilhados
 ```
 
 Repositório: cds-text-editor (monorepo). Licença MIT.
+
+> Projeto independente, **não afiliado à Tiptap nem ao ProseMirror**.

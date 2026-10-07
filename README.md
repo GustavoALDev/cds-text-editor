@@ -25,3 +25,5 @@ O projeto é guiado por specs em [`docs/specs`](docs/specs) (índice em [`docs/s
 ## Desenvolvimento
 
 Veja [CONTRIBUTING.md](CONTRIBUTING.md). Segurança: [SECURITY.md](SECURITY.md). Licença: [MIT](LICENSE).
+
+> Projeto independente, **não afiliado à Tiptap nem ao ProseMirror**.

@@ -9,3 +9,5 @@ Instalação (nome provisório, escopo `@cds` ainda não confirmado): `npm i @cd
 Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
 Repositório: cds-text-editor (monorepo). Licença MIT.
+
+> Projeto independente, **não afiliado à Tiptap nem ao ProseMirror**.

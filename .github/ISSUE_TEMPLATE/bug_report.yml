@@ -1,0 +1,25 @@
+name: Relato de bug
+description: Algo não funciona como esperado
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Vulnerabilidades NÃO vão aqui; use "Report a vulnerability" na aba Security (ver SECURITY.md).
+  - type: textarea
+    id: descricao
+    attributes: { label: Descrição }
+    validations: { required: true }
+  - type: textarea
+    id: passos
+    attributes: { label: Passos para reproduzir }
+    validations: { required: true }
+  - type: textarea
+    id: esperado
+    attributes: { label: Comportamento esperado e atual }
+    validations: { required: true }
+  - type: textarea
+    id: ambiente
+    attributes:
+      label: Versões e ambiente
+      description: Pacote e versão (@cds/rte-*), Angular, navegador, sistema operacional, Node.js.
+    validations: { required: true }
