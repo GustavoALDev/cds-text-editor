@@ -2,7 +2,7 @@
 
 Componente Angular do editor de texto rico (`rte-editor`), sobre Tiptap 3: ponte de signals, Signal Forms, Reactive/Template Forms, rótulos pt-BR/en/es, validadores de texto e CSS funcional sem injeção (compatível com CSP estrita).
 
-**Status: specs 05a (componente e formulários) e 05b1 (barra de ferramentas e tema por instância) concluídas; ainda sem versão publicada.** Menus flutuantes e diálogos (05b2), mídia (05c) e busca/comandos `/` com interface (05d) vêm nas partes seguintes. `features.search` e `features.slashCommands` ficam sempre desligados.
+**Status: specs 05a (componente e formulários), 05b1 (barra e tema por instância), 05b2 (diálogos e menus flutuantes) e 05c1 (diálogos de mídia) concluídas; ainda sem versão publicada.** Upload e rascunho (05c2) e busca/comandos `/` com interface (05d) vêm nas partes seguintes. `features.search` e `features.slashCommands` ficam sempre desligados.
 
 Nome do pacote provisório (escopo `@cds` ainda não confirmado). Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
@@ -145,7 +145,7 @@ Grupos próprios são listas de ids (`RteToolbarItemId`) na ordem de exibição;
 
 ## Diálogos
 
-Os itens `link`, `lang` e `quoteAuthor` e a entrada "Inserir tabela…" do menu `table` (`insertTableCustom`) abrem um `<dialog>` nativo **modal** (`showModal()`), último filho do `rte-editor`, com o título em `h2.rte-dialog__title` (`aria-labelledby`). Os formulários são Signal Forms; os textos vêm da seção `dialogs` de `RteLabels` (trocar o idioma com o diálogo aberto atualiza os textos sem perder o digitado). Fecha com `Escape`, "Cancelar" ou aplicação; clicar no fundo não fecha. Só um diálogo por vez. Se o documento mudar por fora, ou o editor ficar `disabled`/`readonly`/`hidden` ou for destruído, o diálogo fecha como cancelamento e nada é aplicado. Abrir e fechar não emitem `editorBlur`/`editorFocus`/`touch`, mas `Tab` depois do último controle leva o foco à interface do navegador (a lib não prende o foco) e isso conta como saída: o campo fica `touched`.
+Os itens `link`, `lang`, `quoteAuthor`, `image`, `video` e `embed` e a entrada "Inserir tabela…" do menu `table` (`insertTableCustom`) abrem um `<dialog>` nativo **modal** (`showModal()`), último filho do `rte-editor`, com o título em `h2.rte-dialog__title` (`aria-labelledby`). Os formulários são Signal Forms; os textos vêm da seção `dialogs` de `RteLabels` (trocar o idioma com o diálogo aberto atualiza os textos sem perder o digitado). Fecha com `Escape`, "Cancelar" ou aplicação; clicar no fundo não fecha. Só um diálogo por vez. Se o documento mudar por fora, ou o editor ficar `disabled`/`readonly`/`hidden` ou for destruído, o diálogo fecha como cancelamento e nada é aplicado. Abrir e fechar não emitem `editorBlur`/`editorFocus`/`touch`, mas `Tab` depois do último controle leva o foco à interface do navegador (a lib não prende o foco) e isso conta como saída: o campo fica `touched`.
 
 **Carga sob demanda (`@defer`).** Os formulários ficam num _chunk_ separado (`fesm2022/cds-rte-angular-rte-dialogs-<hash>.mjs`), carregado por `@defer (when ...; prefetch on idle)`: ele é buscado quando o navegador está ocioso, e o primeiro pedido espera a chegada se ainda for preciso. O _bundler_ do consumidor precisa manter `import()` dinâmico (o padrão do Angular CLI). Se o _chunk_ falhar, o pedido é descartado com aviso em desenvolvimento e `openDialog` passa a devolver `false` até recarregar a página.
 
@@ -159,6 +159,9 @@ Os itens `link`, `lang` e `quoteAuthor` e a entrada "Inserir tabela…" do menu 
 | `lang`        | fora de bloco de código; seleção não vazia ou cursor num trecho de idioma                                 | `newsBlocks` |
 | `quoteAuthor` | cursor dentro de uma citação em destaque (`pullquote`)                                                    | `newsBlocks` |
 | `table`       | fora de tabela                                                                                            | `tables`     |
+| `image`       | sempre que o editor é editável; com uma imagem selecionada abre no modo _editar_, senão _inserir_         | `media`      |
+| `video`       | idem, para o vídeo                                                                                        | `media`      |
+| `embed`       | idem, para o _embed_; exige ao menos um provedor ativo                                                    | `embeds`     |
 
 Devolve `false` quando não há editor, não é editável (`disabled`/`readonly`/`hidden`), o recurso está desligado, o caso é inaplicável, outro diálogo está aberto (em qualquer instância da página) ou os diálogos falharam ao carregar. Funciona com `toolbar: false`. O foco volta à origem (o item da barra, ou o elemento focado no host) ao cancelar e ao editável ao aplicar.
 
@@ -178,11 +181,92 @@ Devolve `false` quando não há editor, não é editável (`disabled`/`readonly`
 }
 ```
 
+## Diálogos de mídia
+
+`openDialog('image' | 'video' | 'embed')` e os itens `image`, `video` e `embed` da barra (presets `article`: imagem e _embed_; `full`: imagem, vídeo e _embed_) abrem o diálogo no modo **inserir** ou, com a mídia do tipo selecionada, **editar** (o item vira "Editar imagem/vídeo/embed" e fica `--active`). Os formulários de imagem, vídeo e _embed_ vivem no _chunk_ `rte-media-forms` e os demais no `rte-dialogs` (um componente por formulário, em `src/dialogs/forms/`); o de mídia é pré-carregado em ocioso. Depois de inserir, a mídia fica **selecionada** e o menu flutuante do tipo aparece; digitar logo depois substitui a mídia selecionada (um passo de desfazer a recupera). Se o comando recusar na aplicação, o diálogo fecha como cancelamento, com aviso em desenvolvimento.
+
+**Endereços.** Todo endereço de imagem, vídeo, pôster e faixa passa pela regra do esquema do editor (`https:` e, com `allowRelativeMedia` (padrão `true`), caminho relativo à raiz, restritos por `mediaHosts`); `http:`, `data:`, `blob:`, `//host` e `site.com/a.png` são recusados (erro de endereço) e o que se grava é o valor canônico. Os diálogos **não carregam** o endereço (sem pré-visualização).
+
+**Imagem.** Endereço, Texto alternativo (até 1000 caracteres), "Imagem decorativa", Legenda e Crédito (até 300) e, ao editar, Alinhamento e Largura em px (inteiro 1-10000, vazio = sem largura; alternativa às alças de arrasto, WCAG 2.5.7). O diálogo nunca grava um `alt` ausente: exige o texto ou "decorativa" (WCAG 1.1.1, técnica H67; `alt=""`). Atenção: o HTML canônico escreve `alt=""` nos dois casos, então **imagem decorativa e `alt` esquecido não se distinguem no HTML salvo**; a validação "toda imagem tem `alt`" depende do estado do editor (`rteImagesHaveAlt`, ver "Envio de arquivos").
+
+**Vídeo.** Endereço, Pôster (opcional), Legenda e de 0 a 10 faixas de legenda (`captions` ou `subtitles`, endereço, idioma BCP 47, rótulo obrigatório e "Padrão", exclusivo). Faixa inválida mostra erro no campo e nada é aplicado em silêncio. Sem faixa `captions` o diálogo mostra uma dica (WCAG 1.2.2, não bloqueia). Um vídeo vindo do HTML com mais de 10 faixas as mantém todas (só "Acrescentar faixa" fica desabilitado).
+
+**_Embed_.** Cola-se o endereço **da página** (YouTube `watch?v=`, `youtu.be/`, `/shorts/`, Vimeo, Spotify, mais os provedores que o consumidor registrar em `embedProviders`); só é aceito o que o comando do core aceitar, e a dica lista os provedores ativos. O `iframe` é sempre montado pelo core. No modo _editar_ só a legenda muda (o endereço aparece como texto); para trocar o endereço, remova e insira de novo.
+
+**Menus flutuantes de mídia.** `RteFloatingMenuKind` ganhou `video` e `embed` (chaves separadas na configuração: `floatingMenus: { embed: false }`). Prioridade: imagem > vídeo > _embed_ > link > texto > tabela. Imagem: "Detalhes da imagem..." antes dos alinhamentos; vídeo e _embed_: "Detalhes..." e "Remover". Os "Detalhes..." abrem o diálogo no modo _editar_ com origem no editável.
+
+**Seleção por clique.** No editor **editável**, o `editor.css` põe `pointer-events: none` no `video` e no `iframe` do conteúdo: um clique seleciona o nó (e não toca nem interage). Em `readonly` e `disabled` a regra não vale e o vídeo toca. A regra é só do editor; a página publicada (`content.css`) não a recebe.
+
+**`mediaChange` e `mediaSession`.** A saída `mediaChange` (`RteMediaChange`: `added` e `removed`) cobre os endereços de `img[src]`, de cada URL do `srcset`, de `video[src]`, `poster` e `track[src]` (_embeds_ ficam de fora) e é emitida **uma vez** por transação que muda o conjunto, depois do `value`, dentro da zona. `mediaSession` (um `Signal<RteMediaSession>`) dá o **líquido** desde a base (a criação ou a última carga externa, que não emite): `current`, `added` e `removed`, listas ordenadas por unidade de código e congeladas. Orientação: **use o líquido ao salvar** e limpe os arquivos órfãos no servidor **com carência**: desfazer pode trazer de volta um endereço que o delta já deu como removido. O cálculo é incremental (só os intervalos alterados) e não entra na zona sem delta.
+
+```ts
+readonly editor = viewChild.required(RteEditor);
+onSave() {
+  const { removed } = this.editor().mediaSession();
+  // enviar `removed` ao servidor, que apaga depois de uma carência
+}
+```
+
+**CSP e privacidade do consumidor.** Um endereço externo é requisitado pelo navegador do redator assim que entra no documento. Para a CSP, libere `img-src` e `media-src` para os hosts de `mediaHosts` (e `'self'` para caminhos relativos) e `frame-src` para os hosts dos provedores ativos (`https://www.youtube-nocookie.com https://player.vimeo.com https://open.spotify.com` nos padrões, mais os seus). Recomenda-se `mediaHosts` para limitar a quem o navegador envia requisições. O pacote não usa o atributo `style` em tempo de execução; o `iframe` do _embed_ sai com `style="aspect-ratio"` pelo core, que o Chromium pode relatar (`style-src-attr`) só ao carregar conteúdo (desvio já citado em CSP).
+
+**Classes (API pública, BEM).** Além das dos outros diálogos: `.rte-dialog__fieldset`, `.rte-dialog__legend` (faixas), `.rte-dialog__readonly` (endereço do _embed_ ao editar), `.rte-dialog__tracks`, `.rte-dialog__subtitle`, `.rte-dialog__track-add`, `.rte-dialog__track-remove` e `.rte-floating--video|--embed`.
+
+## Envio de arquivos
+
+Sem configuração, nada de arquivo: os diálogos não mostram "Arquivo", colar segue o caminho do core (que descarta `<img src="data:…">`) e soltar um arquivo é **ignorado** (o navegador não navega para ele). Com um adaptador, o editor ganha envio por diálogo, colar e soltar, marcadores no texto, uma bandeja de envios e o estado reativo `uploads`/`pendingUploads`/`imagesMissingAlt`.
+
+```ts
+provideRichText({
+  upload: { adapter: httpUploadAdapter({ endpoint: '/api/media' }) },
+});
+// ou, por instância: <rte-editor [upload]="cfg" />  (a entrada vence o provider; `null` desliga)
+```
+
+**Configuração (`RteUploadConfig`).** `adapter` (obrigatório); `imageTypes`/`videoTypes` (só **subconjunto** da lista fechada: `image/png`, `jpeg`, `gif`, `webp`, `avif` e `video/mp4`, `video/webm`; `image/svg+xml` nunca é aceito, mesmo se configurado; tipo fora da lista é descartado com aviso em desenvolvimento); `maxImageBytes` (padrão 10 MiB), `maxVideoBytes` (200 MiB), `maxFilesPerAction` (20; os excedentes dão `'count'`); `preview` (miniatura local no marcador; padrão `false`). Com o MIME vazio vale a extensão (`.png`, `.jpg`/`.jpeg`, `.gif`, `.webp`, `.avif`, `.mp4`, `.webm`). Vídeo sem `uploadVideo` no adaptador dá `'type'`. Trocar a configuração (por referência) com envios em curso **aborta** todos. A maquinaria do envio (marcadores, fila, bandeja, colar e soltar) é um _chunk_ carregado sob demanda (`rte-upload`), só quando há configuração; gestos feitos antes da chegada do _chunk_ esperam em ordem.
+
+**Adaptador (`RteUploadAdapter`).** `uploadImage(file, { signal, onProgress })` e, opcional, `uploadVideo(...)`; resolva com `{ url, width?, height?, srcset?, sizes? }` (vídeo: `poster?`). O editor chama uma vez por arquivo, **fora da zona**, nunca repete sozinho. Respeite o `signal`: cancelar chama `abort()` de verdade, e uma resolução ou rejeição depois disso é ignorada (nada é inserido). Para dar o motivo da falha, rejeite com `new RteUploadError('network' | 'server' | 'response')`; qualquer outra rejeição vale `'server'`. A resposta é **revalidada** pelas regras do esquema (`mediaHosts`, `allowRelativeMedia`): `url`, `srcset`, `sizes` ou `poster` recusados dão `'response'` e nada entra (um CDN fora de `mediaHosts` aparece no primeiro teste); `width`/`height` que não sejam inteiros de 1 a 10000 são ignorados.
+
+**`httpUploadAdapter` (`@cds/rte-angular/upload`).** `XMLHttpRequest` com `multipart/form-data`: o arquivo em `fieldName` (padrão `'file'`) e o campo `kind` (`'image'` ou `'video'`). Opções: `endpoint` (texto ou `{ image, video? }`), `fieldName`, `headers` (objeto ou função chamada a cada envio, pode devolver `Promise`), `withCredentials`, `timeoutMs` e `mapResponse(body, { file, kind })`. Sem `mapResponse`, o corpo JSON deve ser `{ "url": "…", "width"?, "height"?, "srcset"?, "sizes"?, "poster"? }`. Progresso determinado (ou indeterminado quando o tamanho é desconhecido); cancelar aborta o `XMLHttpRequest`. Sem dependência além dos tipos.
+
+**Colar e soltar.** Colar com arquivo toma a colagem **só se `text/plain` está vazio**: Word, Excel e páginas põem texto **e** uma imagem renderizada, e o texto vence (colar um parágrafo não vira uma imagem). A seleção não é apagada; o marcador entra em `selection.to`. Soltar usa a posição do ponteiro (`Dropcursor` do core); arrastar uma imagem já no documento continua movendo o nó. Limites conhecidos: soltar sobre as alças de redimensionar, a barra ou a bandeja ainda deixa o navegador abrir o arquivo, e arrastar uma imagem de **outro** editor sem adaptador é ignorado no Chromium.
+
+**Marcadores, bandeja e anúncios.** O envio mostra um marcador (`.rte-upload-marker`, nome e `<progress>`) onde a mídia vai cair; ele não entra no HTML, no histórico, na sessão de mídia nem no `value`. A bandeja (`section.rte-uploads`, `role="group"`) fica depois do editável e lista cada envio com `<progress>` e "Cancelar envio de nome" (alcançável por `Tab`; ao cancelar, o foco vai ao item seguinte, ao anterior ou ao editável). A região `aria-live="polite"` (`.rte-uploads__status`, vazia no SSR) anuncia início (um por gesto), conclusão, cancelamento e erro, nunca o progresso. No máximo 2 envios simultâneos por instância (fila FIFO); a **ordem no documento é a do gesto**, qualquer que seja a ordem de chegada. A mídia entra numa transação própria (um passo de desfazer, uma emissão de `value`, o `mediaChange` com a URL); com diálogo aberto ou composição de IME, espera; com o editor `disabled`/`readonly`/`hidden` na chegada, vira `'unavailable'`. Imagem colada ou solta entra com `alt: null` (não é "decorativa"): corrija pelo "Detalhes da imagem…".
+
+**Diálogos.** Com adaptador, o modo _inserir_ de imagem (e de vídeo, se houver `uploadVideo`) ganha "Origem": "Arquivo" (padrão) ou "Endereço". Os erros de arquivo (`rteFileRequired`, `rteFileType`, `rteFileSize`) aparecem no campo e não emitem `uploadError`; "Aplicar" fecha o diálogo e o envio segue pelo marcador. O modo _editar_ continua só por endereço.
+
+**Estado e métodos.** `uploads` (`Signal<readonly RteUploadStatus[]>`: `id`, `fileName`, `type`, `state` `'queued' | 'uploading' | 'inserting'`, `progress`), `pendingUploads` (inclui gestos ainda em espera pelo carregamento do _chunk_ de envio), `imagesMissingAlt` (imagens com `alt: null` na sessão), `uploadFiles(files): number` (envia na seleção; devolve quantos foram aceitos, 0 sem adaptador ou não editável), `cancelUpload(id): boolean` e `cancelAllUploads()`. A saída `uploadError` (`{ fileName, type, reason, cause? }`, `reason` ∈ `'type' | 'size' | 'count' | 'network' | 'server' | 'response' | 'unavailable'`) sai **dentro da zona**, uma vez por arquivo; cancelar pela pessoa ou abortar por ciclo de vida não é erro; `cause` é só para o seu registro e nunca é exibido.
+
+**Validadores (`/validators`).** `rteUploadsFinished` e `rteImagesHaveAlt` leem o **estado do editor**, não o valor. Signal Forms: `rteUploadsFinished(path, () => editor())` e `rteImagesHaveAlt(path, () => editor())` (com `editor` um `viewChild`, que pode ser `null`). Reactive e Template Forms: as diretivas `rteUploadsFinished` e `rteImagesHaveAlt` no `rte-editor` (`RteUploadsFinishedValidator`, `RteImagesHaveAltValidator`). Erros `{ kind: 'rteUploadsPending', count }` e `{ kind: 'rteImagesMissingAlt', count }` (Reactive: `{ rteUploadsPending: { count } }`), formatados por `formatRteError`. Nas diretivas, o validador é **acrescentado ao `NgControl`** (o caminho de controle customizado do Angular não lê `NG_VALIDATORS`): `setValidators()`/`clearValidators()` do seu código o remove. `rteImagesHaveAlt` só enxerga `alt: null` **da sessão**; o HTML salvo não distingue decorativa de `alt` esquecido (ver "Diálogos de mídia").
+
+**CSP e responsabilidades do consumidor.** Libere `connect-src` para o endpoint do `httpUploadAdapter`; `img-src` e `media-src` para o host que o servidor devolve (que também precisa estar em `mediaHosts`, ou ser relativo com `allowRelativeMedia`); `img-src blob:` **só** com `preview: true`. O editor não envia nada sem gesto da pessoa (colar, soltar, diálogo) ou chamada de `uploadFiles`. O **servidor** deve: autenticar e proteger contra CSRF; conferir o tipo real (_magic bytes_), nunca confiar no MIME ou na extensão; limitar tamanho e quantidade; nunca devolver `svg`; servir o arquivo com `Content-Type` correto e `X-Content-Type-Options: nosniff`; gerar o nome do arquivo guardado (o do cliente é só texto); e apagar órfãos com carência (ver `mediaSession`). Nomes de arquivo e mensagens são exibidos só como texto.
+
+**Classes (API pública, BEM).** `.rte-uploads` (`__list`, `__item`, `__name`, `__progress`, `__cancel`, `__status`), `.rte-upload-marker` (`__name`, `__progress`, `__preview`, `--queued`, `--image`, `--video`) e `.rte-dialog__source`.
+
+## Rascunho e salvamento
+
+**Rascunho (`draftKey`).** Opt-in: `<rte-editor draftKey="doc-42" />` (1 a 200 caracteres; use usuário **e** documento na chave, ex.: `user-7:doc-42`). Grava no `localStorage` (`rte-draft:<chave>`) 1 s depois da última alteração e ao ocultar a página; nunca grava `readonly`/`disabled`. Ao carregar, se há rascunho diferente do valor, aparece um aviso acessível (`section.rte-draft`) com data e botões "Restaurar"/"Descartar"; **nunca restaura sozinho**. Sinais e métodos: `draftAvailable` (`{ savedAt }` ou `null`), `restoreDraft()`, `discardDraft()` e a saída `draftError` (`'write'` | `'unavailable'`). `provideRichText({ draft: { storage, maxAgeMs, prompt } })`: `storage` próprio (`DraftStorage` do core), validade (7 dias) e `prompt: false` para construir a sua interface. O código é um _chunk_ (`rte-draft`) carregado só com `draftKey`. **Privacidade:** o rascunho fica no navegador em texto claro; no logout chame `clearLocalDrafts()` (de `@cds/rte-angular`; aceita um prefixo e devolve quantos apagou).
+
+**`isDirty` e `markSaved(savedHtml?)`.** `isDirty()` é `true` quando o valor difere da base salva (a de criação ou da última carga externa). Depois de salvar no servidor chame `editor.markSaved(htmlSalvo)`: a base passa a ser esse HTML (sem argumento, o valor atual) e o rascunho é apagado.
+
+**`onMediaRemoved`.** Adaptador opcional: `onMediaRemoved?(urls)` recebe os endereços de mídia removidos desde a base, **só depois** de `markSaved` e de não haver envios pendentes, já refiltrados contra o documento salvo. Desfazer pode trazer a mídia de volta, e outro documento pode usá-la: **apague com carência**, nunca na hora.
+
+**`warnOnUnsaved`.** Entrada (ou `provideRichText({ warnOnUnsaved: true })`): pede confirmação do navegador ao sair enquanto `isDirty()` ou há envio pendente. Desligado por padrão. Para rotas do Angular use `isDirty()` num guarda de 5 linhas:
+
+```ts
+export const leaveGuard: CanDeactivateFn<{
+  editor: Signal<RteEditor | undefined>;
+}> = (c) => !c.editor()?.isDirty() || confirm('Descartar alterações?');
+```
+
+**`pasteEmbeds`.** Opt-in: colar uma única URL suportada (ex.: YouTube) num parágrafo vazio vira _embed_ (um passo de desfazer); em qualquer outro caso, a colagem segue como antes. Emite `value`, não `mediaChange`.
+
+**Re-hospedagem.** Com `upload: { adapter, rehostExternal: true, ownHosts: [...] }` e `adapter.registerExternal?(url, ctx)`, imagens `https:` externas **coladas** são enviadas ao seu servidor e o `src` é trocado (fila e bandeja dos envios; desfazer remove a imagem, não volta ao externo). Falhas mantêm a URL externa, sem `uploadError`. Endereços com credenciais (`https://usuário:senha@…`) não são re-hospedados. **O servidor busca uma URL vinda da colagem:** valide-a no `registerExternal` do seu backend (só `https:`, recuse `localhost`/IPs privados e redirecionamentos para eles, limite tamanho e tipo) para não virar SSRF. Não re-hospeda colagens feitas antes do _chunk_ de envio carregar, e não faz nada se `mediaHosts` for restrito (o esquema já remove a imagem externa).
+
 ## Menus flutuantes
 
-Quatro menus contextuais aparecem junto ao conteúdo, sem tirar o foco do editável: **texto** (seleção de texto não vazia: `bold italic underline strike code` e `link`, os mesmos itens, estados e atalhos da barra; `link` abre o diálogo), **link** (cursor num link: o endereço, que abre em nova aba com `rel="noopener noreferrer"`, "Editar link" e "Remover link"), **tabela** (cursor ou células selecionadas: inserir linha abaixo, inserir coluna depois, excluir linha, excluir coluna e um menu "Mais operações de tabela" com as demais) e **imagem** (imagem selecionada: alinhar à esquerda, centro, direita ou largura total, e "Remover imagem"). Prioridade quando mais de um se aplica: imagem > link > texto > tabela. `Ctrl+A` não mostra o menu de texto; vídeo e _embed_ não têm menu nesta versão (05c).
+Seis menus contextuais (os de vídeo e _embed_ estão em "Diálogos de mídia") aparecem junto ao conteúdo, sem tirar o foco do editável: **texto** (seleção de texto não vazia: `bold italic underline strike code` e `link`, os mesmos itens, estados e atalhos da barra; `link` abre o diálogo), **link** (cursor num link: o endereço, que abre em nova aba com `rel="noopener noreferrer"`, "Editar link" e "Remover link"), **tabela** (cursor ou células selecionadas: inserir linha abaixo, inserir coluna depois, excluir linha, excluir coluna e um menu "Mais operações de tabela" com as demais) e **imagem** (imagem selecionada: "Detalhes da imagem…", que abre o diálogo de imagem, alinhar à esquerda, centro, direita ou largura total, e "Remover imagem"). Prioridade quando mais de um se aplica: imagem > vídeo > _embed_ > link > texto > tabela. `Ctrl+A` não mostra o menu de texto.
 
-**Configuração.** `floatingMenus` na entrada e em `provideRichText({ floatingMenus })`: `boolean` (vale para os quatro) ou `Partial<Record<'text' | 'link' | 'table' | 'image', boolean>>`; objetos mesclam por chave (entrada > _provider_), ausente = ligado. Imagem exige o recurso `media` e tabela o `tables`. Mudar ao vivo vale sem recriar o editor e sem emitir valor.
+**Configuração.** `floatingMenus` na entrada e em `provideRichText({ floatingMenus })`: `boolean` (vale para todos) ou `Partial<Record<'text' | 'link' | 'table' | 'image' | 'video' | 'embed', boolean>>`; objetos mesclam por chave (entrada > _provider_), ausente = ligado. Imagem e vídeo exigem o recurso `media`, _embed_ o `embeds` e tabela o `tables`. Mudar ao vivo vale sem recriar o editor e sem emitir valor.
 
 ```html
 <rte-editor [floatingMenus]="{ table: false }" />
@@ -195,7 +279,7 @@ Quatro menus contextuais aparecem junto ao conteúdo, sem tirar o foco do editá
 
 **Tabela.** `addRowAfter` e `addColumnAfter` (e as do submenu) seguem a guarda de `colspan`/`rowspan` > 100 da barra: ficam `aria-disabled` com o motivo no `title` e não alteram o documento.
 
-**Rótulos e classes.** Seção `floating` de `RteLabels` (pt-BR, en e es), `labels.toolbar` para os itens que já existem na barra. Classes públicas (BEM): `.rte-floating` (`popover="manual"`, `role="toolbar"`), `.rte-floating--text|--link|--table|--image`, `.rte-floating--measuring` (transitória), `.rte-floating__link` e `.rte-floating__address` (o endereço do link); os itens reaproveitam `.rte-toolbar__button` e `.rte-toolbar__separator`. O CSS usa só `--rte-*` e nenhum atributo `style` (a posição vai por CSSOM). Limitações: sem menus em `readonly`; WebKit: em testes, a seleção de células por arrasto sintético é feita por `setCellSelection`.
+**Rótulos e classes.** Seção `floating` de `RteLabels` (pt-BR, en e es), `labels.toolbar` para os itens que já existem na barra. Classes públicas (BEM): `.rte-floating` (`popover="manual"`, `role="toolbar"`), `.rte-floating--text|--link|--table|--image|--video|--embed`, `.rte-floating--measuring` (transitória), `.rte-floating__link` e `.rte-floating__address` (o endereço do link); os itens reaproveitam `.rte-toolbar__button` e `.rte-toolbar__separator`. O CSS usa só `--rte-*` e nenhum atributo `style` (a posição vai por CSSOM). Limitações: sem menus em `readonly`; WebKit: em testes, a seleção de células por arrasto sintético é feita por `setCellSelection`.
 
 ## Tema por instância
 
@@ -254,6 +338,8 @@ Testado com `default-src 'self'; script-src 'self'; style-src 'self'` por cabeç
 
 ## O que vem depois
 
-05c: mídia (diálogos de imagem, vídeo e _embed_ no mesmo `@defer`; "Detalhes da imagem…" e menus de vídeo e _embed_ nos menus flutuantes). 05d: busca e comandos `/` com interface, `updateOn`/adiamento da emissão com os números de desempenho, API final. Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
+05d: busca e comandos `/` com interface, `updateOn`/adiamento da emissão com os números de desempenho, API final. Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
 
 Repositório: cds-text-editor (monorepo). Licença MIT.
+
+> Projeto independente, **não afiliado à Tiptap nem ao ProseMirror**.

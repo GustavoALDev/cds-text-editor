@@ -1,5 +1,7 @@
 import type { Editor } from '@tiptap/core';
 import { AllSelection, NodeSelection, TextSelection } from '@tiptap/pm/state';
+import { getHtmlSchema } from '@cds/rte-core';
+import { readMediaRules } from './dialogs/media-rules';
 import { dialogTarget } from './dialogs/target';
 import {
   createTestEditor,
@@ -237,5 +239,173 @@ describe('dialogTarget: table', () => {
     const e = createTestEditor('<p>ab</p>', { features: { tables: false } });
     selectText(e, 'ab', 1);
     expect(dialogTarget(e, 'table')).toBeNull();
+  });
+});
+
+describe('dialogTarget: mídia (V2, pré-voo 2)', () => {
+  const IMG =
+    '<p>ab</p><figure class="rt-figure rt-figure--center"><img src="/a.png" alt="A"></figure><p>cd</p>';
+  const VIDEO =
+    '<p>ab</p><figure class="rt-figure rt-figure--video"><video src="/v.webm" controls=""></video></figure><p>cd</p>';
+  const EMBED =
+    '<p>ab</p><figure class="rt-embed rt-embed--youtube" data-rt-provider="youtube"><iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" title="YouTube"></iframe></figure><p>cd</p>';
+
+  /** Seleciona (NodeSelection) o primeiro nó do tipo; devolve a posição. */
+  function selectNode(editor: Editor, typeName: string): number {
+    let found = -1;
+    editor.state.doc.descendants((node, pos) => {
+      if (found >= 0) return false;
+      if (node.type.name === typeName) found = pos;
+      return found < 0;
+    });
+    expect(found).toBeGreaterThanOrEqual(0);
+    editor.view.dispatch(
+      editor.state.tr.setSelection(
+        NodeSelection.create(editor.state.doc, found),
+      ),
+    );
+    return found;
+  }
+
+  function cursor(editor: Editor, pos: number): void {
+    editor.view.dispatch(
+      editor.state.tr.setSelection(TextSelection.create(editor.state.doc, pos)),
+    );
+  }
+
+  it.each(['image', 'video', 'embed'] as const)(
+    'cursor em <p>ab</p> → %s insert {1,1}',
+    (kind) => {
+      const e = createTestEditor('<p>ab</p>');
+      cursor(e, 1);
+      expect(dialogTarget(e, kind)).toEqual({
+        mode: 'insert',
+        range: { from: 1, to: 1 },
+      });
+    },
+  );
+
+  it('seleção de texto → insert com a seleção', () => {
+    const e = at('<p>abcd</p>', 'bc');
+    expect(dialogTarget(e, 'image')).toEqual({
+      mode: 'insert',
+      range: { from: 2, to: 4 },
+    });
+  });
+
+  it('NodeSelection de rtImage em pos → image edit {pos, pos+1}', () => {
+    const e = createTestEditor(IMG);
+    const pos = selectNode(e, 'rtImage');
+    expect(dialogTarget(e, 'image')).toEqual({
+      mode: 'edit',
+      range: { from: pos, to: pos + 1 },
+    });
+  });
+
+  it('NodeSelection de rtVideo + image → insert; video → edit', () => {
+    const e = createTestEditor(VIDEO);
+    const pos = selectNode(e, 'rtVideo');
+    expect(dialogTarget(e, 'image')).toEqual({
+      mode: 'insert',
+      range: { from: pos, to: pos + 1 },
+    });
+    expect(dialogTarget(e, 'video')).toEqual({
+      mode: 'edit',
+      range: { from: pos, to: pos + 1 },
+    });
+  });
+
+  it('NodeSelection de rtEmbed → embed edit; image/video insert', () => {
+    const e = createTestEditor(EMBED);
+    const pos = selectNode(e, 'rtEmbed');
+    expect(dialogTarget(e, 'embed')).toEqual({
+      mode: 'edit',
+      range: { from: pos, to: pos + 1 },
+    });
+    expect(dialogTarget(e, 'image')?.mode).toBe('insert');
+    expect(dialogTarget(e, 'video')?.mode).toBe('insert');
+  });
+
+  it('NodeSelection de rtImage + video/embed → insert', () => {
+    const e = createTestEditor(IMG);
+    selectNode(e, 'rtImage');
+    expect(dialogTarget(e, 'video')?.mode).toBe('insert');
+    expect(dialogTarget(e, 'embed')?.mode).toBe('insert');
+  });
+
+  it.each(['image', 'video', 'embed'] as const)(
+    '%s: cursor em célula de tabela e em bloco de código → insert',
+    (kind) => {
+      const e = at(
+        '<table><tbody><tr><td><p>cel</p></td></tr></tbody></table><pre><code>abc</code></pre>',
+        'cel',
+        1,
+      );
+      const inCell = e.state.selection.from;
+      expect(dialogTarget(e, kind)).toEqual({
+        mode: 'insert',
+        range: { from: inCell, to: inCell },
+      });
+      selectText(e, 'abc', 1);
+      const inCode = e.state.selection.from;
+      expect(dialogTarget(e, kind)).toEqual({
+        mode: 'insert',
+        range: { from: inCode, to: inCode },
+      });
+    },
+  );
+
+  it('features.media: false → image e video null; embed segue', () => {
+    const e = createTestEditor('<p>ab</p>', { features: { media: false } });
+    cursor(e, 1);
+    expect(dialogTarget(e, 'image')).toBeNull();
+    expect(dialogTarget(e, 'video')).toBeNull();
+    expect(dialogTarget(e, 'embed')?.mode).toBe('insert');
+  });
+
+  it('embedProviders: [] → embed null; image/video seguem', () => {
+    const e = createTestEditor('<p>ab</p>', { embedProviders: [] });
+    cursor(e, 1);
+    expect(dialogTarget(e, 'embed')).toBeNull();
+    expect(dialogTarget(e, 'image')?.mode).toBe('insert');
+  });
+
+  it('features.embeds: false → embed null', () => {
+    const e = createTestEditor('<p>ab</p>', { features: { embeds: false } });
+    cursor(e, 1);
+    expect(dialogTarget(e, 'embed')).toBeNull();
+  });
+});
+
+describe('readMediaRules (V4, pré-voo 3)', () => {
+  it('lê as regras de URL e de idioma das mídias do esquema', () => {
+    const schema = getHtmlSchema({});
+    const rules = readMediaRules(schema);
+    const el = schema.elements;
+    expect(rules).toEqual({
+      imageSrc: el['img']?.attributes['src']?.rule,
+      videoSrc: el['video']?.attributes['src']?.rule,
+      videoPoster: el['video']?.attributes['poster']?.rule,
+      trackSrc: el['track']?.attributes['src']?.rule,
+      trackLang: el['track']?.attributes['srclang']?.rule,
+    });
+    expect(rules?.imageSrc.kind).toBe('url');
+    expect(rules?.trackLang.kind).toBe('pattern');
+  });
+
+  it('as regras seguem as opções (mediaHosts)', () => {
+    const rules = readMediaRules(
+      getHtmlSchema({ mediaHosts: ['media.example.test'] }),
+    );
+    expect(rules?.imageSrc).toMatchObject({
+      kind: 'url',
+      hosts: ['media.example.test'],
+    });
+  });
+
+  it('media desligado → null', () => {
+    expect(readMediaRules(getHtmlSchema({ features: { media: false } }))).toBe(
+      null,
+    );
   });
 });

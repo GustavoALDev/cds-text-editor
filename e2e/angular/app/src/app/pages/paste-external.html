@@ -1,0 +1,8 @@
+<rte-editor
+  data-testid="paste-external"
+  ariaLabel="Paste external"
+  [pasteEmbeds]="true"
+  [upload]="upload"
+  [(value)]="value"
+/>
+<output data-testid="html">{{ value() }}</output>

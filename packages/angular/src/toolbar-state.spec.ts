@@ -12,7 +12,7 @@ import { RteEditor, type RteToolbarConfig } from '@cds/rte-angular';
 import { getRteEditor } from '@cds/rte-angular/testing';
 import type { Editor } from '@tiptap/core';
 import { DOMSerializer } from '@tiptap/pm/model';
-import { TextSelection } from '@tiptap/pm/state';
+import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { CellSelection } from '@tiptap/pm/tables';
 import { createRteBridge } from './editor/bridge';
 import type {
@@ -766,12 +766,26 @@ describe('floatingMenus ao vivo (M17, R11)', () => {
     fixture.autoDetectChanges();
     await fixture.whenStable();
     const cmp = fixture.componentInstance as unknown as EditorInternals;
-    expect(cmp.floatingKinds()).toEqual(['image', 'link', 'text', 'table']);
+    // 05c1 (V10): os menus de vídeo e de embed entram na lista
+    expect(cmp.floatingKinds()).toEqual([
+      'image',
+      'video',
+      'embed',
+      'link',
+      'text',
+      'table',
+    ]);
     expect([...cmp.toolbarState.all().keys()]).toContain('bold');
     changes = 0;
     fixture.componentRef.setInput('floatingMenus', { text: false });
     await fixture.whenStable();
-    expect(cmp.floatingKinds()).toEqual(['image', 'link', 'table']);
+    expect(cmp.floatingKinds()).toEqual([
+      'image',
+      'video',
+      'embed',
+      'link',
+      'table',
+    ]);
     expect(cmp.toolbarState.all().size).toBe(0);
     expect(ready).toHaveLength(1);
     expect(changes).toBe(0);
@@ -892,5 +906,155 @@ describe('MutationObserver nos menus flutuantes (R12)', () => {
       expect([boldMenu, boldBar]).toContain(record.target);
       expect(record.type).toBe('attributes');
     }
+  });
+});
+
+const MEDIA_DOC =
+  '<p>abcd</p>' +
+  '<figure class="rt-figure rt-figure--center"><img src="/a.png" alt="A"></figure>' +
+  '<figure class="rt-figure rt-figure--video"><video src="/v.webm" controls=""></video></figure>' +
+  '<figure class="rt-embed rt-embed--youtube" data-rt-provider="youtube"><iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" title="YouTube"></iframe></figure>' +
+  '<p>efgh</p>';
+
+/** NodeSelection no primeiro nó do tipo. */
+function selectMediaNode(editor: Editor, typeName: string): void {
+  let found = -1;
+  editor.state.doc.descendants((node, pos) => {
+    if (found >= 0) return false;
+    if (node.type.name === typeName) found = pos;
+    return found < 0;
+  });
+  expect(found).toBeGreaterThanOrEqual(0);
+  editor.view.dispatch(
+    editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, found)),
+  );
+}
+
+const MEDIA_ITEMS = [
+  ['image', 'rtImage', 'Edit image', 'Insert image'],
+  ['video', 'rtVideo', 'Edit video', 'Insert video'],
+  ['embed', 'rtEmbed', 'Edit embedded content', 'Insert embedded content'],
+] as const;
+
+describe('itens de mídia (V2)', () => {
+  it.each(MEDIA_ITEMS)(
+    '%s: ativo com o próprio nó selecionado; inativo e habilitado no texto',
+    (id, typeName) => {
+      const editor = createTestEditor(MEDIA_DOC);
+      selectMediaNode(editor, typeName);
+      expect(readItemState(editor, id)).toEqual({
+        active: true,
+        enabled: true,
+        value: null,
+      });
+      selectText(editor, 'abcd', 1);
+      expect(readItemState(editor, id)).toEqual({
+        active: false,
+        enabled: true,
+        value: null,
+      });
+    },
+  );
+
+  it('outro nó de mídia selecionado: item inativo e habilitado', () => {
+    const editor = createTestEditor(MEDIA_DOC);
+    selectMediaNode(editor, 'rtVideo');
+    expect(readItemState(editor, 'image')).toEqual({
+      active: false,
+      enabled: true,
+      value: null,
+    });
+  });
+
+  it('sem o nó no esquema: desabilitado', () => {
+    const editor = createTestEditor('<p>ab</p>', {
+      features: { media: false },
+      embedProviders: [],
+    });
+    selectText(editor, 'ab', 1);
+    for (const id of ['image', 'video', 'embed'] as const)
+      expect(readItemState(editor, id)).toEqual({
+        active: false,
+        enabled: false,
+        value: null,
+      });
+  });
+});
+
+@Component({
+  selector: 'rte-test-media-toolbar',
+  imports: [RteEditor],
+  template: `<rte-editor [value]="value" toolbar="full" />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class MediaToolbarHost {
+  readonly value = MEDIA_DOC;
+}
+
+describe('botões de mídia na barra (V2, R2)', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  async function setupMedia() {
+    const fixture = await renderHost(MediaToolbarHost);
+    const el = fixture.nativeElement as HTMLElement;
+    const editor = getRteEditor(
+      el.querySelector('rte-editor') as Element,
+    ) as Editor;
+    const toolbar = el.querySelector('.rte-toolbar') as HTMLElement;
+    return { fixture, editor, toolbar };
+  }
+
+  it.each(MEDIA_ITEMS)(
+    '%s: nó selecionado → item ativo, botão "Edit …" com --active; cursor no texto → "Insert …"',
+    async (id, typeName, edit, insert) => {
+      const { fixture, editor, toolbar } = await setupMedia();
+      const host = fixture.debugElement.query(By.directive(RteEditor));
+      const state = (
+        host.componentInstance as { toolbarState: RteToolbarState }
+      ).toolbarState;
+      selectMediaNode(editor, typeName);
+      await settle(fixture);
+      expect(state.item(id)()).toEqual({
+        active: true,
+        enabled: true,
+        value: null,
+      });
+      const active = toolbar.querySelector(`[aria-label="${edit}"]`);
+      expect(active).not.toBeNull();
+      expect(active?.classList.contains('rte-toolbar__button--active')).toBe(
+        true,
+      );
+      selectText(editor, 'abcd', 1);
+      await settle(fixture);
+      const idle = toolbar.querySelector(`[aria-label="${insert}"]`);
+      expect(idle).not.toBeNull();
+      expect(idle?.classList.contains('rte-toolbar__button--active')).toBe(
+        false,
+      );
+      expect(idle?.getAttribute('aria-haspopup')).toBe('dialog');
+    },
+  );
+
+  it('20 insertText num parágrafo com os itens de mídia → 0 registros', async () => {
+    const { fixture, editor, toolbar } = await setupMedia();
+    expect(toolbar.querySelector('[aria-label="Insert image"]')).not.toBeNull();
+    selectText(editor, 'abcd', 1);
+    editor.view.dispatch(editor.state.tr.insertText('x'));
+    await settle(fixture);
+    const records: MutationRecord[] = [];
+    const observer = new MutationObserver((list) => records.push(...list));
+    observer.observe(toolbar, {
+      subtree: true,
+      attributes: true,
+      childList: true,
+      characterData: true,
+    });
+    for (let i = 0; i < 20; i += 1) {
+      editor.view.dispatch(editor.state.tr.insertText('y'));
+      await settle(fixture);
+      records.push(...observer.takeRecords());
+    }
+    observer.disconnect();
+    expect(records).toEqual([]);
   });
 });

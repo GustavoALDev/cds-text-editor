@@ -1,5 +1,16 @@
-import type { RteLabels } from '@cds/rte-angular';
+import type { RteLabels, RteUploadErrorReason } from '@cds/rte-angular';
 import { RTE_CONTENT_LABELS, RTE_SLASH_LABELS } from '@cds/rte-core/extensions';
+
+const UPLOAD_REASONS: Readonly<Record<RteUploadErrorReason, string>> =
+  Object.freeze({
+    type: 'tipo de arquivo não aceito.',
+    size: 'arquivo grande demais.',
+    count: 'arquivos demais de uma vez.',
+    network: 'falha de conexão.',
+    server: 'o servidor recusou.',
+    response: 'resposta inválida do servidor.',
+    unavailable: 'o editor não está editável.',
+  });
 
 /** Rótulos em português do Brasil, congelados em profundidade. */
 export const RTE_LABELS_PT_BR: RteLabels = Object.freeze({
@@ -62,6 +73,12 @@ export const RTE_LABELS_PT_BR: RteLabels = Object.freeze({
     pullquote: 'Citação em destaque',
     readAlso: 'Caixa "Leia também"',
     clearFormatting: 'Limpar formatação',
+    image: 'Inserir imagem',
+    editImage: 'Editar imagem',
+    video: 'Inserir vídeo',
+    editVideo: 'Editar vídeo',
+    embed: 'Inserir conteúdo incorporado',
+    editEmbed: 'Editar conteúdo incorporado',
     heading: (level: 2 | 3 | 4) => `Título ${level}`,
     colorNames: Object.freeze({
       gray: 'Cinza',
@@ -81,6 +98,14 @@ export const RTE_LABELS_PT_BR: RteLabels = Object.freeze({
       `Use no máximo ${max} caracteres (${actual} agora).`,
     rteMaxWords: ({ max, actual }: { max: number; actual: number }) =>
       `Use no máximo ${max} palavras (${actual} agora).`,
+    rteUploadsPending: (count: number) =>
+      count === 1
+        ? 'Aguarde o fim de 1 envio.'
+        : `Aguarde o fim de ${count} envios.`,
+    rteImagesMissingAlt: (count: number) =>
+      count === 1
+        ? '1 imagem sem texto alternativo.'
+        : `${count} imagens sem texto alternativo.`,
   }),
   dialogs: Object.freeze({
     apply: 'Aplicar',
@@ -121,6 +146,58 @@ export const RTE_LABELS_PT_BR: RteLabels = Object.freeze({
     errorRange: (min: number, max: number) =>
       `Informe um número inteiro de ${min} a ${max}.`,
     errorMaxLength: (max: number) => `Use no máximo ${max} caracteres.`,
+    imageInsertTitle: 'Inserir imagem',
+    imageEditTitle: 'Detalhes da imagem',
+    imageUrl: 'Endereço da imagem (URL)',
+    videoUrl: 'Endereço do vídeo (URL)',
+    imageUrlHint: 'Use https://… ou um caminho que comece com /.',
+    imageAlt: 'Texto alternativo',
+    imageDecorative: 'Imagem decorativa',
+    imageAltHint:
+      'Descreva o que a imagem mostra. Marque "Imagem decorativa" só se ela não acrescentar informação.',
+    imageCaption: 'Legenda',
+    imageCredit: 'Crédito',
+    imageAlign: 'Alinhamento',
+    imageWidth: 'Largura (px)',
+    imageWidthHint: 'Deixe vazio para o tamanho natural.',
+    videoInsertTitle: 'Inserir vídeo',
+    videoEditTitle: 'Detalhes do vídeo',
+    videoPoster: 'Endereço da imagem de capa (opcional)',
+    videoCaption: 'Legenda (abaixo do vídeo)',
+    videoTracks: 'Faixas de texto',
+    videoTrackKind: 'Tipo',
+    videoTrackCaptions: 'Legendas para surdos (falas e sons)',
+    videoTrackSubtitles: 'Legendas (tradução)',
+    videoTrackUrl: 'Endereço da faixa (.vtt)',
+    videoTrackLang: 'Código do idioma (BCP 47)',
+    videoTrackLabel: 'Rótulo',
+    videoTrackDefault: 'Padrão',
+    videoTrackAdd: 'Acrescentar faixa',
+    videoCaptionsHint:
+      'Sem faixa de legendas para surdos: vídeos com fala ou som relevante precisam dela (WCAG 1.2.2).',
+    embedInsertTitle: 'Inserir conteúdo incorporado',
+    embedEditTitle: 'Detalhes do conteúdo incorporado',
+    embedUrl: 'Endereço da página (URL)',
+    embedCaption: 'Legenda',
+    errorMediaUrl:
+      'Endereço não aceito. Use https:// ou um caminho que comece com /, num host permitido.',
+    errorEmbedUrl: 'Nenhum provedor ativo reconhece este endereço.',
+    videoUrlHint: 'Use https://… ou um caminho que comece com /.',
+    videoTrack: (n: number) => `Faixa ${n}`,
+    videoTrackRemove: (n: number) => `Remover faixa ${n}`,
+    embedUrlHint: (providers: readonly string[]) =>
+      `Aceitos: ${providers.join(', ')}.`,
+    mediaSource: 'Origem',
+    mediaSourceFile: 'Arquivo',
+    mediaSourceUrl: 'Endereço (URL)',
+    imageFile: 'Arquivo de imagem',
+    videoFile: 'Arquivo de vídeo',
+    fileHint: (types: readonly string[], maxMegabytes: number) =>
+      `Aceitos: ${types.join(', ')}. Até ${maxMegabytes} MB.`,
+    errorFileRequired: 'Escolha um arquivo.',
+    errorFileType: 'Este tipo de arquivo não é aceito.',
+    errorFileSize: (maxMegabytes: number) =>
+      `O arquivo passa de ${maxMegabytes} MB.`,
     languageNames: Object.freeze({
       en: 'Inglês',
       es: 'Espanhol',
@@ -149,5 +226,31 @@ export const RTE_LABELS_PT_BR: RteLabels = Object.freeze({
     imageAlignRight: 'Alinhar à direita',
     imageAlignFull: 'Largura total',
     removeImage: 'Remover imagem',
+    videoMenu: 'Vídeo',
+    embedMenu: 'Conteúdo incorporado',
+    imageDetails: 'Detalhes da imagem…',
+    videoDetails: 'Detalhes do vídeo…',
+    embedDetails: 'Detalhes do conteúdo incorporado…',
+    removeVideo: 'Remover vídeo',
+    removeEmbed: 'Remover conteúdo incorporado',
+  }),
+  upload: Object.freeze({
+    region: 'Envios',
+    progress: (name: string) => `Enviando ${name}`,
+    queued: (name: string) => `${name} (na fila)`,
+    cancel: (name: string) => `Cancelar envio de ${name}`,
+    announceStart: (count: number) =>
+      count === 1 ? 'Enviando 1 arquivo.' : `Enviando ${count} arquivos.`,
+    announceDone: (name: string) => `${name} enviado.`,
+    announceCancelled: (name: string) => `Envio de ${name} cancelado.`,
+    announceError: (name: string, reason: RteUploadErrorReason) =>
+      `Não foi possível enviar ${name}: ${UPLOAD_REASONS[reason]}`,
+  }),
+  draft: Object.freeze({
+    region: 'Rascunho salvo',
+    available: (savedAt: number) =>
+      `Há um rascunho salvo em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(savedAt)}.`,
+    restore: 'Restaurar',
+    discard: 'Descartar',
   }),
 });

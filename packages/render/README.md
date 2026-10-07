@@ -90,3 +90,5 @@ O mesmo código roda no servidor. A hidratação re-atribui o `innerHTML` do _ho
 Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
 Repositório: cds-text-editor (monorepo). Licença MIT.
+
+> Projeto independente, **não afiliado à Tiptap nem ao ProseMirror**.

@@ -1,0 +1,10 @@
+<rte-editor
+  data-testid="draft"
+  ariaLabel="Draft"
+  draftKey="e2e-draft"
+  [(value)]="value"
+/>
+<button type="button" data-testid="clear-drafts" (click)="clear()">
+  Clear drafts
+</button>
+<output data-testid="cleared">{{ cleared() ?? '' }}</output>

@@ -8,7 +8,7 @@ import {
 import type { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { RteDialogMode, RteDialogTarget } from './target';
-import type { RteDialogKind } from './types';
+import { isMediaKind, type RteDialogKind } from './types';
 import { setPendingSelection } from './ui-extension';
 
 const DEFER_FAILED =
@@ -72,10 +72,12 @@ export interface RteDialogView {
  * (carregado por `@defer`) lê o pedido e registra a vista para ser fechado.
  */
 export class RteDialogController {
-  private readonly editor: Signal<Editor | null>;
+  /** Editor do controlador (validação do *embed* no *chunk*, pré-voo 5). */
+  readonly editor: Signal<Editor | null>;
   private readonly current = signal<RteDialogRequest | null>(null);
   private readonly wanted = signal(false);
   private readonly broken = signal(false);
+  private readonly mediaBroken = signal(false);
   private view: RteDialogView | null = null;
   private nextId = 1;
   /** Documento em que o pedido em curso foi registrado (G6). */
@@ -90,6 +92,11 @@ export class RteDialogController {
   readonly requested: Signal<boolean> = this.wanted.asReadonly();
   /** O *chunk* falhou (`@error`, terminal; pré-voo 5). */
   readonly failed: Signal<boolean> = this.broken.asReadonly();
+  /**
+   * O *chunk* dos formulários de mídia falhou (05c2a E2, Ruling 1): terminal
+   * só para imagem, vídeo e *embed*; os outros diálogos seguem abrindo.
+   */
+  readonly mediaFailed: Signal<boolean> = this.mediaBroken.asReadonly();
 
   constructor(o: { editor: Signal<Editor | null> }) {
     this.editor = o.editor;
@@ -137,7 +144,9 @@ export class RteDialogController {
   /**
    * Aplica (G5): com outro documento no estado, cancela e devolve `false`;
    * senão fecha o diálogo, limpa a seleção pendente, roda o comando (que
-   * devolve o foco ao editável) e encerra o pedido.
+   * devolve o foco ao editável) e encerra o pedido. Comando que devolve
+   * `false` encerra como cancelamento: foco na origem ou no editável (V9),
+   * se o documento não mudou.
    */
   apply(run: (editor: Editor) => boolean): boolean {
     const req = untracked(this.current);
@@ -148,13 +157,22 @@ export class RteDialogController {
       return false;
     }
     this.settling = true;
+    let ok = false;
     try {
       this.view?.hide();
       setPendingSelection(editor, null);
-      return run(editor);
+      ok = run(editor);
+      return ok;
     } finally {
       this.clear();
       this.settling = false;
+      // Comando recusado: fecha como cancelamento (V9, Ruling 4), com o
+      // foco de volta à origem ou ao editável (G4) — só com o documento
+      // intacto: a cadeia do Tiptap despacha mesmo com um passo `false`, e
+      // então o foco fica onde o comando o deixou.
+      if (!ok && !this.disposed && editor.state.doc === req.doc) {
+        restoreFocus(req.origin, editor);
+      }
     }
   }
 
@@ -188,6 +206,20 @@ export class RteDialogController {
     this.cancel('cancelled');
   }
 
+  /**
+   * `@error` do `@defer` dos formulários de mídia (05c2a E2, Ruling 1):
+   * descarta o pedido como cancelamento (como a G7) e recusa só a mídia daí
+   * em diante.
+   */
+  failMedia(): void {
+    this.mediaBroken.set(true);
+    if (isDevMode()) console.warn(DEFER_FAILED);
+    // Só o pedido de mídia em curso: um link aberto depois de um pedido de
+    // mídia cancelado não é derrubado pela falha que chega atrasada.
+    const req = untracked(this.current);
+    if (req && isMediaKind(req.kind)) this.cancel('cancelled');
+  }
+
   /** Encerra o pedido em curso e libera o documento (G6). */
   private clear(): void {
     this.current.set(null);
@@ -212,6 +244,15 @@ function restoreFocus(origin: HTMLElement | null, editor: Editor | null): void {
     origin.isConnected &&
     origin !== editor?.view.dom &&
     !(origin as HTMLButtonElement).disabled;
-  if (usable) origin.focus();
-  else editor?.commands.focus();
+  if (usable) {
+    origin.focus();
+    return;
+  }
+  if (!editor) return;
+  editor.commands.focus();
+  // O `close()` nativo do `<dialog>` já pode ter devolvido o foco ao editável:
+  // o `focus()` do Tiptap então não faz nada, e o Firefox (que põe o cursor no
+  // início ao focar) vence a seleção de nó (vídeo, *embed*, imagem) quando o
+  // ProseMirror lê o DOM. `view.focus()` regrava a seleção no DOM já.
+  if (editor.view.hasFocus()) editor.view.focus();
 }

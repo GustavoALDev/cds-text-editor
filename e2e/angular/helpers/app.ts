@@ -52,28 +52,37 @@ export async function gotoApp(
 }
 
 /** O elemento host `rte-editor` de um editor do app. */
-export function editorHost(page: Page, id: RteE2eId | 'lifecycle'): Locator {
+export function editorHost(
+  page: Page,
+  id: RteE2eId | 'lifecycle' | 'draft' | 'draft-save' | 'paste-external',
+): Locator {
   return page.locator(`rte-editor[data-testid="${id}"]`);
 }
 
 /** Espera o `Editor` do Tiptap existir no host (depois da hidratação). */
 export async function waitForEditor(
   page: Page,
-  id: RteE2eId | 'lifecycle',
+  id: RteE2eId | 'lifecycle' | 'draft' | 'draft-save' | 'paste-external',
 ): Promise<void> {
   // `expect.poll` + `evaluate`, não `waitForFunction`: no WebKit, com o
   // zone.js carregando, o `waitForFunction` às vezes resolve com uma promessa
   // da zona (valor "verdadeiro") antes de o predicado valer.
   await expect
-    .poll(() =>
-      page.evaluate((testId) => {
-        const host = document.querySelector(
-          `rte-editor[data-testid="${testId}"]`,
-        );
-        return (
-          !!host && !!window.rteE2e && window.rteE2e.getRteEditor(host) !== null
-        );
-      }, id),
+    .poll(
+      () =>
+        page.evaluate((testId) => {
+          const host = document.querySelector(
+            `rte-editor[data-testid="${testId}"]`,
+          );
+          return (
+            !!host &&
+            !!window.rteE2e &&
+            window.rteE2e.getRteEditor(host) !== null
+          );
+        }, id),
+      // Firefox sob carga (2 workers) às vezes passa de 5 s para criar o editor
+      // da página `media` (vídeo e iframes no documento).
+      { timeout: 20_000 },
     )
     .toBe(true);
 }
@@ -93,7 +102,10 @@ export async function settlePage(page: Page): Promise<void> {
 }
 
 /** O editável (`.ProseMirror`) de um editor do app. */
-export function editableOf(page: Page, id: RteE2eId | 'lifecycle'): Locator {
+export function editableOf(
+  page: Page,
+  id: RteE2eId | 'lifecycle' | 'draft' | 'draft-save' | 'paste-external',
+): Locator {
   return editorHost(page, id).locator('.ProseMirror');
 }
 

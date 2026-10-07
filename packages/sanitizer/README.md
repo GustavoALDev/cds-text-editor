@@ -84,3 +84,5 @@ O que ele protege, o que não protege, as hipóteses de uso e a CSP recomendada 
 Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
 Repositório: cds-text-editor (monorepo). Licença MIT.
+
+> Projeto independente, **não afiliado à Tiptap nem ao ProseMirror**.

@@ -21,11 +21,23 @@ import {
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import { RteEditor } from '@cds/rte-angular';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { rteMaxChars, rteRequired } from '@cds/rte-angular/validators';
+import {
+  rteImagesHaveAlt,
+  rteMaxChars,
+  rteRequired,
+  rteUploadsFinished,
+} from '@cds/rte-angular/validators';
 import type { Editor } from '@tiptap/core';
 import type { Transaction } from '@tiptap/pm/state';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { installDataTransferShim } from './testing-support/data-transfer';
+import { installDialogShim } from './testing-support/dialog';
+import { createFakeUploadAdapter } from './testing-support/fake-upload-adapter';
+import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
+import { drainUploads, pngFile } from './testing-support/upload-dialog';
+import { fixAlt, imageSrc, pasteImage } from './testing-support/upload-forms';
+import { whenUploadReady } from './testing-support/upload-runtime';
 
 afterEach(() => {
   document.body
@@ -240,5 +252,114 @@ describe('Signal Forms: [formField] no rte-editor (D5, R5)', () => {
     expect(host.model().body).toBe('<p>ab</p>');
     expect(editor.getHTML()).toBe('<p>ab</p>');
     expect(probe.loads).toBe(0);
+  });
+});
+
+// Spec 05c2a, Tarefa 11: rteUploadsFinished e rteImagesHaveAlt (E19, R13).
+
+@Component({
+  selector: 'rte-test-signal-uploads',
+  imports: [RteEditor, FormField],
+  template: '<rte-editor [formField]="f.body" [upload]="upload" />',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class UploadHost {
+  readonly adapter = createFakeUploadAdapter();
+  readonly upload = { adapter: this.adapter };
+  readonly model = signal<Model>({ body: '<p>ab</p>' });
+  readonly editorRef = viewChild(RteEditor);
+  readonly f = form(this.model, (p) => {
+    rteUploadsFinished(p.body, () => this.editorRef());
+    rteImagesHaveAlt(p.body, () => this.editorRef());
+  });
+}
+
+describe('Signal Forms: validadores do envio (E19)', () => {
+  let restore: (() => void)[] = [];
+  beforeEach(() => {
+    restore = [
+      installDialogShim(),
+      installPopoverShim(),
+      installDataTransferShim(),
+    ];
+  });
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    for (const r of restore) r();
+  });
+
+  async function setupUploads() {
+    const fixture = TestBed.createComponent(UploadHost);
+    fixture.autoDetectChanges();
+    await settle(fixture);
+    const host = fixture.componentInstance;
+    const cmp = host.editorRef() as RteEditor;
+    await whenUploadReady(cmp);
+    await settle(fixture);
+    return { fixture, host, cmp, editor: cmp.editor() as Editor };
+  }
+
+  const kinds = (host: UploadHost) =>
+    host.f
+      .body()
+      .errors()
+      .map((e) => e.kind);
+
+  it('válido sem envio; inválido durante; válido depois de terminar', async () => {
+    const { fixture, host, cmp } = await setupUploads();
+    expect(host.f.body().valid()).toBe(true);
+    cmp.uploadFiles([pngFile()]);
+    await drainUploads(fixture);
+    expect(host.f.body().errors()).toEqual([
+      expect.objectContaining({ kind: 'rteUploadsPending', count: 1 }),
+    ]);
+    host.adapter.resolve(0, { url: '/a.png' });
+    await drainUploads(fixture);
+    // terminou: a imagem entra com alt null (E9), o outro validador acusa
+    expect(kinds(host)).toEqual(['rteImagesMissingAlt']);
+  });
+
+  it('válido depois de falhar e de cancelar, sem mudar o valor', async () => {
+    const { fixture, host, cmp } = await setupUploads();
+    const before = host.model().body;
+    cmp.uploadFiles([pngFile('a.png'), pngFile('b.png')]);
+    await drainUploads(fixture);
+    expect(host.f.body().errors()).toEqual([
+      expect.objectContaining({ kind: 'rteUploadsPending', count: 2 }),
+    ]);
+    host.adapter.reject(0, new Error('500'));
+    await drainUploads(fixture);
+    expect(host.f.body().errors()).toEqual([
+      expect.objectContaining({ kind: 'rteUploadsPending', count: 1 }),
+    ]);
+    cmp.cancelAllUploads();
+    await drainUploads(fixture);
+    expect(host.f.body().valid()).toBe(true);
+    expect(host.model().body).toBe(before);
+  });
+
+  it('imagem colada: rteImagesMissingAlt; válido depois do "Detalhes…" com texto, sem mudar a URL', async () => {
+    const { fixture, host, cmp, editor } = await setupUploads();
+    await pasteImage(fixture, editor, (url) =>
+      host.adapter.resolve(0, { url }),
+    );
+    expect(host.f.body().errors()).toEqual([
+      expect.objectContaining({ kind: 'rteImagesMissingAlt', count: 1 }),
+    ]);
+    await fixAlt(fixture, cmp, editor, 'Gato');
+    expect(host.f.body().valid()).toBe(true);
+    expect(imageSrc(editor)).toBe('/up.png');
+    expect(host.model().body).toContain('alt="Gato"');
+  });
+
+  it('imagem colada: válido depois do "Detalhes…" com decorativa', async () => {
+    const { fixture, host, cmp, editor } = await setupUploads();
+    await pasteImage(fixture, editor, (url) =>
+      host.adapter.resolve(0, { url }),
+    );
+    expect(host.f.body().invalid()).toBe(true);
+    await fixAlt(fixture, cmp, editor, null);
+    expect(host.f.body().valid()).toBe(true);
+    expect(imageSrc(editor)).toBe('/up.png');
   });
 });

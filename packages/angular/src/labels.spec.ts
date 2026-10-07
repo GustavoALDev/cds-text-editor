@@ -30,7 +30,8 @@ import {
   RTE_LABELS_PT_BR,
 } from '@cds/rte-angular/i18n';
 import type { Editor } from '@tiptap/core';
-import { describe, expect, it } from 'vitest';
+import { NodeSelection } from '@tiptap/pm/state';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   dialogField,
   installDialogShim,
@@ -41,7 +42,10 @@ import { selectText } from './testing-support/editors';
 import { fakeCoords, installGeometry } from './testing-support/geometry';
 import { installPopoverShim, isPopoverOpen } from './testing-support/popover';
 import { mergeLabels, readLabelsSource } from './labels/merge';
+import { dialogErrorText } from './dialogs/form-helpers';
 import { settle } from './testing-support/render';
+import { createFakeUploadAdapter } from './testing-support/fake-upload-adapter';
+import { whenUploadReady } from './testing-support/upload-runtime';
 
 function deepKeys(value: unknown, prefix = ''): string[] {
   if (value === null || typeof value !== 'object' || Array.isArray(value))
@@ -183,7 +187,7 @@ describe('rótulos dos menus flutuantes', () => {
 
   it('floating completa e sem string vazia nos três pacotes', () => {
     for (const [, pack] of packs) {
-      expect(Object.keys(pack.floating).length).toBe(12);
+      expect(Object.keys(pack.floating).length).toBe(19);
       for (const text of strings(pack.floating)) expect(text).not.toBe('');
     }
   });
@@ -697,6 +701,262 @@ describe('rótulos dos diálogos ao vivo (R16)', () => {
   });
 });
 
+// G19 (spec 05c1, V14): os diálogos de mídia trocam todos os textos ao vivo.
+
+const MEDIA_IMAGE_DOC =
+  '<p>ab</p><figure class="rt-figure rt-figure--center"><img src="/a.png" alt="A" width="800" height="600" loading="lazy" decoding="async"></figure><p>cd</p>';
+
+@Component({
+  selector: 'rte-test-live-media',
+  imports: [RteEditor],
+  template: `<rte-editor
+    [value]="value()"
+    [labels]="labels()"
+    toolbar="full"
+    (valueChange)="writes = writes + 1"
+  />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class LiveMediaHost {
+  readonly value = signal('<p></p>');
+  readonly lang = signal<keyof typeof PACKS>('en');
+  readonly labels = signal<RteLabelsSource | undefined>(
+    () => PACKS[this.lang()],
+  );
+  writes = 0;
+  readonly cmp = viewChildren(RteEditor);
+}
+
+/** Textos visíveis do diálogo, na ordem do documento. */
+function dialogTexts(dialog: HTMLDialogElement): string[] {
+  return [
+    ...dialog.querySelectorAll(
+      '.rte-dialog__title, .rte-dialog__label, .rte-dialog__hint, .rte-dialog__error, .rte-dialog__subtitle, .rte-dialog__legend, button, option',
+    ),
+  ].map((el) => el.textContent?.trim() ?? '');
+}
+
+describe('rótulos dos diálogos de mídia ao vivo (G19)', () => {
+  interface Live {
+    fixture: ReturnType<typeof TestBed.createComponent<LiveMediaHost>>;
+    host: LiveMediaHost;
+    cmp: RteEditor;
+    editor: Editor;
+  }
+
+  async function setup(doc: string): Promise<Live> {
+    const fixture = TestBed.createComponent(LiveMediaHost);
+    const host = fixture.componentInstance;
+    host.value.set(doc);
+    fixture.autoDetectChanges();
+    await settle(fixture);
+    const cmp = host.cmp()[0] as RteEditor;
+    return { fixture, host, cmp, editor: cmp.editor() as Editor };
+  }
+
+  /**
+   * Abre `kind`, deixa `fill` digitar e mostrar um erro, troca para pt-BR e
+   * devolve o diálogo; confere que nada foi aplicado nem emitido.
+   */
+  async function switchWhileOpen(
+    live: Live,
+    kind: 'image' | 'video' | 'embed',
+    fill: (dialog: HTMLDialogElement) => Promise<void>,
+  ): Promise<HTMLDialogElement> {
+    const { fixture, host, cmp, editor } = live;
+    let transactions = 0;
+    editor.on('transaction', ({ transaction }) => {
+      if (transaction.docChanged) transactions++;
+    });
+    const doc = editor.state.doc;
+    host.writes = 0;
+    expect(cmp.openDialog(kind)).toBe(true);
+    const dialog = await waitForDialog(fixture);
+    await fill(dialog);
+    dialog.querySelector<HTMLButtonElement>('.rte-dialog__apply')?.click();
+    await settle(fixture);
+    expect(dialog.open).toBe(true);
+    expect(dialog.querySelector('.rte-dialog__error')).not.toBeNull();
+
+    host.lang.set('pt-BR');
+    await settle(fixture);
+    expect(dialog.open).toBe(true);
+    expect(transactions).toBe(0);
+    expect(editor.state.doc).toBe(doc);
+    expect(host.writes).toBe(0);
+    return dialog;
+  }
+
+  let restoreDialog: () => void;
+  let restorePopover: () => void;
+  beforeEach(() => {
+    restoreDialog = installDialogShim();
+    restorePopover = installPopoverShim();
+  });
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    restorePopover();
+    restoreDialog();
+  });
+
+  it('imagem (editar) com erro visível: título, rótulos, dicas, erro, alinhamentos e ações em pt-BR; valores intactos', async () => {
+    const live = await setup(MEDIA_IMAGE_DOC);
+    let found = -1;
+    live.editor.state.doc.descendants((node, pos) => {
+      if (found < 0 && node.type.name === 'rtImage') found = pos;
+      return found < 0;
+    });
+    live.editor.view.dispatch(
+      live.editor.state.tr.setSelection(
+        NodeSelection.create(live.editor.state.doc, found),
+      ),
+    );
+    let src!: HTMLInputElement;
+    let alt!: HTMLInputElement;
+    let width!: HTMLInputElement;
+    const dialog = await switchWhileOpen(live, 'image', async (d) => {
+      src = dialogField(d, 'Image address (URL)');
+      alt = dialogField(d, 'Alternative text');
+      width = dialogField(d, 'Width (px)');
+      typeInto(src, 'javascript:x');
+      typeInto(alt, 'Uma foto');
+      typeInto(width, '640');
+    });
+
+    expect(dialogTexts(dialog)).toEqual([
+      'Detalhes da imagem',
+      'Endereço da imagem (URL)',
+      'Use https://… ou um caminho que comece com /.',
+      'Endereço não aceito. Use https:// ou um caminho que comece com /, num host permitido.',
+      'Texto alternativo',
+      'Descreva o que a imagem mostra. Marque "Imagem decorativa" só se ela não acrescentar informação.',
+      'Imagem decorativa',
+      'Legenda',
+      'Crédito',
+      'Alinhamento',
+      'Alinhar à esquerda',
+      'Centralizar',
+      'Alinhar à direita',
+      'Largura total',
+      'Largura (px)',
+      'Deixe vazio para o tamanho natural.',
+      'Remover',
+      'Cancelar',
+      'Aplicar',
+    ]);
+    expect(dialogField(dialog, 'Endereço da imagem (URL)')).toBe(src);
+    expect(dialogField(dialog, 'Texto alternativo')).toBe(alt);
+    expect(src.value).toBe('javascript:x');
+    expect(alt.value).toBe('Uma foto');
+    expect(width.value).toBe('640');
+  });
+
+  it('vídeo (inserir) com 3 faixas e um erro visível: legendas Faixa 1…3, "Remover faixa 2" e erro em pt-BR; valores intactos', async () => {
+    const live = await setup('<p></p>');
+    let inputs: HTMLInputElement[] = [];
+    const dialog = await switchWhileOpen(live, 'video', async (d) => {
+      typeInto(dialogField(d, 'Video address (URL)'), '/v.webm');
+      typeInto(dialogField(d, 'Caption'), 'Aula');
+      for (let i = 0; i < 3; i++) {
+        d.querySelector<HTMLButtonElement>('.rte-dialog__track-add')?.click();
+        await settle(live.fixture);
+      }
+      const sets = [
+        ...d.querySelectorAll<HTMLFieldSetElement>('.rte-dialog__fieldset'),
+      ];
+      expect(sets).toHaveLength(3);
+      // Faixa 2 sem rótulo: o único erro visível.
+      const values = [
+        ['/1.vtt', 'en', 'English'],
+        ['/2.vtt', 'es', ''],
+        ['/3.vtt', 'fr', 'Français'],
+      ];
+      sets.forEach((set, i) => {
+        const fields = [
+          ...set.querySelectorAll<HTMLInputElement>('input.rte-dialog__input'),
+        ];
+        fields.forEach((input, j) => typeInto(input, values[i]![j]!));
+      });
+      await settle(live.fixture);
+      inputs = [...d.querySelectorAll<HTMLInputElement>('input')];
+    });
+    const before = inputs.map((i) =>
+      i.type === 'checkbox' ? i.checked : i.value,
+    );
+
+    const track = (n: number) => [
+      `Faixa ${n}`,
+      'Tipo',
+      'Legendas para surdos (falas e sons)',
+      'Legendas (tradução)',
+      'Endereço da faixa (.vtt)',
+      'Código do idioma (BCP 47)',
+      'Rótulo',
+      ...(n === 2 ? ['Preencha este campo.'] : []),
+      'Padrão',
+      `Remover faixa ${n}`,
+    ];
+    expect(dialogTexts(dialog)).toEqual([
+      'Inserir vídeo',
+      'Endereço do vídeo (URL)',
+      'Use https://… ou um caminho que comece com /.',
+      'Endereço da imagem de capa (opcional)',
+      'Legenda (abaixo do vídeo)',
+      'Faixas de texto',
+      ...track(1),
+      ...track(2),
+      ...track(3),
+      'Acrescentar faixa',
+      'Cancelar',
+      'Aplicar',
+    ]);
+    expect(
+      [...dialog.querySelectorAll('.rte-dialog__legend')].map((l) =>
+        l.textContent?.trim(),
+      ),
+    ).toEqual(['Faixa 1', 'Faixa 2', 'Faixa 3']);
+    expect(
+      [
+        ...dialog.querySelectorAll('.rte-dialog__track-remove'),
+      ][1]?.textContent?.trim(),
+    ).toBe('Remover faixa 2');
+    // Os mesmos elementos, com os mesmos valores.
+    expect([...dialog.querySelectorAll<HTMLInputElement>('input')]).toEqual(
+      inputs,
+    );
+    expect(
+      inputs.map((i) => (i.type === 'checkbox' ? i.checked : i.value)),
+    ).toEqual(before);
+    expect(before).toContain('/v.webm');
+    expect(before).toContain('Français');
+  });
+
+  it('embed (inserir) com erro visível: título, rótulos, dica com provedores, erro e ações em pt-BR; valores intactos', async () => {
+    const live = await setup('<p></p>');
+    let url!: HTMLInputElement;
+    let caption!: HTMLInputElement;
+    const dialog = await switchWhileOpen(live, 'embed', async (d) => {
+      url = dialogField(d, 'Page address (URL)');
+      caption = dialogField(d, 'Caption');
+      typeInto(url, 'https://example.com/x');
+      typeInto(caption, 'Um vídeo');
+    });
+
+    expect(dialogTexts(dialog)).toEqual([
+      'Inserir conteúdo incorporado',
+      'Endereço da página (URL)',
+      'Aceitos: YouTube, Vimeo, Spotify.',
+      'Nenhum provedor ativo reconhece este endereço.',
+      'Legenda',
+      'Cancelar',
+      'Aplicar',
+    ]);
+    expect(dialogField(dialog, 'Endereço da página (URL)')).toBe(url);
+    expect(url.value).toBe('https://example.com/x');
+    expect(caption.value).toBe('Um vídeo');
+  });
+});
+
 const LINK_DOC = '<p>Texto <a href="https://example.com/">exemplo</a> fim</p>';
 
 @Component({
@@ -800,5 +1060,458 @@ describe('rótulos dos menus flutuantes ao vivo (R13)', () => {
       restoreGeometry();
       restorePopover();
     }
+  });
+});
+
+describe('rótulos de mídia (05c1)', () => {
+  const packs = [
+    ['en', RTE_LABELS_EN],
+    ['pt-BR', RTE_LABELS_PT_BR],
+    ['es', RTE_LABELS_ES],
+  ] as const;
+  const KEYS = {
+    toolbar: ['image', 'editImage', 'video', 'editVideo', 'embed', 'editEmbed'],
+    floating: [
+      'videoMenu',
+      'embedMenu',
+      'imageDetails',
+      'videoDetails',
+      'embedDetails',
+      'removeVideo',
+      'removeEmbed',
+    ],
+    dialogs: [
+      'imageInsertTitle',
+      'imageEditTitle',
+      'imageUrl',
+      'imageUrlHint',
+      'imageAlt',
+      'imageAltHint',
+      'imageDecorative',
+      'imageCaption',
+      'imageCredit',
+      'imageAlign',
+      'imageWidth',
+      'imageWidthHint',
+      'videoInsertTitle',
+      'videoEditTitle',
+      'videoUrl',
+      'videoUrlHint',
+      'videoPoster',
+      'videoCaption',
+      'videoTracks',
+      'videoTrack',
+      'videoTrackKind',
+      'videoTrackCaptions',
+      'videoTrackSubtitles',
+      'videoTrackUrl',
+      'videoTrackLang',
+      'videoTrackLabel',
+      'videoTrackDefault',
+      'videoTrackAdd',
+      'videoTrackRemove',
+      'videoCaptionsHint',
+      'embedInsertTitle',
+      'embedEditTitle',
+      'embedUrl',
+      'embedUrlHint',
+      'embedCaption',
+      'errorMediaUrl',
+      'errorEmbedUrl',
+    ],
+  } as const;
+
+  it('as chaves novas existem e têm texto nos três pacotes', () => {
+    for (const [name, pack] of packs) {
+      for (const [section, keys] of Object.entries(KEYS)) {
+        const bag = (
+          pack as unknown as Record<string, Record<string, unknown>>
+        )[section];
+        for (const key of keys) {
+          const value = bag?.[key];
+          const text =
+            typeof value === 'function'
+              ? key === 'embedUrlHint'
+                ? (value as (p: string[]) => string)(['YouTube', 'Vimeo'])
+                : (value as (n: number) => string)(3)
+              : value;
+          expect(typeof text, `${name}.${section}.${key}`).toBe('string');
+          expect(text, `${name}.${section}.${key}`).not.toBe('');
+        }
+      }
+    }
+  });
+
+  it('cópia da tabela', () => {
+    expect(RTE_LABELS_EN.dialogs.videoTrack(2)).toBe('Track 2');
+    expect(RTE_LABELS_EN.dialogs.videoTrackRemove(3)).toBe('Remove track 3');
+    expect(RTE_LABELS_PT_BR.dialogs.embedUrlHint(['YouTube', 'Vimeo'])).toBe(
+      'Aceitos: YouTube, Vimeo.',
+    );
+    expect(RTE_LABELS_ES.dialogs.embedUrlHint(['YouTube'])).toBe(
+      'Se aceptan: YouTube.',
+    );
+    expect(RTE_LABELS_ES.floating.removeEmbed).toBe(
+      'Quitar contenido incrustado',
+    );
+    expect(RTE_LABELS_PT_BR.toolbar.editEmbed).toBe(
+      'Editar conteúdo incorporado',
+    );
+    expect(RTE_LABELS_EN.dialogs.imageUrlHint).toBe(
+      RTE_LABELS_EN.dialogs.videoUrlHint,
+    );
+  });
+
+  it('mergeLabels protege as funções novas de dialogs', () => {
+    const merged = mergeLabels(RTE_LABELS_EN, {
+      dialogs: {
+        videoTrack: () => 7 as never,
+        videoTrackRemove: () => {
+          throw new Error('x');
+        },
+        embedUrlHint: (p) => p.join('|'),
+      },
+    });
+    expect(merged.dialogs.videoTrack(1)).toBe('Track 1');
+    expect(merged.dialogs.videoTrackRemove(2)).toBe('Remove track 2');
+    expect(merged.dialogs.embedUrlHint(['a', 'b'])).toBe('a|b');
+  });
+});
+
+describe('rótulos do envio de arquivos (05c2a, E20)', () => {
+  const packs = [
+    ['en', RTE_LABELS_EN],
+    ['pt-BR', RTE_LABELS_PT_BR],
+    ['es', RTE_LABELS_ES],
+  ] as const;
+  const REASONS = [
+    'type',
+    'size',
+    'count',
+    'network',
+    'server',
+    'response',
+    'unavailable',
+  ] as const;
+
+  const COPY = {
+    en: {
+      region: 'Uploads',
+      progress: 'Uploading a.png',
+      queued: 'a.png (waiting)',
+      cancel: 'Cancel upload of a.png',
+      start1: 'Uploading 1 file.',
+      start3: 'Uploading 3 files.',
+      done: 'a.png uploaded.',
+      cancelled: 'Upload of a.png cancelled.',
+      error: {
+        type: 'Could not upload a.png: file type not accepted.',
+        size: 'Could not upload a.png: file too large.',
+        count: 'Could not upload a.png: too many files at once.',
+        network: 'Could not upload a.png: connection failed.',
+        server: 'Could not upload a.png: the server refused it.',
+        response: 'Could not upload a.png: invalid server response.',
+        unavailable: 'Could not upload a.png: the editor is not editable.',
+      },
+      mediaSource: 'Source',
+      mediaSourceFile: 'File',
+      mediaSourceUrl: 'Address (URL)',
+      imageFile: 'Image file',
+      videoFile: 'Video file',
+      fileHint: 'Accepted: PNG, JPEG. Up to 10 MB.',
+      errorFileRequired: 'Choose a file.',
+      errorFileType: 'This file type is not accepted.',
+      errorFileSize: 'The file is larger than 10 MB.',
+      pending1: 'Wait for 1 upload to finish.',
+      pending2: 'Wait for 2 uploads to finish.',
+      missingAlt1: '1 image has no alternative text.',
+      missingAlt2: '2 images have no alternative text.',
+    },
+    'pt-BR': {
+      region: 'Envios',
+      progress: 'Enviando a.png',
+      queued: 'a.png (na fila)',
+      cancel: 'Cancelar envio de a.png',
+      start1: 'Enviando 1 arquivo.',
+      start3: 'Enviando 3 arquivos.',
+      done: 'a.png enviado.',
+      cancelled: 'Envio de a.png cancelado.',
+      error: {
+        type: 'Não foi possível enviar a.png: tipo de arquivo não aceito.',
+        size: 'Não foi possível enviar a.png: arquivo grande demais.',
+        count: 'Não foi possível enviar a.png: arquivos demais de uma vez.',
+        network: 'Não foi possível enviar a.png: falha de conexão.',
+        server: 'Não foi possível enviar a.png: o servidor recusou.',
+        response:
+          'Não foi possível enviar a.png: resposta inválida do servidor.',
+        unavailable:
+          'Não foi possível enviar a.png: o editor não está editável.',
+      },
+      mediaSource: 'Origem',
+      mediaSourceFile: 'Arquivo',
+      mediaSourceUrl: 'Endereço (URL)',
+      imageFile: 'Arquivo de imagem',
+      videoFile: 'Arquivo de vídeo',
+      fileHint: 'Aceitos: PNG, JPEG. Até 10 MB.',
+      errorFileRequired: 'Escolha um arquivo.',
+      errorFileType: 'Este tipo de arquivo não é aceito.',
+      errorFileSize: 'O arquivo passa de 10 MB.',
+      pending1: 'Aguarde o fim de 1 envio.',
+      pending2: 'Aguarde o fim de 2 envios.',
+      missingAlt1: '1 imagem sem texto alternativo.',
+      missingAlt2: '2 imagens sem texto alternativo.',
+    },
+    es: {
+      region: 'Envíos',
+      progress: 'Enviando a.png',
+      queued: 'a.png (en cola)',
+      cancel: 'Cancelar envío de a.png',
+      start1: 'Enviando 1 archivo.',
+      start3: 'Enviando 3 archivos.',
+      done: 'a.png enviado.',
+      cancelled: 'Envío de a.png cancelado.',
+      error: {
+        type: 'No se pudo enviar a.png: tipo de archivo no aceptado.',
+        size: 'No se pudo enviar a.png: archivo demasiado grande.',
+        count: 'No se pudo enviar a.png: demasiados archivos a la vez.',
+        network: 'No se pudo enviar a.png: fallo de conexión.',
+        server: 'No se pudo enviar a.png: el servidor lo rechazó.',
+        response: 'No se pudo enviar a.png: respuesta del servidor no válida.',
+        unavailable: 'No se pudo enviar a.png: el editor no es editable.',
+      },
+      mediaSource: 'Origen',
+      mediaSourceFile: 'Archivo',
+      mediaSourceUrl: 'Dirección (URL)',
+      imageFile: 'Archivo de imagen',
+      videoFile: 'Archivo de vídeo',
+      fileHint: 'Se aceptan: PNG, JPEG. Hasta 10 MB.',
+      errorFileRequired: 'Elige un archivo.',
+      errorFileType: 'Este tipo de archivo no se acepta.',
+      errorFileSize: 'El archivo supera 10 MB.',
+      pending1: 'Espera a que termine 1 envío.',
+      pending2: 'Espera a que terminen 2 envíos.',
+      missingAlt1: '1 imagen sin texto alternativo.',
+      missingAlt2: '2 imágenes sin texto alternativo.',
+    },
+  } as const;
+
+  it('fixa o número de chaves das seções', () => {
+    for (const [name, pack] of packs) {
+      expect(Object.keys(pack.upload).length, name).toBe(8);
+      expect(Object.keys(pack.errors).length, name).toBe(5);
+      expect(Object.keys(pack.dialogs).length, name).toBe(82);
+    }
+  });
+
+  it('cada texto novo é igual ao da tabela, nos três idiomas', () => {
+    for (const [name, pack] of packs) {
+      const c = COPY[name];
+      const u = pack.upload;
+      expect(u.region, name).toBe(c.region);
+      expect(u.progress('a.png'), name).toBe(c.progress);
+      expect(u.queued('a.png'), name).toBe(c.queued);
+      expect(u.cancel('a.png'), name).toBe(c.cancel);
+      expect(u.announceStart(1), name).toBe(c.start1);
+      expect(u.announceStart(3), name).toBe(c.start3);
+      expect(u.announceDone('a.png'), name).toBe(c.done);
+      expect(u.announceCancelled('a.png'), name).toBe(c.cancelled);
+      for (const reason of REASONS)
+        expect(u.announceError('a.png', reason), `${name}.${reason}`).toBe(
+          c.error[reason],
+        );
+      const d = pack.dialogs;
+      expect(d.mediaSource, name).toBe(c.mediaSource);
+      expect(d.mediaSourceFile, name).toBe(c.mediaSourceFile);
+      expect(d.mediaSourceUrl, name).toBe(c.mediaSourceUrl);
+      expect(d.imageFile, name).toBe(c.imageFile);
+      expect(d.videoFile, name).toBe(c.videoFile);
+      expect(d.fileHint(['PNG', 'JPEG'], 10), name).toBe(c.fileHint);
+      expect(d.errorFileRequired, name).toBe(c.errorFileRequired);
+      expect(d.errorFileType, name).toBe(c.errorFileType);
+      expect(d.errorFileSize(10), name).toBe(c.errorFileSize);
+      expect(pack.errors.rteUploadsPending(1), name).toBe(c.pending1);
+      expect(pack.errors.rteUploadsPending(2), name).toBe(c.pending2);
+      expect(pack.errors.rteImagesMissingAlt(1), name).toBe(c.missingAlt1);
+      expect(pack.errors.rteImagesMissingAlt(2), name).toBe(c.missingAlt2);
+    }
+  });
+
+  it('literais do plano', () => {
+    expect(RTE_LABELS_EN.upload.cancel('a.png')).toBe('Cancel upload of a.png');
+    expect(RTE_LABELS_PT_BR.upload.announceStart(2)).toBe(
+      'Enviando 2 arquivos.',
+    );
+    expect(RTE_LABELS_ES.dialogs.fileHint(['PNG', 'JPEG'], 1)).toBe(
+      'Se aceptan: PNG, JPEG. Hasta 1 MB.',
+    );
+    expect(RTE_LABELS_PT_BR.errors.rteImagesMissingAlt(1)).toBe(
+      '1 imagem sem texto alternativo.',
+    );
+  });
+
+  it('mergeLabels protege as funções de upload e mescla region', () => {
+    const merged = mergeLabels(RTE_LABELS_EN, {
+      upload: {
+        cancel: () => 7 as never,
+        region: 'X',
+        progress: () => {
+          throw new Error('x');
+        },
+        announceStart: (c) => `n=${c}`,
+      },
+    });
+    expect(merged.upload.cancel('a')).toBe('Cancel upload of a');
+    expect(merged.upload.region).toBe('X');
+    expect(merged.upload.progress('a')).toBe('Uploading a');
+    expect(merged.upload.announceStart(2)).toBe('n=2');
+    expect(merged.upload.queued('a')).toBe('a (waiting)');
+  });
+
+  it('mergeLabels protege as funções novas de dialogs e errors', () => {
+    const merged = mergeLabels(RTE_LABELS_EN, {
+      dialogs: {
+        fileHint: () => 1 as never,
+        errorFileSize: (m) => `big ${m}`,
+        errorFileType: 'T',
+      },
+      errors: {
+        rteUploadsPending: () => {
+          throw new Error('x');
+        },
+        rteImagesMissingAlt: (c) => `alt ${c}`,
+      },
+    });
+    expect(merged.dialogs.fileHint(['A'], 2)).toBe('Accepted: A. Up to 2 MB.');
+    expect(merged.dialogs.errorFileSize(3)).toBe('big 3');
+    expect(merged.dialogs.errorFileType).toBe('T');
+    expect(merged.errors.rteUploadsPending(1)).toBe(
+      'Wait for 1 upload to finish.',
+    );
+    expect(merged.errors.rteImagesMissingAlt(4)).toBe('alt 4');
+  });
+
+  it('mergeLabels ignora upload que não é objeto', () => {
+    expect(mergeLabels(RTE_LABELS_EN, { upload: 1 as never }).upload).toBe(
+      RTE_LABELS_EN.upload,
+    );
+  });
+});
+
+@Component({
+  selector: 'rte-test-upload-labels',
+  imports: [RteEditor],
+  template: `<rte-editor [upload]="upload" [labels]="labels" />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class UploadLabelsHost {
+  readonly upload = { adapter: createFakeUploadAdapter() };
+  readonly labels: RteLabelsInput = {
+    upload: { region: 'Fila', announceStart: (c: number) => `n=${c}` },
+  };
+}
+
+describe('rótulos do envio na tela (E20, R14)', () => {
+  let restoreDialog: () => void;
+  beforeEach(() => {
+    restoreDialog = installDialogShim();
+  });
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    restoreDialog();
+  });
+
+  it('rótulos parciais do consumidor chegam à bandeja e à região; o resto vem do en', async () => {
+    const fixture = TestBed.createComponent(UploadLabelsHost);
+    fixture.autoDetectChanges();
+    await settle(fixture);
+    const cmp = fixture.debugElement.query(
+      (el) => el.componentInstance instanceof RteEditor,
+    ).componentInstance as RteEditor;
+    await whenUploadReady(cmp);
+    cmp.uploadFiles([new File(['x'], 'a.png', { type: 'image/png' })]);
+    await settle(fixture);
+    const root = fixture.nativeElement as HTMLElement;
+    expect(
+      root.querySelector('section.rte-uploads')?.getAttribute('aria-label'),
+    ).toBe('Fila');
+    expect(
+      root.querySelector('.rte-uploads__progress')?.getAttribute('aria-label'),
+    ).toBe('Uploading a.png');
+    expect(
+      root.querySelector('.rte-uploads__status')?.textContent?.trim(),
+    ).toBe('n=1');
+  });
+});
+
+describe('erros do campo de arquivo no diálogo (05c2a E14, Tarefa 10)', () => {
+  const kinds = (maxMegabytes: number) =>
+    [
+      { kind: 'rteFileRequired' },
+      { kind: 'rteFileType' },
+      { kind: 'rteFileSize', maxMegabytes },
+    ] as unknown as Parameters<typeof dialogErrorText>[0];
+
+  it('en e pt-BR, com o teto do erro', () => {
+    for (const [pack, expected] of [
+      [
+        RTE_LABELS_EN,
+        [
+          'Choose a file.',
+          'This file type is not accepted.',
+          'The file is larger than 10 MB.',
+        ],
+      ],
+      [
+        RTE_LABELS_PT_BR,
+        [
+          'Escolha um arquivo.',
+          'Este tipo de arquivo não é aceito.',
+          'O arquivo passa de 10 MB.',
+        ],
+      ],
+    ] as const) {
+      const labels = pack.dialogs;
+      const errors = kinds(10);
+      expect(errors.map((e) => dialogErrorText([e], labels))).toEqual(expected);
+    }
+  });
+});
+
+describe('rótulos do rascunho (05c2b S14)', () => {
+  const packs = [
+    ['en', RTE_LABELS_EN],
+    ['pt-BR', RTE_LABELS_PT_BR],
+    ['es', RTE_LABELS_ES],
+  ] as const;
+  const AT = Date.UTC(2026, 9, 7, 15, 30);
+
+  it('seção completa nos três idiomas', () => {
+    for (const [name, pack] of packs) {
+      expect(Object.keys(pack.draft).sort(), name).toEqual([
+        'available',
+        'discard',
+        'region',
+        'restore',
+      ]);
+      expect(pack.draft.region, name).not.toBe('');
+      expect(pack.draft.restore, name).not.toBe('');
+      expect(pack.draft.discard, name).not.toBe('');
+      expect(pack.draft.available(AT), name).toMatch(/2026/);
+    }
+    expect(deepKeys(RTE_LABELS_PT_BR.draft)).toEqual(
+      deepKeys(RTE_LABELS_EN.draft),
+    );
+    expect(RTE_LABELS_PT_BR.draft.restore).toBe('Restaurar');
+    expect(RTE_LABELS_ES.draft.discard).toBe('Descartar');
+    expect(RTE_LABELS_EN.draft.restore).toBe('Restore');
+  });
+
+  it('mergeLabels mescla draft e protege a função', () => {
+    const merged = mergeLabels(RTE_LABELS_EN, {
+      draft: { restore: 'Voltar', available: () => 7 as never },
+    });
+    expect(merged.draft.restore).toBe('Voltar');
+    expect(merged.draft.discard).toBe('Discard');
+    expect(merged.draft.available(AT)).toBe(RTE_LABELS_EN.draft.available(AT));
   });
 });

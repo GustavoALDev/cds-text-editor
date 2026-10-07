@@ -823,19 +823,25 @@ describe('editor.css: diálogos (spec 05b2a, G20)', () => {
     ).toBe(true);
   });
 
-  it('forced-colors: dica do diálogo em CanvasText (o GrayText do --rte-text-muted fica abaixo de 4,5:1)', () => {
-    const rules: Rule[] = [];
-    root.walkAtRules('media', (at) => {
-      if (/forced-colors:\s*active/.test(at.params))
-        at.walkRules((r) => void rules.push(r));
-    });
-    const hint = rules.filter((r) =>
-      r.selectors.some((s) => s.trim().endsWith('.rte-dialog__hint')),
-    );
-    expect(hint.flatMap((r) => declarations(r))).toContainEqual(
-      expect.objectContaining({ prop: 'color', value: 'CanvasText' }),
-    );
-  });
+  // A dica e a URL somente leitura (05c1, N31 no WebKit) não são texto
+  // inaplicável: em CanvasText, porque o GrayText do --rte-text-muted fica
+  // abaixo de 4,5:1 nos motores que não forçam as cores.
+  it.each(['.rte-dialog__hint', '.rte-dialog__readonly'])(
+    'forced-colors: %s do diálogo em CanvasText (o GrayText do --rte-text-muted fica abaixo de 4,5:1)',
+    (selector) => {
+      const rules: Rule[] = [];
+      root.walkAtRules('media', (at) => {
+        if (/forced-colors:\s*active/.test(at.params))
+          at.walkRules((r) => void rules.push(r));
+      });
+      const matched = rules.filter((r) =>
+        r.selectors.some((s) => s.trim().endsWith(selector)),
+      );
+      expect(matched.flatMap((r) => declarations(r))).toContainEqual(
+        expect.objectContaining({ prop: 'color', value: 'CanvasText' }),
+      );
+    },
+  );
 
   it('sem animation/transition nas regras dos diálogos', () => {
     const moving = dialogRules()
@@ -985,5 +991,340 @@ describe('editor.css: menus flutuantes (spec 05b2b, M18)', () => {
       .filter((d) => /^(?:animation|transition)(?:-|$)/.test(d.prop))
       .map((d) => `${d.prop}: ${d.value}`);
     expect(moving).toEqual([]);
+  });
+});
+
+describe('editor.css: mídia (spec 05c1, V11, V15)', () => {
+  const rulesEnding = (cls: string): Rule[] =>
+    styleRules().filter((r) =>
+      r.selectors.some((s) => new RegExp(`\\.${cls}$`).test(s.trim())),
+    );
+  const declsOf = (rules: Rule[]): Declaration[] =>
+    rules.flatMap((r) => declarations(r));
+
+  it.each([
+    'rte-dialog__fieldset',
+    'rte-dialog__legend',
+    'rte-dialog__readonly',
+    'rte-dialog__tracks',
+    'rte-dialog__subtitle',
+    'rte-dialog__track-add',
+    'rte-dialog__track-remove',
+  ])('%s: regra em rte.components sob .rte-editor', (cls) => {
+    const rules = rulesEnding(cls);
+    expect(rules.length).toBeGreaterThan(0);
+    for (const r of rules) {
+      expect(layerOf(r)).toBe('rte.components');
+      expect(
+        r.selectors.every((s) => s.trim().startsWith('.rte-editor ')),
+      ).toBe(true);
+    }
+  });
+
+  it('o fieldset tem borda, raio e grade em tokens', () => {
+    const decls = declsOf(rulesEnding('rte-dialog__fieldset'));
+    expect(decls).toContainEqual(
+      expect.objectContaining({
+        prop: 'border',
+        value: '1px solid var(--rte-border)',
+      }),
+    );
+    expect(decls).toContainEqual(
+      expect.objectContaining({
+        prop: 'border-radius',
+        value: 'var(--rte-radius)',
+      }),
+    );
+    expect(decls).toContainEqual(
+      expect.objectContaining({ prop: 'display', value: 'grid' }),
+    );
+  });
+
+  it('a legenda tem o peso do rótulo e o texto de leitura usa --rte-text-muted', () => {
+    expect(declsOf(rulesEnding('rte-dialog__legend'))).toContainEqual(
+      expect.objectContaining({ prop: 'font-weight', value: '500' }),
+    );
+    const readonly = declsOf(rulesEnding('rte-dialog__readonly'));
+    expect(readonly).toContainEqual(
+      expect.objectContaining({ prop: 'overflow-wrap', value: 'anywhere' }),
+    );
+    expect(readonly).toContainEqual(
+      expect.objectContaining({
+        prop: 'color',
+        value: 'var(--rte-text-muted)',
+      }),
+    );
+  });
+
+  it('os botões de faixa têm alvo de pelo menos 24 px', () => {
+    for (const cls of ['rte-dialog__track-add', 'rte-dialog__track-remove']) {
+      const decls = declsOf(rulesEnding(cls));
+      expect(
+        decls.some(
+          (d) => d.prop === 'min-block-size' && d.value.includes('24px'),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it('pointer-events: none no vídeo e no iframe só com o editável (V11)', () => {
+    const withNone = styleRules().filter((r) =>
+      declarations(r).some(
+        (d) => d.prop === 'pointer-events' && d.value === 'none',
+      ),
+    );
+    const media = withNone.filter((r) =>
+      r.selectors.some((s) => /rt-figure--video|rt-embed/.test(s)),
+    );
+    expect(media.length).toBeGreaterThan(0);
+    for (const r of media)
+      for (const s of r.selectors)
+        expect(s).toContain(".rte-content[contenteditable='true']");
+    const content = readFileSync(CONTENT_CSS_FILE, 'utf8');
+    expect(content).not.toMatch(/pointer-events/);
+  });
+
+  it('forced-colors: .rte-dialog__fieldset { border-color: CanvasText }', () => {
+    const rules: Rule[] = [];
+    root.walkAtRules('media', (at) => {
+      if (/forced-colors:\s*active/.test(at.params))
+        at.walkRules((r) => void rules.push(r));
+    });
+    const fieldset = rules.filter((r) =>
+      r.selectors.some((s) => s.trim().endsWith('.rte-dialog__fieldset')),
+    );
+    expect(
+      declsOf(fieldset).some(
+        (d) => d.prop === 'border-color' && d.value === 'CanvasText',
+      ),
+    ).toBe(true);
+  });
+});
+
+describe('editor.css: envio de arquivos (spec 05c2a, E21)', () => {
+  /** Regras cujo seletor termina na classe (com pseudo-elemento opcional). */
+  const rulesOf = (cls: string): Rule[] =>
+    styleRules().filter((r) =>
+      r.selectors.some((s) =>
+        new RegExp(`\\.${cls}(?:::?[\\w-]+)*$`).test(s.trim()),
+      ),
+    );
+  const outsideForced = (rules: Rule[]): Rule[] =>
+    rules.filter(
+      (r) =>
+        !enclosingAtRules(r).some(
+          (a) => a.name === 'media' && /forced-colors/.test(a.params),
+        ),
+    );
+  const declsOf = (rules: Rule[]): Declaration[] =>
+    rules.flatMap((r) => declarations(r));
+  const has = (cls: string, prop: string, value: string): boolean =>
+    declsOf(outsideForced(rulesOf(cls))).some(
+      (d) => d.prop === prop && d.value === value,
+    );
+  const forcedRules = (): Rule[] => {
+    const rules: Rule[] = [];
+    root.walkAtRules('media', (at) => {
+      if (/forced-colors:\s*active/.test(at.params))
+        at.walkRules((r) => void rules.push(r));
+    });
+    return rules;
+  };
+
+  const CLASSES = [
+    'rte-uploads',
+    'rte-uploads__list',
+    'rte-uploads__item',
+    'rte-uploads__name',
+    'rte-uploads__progress',
+    'rte-uploads__cancel',
+    'rte-uploads__status',
+    'rte-upload-marker',
+    'rte-upload-marker__name',
+    'rte-upload-marker__progress',
+    'rte-upload-marker__preview',
+    'rte-upload-marker--queued',
+    'rte-dialog__source',
+  ];
+
+  it.each(CLASSES)('%s: regras em rte.components, sob .rte-editor', (cls) => {
+    const rules = rulesOf(cls);
+    expect(rules.length).toBeGreaterThan(0);
+    for (const r of rules) {
+      expect(layerOf(r)).toBe('rte.components');
+      for (const s of r.selectors) expect(s.trim()).toMatch(/^\.rte-editor /);
+    }
+  });
+
+  it('nenhuma regra do envio no content.css (spec 06)', () => {
+    const content = readFileSync(CONTENT_CSS_FILE, 'utf8');
+    expect(content).not.toMatch(/rte-upload|rte-dialog__source/);
+  });
+
+  const DRAFT_CLASSES = [
+    'rte-draft',
+    'rte-draft__text',
+    'rte-draft__actions',
+    'rte-draft__status',
+  ];
+
+  it.each(DRAFT_CLASSES)(
+    '%s (rascunho): regras em rte.components, sob .rte-editor',
+    (cls) => {
+      const rules = rulesOf(cls);
+      expect(rules.length).toBeGreaterThan(0);
+      for (const r of rules) {
+        expect(layerOf(r)).toBe('rte.components');
+        for (const s of r.selectors) expect(s.trim()).toMatch(/^\.rte-editor /);
+      }
+    },
+  );
+
+  it('rascunho: nada no content.css, cores só em --rte-*, alvos de 24 px', () => {
+    const content = readFileSync(CONTENT_CSS_FILE, 'utf8');
+    expect(content).not.toMatch(/rte-draft/);
+    const button = styleRules().filter((r) =>
+      r.selectors.some((x) =>
+        /\.rte-draft__actions > button(?::[\w-]+)?$/.test(x.trim()),
+      ),
+    );
+    expect(button.length).toBeGreaterThan(0);
+    for (const d of declsOf([...DRAFT_CLASSES.flatMap(rulesOf), ...button])) {
+      if (!/color|^border|^background|^outline/.test(d.prop)) continue;
+      const colors = d.value
+        .split(/\s+/)
+        .filter((t) => !NON_COLOR_TOKEN.test(t));
+      for (const c of colors)
+        expect(c, `${d.prop}: ${d.value}`).toMatch(COLOR_VALUE);
+    }
+    expect(
+      declsOf(button).some(
+        (d) => d.prop === 'min-block-size' && /24px/.test(d.value),
+      ),
+    ).toBe(true);
+  });
+
+  it('cores do envio só em --rte-* (CanvasText/Highlight em forced-colors), inclusive accent-color', () => {
+    const rules = CLASSES.flatMap(rulesOf);
+    for (const d of declsOf(rules)) {
+      if (!/color|^border|^background|^outline/.test(d.prop)) continue;
+      const forced = enclosingAtRules(d).some(
+        (a) => a.name === 'media' && /forced-colors/.test(a.params),
+      );
+      const colors = d.value
+        .split(/\s+/)
+        .filter((t) => !NON_COLOR_TOKEN.test(t));
+      for (const c of colors) {
+        if (forced)
+          expect(c, `${d.prop}: ${d.value}`).toMatch(
+            /^(?:CanvasText|Highlight|var\(--rte-[a-z0-9-]+\)|transparent)$/,
+          );
+        else expect(c, `${d.prop}: ${d.value}`).toMatch(COLOR_VALUE);
+      }
+    }
+  });
+
+  it('bandeja: borda superior --rte-border, lista sem marcadores, item em grade, nome que quebra', () => {
+    expect(
+      has('rte-uploads', 'border-block-start', '1px solid var(--rte-border)'),
+    ).toBe(true);
+    expect(has('rte-uploads__list', 'list-style', 'none')).toBe(true);
+    expect(has('rte-uploads__item', 'display', 'grid')).toBe(true);
+    expect(has('rte-uploads__name', 'overflow-wrap', 'anywhere')).toBe(true);
+  });
+
+  it('progresso: accent-color e barra em tokens, altura ≥ 8 px, borda legível', () => {
+    expect(
+      has('rte-uploads__progress', 'accent-color', 'var(--rte-primary-text)'),
+    ).toBe(true);
+    const decls = declsOf(outsideForced(rulesOf('rte-uploads__progress')));
+    expect(
+      decls.some((d) => d.prop === 'block-size' && /8px/.test(d.value)),
+    ).toBe(true);
+    expect(
+      decls.some(
+        (d) =>
+          d.prop === 'border' && d.value === '1px solid var(--rte-text-muted)',
+      ),
+    ).toBe(true);
+    // a barra preenchida dos três motores (sem o verde do UA com borda de autor)
+    const value = styleRules().filter((r) =>
+      r.selectors.some((s) => /progress-value$|progress-bar$/.test(s)),
+    );
+    expect(value.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('botão cancelar com alvo ≥ 24 × 24 px e foco visível', () => {
+    const decls = declsOf(outsideForced(rulesOf('rte-uploads__cancel')));
+    expect(
+      decls.some((d) => d.prop === 'min-inline-size' && d.value === '24px'),
+    ).toBe(true);
+    expect(
+      decls.some(
+        (d) => d.prop === 'min-block-size' && d.value.includes('24px'),
+      ),
+    ).toBe(true);
+    expect(
+      styleRules().some((r) =>
+        r.selectors.some((s) => /rte-uploads__cancel:focus-visible$/.test(s)),
+      ),
+    ).toBe(true);
+  });
+
+  it('região de status visualmente oculta (fora da tela, ainda no leitor)', () => {
+    expect(has('rte-uploads__status', 'position', 'absolute')).toBe(true);
+    expect(has('rte-uploads__status', 'clip-path', 'inset(50%)')).toBe(true);
+    expect(has('rte-uploads__status', 'overflow', 'hidden')).toBe(true);
+    expect(has('rte-uploads__status', 'display', 'none')).toBe(false);
+  });
+
+  it('marcador: inline-flex, borda tracejada, raio, sem seleção; miniatura contida; fila', () => {
+    expect(has('rte-upload-marker', 'display', 'inline-flex')).toBe(true);
+    expect(
+      has('rte-upload-marker', 'border', '1px dashed var(--rte-border)'),
+    ).toBe(true);
+    expect(has('rte-upload-marker', 'border-radius', 'var(--rte-radius)')).toBe(
+      true,
+    );
+    expect(has('rte-upload-marker', 'user-select', 'none')).toBe(true);
+    expect(has('rte-upload-marker__preview', 'object-fit', 'contain')).toBe(
+      true,
+    );
+    expect(
+      declsOf(rulesOf('rte-upload-marker__preview')).some(
+        (d) => d.prop === 'max-block-size' && /var\(--rte-/.test(d.value),
+      ),
+    ).toBe(true);
+    expect(
+      has('rte-upload-marker--queued', 'color', 'var(--rte-text-muted)'),
+    ).toBe(true);
+  });
+
+  it('origem do diálogo em linha com espaçamento', () => {
+    expect(has('rte-dialog__source', 'display', 'flex')).toBe(true);
+    expect(
+      declsOf(rulesOf('rte-dialog__source')).some((d) => d.prop === 'gap'),
+    ).toBe(true);
+  });
+
+  it('forced-colors: progresso em Highlight com borda CanvasText; marcador CanvasText', () => {
+    const forced = forcedRules();
+    const decls = (cls: string) =>
+      declsOf(
+        forced.filter((r) =>
+          r.selectors.some((s) => new RegExp(`\\.${cls}$`).test(s.trim())),
+        ),
+      );
+    expect(decls('rte-uploads__progress')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ prop: 'accent-color', value: 'Highlight' }),
+        expect.objectContaining({ prop: 'border-color', value: 'CanvasText' }),
+      ]),
+    );
+    expect(decls('rte-upload-marker')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ prop: 'border-color', value: 'CanvasText' }),
+      ]),
+    );
   });
 });

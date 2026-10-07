@@ -12,8 +12,11 @@ import { getRteHtml } from '@cds/rte-core/extensions';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import { RteEditor, type RteToolbarConfig } from '@cds/rte-angular';
 import type { Editor } from '@tiptap/core';
-import { EditorState } from '@tiptap/pm/state';
-import { documentDialogBusy } from './dialogs/controller';
+import { EditorState, NodeSelection } from '@tiptap/pm/state';
+import {
+  documentDialogBusy,
+  type RteDialogController,
+} from './dialogs/controller';
 import {
   afterEach,
   beforeEach,
@@ -28,7 +31,11 @@ import {
   installDialogShim,
   waitForDialog,
 } from './testing-support/dialog';
-import { selectText } from './testing-support/editors';
+import {
+  createTestEditor,
+  destroyTestEditors,
+  selectText,
+} from './testing-support/editors';
 import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
 
@@ -508,6 +515,48 @@ describe('foco e D11 (R4)', () => {
     expect(getRteHtml(editor)).toContain('<cite>Ana</cite>');
   });
 
+  it('Fix 3: recusa com o documento já alterado → foco segue no editável', async () => {
+    const { fixture, el, cmp, editor } = await setup();
+    await focusEditor(fixture, editor);
+    inQuote(editor);
+    const { origin } = await openByButton(fixture, el);
+    const dialogs = (cmp as unknown as { dialogs: RteDialogController })
+      .dialogs;
+    // A cadeia do Tiptap despacha mesmo com um passo `false` (só o `run()`
+    // devolve `false`), como nos diálogos antigos de `apply.ts`; o foco é
+    // posto no editável na hora (o `focus()` da cadeia o põe no quadro
+    // seguinte, o que esconderia a troca).
+    const ok = dialogs.apply((ed) => {
+      ed.view.focus();
+      return ed
+        .chain()
+        .insertContent('x')
+        .command(() => false)
+        .run();
+    });
+    expect(ok).toBe(false);
+    await nextFrame();
+    await settle(fixture);
+    expect(getRteHtml(editor)).toContain('x');
+    expect(document.activeElement).not.toBe(origin);
+    expect(document.activeElement).toBe(editor.view.dom);
+  });
+
+  it('Fix 3: recusa sem mudar o documento → foco volta à origem', async () => {
+    const { fixture, el, cmp, editor } = await setup();
+    await focusEditor(fixture, editor);
+    inQuote(editor);
+    const { origin } = await openByButton(fixture, el);
+    const before = editor.state.doc;
+    const dialogs = (cmp as unknown as { dialogs: RteDialogController })
+      .dialogs;
+    expect(dialogs.apply(() => false)).toBe(false);
+    await nextFrame();
+    await settle(fixture);
+    expect(editor.state.doc).toBe(before);
+    expect(document.activeElement).toBe(origin);
+  });
+
   it('cancelar devolve o foco ao botão de origem', async () => {
     const { fixture, el, editor } = await setup();
     await focusEditor(fixture, editor);
@@ -575,5 +624,354 @@ describe('foco e D11 (R4)', () => {
     await settle(fixture);
     expect(host.blurs).toBe(1);
     expect(host.touches).toBe(1);
+  });
+});
+
+// Spec 05c1, Tarefa 6: R7 — a base dos diálogos (G2–G6) nos três diálogos
+// de mídia.
+
+const MEDIA_IMAGE =
+  '<figure class="rt-figure rt-figure--center"><img src="/a.png" alt="A" loading="lazy" decoding="async"></figure>';
+const MEDIA_VIDEO =
+  '<figure class="rt-figure rt-figure--video"><video src="/v.webm" controls="" preload="metadata" playsinline=""></video></figure>';
+const VIMEO = 'https://vimeo.com/76979871';
+
+/** Documento com as três mídias (o *embed* montado pelo core). */
+function mediaDoc(): string {
+  const control = createTestEditor('<p></p>');
+  expect(control.commands.setEmbed(VIMEO, { caption: 'Old' })).toBe(true);
+  const embed = getRteHtml(control);
+  destroyTestEditors();
+  return `<p>ab</p>${MEDIA_IMAGE}${MEDIA_VIDEO}${embed}<p>cd</p>`;
+}
+
+interface MediaCase {
+  kind: 'image' | 'video' | 'embed';
+  node: string;
+  insert: string;
+  edit: string;
+  /** Primeiro campo nos modos inserir e editar (G4). */
+  first: string;
+  editFirst: string;
+  command: string;
+  fill(dialog: HTMLElement): void;
+}
+
+const MEDIA: readonly MediaCase[] = [
+  {
+    kind: 'image',
+    node: 'rtImage',
+    insert: 'Insert image',
+    edit: 'Edit image',
+    first: 'Image address (URL)',
+    editFirst: 'Image address (URL)',
+    command: 'setImage',
+    fill: (d) => {
+      type(field(d, 'Image address (URL)'), '/n.png');
+      type(field(d, 'Alternative text'), 'N');
+    },
+  },
+  {
+    kind: 'video',
+    node: 'rtVideo',
+    insert: 'Insert video',
+    edit: 'Edit video',
+    first: 'Video address (URL)',
+    editFirst: 'Video address (URL)',
+    command: 'setVideo',
+    fill: (d) => type(field(d, 'Video address (URL)'), '/n.webm'),
+  },
+  {
+    kind: 'embed',
+    node: 'rtEmbed',
+    insert: 'Insert embedded content',
+    edit: 'Edit embedded content',
+    first: 'Page address (URL)',
+    editFirst: 'Caption',
+    command: 'setEmbed',
+    fill: (d) => type(field(d, 'Page address (URL)'), VIMEO),
+  },
+];
+
+function selectMedia(editor: Editor, typeName: string): void {
+  let found = -1;
+  editor.state.doc.descendants((node, pos) => {
+    if (found >= 0) return false;
+    if (node.type.name === typeName) found = pos;
+    return found < 0;
+  });
+  if (found < 0) throw new Error(`${typeName} ausente`);
+  editor.view.dispatch(
+    editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, found)),
+  );
+}
+
+/** `Escape` com `key` e `keyCode` (o `captureKeyDown` do ProseMirror lê o código). */
+function pressEscape(dialog: HTMLDialogElement): void {
+  const target = (document.activeElement as HTMLElement | null) ?? dialog;
+  target.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'Escape',
+      keyCode: 27,
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+  escapeDialog(dialog);
+}
+
+@Component({
+  selector: 'rte-test-media-form',
+  imports: [RteEditor, FormField],
+  template: `<rte-editor [formField]="f.body" toolbar="full" />`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class MediaFormHost {
+  readonly model = signal({ body: '<p></p>' });
+  readonly f = form(this.model);
+  readonly cmp = viewChild.required(RteEditor);
+}
+
+describe.each(MEDIA)('R7: diálogo $kind (05c1)', (m) => {
+  async function mediaSetup(): ReturnType<typeof setup> {
+    const doc = mediaDoc();
+    return setup((h) => h.value.set(doc));
+  }
+
+  it('inserir: showModal() e foco no primeiro campo', async () => {
+    const showModal = vi.spyOn(HTMLDialogElement.prototype, 'showModal');
+    const { fixture, cmp, editor } = await mediaSetup();
+    selectText(editor, 'ab', 1);
+    expect(cmp.openDialog(m.kind)).toBe(true);
+    const dialog = await waitForDialog(fixture);
+    expect(showModal).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(field(dialog, m.first));
+  });
+
+  it('editar: foco no primeiro campo do modo', async () => {
+    const { fixture, cmp, editor } = await mediaSetup();
+    selectMedia(editor, m.node);
+    expect(cmp.openDialog(m.kind)).toBe(true);
+    const dialog = await waitForDialog(fixture);
+    expect(dialog.querySelector('.rte-dialog__remove')).not.toBeNull();
+    expect(document.activeElement).toBe(field(dialog, m.editFirst));
+  });
+
+  it.each(['cancel', 'escape'] as const)(
+    '%s fecha sem transação de documento',
+    async (how) => {
+      const { fixture, cmp, editor } = await mediaSetup();
+      selectText(editor, 'ab', 1);
+      const before = getRteHtml(editor);
+      const changes = docChanges(editor);
+      cmp.openDialog(m.kind);
+      const dialog = await waitForDialog(fixture);
+      m.fill(dialog);
+      if (how === 'cancel') action(dialog, 'Cancel').click();
+      else pressEscape(dialog);
+      await settle(fixture);
+      expect(dialog.open).toBe(false);
+      expect(getRteHtml(editor)).toBe(before);
+      expect(changes.count).toBe(0);
+    },
+  );
+
+  it('um por vez: segundo pedido (do mesmo tipo ou de outro) → false', async () => {
+    const { fixture, cmp, editor } = await mediaSetup();
+    selectText(editor, 'ab', 1);
+    expect(cmp.openDialog(m.kind)).toBe(true);
+    expect(cmp.openDialog(m.kind)).toBe(false);
+    await waitForDialog(fixture);
+    expect(cmp.openDialog(m.kind)).toBe(false);
+    expect(cmp.openDialog('link')).toBe(false);
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelectorAll(
+        '.rte-dialog[open]',
+      ),
+    ).toHaveLength(1);
+  });
+
+  describe('G5: fecha como cancelamento sem mudar o documento', () => {
+    it.each([
+      ['setValue externo', (h: Host) => h.value.set('<p>outro</p>')],
+      ['disabled', (h: Host) => h.disabled.set(true)],
+      ['readonly', (h: Host) => h.readonly.set(true)],
+      ['hidden', (h: Host) => h.hidden.set(true)],
+    ] as const)('%s', async (name, change) => {
+      const { fixture, host, editor } = await mediaSetup();
+      selectText(editor, 'ab', 1);
+      const changes = docChanges(editor);
+      host.cmp().openDialog(m.kind);
+      const dialog = await waitForDialog(fixture);
+      m.fill(dialog);
+      const before = getRteHtml(editor);
+      change(host);
+      await settle(fixture);
+      expect(dialog.open).toBe(false);
+      if (name === 'setValue externo') {
+        expect(getRteHtml(editor)).toBe('<p>outro</p>');
+      } else {
+        expect(getRteHtml(editor)).toBe(before);
+        expect(changes.count).toBe(0);
+      }
+      expect(error).not.toHaveBeenCalled();
+    });
+
+    it('fixture.destroy()', async () => {
+      const { fixture, cmp, editor } = await mediaSetup();
+      selectText(editor, 'ab', 1);
+      cmp.openDialog(m.kind);
+      const dialog = await waitForDialog(fixture);
+      expect(() => fixture.destroy()).not.toThrow();
+      expect(dialog.open).toBe(false);
+      expect(error).not.toHaveBeenCalled();
+    });
+
+    it('"Aplicar" com o documento trocado não roda o comando e fecha', async () => {
+      const { fixture, cmp, editor } = await mediaSetup();
+      selectText(editor, 'ab', 1);
+      cmp.openDialog(m.kind);
+      const dialog = await waitForDialog(fixture);
+      m.fill(dialog);
+      await settle(fixture);
+      const { state, view } = editor;
+      view.updateState(
+        EditorState.create({
+          doc: state.schema.nodeFromJSON(state.doc.toJSON()),
+          plugins: state.plugins,
+        }),
+      );
+      const swapped = getRteHtml(editor);
+      const command = vi.spyOn(
+        editor.extensionManager.commands as unknown as Record<
+          string,
+          (...args: unknown[]) => unknown
+        >,
+        m.command,
+      );
+      action(dialog, 'Apply').click();
+      await settle(fixture);
+      expect(command).not.toHaveBeenCalled();
+      expect(getRteHtml(editor)).toBe(swapped);
+      expect(dialog.open).toBe(false);
+    });
+  });
+
+  it('abrir, aplicar e cancelar pela barra: 0 editorBlur/editorFocus/touch', async () => {
+    const { fixture, host, el, editor } = await mediaSetup();
+    await focusEditor(fixture, editor);
+    selectText(editor, 'ab', 1);
+    const before = getRteHtml(editor);
+    let origin = button(el, m.insert);
+    origin.focus();
+    origin.click();
+    let dialog = await waitForDialog(fixture);
+    m.fill(dialog);
+    action(dialog, 'Apply').click();
+    await nextFrame();
+    await settle(fixture);
+    expect(dialog.open).toBe(false);
+    expect(getRteHtml(editor)).not.toBe(before);
+    // A mídia nova fica selecionada (V12): o item vira "Editar".
+    origin = button(el, m.edit);
+    origin.focus();
+    origin.click();
+    dialog = await waitForDialog(fixture);
+    action(dialog, 'Cancel').click();
+    await nextFrame();
+    await settle(fixture);
+    expect(document.activeElement).toBe(origin);
+    expect([host.blurs, host.focuses, host.touches]).toEqual([0, 0, 0]);
+  });
+
+  it('o touched do [formField] continua false', async () => {
+    const doc = mediaDoc();
+    const fixture = TestBed.createComponent(MediaFormHost);
+    fixture.componentInstance.model.set({ body: doc });
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const editor = fixture.componentInstance.cmp().editor() as Editor;
+    editor.view.dom.focus();
+    selectText(editor, 'ab', 1);
+    await settle(fixture);
+    const origin = button(el, m.insert);
+    origin.focus();
+    origin.click();
+    let dialog = await waitForDialog(fixture);
+    m.fill(dialog);
+    action(dialog, 'Apply').click();
+    await nextFrame();
+    await settle(fixture);
+    selectText(editor, 'cd', 1);
+    await settle(fixture);
+    origin.focus();
+    origin.click();
+    dialog = await waitForDialog(fixture);
+    action(dialog, 'Cancel').click();
+    await nextFrame();
+    await settle(fixture);
+    expect(fixture.componentInstance.f.body().touched()).toBe(false);
+  });
+
+  it('cancelar devolve o foco ao item da barra (origem)', async () => {
+    const { fixture, el, editor } = await mediaSetup();
+    await focusEditor(fixture, editor);
+    selectMedia(editor, m.node);
+    await settle(fixture);
+    const origin = button(el, m.edit);
+    origin.focus();
+    origin.click();
+    const dialog = await waitForDialog(fixture);
+    action(dialog, 'Cancel').click();
+    await nextFrame();
+    await settle(fixture);
+    expect(document.activeElement).toBe(origin);
+  });
+
+  it('cancelar depois de openDialog com foco no editável → editável', async () => {
+    const { fixture, cmp, editor } = await mediaSetup();
+    await focusEditor(fixture, editor);
+    selectText(editor, 'ab', 1);
+    cmp.openDialog(m.kind);
+    const dialog = await waitForDialog(fixture);
+    expect(document.activeElement).not.toBe(editor.view.dom);
+    action(dialog, 'Cancel').click();
+    await nextFrame();
+    await settle(fixture);
+    expect(document.activeElement).toBe(editor.view.dom);
+  });
+});
+
+describe('cancelar com o foco já devolvido ao editável', () => {
+  it('o <dialog> nativo restaura o foco ao fechar: a NodeSelection de mídia sobrevive ao cursor que o Firefox põe no início (N29)', async () => {
+    const doc = mediaDoc();
+    const { fixture, cmp, editor } = await setup((h) => h.value.set(doc));
+    selectMedia(editor, 'rtVideo');
+    const selected = editor.state.selection;
+    expect(selected).toBeInstanceOf(NodeSelection);
+    expect(cmp.openDialog('video')).toBe(true);
+    const dialog = await waitForDialog(fixture);
+    // O `close()` nativo devolve o foco ao editável antes do controlador agir;
+    // o `commands.focus()` do Tiptap então não faz nada (já tem foco) e o
+    // Firefox, que põe o cursor no início ao focar, vence a seleção de nó
+    // quando o ProseMirror lê o DOM.
+    const close = dialog.close.bind(dialog);
+    dialog.close = (value?: string) => {
+      close(value);
+      editor.view.dom.focus();
+      const text = editor.view.dom.querySelector('p')?.firstChild;
+      if (text) document.getSelection()?.collapse(text, 0);
+    };
+    const sync = vi.spyOn(editor.view, 'focus');
+    action(dialog, 'Cancel').click();
+    await nextFrame();
+    await settle(fixture);
+    expect(editor.view.hasFocus()).toBe(true);
+    // `view.focus()` regrava a seleção no DOM antes do `selectionchange`
+    expect(sync).toHaveBeenCalled();
+    const now = editor.state.selection;
+    expect(now).toBeInstanceOf(NodeSelection);
+    expect(now.from).toBe(selected.from);
   });
 });

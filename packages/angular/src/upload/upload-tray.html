@@ -1,0 +1,43 @@
+@if (items().length) {
+<section class="rte-uploads" role="group" [attr.aria-label]="labels().region">
+  <ul class="rte-uploads__list">
+    @for (item of items(); track item.id) {
+    <li class="rte-uploads__item">
+      <span class="rte-uploads__name" [attr.title]="item.name"
+        >{{ item.shown }}</span
+      >
+      <progress
+        class="rte-uploads__progress"
+        [attr.value]="item.progress"
+        [attr.aria-label]="
+          item.queued ? labels().queued(item.name) : labels().progress(item.name)
+        "
+      ></progress>
+      <button
+        type="button"
+        class="rte-uploads__cancel"
+        [attr.data-rte-upload]="item.id"
+        [attr.aria-label]="labels().cancel(item.name)"
+        (click)="onCancel(item.id)"
+        (keydown)="onKeydown($event, item.id)"
+      >
+        <svg
+          class="rte-icon"
+          aria-hidden="true"
+          focusable="false"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
+    </li>
+    }
+  </ul>
+</section>
+}

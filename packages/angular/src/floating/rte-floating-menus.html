@@ -155,8 +155,28 @@
     </button>
     }
   </div>
-  } @case ('image') { @let align = imageAlign(); @for (a of imageAligns; track
-  a[0]) {
+  } @default { @if (media[kind]; as m) {
+  <button
+    type="button"
+    class="rte-toolbar__button"
+    rteRovingItem
+    aria-haspopup="dialog"
+    [attr.aria-label]="labels()[m.details]"
+    [attr.title]="labels()[m.details]"
+    (mousedown)="$event.preventDefault()"
+    (click)="act.details(m.kind)"
+  >
+    <ng-container
+      *ngTemplateOutlet="iconTpl; context: { $implicit: 'mediaDetails' }"
+    />
+  </button>
+  <div
+    class="rte-toolbar__separator"
+    role="separator"
+    aria-orientation="vertical"
+  ></div>
+  @if (m.kind === 'image') { @let align = imageAlign(); @for (a of imageAligns;
+  track a[0]) {
   <button
     type="button"
     class="rte-toolbar__button"
@@ -171,19 +191,25 @@
     <ng-container *ngTemplateOutlet="iconTpl; context: { $implicit: a[2] }" />
   </button>
   }
+  <div
+    class="rte-toolbar__separator"
+    role="separator"
+    aria-orientation="vertical"
+  ></div>
+  }
   <button
     type="button"
     class="rte-toolbar__button"
     rteRovingItem
-    [attr.aria-label]="labels().removeImage"
-    [attr.title]="labels().removeImage"
+    [attr.aria-label]="labels()[m.remove]"
+    [attr.title]="labels()[m.remove]"
     (mousedown)="$event.preventDefault()"
-    (click)="act.exec(commands.removeImage)"
+    (click)="act.exec(commands.removeMedia, m.node)"
   >
     <ng-container
       *ngTemplateOutlet="iconTpl; context: { $implicit: 'removeImage' }"
     />
   </button>
-  } }
+  } } }
 </div>
 }

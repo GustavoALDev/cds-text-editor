@@ -5,11 +5,13 @@ import type {
 import { RTE_DIALOG_LANGUAGES } from '../dialogs/types';
 import type {
   RteDialogLabels,
+  RteDraftLabels,
   RteFloatingMenuLabels,
   RteLabels,
   RteLabelsInput,
   RteLabelsSource,
   RteToolbarLabels,
+  RteUploadLabels,
 } from './types';
 
 type Bag = Record<string, unknown>;
@@ -123,6 +125,8 @@ function mergeErrors(base: RteLabels['errors'], given: unknown) {
   const required = own(given, 'rteRequired');
   const maxChars = own(given, 'rteMaxChars');
   const maxWords = own(given, 'rteMaxWords');
+  const pending = own(given, 'rteUploadsPending');
+  const missingAlt = own(given, 'rteImagesMissingAlt');
   return {
     rteRequired: typeof required === 'string' ? required : base.rteRequired,
     rteMaxChars:
@@ -139,6 +143,17 @@ function mergeErrors(base: RteLabels['errors'], given: unknown) {
             base.rteMaxWords,
           )
         : base.rteMaxWords,
+    rteUploadsPending:
+      typeof pending === 'function'
+        ? guard(pending as (count: number) => unknown, base.rteUploadsPending)
+        : base.rteUploadsPending,
+    rteImagesMissingAlt:
+      typeof missingAlt === 'function'
+        ? guard(
+            missingAlt as (count: number) => unknown,
+            base.rteImagesMissingAlt,
+          )
+        : base.rteImagesMissingAlt,
   };
 }
 
@@ -169,31 +184,34 @@ function mergeToolbar(
   return out as unknown as RteToolbarLabels;
 }
 
+/** Funções de `dialogs`, cada uma com `guard` (valor não função → o da base). */
+const DIALOG_FUNCTIONS = [
+  'errorRange',
+  'errorMaxLength',
+  'videoTrack',
+  'videoTrackRemove',
+  'embedUrlHint',
+  'fileHint',
+  'errorFileSize',
+] as const;
+
 function mergeDialogs(base: RteDialogLabels, given: unknown): RteDialogLabels {
   if (!isBag(given)) return base;
   const out: Record<string, unknown> = { ...base };
+  const functions: readonly string[] = DIALOG_FUNCTIONS;
   for (const key of Object.keys(base)) {
-    if (
-      key === 'languageNames' ||
-      key === 'errorRange' ||
-      key === 'errorMaxLength'
-    )
-      continue;
+    if (key === 'languageNames' || functions.includes(key)) continue;
     const value = own(given, key);
     if (typeof value === 'string') out[key] = value;
   }
-  const range = own(given, 'errorRange');
-  if (typeof range === 'function')
-    out['errorRange'] = guard(
-      range as (min: number, max: number) => unknown,
-      base.errorRange,
-    );
-  const maxLength = own(given, 'errorMaxLength');
-  if (typeof maxLength === 'function')
-    out['errorMaxLength'] = guard(
-      maxLength as (max: number) => unknown,
-      base.errorMaxLength,
-    );
+  for (const key of DIALOG_FUNCTIONS) {
+    const value = own(given, key);
+    if (typeof value === 'function')
+      out[key] = guard(
+        value as (...args: never[]) => unknown,
+        base[key] as (...args: never[]) => string,
+      );
+  }
   const names: Record<string, string> = { ...base.languageNames };
   const givenNames = own(given, 'languageNames');
   for (const code of RTE_DIALOG_LANGUAGES) {
@@ -215,6 +233,50 @@ function mergeFloating(
     if (typeof value === 'string') out[key] = value;
   }
   return out as unknown as RteFloatingMenuLabels;
+}
+
+/** Funções de `upload`, cada uma com `guard`; `region` é texto. */
+const UPLOAD_FUNCTIONS = [
+  'progress',
+  'queued',
+  'cancel',
+  'announceStart',
+  'announceDone',
+  'announceCancelled',
+  'announceError',
+] as const;
+
+function mergeUpload(base: RteUploadLabels, given: unknown): RteUploadLabels {
+  if (!isBag(given)) return base;
+  const out: Record<string, unknown> = { ...base };
+  const region = own(given, 'region');
+  if (typeof region === 'string') out['region'] = region;
+  for (const key of UPLOAD_FUNCTIONS) {
+    const value = own(given, key);
+    if (typeof value === 'function')
+      out[key] = guard(
+        value as (...args: never[]) => unknown,
+        base[key] as (...args: never[]) => string,
+      );
+  }
+  return out as unknown as RteUploadLabels;
+}
+
+function mergeDraft(base: RteDraftLabels, given: unknown): RteDraftLabels {
+  if (!isBag(given)) return base;
+  const out: Record<string, unknown> = { ...base };
+  for (const key of ['region', 'restore', 'discard'] as const) {
+    const value = own(given, key);
+    if (typeof value === 'string') out[key] = value;
+  }
+  const available = own(given, 'available');
+  if (typeof available === 'function') {
+    out['available'] = guard(
+      available as (savedAt: number) => unknown,
+      base.available,
+    );
+  }
+  return out as unknown as RteDraftLabels;
 }
 
 /**
@@ -254,6 +316,14 @@ export function mergeLabels(
     floating: safely(
       () => mergeFloating(base.floating, own(input, 'floating')),
       base.floating,
+    ),
+    upload: safely(
+      () => mergeUpload(base.upload, own(input, 'upload')),
+      base.upload,
+    ),
+    draft: safely(
+      () => mergeDraft(base.draft, own(input, 'draft')),
+      base.draft,
     ),
   };
 }

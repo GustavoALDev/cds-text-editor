@@ -99,6 +99,7 @@ export function readFloatingAnchor(
     return null;
   }
   const el = dom as Element;
-  const target = kind === 'image' ? (el.closest('figure') ?? el) : el;
+  // mídia: o `<figure>` do nó (próprio ou ancestral), como a imagem (V10)
+  const target = kind === 'table' ? el : (el.closest('figure') ?? el);
   return toRect(target.getBoundingClientRect());
 }

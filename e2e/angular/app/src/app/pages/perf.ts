@@ -4,14 +4,21 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { form, FormField } from '@angular/forms/signals';
-import { RteEditor, type RteToolbarConfig } from '@cds/rte-angular';
+import {
+  RteEditor,
+  type RteEditorConfig,
+  type RteToolbarConfig,
+} from '@cds/rte-angular';
 import { rteMaxChars } from '@cds/rte-angular/validators';
 import { E2eBridge } from '../e2e-bridge';
 
 /**
  * N8 e N15 (informativos): documento grande num `[formField]` com
- * `rteMaxChars`; a barra (`full` por padrão) troca ao vivo pela ponte.
+ * `rteMaxChars`; a barra (`full` por padrão) troca ao vivo pela ponte. Com
+ * `?media` na URL o editor liga `features.media` (N32, spec 05c1: 200 imagens
+ * no documento); sem ela a página é a de sempre (N8, N15, N26).
  */
 @Component({
   selector: 'app-perf',
@@ -22,6 +29,11 @@ import { E2eBridge } from '../e2e-bridge';
 export class PerfPage {
   protected readonly bridge = inject(E2eBridge);
   protected readonly model = signal({ body: '' });
+  protected readonly options: RteEditorConfig = new URLSearchParams(
+    inject(DOCUMENT).location?.search ?? '',
+  ).has('media')
+    ? { features: { media: true }, allowRelativeMedia: true }
+    : {};
   protected readonly toolbar = signal<RteToolbarConfig>('full');
   protected readonly f = form(this.model, (p) => {
     rteMaxChars(p.body, 1_000_000);

@@ -1,0 +1,76 @@
+<form
+  class="rte-dialog__form"
+  [formRoot]="form"
+  (mousedown)="keepFocus($event)"
+>
+  @let rowsError = error(form.rows);
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().rows"
+      >{{ labels().tableRows }}</label
+    >
+    <input
+      class="rte-dialog__input"
+      type="number"
+      step="1"
+      [id]="ids().rows"
+      [formField]="form.rows"
+      [attr.aria-invalid]="rowsError ? 'true' : null"
+      [attr.aria-describedby]="rowsError ? ids().rows + '-error' : null"
+    />
+    @if (rowsError) {
+    <p class="rte-dialog__error" [id]="ids().rows + '-error'">
+      {{ rowsError }}
+    </p>
+    }
+  </div>
+  @let colsError = error(form.cols);
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().cols"
+      >{{ labels().tableColumns }}</label
+    >
+    <input
+      class="rte-dialog__input"
+      type="number"
+      step="1"
+      [id]="ids().cols"
+      [formField]="form.cols"
+      [attr.aria-invalid]="colsError ? 'true' : null"
+      [attr.aria-describedby]="colsError ? ids().cols + '-error' : null"
+    />
+    @if (colsError) {
+    <p class="rte-dialog__error" [id]="ids().cols + '-error'">
+      {{ colsError }}
+    </p>
+    }
+  </div>
+  <div class="rte-dialog__field">
+    <input
+      class="rte-dialog__checkbox"
+      type="checkbox"
+      [id]="ids().headerRow"
+      [formField]="form.headerRow"
+    />
+    <label class="rte-dialog__label" [for]="ids().headerRow"
+      >{{ labels().tableHeaderRow }}</label
+    >
+  </div>
+  <div class="rte-dialog__field">
+    <input
+      class="rte-dialog__checkbox"
+      type="checkbox"
+      [id]="ids().headerColumn"
+      [formField]="form.headerColumn"
+    />
+    <label class="rte-dialog__label" [for]="ids().headerColumn"
+      >{{ labels().tableHeaderColumn }}</label
+    >
+  </div>
+  <div class="rte-dialog__actions">
+    <button type="button" class="rte-dialog__cancel" (click)="cancel()">
+      {{ labels().cancel }}
+    </button>
+    <button type="submit" class="rte-dialog__apply">
+      {{ labels().tableInsert }}
+    </button>
+  </div>
+</form>

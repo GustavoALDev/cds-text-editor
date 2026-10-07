@@ -44,3 +44,9 @@ Módulo Pro/monetização (fronteira Core/Pro apenas **definida** em documento a
 | Consumidor real ainda em Angular < 22 | Usar app Angular 22 limpo; só atualizar o consumidor se for desejado |
 | Manutenção a longo prazo (issues, segurança) | Política de suporte explícita; automação de dependências |
 | Fronteira Core/Pro mal definida | Documentar antes da 1.0 e não mover recursos já MIT |
+
+## 6. Andamento
+
+**Parte 09a concluída** (independe da API final do editor): R1/R2 (`.github/workflows/release.yml`, `publishConfig` com provenance, versão independente), R4 (peers `@angular/*` conferidos por regra do repositório; `docs/support.md`), R8 (`SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, templates), R10 (aviso de não afiliação nos READMEs), R11 (`docs/open-core.md`), R9 parcial (`docs/security.md`, `npm audit` informativo no CI).
+
+**Falta**: R3 (instalação em app Angular 22 limpo; confirmar que `changeset publish` publica o conteúdo de `dist` dos pacotes ng-packagr/tsup), R5 a R7 (consumidor real), congelar a API (api-extractor), fuzzing do sanitizador e revisão do `httpUploadAdapter`/exemplo de servidor, publicação real `0.x` (`next`) e `1.0.0`. Dados do autor: `TODO-AUTOR` (organização/escopo npm, contato, URL do repositório).

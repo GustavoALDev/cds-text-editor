@@ -183,22 +183,55 @@ describe('readFloatingContext (M4, R3)', () => {
     expect(kindOf(at(table('<p>xy</p>'), 'x'))).toBe('text');
   });
 
-  it('NodeSelection de vídeo: fora de tabela → null, dentro → table', () => {
-    const out = createTestEditor(`<p>a</p>${VIDEO}`);
-    selectNode(out, 'rtVideo');
-    expect(kindOf(out)).toBeNull();
-    const inside = createTestEditor(table(VIDEO));
-    selectNode(inside, 'rtVideo');
-    expect(kindOf(inside)).toBe('table');
+  it('NodeSelection de vídeo → video com {pos, pos + 1}', () => {
+    const e = createTestEditor(`<p>a</p>${VIDEO}`);
+    const pos = selectNode(e, 'rtVideo');
+    expect(readFloatingContext(e, ALL)).toEqual({
+      kind: 'video',
+      identity: { kind: 'video', from: pos, to: pos + 1 },
+    });
   });
 
-  it('NodeSelection de embed: fora de tabela → null, dentro → table', () => {
-    const out = createTestEditor(`<p>a</p>${EMBED}`);
-    selectNode(out, 'rtEmbed');
-    expect(kindOf(out)).toBeNull();
-    const inside = createTestEditor(table(EMBED));
-    selectNode(inside, 'rtEmbed');
-    expect(kindOf(inside)).toBe('table');
+  // pré-voo 18: antes da 05c1 o vídeo em célula mostrava o menu de tabela
+  it('vídeo dentro de célula → video; sem video nos tipos → table', () => {
+    const e = createTestEditor(table(VIDEO));
+    const pos = selectNode(e, 'rtVideo');
+    expect(readFloatingContext(e, ALL)?.identity).toEqual({
+      kind: 'video',
+      from: pos,
+      to: pos + 1,
+    });
+    expect(kindOf(e, ['image', 'embed', 'link', 'text', 'table'])).toBe(
+      'table',
+    );
+  });
+
+  it('NodeSelection de embed → embed com {pos, pos + 1}', () => {
+    const e = createTestEditor(`<p>a</p>${EMBED}`);
+    const pos = selectNode(e, 'rtEmbed');
+    expect(readFloatingContext(e, ALL)).toEqual({
+      kind: 'embed',
+      identity: { kind: 'embed', from: pos, to: pos + 1 },
+    });
+  });
+
+  // pré-voo 18: idem para o embed em célula
+  it('embed dentro de célula → embed; sem embed nos tipos → table', () => {
+    const e = createTestEditor(table(EMBED));
+    selectNode(e, 'rtEmbed');
+    expect(kindOf(e)).toBe('embed');
+    expect(kindOf(e, ['image', 'video', 'link', 'text', 'table'])).toBe(
+      'table',
+    );
+  });
+
+  it('vídeo e embed não respondem ao tipo um do outro nem ao de imagem', () => {
+    const v = createTestEditor(`<p>a</p>${VIDEO}`);
+    selectNode(v, 'rtVideo');
+    expect(kindOf(v, ['image', 'embed', 'link', 'text'])).toBeNull();
+    const m = createTestEditor(`<p>a</p>${EMBED}`);
+    selectNode(m, 'rtEmbed');
+    expect(kindOf(m, ['image', 'video', 'link', 'text'])).toBeNull();
   });
 
   it('kinds sem table → null na célula', () => {

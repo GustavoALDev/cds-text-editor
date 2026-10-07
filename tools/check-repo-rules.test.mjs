@@ -92,3 +92,31 @@ test('unparseable tsconfig is reported as a violation, not a crash', () => {
   const root = fixture({ 'packages/angular/tsconfig.spec.json': '{ "a": ' });
   assert.equal(checkRepoRules(root).length, 1);
 });
+
+test('rejects Angular peers outside >=22.x.y <23', () => {
+  const root = fixture({
+    'packages/render/package.json': JSON.stringify({
+      name: '@cds/rte-render',
+      peerDependencies: { '@angular/core': '>=21.0.0 <23' },
+    }),
+  });
+  assert.equal(checkRepoRules(root).length, 1);
+});
+
+test('accepts Angular peers >=22.2.1 <23', () => {
+  const root = fixture({
+    'packages/angular/package.json': JSON.stringify({
+      name: '@cds/rte-angular',
+      peerDependencies: { '@angular/core': '>=22.2.1 <23' },
+    }),
+  });
+  assert.deepEqual(checkRepoRules(root), []);
+});
+
+test('requires governance files in the real repo (root package.json)', () => {
+  const errors = checkRepoRules(
+    fixture({ 'package.json': '{}', 'packages/core/src/index.ts': '' }),
+  );
+  assert.ok(errors.some((e) => e.startsWith('SECURITY.md:')));
+  assert.ok(errors.some((e) => e.startsWith('docs/open-core.md:')));
+});

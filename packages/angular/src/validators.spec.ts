@@ -20,8 +20,10 @@ import {
   formatRteError,
   isRteValidationError,
   rteMaxChars,
+  rteImagesHaveAlt,
   rteMaxWords,
   rteRequired,
+  rteUploadsFinished,
 } from '@cds/rte-angular/validators';
 /* eslint-enable @nx/enforce-module-boundaries */
 import { RTE_CODE_LANGUAGES } from '@cds/rte-core/code-languages';
@@ -200,10 +202,12 @@ describe('RteValidators (Reactive Forms)', () => {
 });
 
 describe('erros tipados', () => {
-  it('isRteValidationError reconhece só os três kinds', () => {
+  it('isRteValidationError reconhece só os cinco kinds', () => {
     expect(isRteValidationError({ kind: 'rteRequired' })).toBe(true);
     expect(isRteValidationError({ kind: 'rteMaxChars' })).toBe(true);
     expect(isRteValidationError({ kind: 'rteMaxWords' })).toBe(true);
+    expect(isRteValidationError({ kind: 'rteUploadsPending' })).toBe(true);
+    expect(isRteValidationError({ kind: 'rteImagesMissingAlt' })).toBe(true);
     expect(isRteValidationError({ kind: 'required' })).toBe(false);
   });
 
@@ -316,6 +320,115 @@ describe('formatRteError: formas de erro e rótulos malformados', () => {
       { kind: 'rteMaxWords', context: { max: '5', actual: 7 } },
       { kind: 'rteMaxChars', context: null },
       { rteMaxChars: true },
+    ]) {
+      expect(formatRteError(error as never, RTE_LABELS_EN)).toBe('');
+    }
+  });
+});
+
+// Spec 05c2a, Tarefa 11: validadores do estado do editor (E19, R13).
+
+/** Editor falso: só os dois *signals* que os validadores leem. */
+function fakeEditor(pending: number, missing: number) {
+  return {
+    pendingUploads: signal(pending),
+    imagesMissingAlt: signal(missing),
+  } as unknown as RteEditor;
+}
+
+describe('Signal Forms: rteUploadsFinished e rteImagesHaveAlt (E19)', () => {
+  it('leem o editor; null/undefined são válidos', () => {
+    const editor = signal<RteEditor | null | undefined>(undefined);
+    const f = make((p) => {
+      rteUploadsFinished(p.body, () => editor());
+      rteImagesHaveAlt(p.body, () => editor());
+    }, '<p>a</p>');
+    expect(f.body().errors()).toEqual([]);
+    editor.set(null);
+    expect(f.body().errors()).toEqual([]);
+    const live = fakeEditor(2, 1);
+    editor.set(live);
+    expect(f.body().errors()).toEqual([
+      expect.objectContaining({ kind: 'rteUploadsPending', count: 2 }),
+      expect.objectContaining({ kind: 'rteImagesMissingAlt', count: 1 }),
+    ]);
+    (live.pendingUploads as ReturnType<typeof signal<number>>).set(0);
+    (live.imagesMissingAlt as ReturnType<typeof signal<number>>).set(0);
+    expect(f.body().errors()).toEqual([]);
+  });
+
+  it('nenhum dos dois publica metadado (REQUIRED, MAX_LENGTH)', () => {
+    const f = make((p) => {
+      rteUploadsFinished(p.body, () => fakeEditor(1, 1));
+      rteImagesHaveAlt(p.body, () => fakeEditor(1, 1));
+    }, '');
+    expect(f.body().required()).toBe(false);
+    expect(f.body().maxLength?.()).toBeUndefined();
+    expect(
+      f
+        .body()
+        .errors()
+        .map((e) => e.kind),
+    ).toEqual(['rteUploadsPending', 'rteImagesMissingAlt']);
+  });
+});
+
+describe('formatRteError: envios e texto alternativo (E19, E20)', () => {
+  const forms = (kind: string, count: number) => [
+    { kind, count },
+    { kind, context: { count } },
+    { [kind]: { count } },
+  ];
+
+  it('as três formas nos três idiomas', () => {
+    for (const pack of [RTE_LABELS_EN, RTE_LABELS_PT_BR, RTE_LABELS_ES]) {
+      for (const count of [1, 2]) {
+        for (const e of forms('rteUploadsPending', count)) {
+          expect(formatRteError(e as never, pack)).toBe(
+            pack.errors.rteUploadsPending(count),
+          );
+        }
+        for (const e of forms('rteImagesMissingAlt', count)) {
+          expect(formatRteError(e as never, pack)).toBe(
+            pack.errors.rteImagesMissingAlt(count),
+          );
+        }
+      }
+    }
+    expect(
+      formatRteError({ rteUploadsPending: { count: 2 } }, RTE_LABELS_PT_BR),
+    ).toBe('Aguarde o fim de 2 envios.');
+    expect(
+      formatRteError(
+        { kind: 'rteImagesMissingAlt', count: 1 } as never,
+        RTE_LABELS_EN,
+      ),
+    ).toBe('1 image has no alternative text.');
+  });
+
+  it('rótulo ausente ou que lança cai no inglês; count inválido devolve vazio', () => {
+    const throwing = {
+      errors: {
+        rteUploadsPending: () => {
+          throw new Error('fn');
+        },
+      },
+    } as unknown as typeof RTE_LABELS_EN;
+    for (const labels of [throwing, {} as typeof RTE_LABELS_EN]) {
+      expect(
+        formatRteError(
+          { kind: 'rteUploadsPending', count: 2 } as never,
+          labels,
+        ),
+      ).toBe('Wait for 2 uploads to finish.');
+      expect(
+        formatRteError({ rteImagesMissingAlt: { count: 3 } }, labels),
+      ).toBe('3 images have no alternative text.');
+    }
+    for (const error of [
+      { kind: 'rteUploadsPending' },
+      { kind: 'rteImagesMissingAlt', context: { count: '1' } },
+      { rteUploadsPending: true },
     ]) {
       expect(formatRteError(error as never, RTE_LABELS_EN)).toBe('');
     }

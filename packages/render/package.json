@@ -33,5 +33,9 @@
     "tiptap",
     "prosemirror",
     "angular"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
 }

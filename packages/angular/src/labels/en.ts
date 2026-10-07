@@ -1,5 +1,17 @@
 import { RTE_CONTENT_LABELS, RTE_SLASH_LABELS } from '@cds/rte-core/extensions';
+import type { RteUploadErrorReason } from '../upload/types';
 import type { RteLabels } from './types';
+
+const UPLOAD_REASONS: Readonly<Record<RteUploadErrorReason, string>> =
+  Object.freeze({
+    type: 'file type not accepted.',
+    size: 'file too large.',
+    count: 'too many files at once.',
+    network: 'connection failed.',
+    server: 'the server refused it.',
+    response: 'invalid server response.',
+    unavailable: 'the editor is not editable.',
+  });
 
 /** Rótulos em inglês (padrão), congelados em profundidade. */
 export const RTE_LABELS_EN: RteLabels = Object.freeze({
@@ -62,6 +74,12 @@ export const RTE_LABELS_EN: RteLabels = Object.freeze({
     pullquote: 'Pull quote',
     readAlso: '"Read also" box',
     clearFormatting: 'Clear formatting',
+    image: 'Insert image',
+    editImage: 'Edit image',
+    video: 'Insert video',
+    editVideo: 'Edit video',
+    embed: 'Insert embedded content',
+    editEmbed: 'Edit embedded content',
     heading: (level: 2 | 3 | 4) => `Heading ${level}`,
     colorNames: Object.freeze({
       gray: 'Gray',
@@ -81,6 +99,14 @@ export const RTE_LABELS_EN: RteLabels = Object.freeze({
       `Use at most ${max} characters (${actual} now).`,
     rteMaxWords: ({ max, actual }: { max: number; actual: number }) =>
       `Use at most ${max} words (${actual} now).`,
+    rteUploadsPending: (count: number) =>
+      count === 1
+        ? 'Wait for 1 upload to finish.'
+        : `Wait for ${count} uploads to finish.`,
+    rteImagesMissingAlt: (count: number) =>
+      count === 1
+        ? '1 image has no alternative text.'
+        : `${count} images have no alternative text.`,
   }),
   dialogs: Object.freeze({
     apply: 'Apply',
@@ -121,6 +147,58 @@ export const RTE_LABELS_EN: RteLabels = Object.freeze({
     errorRange: (min: number, max: number) =>
       `Enter a whole number from ${min} to ${max}.`,
     errorMaxLength: (max: number) => `Use at most ${max} characters.`,
+    imageInsertTitle: 'Insert image',
+    imageEditTitle: 'Image details',
+    imageUrl: 'Image address (URL)',
+    videoUrl: 'Video address (URL)',
+    imageUrlHint: 'Use https://… or a path starting with /.',
+    imageAlt: 'Alternative text',
+    imageDecorative: 'Decorative image',
+    imageAltHint:
+      'Describe what the image shows. Mark "Decorative image" only if it adds no information.',
+    imageCaption: 'Caption',
+    imageCredit: 'Credit',
+    imageAlign: 'Alignment',
+    imageWidth: 'Width (px)',
+    imageWidthHint: 'Leave empty for the natural size.',
+    videoInsertTitle: 'Insert video',
+    videoEditTitle: 'Video details',
+    videoPoster: 'Cover image address (optional)',
+    videoCaption: 'Caption',
+    videoTracks: 'Text tracks',
+    videoTrackKind: 'Type',
+    videoTrackCaptions: 'Captions (dialogue and sounds)',
+    videoTrackSubtitles: 'Subtitles (translation)',
+    videoTrackUrl: 'Track address (.vtt)',
+    videoTrackLang: 'Language code (BCP 47)',
+    videoTrackLabel: 'Label',
+    videoTrackDefault: 'Default',
+    videoTrackAdd: 'Add track',
+    videoCaptionsHint:
+      'No captions track: videos with speech or meaningful sound need one (WCAG 1.2.2).',
+    embedInsertTitle: 'Insert embedded content',
+    embedEditTitle: 'Embedded content details',
+    embedUrl: 'Page address (URL)',
+    embedCaption: 'Caption',
+    errorMediaUrl:
+      'Address not accepted. Use https:// or a path starting with /, on an allowed host.',
+    errorEmbedUrl: 'No enabled provider recognizes this address.',
+    videoUrlHint: 'Use https://… or a path starting with /.',
+    videoTrack: (n: number) => `Track ${n}`,
+    videoTrackRemove: (n: number) => `Remove track ${n}`,
+    embedUrlHint: (providers: readonly string[]) =>
+      `Accepted: ${providers.join(', ')}.`,
+    mediaSource: 'Source',
+    mediaSourceFile: 'File',
+    mediaSourceUrl: 'Address (URL)',
+    imageFile: 'Image file',
+    videoFile: 'Video file',
+    fileHint: (types: readonly string[], maxMegabytes: number) =>
+      `Accepted: ${types.join(', ')}. Up to ${maxMegabytes} MB.`,
+    errorFileRequired: 'Choose a file.',
+    errorFileType: 'This file type is not accepted.',
+    errorFileSize: (maxMegabytes: number) =>
+      `The file is larger than ${maxMegabytes} MB.`,
     languageNames: Object.freeze({
       en: 'English',
       es: 'Spanish',
@@ -149,5 +227,31 @@ export const RTE_LABELS_EN: RteLabels = Object.freeze({
     imageAlignRight: 'Align right',
     imageAlignFull: 'Full width',
     removeImage: 'Remove image',
+    videoMenu: 'Video',
+    embedMenu: 'Embedded content',
+    imageDetails: 'Image details…',
+    videoDetails: 'Video details…',
+    embedDetails: 'Embedded content details…',
+    removeVideo: 'Remove video',
+    removeEmbed: 'Remove embedded content',
+  }),
+  upload: Object.freeze({
+    region: 'Uploads',
+    progress: (name: string) => `Uploading ${name}`,
+    queued: (name: string) => `${name} (waiting)`,
+    cancel: (name: string) => `Cancel upload of ${name}`,
+    announceStart: (count: number) =>
+      count === 1 ? 'Uploading 1 file.' : `Uploading ${count} files.`,
+    announceDone: (name: string) => `${name} uploaded.`,
+    announceCancelled: (name: string) => `Upload of ${name} cancelled.`,
+    announceError: (name: string, reason: RteUploadErrorReason) =>
+      `Could not upload ${name}: ${UPLOAD_REASONS[reason]}`,
+  }),
+  draft: Object.freeze({
+    region: 'Saved draft',
+    available: (savedAt: number) =>
+      `A draft saved on ${new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(savedAt)} is available.`,
+    restore: 'Restore',
+    discard: 'Discard',
   }),
 });

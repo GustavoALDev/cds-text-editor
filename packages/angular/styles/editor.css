@@ -415,6 +415,11 @@
     gap: 0.25rem 0.5rem;
   }
 
+  /* Origem "Arquivo" ou "Endereço" (05c2a E14): o grupo inativo fica no DOM, oculto. */
+  .rte-editor .rte-dialog__field[hidden] {
+    display: none;
+  }
+
   .rte-editor .rte-dialog__label {
     flex: 0 1 auto;
     font-weight: 500;
@@ -439,7 +444,8 @@
     border-color: var(--rte-danger);
   }
 
-  .rte-editor .rte-dialog__checkbox {
+  .rte-editor .rte-dialog__checkbox,
+  .rte-editor .rte-dialog__radio {
     flex: none;
     min-inline-size: 24px;
     min-block-size: 24px;
@@ -472,7 +478,9 @@
 
   .rte-editor .rte-dialog__apply,
   .rte-editor .rte-dialog__cancel,
-  .rte-editor .rte-dialog__remove {
+  .rte-editor .rte-dialog__remove,
+  .rte-editor .rte-dialog__track-add,
+  .rte-editor .rte-dialog__track-remove {
     box-sizing: border-box;
     min-inline-size: 24px;
     min-block-size: max(24px, calc(2rem * var(--rte-density)));
@@ -492,7 +500,9 @@
   }
 
   .rte-editor .rte-dialog__cancel:hover,
-  .rte-editor .rte-dialog__remove:hover {
+  .rte-editor .rte-dialog__remove:hover,
+  .rte-editor .rte-dialog__track-add:hover,
+  .rte-editor .rte-dialog__track-remove:hover {
     background-color: var(--rte-surface-raised);
   }
 
@@ -510,16 +520,267 @@
   .rte-editor .rte-dialog__input:focus-visible,
   .rte-editor .rte-dialog__select:focus-visible,
   .rte-editor .rte-dialog__checkbox:focus-visible,
+  .rte-editor .rte-dialog__radio:focus-visible,
   .rte-editor .rte-dialog__apply:focus-visible,
   .rte-editor .rte-dialog__cancel:focus-visible,
-  .rte-editor .rte-dialog__remove:focus-visible {
+  .rte-editor .rte-dialog__remove:focus-visible,
+  .rte-editor .rte-dialog__track-add:focus-visible,
+  .rte-editor .rte-dialog__track-remove:focus-visible {
     outline: var(--rte-focus-width) solid var(--rte-focus);
     outline-offset: 1px;
+  }
+
+  /* Mídia (05c1): faixas de legenda em grupos com borda; o botão de remover alinha à direita. */
+  .rte-editor .rte-dialog__tracks {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin: 0;
+  }
+
+  .rte-editor .rte-dialog__subtitle {
+    margin: 0;
+    font-size: 1em;
+    font-weight: 600;
+  }
+
+  .rte-editor .rte-dialog__fieldset {
+    display: grid;
+    gap: 0.75rem;
+    align-self: stretch;
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--rte-border);
+    border-radius: var(--rte-radius);
+  }
+
+  .rte-editor .rte-dialog__legend {
+    padding: 0 0.25rem;
+    font-weight: 500;
+  }
+
+  .rte-editor .rte-dialog__track-remove {
+    justify-self: end;
+  }
+
+  .rte-editor .rte-dialog__readonly {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--rte-text-muted);
   }
 
   /* Seleção pendente (G13): o alvo do diálogo aberto continua visível sem o foco no editável. */
   .rte-editor .rte-pending-selection {
     background-color: var(--rte-primary-subtle);
+  }
+
+  /* Origem do diálogo de mídia (05c2a E14): "Arquivo" e "Endereço" lado a lado. */
+  .rte-editor .rte-dialog__source {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  /* Bandeja de envios (05c2a E8, E21): fora do editável, depois dele, dentro da moldura. */
+  .rte-editor .rte-uploads {
+    padding: calc(0.5rem * var(--rte-density))
+      calc(0.75rem * var(--rte-density));
+    border-block-start: 1px solid var(--rte-border);
+  }
+
+  .rte-editor .rte-uploads__list {
+    display: grid;
+    gap: calc(0.25rem * var(--rte-density));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .rte-editor .rte-uploads__item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(4rem, 10rem) auto;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .rte-editor .rte-uploads__name {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* <progress> nativo: borda legível (≥ 3:1), trilho na superfície e barra no tom de texto
+   * principal; com borda de autor o UA troca a aparência nativa, daí as pseudo-barras. */
+  .rte-editor .rte-uploads__progress,
+  .rte-editor .rte-upload-marker__progress {
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: max(8px, 0.5rem);
+    appearance: none;
+    accent-color: var(--rte-primary-text);
+    color: var(--rte-primary-text);
+    background-color: var(--rte-surface);
+    border: 1px solid var(--rte-text-muted);
+    border-radius: var(--rte-radius);
+    overflow: hidden;
+  }
+
+  .rte-editor .rte-uploads__progress::-webkit-progress-bar,
+  .rte-editor .rte-upload-marker__progress::-webkit-progress-bar {
+    background-color: var(--rte-surface);
+  }
+
+  .rte-editor .rte-uploads__progress::-webkit-progress-value,
+  .rte-editor .rte-upload-marker__progress::-webkit-progress-value {
+    background-color: var(--rte-primary-text);
+  }
+
+  .rte-editor .rte-uploads__progress::-moz-progress-bar,
+  .rte-editor .rte-upload-marker__progress::-moz-progress-bar {
+    background-color: var(--rte-primary-text);
+  }
+
+  .rte-editor .rte-uploads__cancel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-inline-size: 24px;
+    min-block-size: max(24px, calc(2rem * var(--rte-density)));
+    margin: 0;
+    padding: 0 0.375rem;
+    color: var(--rte-text);
+    background-color: transparent;
+    border: 1px solid var(--rte-border);
+    border-radius: var(--rte-radius);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .rte-editor .rte-uploads__cancel:hover {
+    background-color: var(--rte-surface-raised);
+  }
+
+  .rte-editor .rte-uploads__cancel:focus-visible {
+    outline: var(--rte-focus-width) solid var(--rte-focus);
+    outline-offset: 1px;
+  }
+
+  /* Região aria-live sempre presente (E8): fora da tela, ainda lida pelo leitor. */
+  .rte-editor .rte-uploads__status {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Aviso de restauração do rascunho (05c2b S6, S14): antes do editável, sem mostrar o conteúdo. */
+  .rte-editor .rte-draft-host {
+    display: contents;
+  }
+
+  .rte-editor .rte-draft {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: calc(0.5rem * var(--rte-density)) 0.75rem;
+    padding: calc(0.5rem * var(--rte-density))
+      calc(0.75rem * var(--rte-density));
+    border-block-end: 1px solid var(--rte-border);
+    background-color: var(--rte-surface-raised);
+    color: var(--rte-text);
+  }
+
+  .rte-editor .rte-draft__text {
+    flex: 1 1 12rem;
+    min-inline-size: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .rte-editor .rte-draft__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .rte-editor .rte-draft__actions > button {
+    box-sizing: border-box;
+    min-inline-size: 24px;
+    min-block-size: max(24px, calc(2rem * var(--rte-density)));
+    margin: 0;
+    padding: 0 0.75rem;
+    color: var(--rte-text);
+    background-color: transparent;
+    border: 1px solid var(--rte-border);
+    border-radius: var(--rte-radius);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .rte-editor .rte-draft__actions > button:hover {
+    background-color: var(--rte-surface);
+  }
+
+  .rte-editor .rte-draft__actions > button:focus-visible {
+    outline: var(--rte-focus-width) solid var(--rte-focus);
+    outline-offset: 1px;
+  }
+
+  /* Região aria-live sempre presente (S6): fora da tela, ainda lida pelo leitor. */
+  .rte-editor .rte-draft__status {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Marcador de envio (05c2a E7): widget fora do documento, onde a mídia vai cair. */
+  .rte-editor .rte-upload-marker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    box-sizing: border-box;
+    max-inline-size: 100%;
+    padding: 0.125rem 0.375rem;
+    vertical-align: middle;
+    border: 1px dashed var(--rte-border);
+    border-radius: var(--rte-radius);
+    user-select: none;
+  }
+
+  .rte-editor .rte-upload-marker__name {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rte-editor .rte-upload-marker__progress {
+    flex: none;
+    inline-size: 4rem;
+  }
+
+  .rte-editor .rte-upload-marker__preview {
+    max-inline-size: calc(4rem * var(--rte-density));
+    max-block-size: calc(3rem * var(--rte-density));
+    object-fit: contain;
+  }
+
+  /* Na fila: texto atenuado em token (sem opacidade, que tiraria o contraste). */
+  .rte-editor .rte-upload-marker--queued {
+    color: var(--rte-text-muted);
   }
 
   @media (forced-colors: active) {
@@ -551,13 +812,16 @@
     }
 
     .rte-editor .rte-dialog,
-    .rte-editor .rte-floating {
+    .rte-editor .rte-floating,
+    .rte-editor .rte-dialog__fieldset {
       border-color: CanvasText;
     }
 
-    /* A dica não é texto inaplicável: o GrayText do --rte-text-muted fica abaixo de 4,5:1 sobre
-     * Canvas nos motores que não forçam as cores (WebKit). */
-    .rte-editor .rte-dialog__hint {
+    /* A dica e a URL somente leitura (05c1) não são texto inaplicável: o GrayText do
+     * --rte-text-muted fica abaixo de 4,5:1 sobre Canvas nos motores que não forçam as cores
+     * (WebKit). */
+    .rte-editor .rte-dialog__hint,
+    .rte-editor .rte-dialog__readonly {
       color: CanvasText;
     }
 
@@ -565,11 +829,46 @@
       color: HighlightText;
       background-color: Highlight;
     }
+
+    /* Envio (05c2a E21): progresso em Highlight com borda CanvasText; marcador CanvasText. */
+    .rte-editor .rte-uploads__progress,
+    .rte-editor .rte-upload-marker__progress {
+      accent-color: Highlight;
+      border-color: CanvasText;
+    }
+
+    .rte-editor .rte-uploads__progress::-webkit-progress-value,
+    .rte-editor .rte-upload-marker__progress::-webkit-progress-value {
+      background-color: Highlight;
+    }
+
+    .rte-editor .rte-uploads__progress::-moz-progress-bar,
+    .rte-editor .rte-upload-marker__progress::-moz-progress-bar {
+      background-color: Highlight;
+    }
+
+    .rte-editor .rte-upload-marker {
+      border-color: CanvasText;
+    }
+
+    /* Na fila: --rte-text-muted fica abaixo de 4,5:1 sobre Canvas nos motores que não
+     * forçam as cores (WebKit), como a dica do diálogo. */
+    .rte-editor .rte-upload-marker--queued {
+      color: CanvasText;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .rte-editor .rte-editor__frame {
       transition: none;
+      animation: none;
+    }
+
+    /* Envio sem fração (E21): o <progress> indeterminado não anima. */
+    .rte-editor .rte-uploads__progress:indeterminate,
+    .rte-editor .rte-upload-marker__progress:indeterminate,
+    .rte-editor .rte-uploads__progress:indeterminate::-moz-progress-bar,
+    .rte-editor .rte-upload-marker__progress:indeterminate::-moz-progress-bar {
       animation: none;
     }
   }
@@ -674,6 +973,12 @@
   /* O título vazio de caixa mostra o rótulo da variante; em itálico, para não parecer digitado. */
   .rte-content .rte-placeholder:not(.rte-placeholder--doc)::before {
     font-style: italic;
+  }
+
+  /* V11: com o editável ligado, o clique no vídeo/iframe seleciona o nó (o menu abre) em vez de tocar. */
+  .rte-editor .rte-content[contenteditable='true'] .rt-figure--video video,
+  .rte-editor .rte-content[contenteditable='true'] .rt-embed iframe {
+    pointer-events: none;
   }
 
   /* Tarefas: o checkbox fica fora da área editável (`contenteditable=false`). */

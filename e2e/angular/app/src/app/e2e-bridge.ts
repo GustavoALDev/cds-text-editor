@@ -8,7 +8,14 @@ import {
   NgZone,
   signal,
 } from '@angular/core';
-import type { RteToolbarConfig } from '@cds/rte-angular';
+import type {
+  RteEditor,
+  RteMediaChange,
+  RteMediaSession,
+  RteToolbarConfig,
+  RteUploadErrorEvent,
+  RteUploadStatus,
+} from '@cds/rte-angular';
 import { getRteEditor } from '@cds/rte-angular/testing';
 import { getRteHtml } from '@cds/rte-core/extensions';
 import { applyRteTheme, type RteTheme } from '@cds/rte-theme';
@@ -29,12 +36,21 @@ export type RteE2eId =
   | 'dialogs'
   | 'dialogs-api'
   | 'floating'
-  | 'floating-alt';
+  | 'floating-alt'
+  | 'media'
+  | 'media-alt'
+  | 'media-key'
+  | 'upload'
+  | 'upload-reactive'
+  | 'upload-template'
+  | 'upload-none';
 /** Exibições da rota `render` que os testes leem (`data-testid` igual ao id). */
 export type RteE2eRenderId =
   'render-main' | 'render-wide' | 'render-input' | 'render-keep';
 export type RteE2eToggle = 'disabled' | 'readonly' | 'hidden' | 'show';
 export type RteE2eLang = 'en' | 'pt-BR' | 'es';
+/** `[upload]` ao vivo: `http` (nova config com a consulta), `none` (`null`), `other` (outra config). */
+export type RteE2eUploadMode = 'http' | 'none' | 'other';
 
 export interface RteE2eState {
   valid: boolean;
@@ -59,6 +75,17 @@ export interface RteE2eHandle {
   setFloatingMenus?(config: unknown): void;
   /** `focusFloatingMenu()` do editor (página `floating`). */
   focusFloatingMenu?(): boolean;
+  /** Último `mediaChange` e contagem (página `media`). */
+  lastMediaChange?(): RteMediaChange | null;
+  mediaChanges?(): number;
+  /** `mediaSession()` do editor (página `media`). */
+  mediaSession?(): RteMediaSession;
+  /** O `RteEditor` com envio (página `upload`). */
+  uploadEditor?(): RteEditor;
+  /** `uploadError` recebidos, em ordem (página `upload`). */
+  uploadErrors?(): readonly RteUploadErrorEvent[];
+  /** Troca o `[upload]` do editor (Ruling 14: `query` vai ao *endpoint*). */
+  setUpload?(mode: RteE2eUploadMode, query?: string): void;
 }
 
 /** O que a página `render` registra para uma exibição. */
@@ -92,6 +119,24 @@ export interface RteE2eApi {
   setFloatingMenus(id: RteE2eId, config: unknown): void;
   /** `focusFloatingMenu()` do editor `id` (N9, N24). */
   focusFloatingMenu(id: RteE2eId): boolean;
+  /** Último `mediaChange` do editor `id` (`null` antes do primeiro). */
+  lastMediaChange(id: RteE2eId): RteMediaChange | null;
+  /** Quantos `mediaChange` o editor `id` emitiu. */
+  mediaChanges(id: RteE2eId): number;
+  /** `mediaSession()` do editor `id`. */
+  mediaSession(id: RteE2eId): RteMediaSession;
+  /** `uploads()` do editor `id` (spec 05c2a, E18). */
+  uploads(id: RteE2eId): readonly RteUploadStatus[];
+  pendingUploads(id: RteE2eId): number;
+  imagesMissingAlt(id: RteE2eId): number;
+  /** Último `uploadError` do editor `id` (`null` antes do primeiro). */
+  lastUploadError(id: RteE2eId): RteUploadErrorEvent | null;
+  uploadErrors(id: RteE2eId): readonly RteUploadErrorEvent[];
+  /** `uploadFiles(files)` do editor `id`; os aceitos (E5). */
+  uploadFiles(id: RteE2eId, files: File[]): number;
+  cancelAllUploads(id: RteE2eId): void;
+  /** Troca o `[upload]` do editor `id` (Ruling 14), já aplicado ao voltar (`tick`). */
+  setUpload(id: RteE2eId, mode: RteE2eUploadMode, query?: string): void;
   /** Passa a contar as mutações do `rte-floating-menus` do editor `id` (R16). */
   watchFloating(id: RteE2eId): void;
   /** Mutações (`total`) e as de `style` desde o `watchFloating(id)`. */
@@ -119,6 +164,24 @@ export interface RteE2eApi {
   ): RteE2eProbeResult[];
   readonly readyAt: Partial<Record<RteE2eId, number>>;
   readonly toggledAt: number | null;
+}
+
+function mediaOf(bridge: E2eBridge, id: RteE2eId) {
+  const h = bridge.handle(id);
+  if (!h.lastMediaChange || !h.mediaChanges || !h.mediaSession)
+    throw new Error(`rteE2e: editor '${id}' sem mídia.`);
+  return {
+    last: h.lastMediaChange,
+    count: h.mediaChanges,
+    session: h.mediaSession,
+  };
+}
+
+function uploadOf(bridge: E2eBridge, id: RteE2eId) {
+  const h = bridge.handle(id);
+  if (!h.uploadEditor || !h.uploadErrors)
+    throw new Error(`rteE2e: editor '${id}' sem envio.`);
+  return { editor: h.uploadEditor(), errors: h.uploadErrors() };
 }
 
 /** Estado sem formulário (`[(value)]`): sempre válido, nunca tocado. */
@@ -358,6 +421,32 @@ export function installE2eBridge(): void {
         count(entry, entry.observer.takeRecords());
         return { total: entry.total, style: entry.style };
       },
+      lastMediaChange: (id) => run(() => mediaOf(bridge, id).last()),
+      mediaChanges: (id) => run(() => mediaOf(bridge, id).count()),
+      mediaSession: (id) => run(() => mediaOf(bridge, id).session()),
+      uploads: (id) => run(() => uploadOf(bridge, id).editor.uploads()),
+      pendingUploads: (id) =>
+        run(() => uploadOf(bridge, id).editor.pendingUploads()),
+      imagesMissingAlt: (id) =>
+        run(() => uploadOf(bridge, id).editor.imagesMissingAlt()),
+      lastUploadError: (id) =>
+        run(() => uploadOf(bridge, id).errors.at(-1) ?? null),
+      uploadErrors: (id) => run(() => [...uploadOf(bridge, id).errors]),
+      uploadFiles: (id, files) =>
+        run(() => uploadOf(bridge, id).editor.uploadFiles(files)),
+      cancelAllUploads: (id) =>
+        run(() => uploadOf(bridge, id).editor.cancelAllUploads()),
+      setUpload: (id, mode, query) =>
+        run(() => {
+          const set = bridge.handle(id).setUpload;
+          if (!set) throw new Error(`rteE2e: editor '${id}' sem [upload].`);
+          set(mode, query);
+          // O `[upload]` só chega ao editor na detecção de mudanças; sem ela,
+          // um `uploadFiles` logo em seguida (outro `evaluate`, antes do
+          // agendador: visto no WebKit) usa a configuração anterior e a troca
+          // (E17) o aborta ou descarta em espera do chunk, sem `uploadError`.
+          appRef.tick();
+        }),
       renderedHtml: (id) => run(() => bridge.render(id).renderedHtml()),
       renderError: (id) => run(() => bridge.render(id).error()),
       setRenderInput: (html, mode = 'sanitize') =>

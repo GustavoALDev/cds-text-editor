@@ -63,12 +63,22 @@ function inCodeBlock(state: EditorState): boolean {
   );
 }
 
-function imageContext(editor: Editor): RteFloatingContext | null {
-  const { selection } = editor.state;
-  return selection instanceof NodeSelection &&
-    selection.node.type.name === 'rtImage'
-    ? context('image', selection.from, selection.to)
-    : null;
+/**
+ * `NodeSelection` de um nó de mídia (`typeName`) → o tipo `kind` com a
+ * identidade `{pos, pos + nodeSize}`; vale também dentro de tabela, porque a
+ * mídia vem antes de `table` na prioridade (V10, pré-voo 18).
+ */
+function mediaContext(
+  kind: RteFloatingMenuKind,
+  typeName: string,
+): (editor: Editor) => RteFloatingContext | null {
+  return (editor) => {
+    const { selection } = editor.state;
+    return selection instanceof NodeSelection &&
+      selection.node.type.name === typeName
+      ? context(kind, selection.from, selection.to)
+      : null;
+  };
 }
 
 /** Cursor dentro de um link, pela mesma regra do diálogo (borda conta, ruling 19). */
@@ -119,7 +129,9 @@ function tableContext(editor: Editor): RteFloatingContext | null {
 const READERS: Readonly<
   Record<RteFloatingMenuKind, (editor: Editor) => RteFloatingContext | null>
 > = {
-  image: imageContext,
+  image: mediaContext('image', 'rtImage'),
+  video: mediaContext('video', 'rtVideo'),
+  embed: mediaContext('embed', 'rtEmbed'),
   link: linkContext,
   text: textContext,
   table: tableContext,
@@ -127,8 +139,9 @@ const READERS: Readonly<
 
 /**
  * Contexto do menu flutuante para a seleção atual (M4): o primeiro tipo
- * aplicável de `RTE_FLOATING_KINDS` (`image > link > text > table`) entre os
- * habilitados em `kinds` (pré-voo 4); `null` se nenhum se aplica.
+ * aplicável de `RTE_FLOATING_KINDS` (`image > video > embed > link > text >
+ * table`) entre os habilitados em `kinds` (pré-voo 4); `null` se nenhum se
+ * aplica.
  */
 export function readFloatingContext(
   editor: Editor,

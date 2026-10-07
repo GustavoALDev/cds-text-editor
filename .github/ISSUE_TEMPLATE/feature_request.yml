@@ -1,0 +1,15 @@
+name: Pedido de recurso
+description: Sugira uma melhoria
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problema
+    attributes: { label: Problema ou necessidade }
+    validations: { required: true }
+  - type: textarea
+    id: proposta
+    attributes: { label: Proposta }
+    validations: { required: true }
+  - type: textarea
+    id: alternativas
+    attributes: { label: Alternativas consideradas }

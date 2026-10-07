@@ -1,0 +1,276 @@
+<form
+  class="rte-dialog__form"
+  [formRoot]="form"
+  (mousedown)="keepFocus($event)"
+>
+  @if (fileRules(); as rules) {
+  <fieldset class="rte-dialog__fieldset rte-dialog__source">
+    <legend class="rte-dialog__legend">{{ labels().mediaSource }}</legend>
+    <div class="rte-dialog__field">
+      <input
+        class="rte-dialog__radio"
+        type="radio"
+        value="file"
+        [name]="sourceIds().name"
+        [id]="sourceIds().file"
+        [checked]="useFile()"
+        (change)="onSource('file')"
+      />
+      <label class="rte-dialog__label" [for]="sourceIds().file"
+        >{{ labels().mediaSourceFile }}</label
+      >
+    </div>
+    <div class="rte-dialog__field">
+      <input
+        class="rte-dialog__radio"
+        type="radio"
+        value="url"
+        [name]="sourceIds().name"
+        [id]="sourceIds().url"
+        [checked]="!useFile()"
+        (change)="onSource('url')"
+      />
+      <label class="rte-dialog__label" [for]="sourceIds().url"
+        >{{ labels().mediaSourceUrl }}</label
+      >
+    </div>
+  </fieldset>
+  @let fileError = error(form.file);
+  <div class="rte-dialog__field" [hidden]="!useFile()">
+    <label class="rte-dialog__label" [for]="sourceIds().input"
+      >{{ labels().videoFile }}</label
+    >
+    <input
+      #fileInput
+      class="rte-dialog__input rte-dialog__file"
+      type="file"
+      [id]="sourceIds().input"
+      [accept]="rules.accept"
+      [attr.aria-invalid]="fileError ? 'true' : null"
+      [attr.aria-describedby]="
+          sourceIds().input + '-hint' +
+          (fileError ? ' ' + sourceIds().input + '-error' : '')
+        "
+      (change)="onFile($event)"
+    />
+    <p class="rte-dialog__hint" [id]="sourceIds().input + '-hint'">
+      {{ labels().fileHint(rules.typeNames, rules.maxMegabytes) }}
+    </p>
+    @if (fileError) {
+    <p class="rte-dialog__error" [id]="sourceIds().input + '-error'">
+      {{ fileError }}
+    </p>
+    }
+  </div>
+  } @let srcError = error(form.src);
+  <div class="rte-dialog__field" [hidden]="useFile()">
+    <label class="rte-dialog__label" [for]="ids().src"
+      >{{ labels().videoUrl }}</label
+    >
+    <input
+      class="rte-dialog__input"
+      type="text"
+      inputmode="url"
+      autocomplete="off"
+      spellcheck="false"
+      [id]="ids().src"
+      [formField]="form.src"
+      [attr.aria-invalid]="srcError ? 'true' : null"
+      [attr.aria-describedby]="
+          ids().src + '-hint' + (srcError ? ' ' + ids().src + '-error' : '')
+        "
+    />
+    <p class="rte-dialog__hint" [id]="ids().src + '-hint'">
+      {{ labels().videoUrlHint }}
+    </p>
+    @if (srcError) {
+    <p class="rte-dialog__error" [id]="ids().src + '-error'">{{ srcError }}</p>
+    }
+  </div>
+  @let posterError = error(form.poster);
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().poster"
+      >{{ labels().videoPoster }}</label
+    >
+    <input
+      class="rte-dialog__input"
+      type="text"
+      inputmode="url"
+      autocomplete="off"
+      spellcheck="false"
+      [id]="ids().poster"
+      [formField]="form.poster"
+      [attr.aria-invalid]="posterError ? 'true' : null"
+      [attr.aria-describedby]="posterError ? ids().poster + '-error' : null"
+    />
+    @if (posterError) {
+    <p class="rte-dialog__error" [id]="ids().poster + '-error'">
+      {{ posterError }}
+    </p>
+    }
+  </div>
+  @let captionError = error(form.caption);
+  <div class="rte-dialog__field">
+    <label class="rte-dialog__label" [for]="ids().caption"
+      >{{ labels().videoCaption }}</label
+    >
+    <input
+      class="rte-dialog__input"
+      type="text"
+      [id]="ids().caption"
+      [formField]="form.caption"
+      [attr.aria-invalid]="captionError ? 'true' : null"
+      [attr.aria-describedby]="captionError ? ids().caption + '-error' : null"
+    />
+    @if (captionError) {
+    <p class="rte-dialog__error" [id]="ids().caption + '-error'">
+      {{ captionError }}
+    </p>
+    }
+  </div>
+  <div
+    class="rte-dialog__tracks"
+    role="group"
+    [attr.aria-labelledby]="ids().tracks"
+    [attr.aria-describedby]="noCaptions() ? ids().hint : null"
+  >
+    <h3 class="rte-dialog__subtitle" [id]="ids().tracks">
+      {{ labels().videoTracks }}
+    </h3>
+    @for (track of form.tracks; track track; let i = $index) {
+    <fieldset class="rte-dialog__fieldset">
+      <legend class="rte-dialog__legend">
+        {{ labels().videoTrack(i + 1) }}
+      </legend>
+      <div class="rte-dialog__field">
+        <label class="rte-dialog__label" [for]="kindId(i)"
+          >{{ labels().videoTrackKind }}</label
+        >
+        <select
+          class="rte-dialog__select"
+          [id]="kindId(i)"
+          [formField]="track.kind"
+        >
+          @for (kind of kinds; track kind) {
+          <option [value]="kind">{{ kindName(kind) }}</option>
+          }
+        </select>
+      </div>
+      @let trackSrcError = error(track.src);
+      <div class="rte-dialog__field">
+        <label class="rte-dialog__label" [for]="trackId(i, 'src')"
+          >{{ labels().videoTrackUrl }}</label
+        >
+        <input
+          class="rte-dialog__input"
+          type="text"
+          inputmode="url"
+          autocomplete="off"
+          spellcheck="false"
+          [id]="trackId(i, 'src')"
+          [formField]="track.src"
+          [attr.aria-invalid]="trackSrcError ? 'true' : null"
+          [attr.aria-describedby]="
+            trackSrcError ? trackId(i, 'src') + '-error' : null
+          "
+        />
+        @if (trackSrcError) {
+        <p class="rte-dialog__error" [id]="trackId(i, 'src') + '-error'">
+          {{ trackSrcError }}
+        </p>
+        }
+      </div>
+      @let langError = error(track.srclang);
+      <div class="rte-dialog__field">
+        <label class="rte-dialog__label" [for]="trackId(i, 'lang')"
+          >{{ labels().videoTrackLang }}</label
+        >
+        <input
+          class="rte-dialog__input"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          [id]="trackId(i, 'lang')"
+          [formField]="track.srclang"
+          [attr.aria-invalid]="langError ? 'true' : null"
+          [attr.aria-describedby]="
+            langError ? trackId(i, 'lang') + '-error' : null
+          "
+        />
+        @if (langError) {
+        <p class="rte-dialog__error" [id]="trackId(i, 'lang') + '-error'">
+          {{ langError }}
+        </p>
+        }
+      </div>
+      @let labelError = error(track.label);
+      <div class="rte-dialog__field">
+        <label class="rte-dialog__label" [for]="trackId(i, 'label')"
+          >{{ labels().videoTrackLabel }}</label
+        >
+        <input
+          class="rte-dialog__input"
+          type="text"
+          [id]="trackId(i, 'label')"
+          [formField]="track.label"
+          [attr.aria-invalid]="labelError ? 'true' : null"
+          [attr.aria-describedby]="
+            labelError ? trackId(i, 'label') + '-error' : null
+          "
+        />
+        @if (labelError) {
+        <p class="rte-dialog__error" [id]="trackId(i, 'label') + '-error'">
+          {{ labelError }}
+        </p>
+        }
+      </div>
+      <div class="rte-dialog__field">
+        <input
+          class="rte-dialog__checkbox"
+          type="checkbox"
+          [id]="trackId(i, 'default')"
+          [formField]="track.isDefault"
+          (change)="onDefault(i, $event)"
+        />
+        <label class="rte-dialog__label" [for]="trackId(i, 'default')"
+          >{{ labels().videoTrackDefault }}</label
+        >
+      </div>
+      <button
+        type="button"
+        class="rte-dialog__track-remove"
+        (click)="removeTrack(i)"
+      >
+        {{ labels().videoTrackRemove(i + 1) }}
+      </button>
+    </fieldset>
+    }
+    <button
+      type="button"
+      class="rte-dialog__track-add"
+      [id]="ids().add"
+      [disabled]="full()"
+      (click)="addTrack()"
+    >
+      {{ labels().videoTrackAdd }}
+    </button>
+    @if (noCaptions()) {
+    <p class="rte-dialog__hint" [id]="ids().hint">
+      {{ labels().videoCaptionsHint }}
+    </p>
+    }
+  </div>
+  <div class="rte-dialog__actions">
+    @if (request().mode === 'edit') {
+    <button type="button" class="rte-dialog__remove" (click)="remove()">
+      {{ labels().remove }}
+    </button>
+    }
+    <button type="button" class="rte-dialog__cancel" (click)="cancel()">
+      {{ labels().cancel }}
+    </button>
+    <button type="submit" class="rte-dialog__apply">
+      {{ labels().apply }}
+    </button>
+  </div>
+</form>

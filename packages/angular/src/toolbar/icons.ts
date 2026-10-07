@@ -16,6 +16,11 @@
  * `panel-bottom-close`/`panel-right-close` (o Lucide não tem remover
  * linha/coluna: nome acessível e dica dizem a operação).
  *
+ * Mídia (05c1): `mediaDetails` vem de `pencil` (Lucide 1.52.0, sem
+ * conversão: já são só caminhos); os itens da barra `image`, `video` e
+ * `embed` vêm de `image`, `video` e `square-play` (`rect`/`circle`
+ * convertidos em caminhos, como acima).
+ *
  * ISC License
  *
  * Copyright (c) 2026 Lucide Icons and Contributors
@@ -50,7 +55,8 @@ export type RteIconName =
   | 'removeLink'
   | 'openLink'
   | 'imageAlignFull'
-  | 'removeImage';
+  | 'removeImage'
+  | 'mediaDetails';
 
 /** Lista de `d` por ícone (viewBox 24, traço 2, `currentColor`). */
 export const RTE_ICONS: Readonly<Record<RteIconName, readonly string[]>> =
@@ -209,6 +215,23 @@ export const RTE_ICONS: Readonly<Record<RteIconName, readonly string[]>> =
     imageAlignFull: [
       'M4 4H20A2 2 0 0 1 22 6V8A2 2 0 0 1 20 10H4A2 2 0 0 1 2 8V6A2 2 0 0 1 4 4Z',
       'M4 14H20A2 2 0 0 1 22 16V18A2 2 0 0 1 20 20H4A2 2 0 0 1 2 18V16A2 2 0 0 1 4 14Z',
+    ],
+    image: [
+      'M5 3H19A2 2 0 0 1 21 5V19A2 2 0 0 1 19 21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3Z',
+      'M11 9A2 2 0 0 1 7 9A2 2 0 0 1 11 9Z',
+      'm21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21',
+    ],
+    video: [
+      'm16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5',
+      'M4 6H14A2 2 0 0 1 16 8V16A2 2 0 0 1 14 18H4A2 2 0 0 1 2 16V8A2 2 0 0 1 4 6Z',
+    ],
+    embed: [
+      'M5 3H19A2 2 0 0 1 21 5V19A2 2 0 0 1 19 21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3Z',
+      'M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z',
+    ],
+    mediaDetails: [
+      'M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z',
+      'm15 5 4 4',
     ],
     removeImage: [
       'M10 11v6',

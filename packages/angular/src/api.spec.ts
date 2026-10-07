@@ -7,6 +7,7 @@ import {
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import {
+  provideRichText,
   RteEditor,
   type RteDialogKind,
   type RteEditorConfig,
@@ -14,6 +15,7 @@ import {
 } from '@cds/rte-angular';
 import { getRteHtml } from '@cds/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
+import { NodeSelection } from '@tiptap/pm/state';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   chooseOption,
@@ -24,8 +26,11 @@ import {
   waitForDialog,
 } from './testing-support/dialog';
 import { selectText } from './testing-support/editors';
+import { createFakeUploadAdapter } from './testing-support/fake-upload-adapter';
+import { whenUploadReady } from './testing-support/upload-runtime';
 import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
+import type { RteDialogController } from './dialogs/controller';
 
 // Spec 05b2a, Tarefas 4 e 6: `openDialog` (R17).
 
@@ -41,15 +46,17 @@ const DOC =
     [options]="options()"
     [disabled]="disabled()"
     [readonly]="readonly()"
+    [hidden]="hidden()"
   />`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class Host {
-  readonly value = DOC;
+  value = DOC;
   readonly toolbar = signal<RteToolbarConfig | undefined>('full');
   readonly options = signal<RteEditorConfig | undefined>(undefined);
   readonly disabled = signal(false);
   readonly readonly = signal(false);
+  readonly hidden = signal(false);
   readonly cmp = viewChild.required(RteEditor);
 }
 
@@ -231,5 +238,172 @@ describe('openDialog com toolbar: false (R17)', () => {
     expect(event.defaultPrevented).toBe(true);
     const dialog = await waitForDialog(fixture);
     expect(title(dialog)).toBe('Insert link');
+  });
+});
+
+describe('openDialog de mídia (V2, V9)', () => {
+  const MEDIA =
+    '<p>texto</p>' +
+    '<figure class="rt-figure rt-figure--center"><img src="/a.png" alt="A"></figure>' +
+    '<figure class="rt-figure rt-figure--video"><video src="/v.webm" controls=""></video></figure>' +
+    '<figure class="rt-embed rt-embed--youtube" data-rt-provider="youtube"><iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" title="YouTube"></iframe></figure>';
+
+  function controller(cmp: RteEditor): RteDialogController {
+    return (cmp as unknown as { dialogs: RteDialogController }).dialogs;
+  }
+
+  function selectNode(editor: Editor, typeName: string): number {
+    let found = -1;
+    editor.state.doc.descendants((node, pos) => {
+      if (found >= 0) return false;
+      if (node.type.name === typeName) found = pos;
+      return found < 0;
+    });
+    editor.view.dispatch(
+      editor.state.tr.setSelection(
+        NodeSelection.create(editor.state.doc, found),
+      ),
+    );
+    return found;
+  }
+
+  async function setupMedia(init: (host: Host) => void = () => undefined) {
+    const fixture = TestBed.createComponent(Host);
+    fixture.componentInstance.value = MEDIA;
+    init(fixture.componentInstance);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const cmp = fixture.componentInstance.cmp();
+    return { fixture, cmp, editor: cmp.editor() as Editor };
+  }
+
+  it.each(['image', 'video', 'embed'] as const)(
+    '%s: true no editável com o cursor no texto → insert',
+    async (kind) => {
+      const { cmp, editor } = await setupMedia();
+      selectText(editor, 'texto', 2);
+      const from = editor.state.selection.from;
+      expect(cmp.openDialog(kind)).toBe(true);
+      const req = controller(cmp).request();
+      expect(req?.kind).toBe(kind);
+      expect(req?.mode).toBe('insert');
+      expect(req?.range).toEqual({ from, to: from });
+    },
+  );
+
+  it.each([
+    ['image', 'rtImage'],
+    ['video', 'rtVideo'],
+    ['embed', 'rtEmbed'],
+  ] as const)(
+    '%s: com o próprio nó selecionado → edit sobre o nó',
+    async (kind, typeName) => {
+      const { cmp, editor } = await setupMedia();
+      const pos = selectNode(editor, typeName);
+      expect(cmp.openDialog(kind)).toBe(true);
+      const req = controller(cmp).request();
+      expect(req?.kind).toBe(kind);
+      expect(req?.mode).toBe('edit');
+      expect(req?.range).toEqual({ from: pos, to: pos + 1 });
+    },
+  );
+
+  it.each([
+    ['readonly', (h: Host) => h.readonly.set(true)],
+    ['disabled', (h: Host) => h.disabled.set(true)],
+  ] as const)('false com %s', async (_name, init) => {
+    const { cmp, editor } = await setupMedia(init);
+    selectText(editor, 'texto', 2);
+    for (const kind of ['image', 'video', 'embed'] as const)
+      expect(cmp.openDialog(kind)).toBe(false);
+    expect(controller(cmp).request()).toBeNull();
+  });
+
+  it('false com outro diálogo aberto', async () => {
+    const { fixture, cmp, editor } = await setupMedia();
+    selectText(editor, 'texto');
+    expect(cmp.openDialog('link')).toBe(true);
+    await waitForDialog(fixture);
+    for (const kind of ['image', 'video', 'embed'] as const)
+      expect(cmp.openDialog(kind)).toBe(false);
+    expect(controller(cmp).request()?.kind).toBe('link');
+  });
+
+  it('false com media: false (image, video); embed segue', async () => {
+    const { cmp, editor } = await setupMedia((h) =>
+      h.options.set({ features: { media: false } }),
+    );
+    selectText(editor, 'texto', 2);
+    expect(cmp.openDialog('image')).toBe(false);
+    expect(cmp.openDialog('video')).toBe(false);
+    expect(cmp.openDialog('embed')).toBe(true);
+  });
+
+  it('false com embedProviders: [] (embed); image segue', async () => {
+    const { cmp, editor } = await setupMedia((h) =>
+      h.options.set({ embedProviders: [] }),
+    );
+    selectText(editor, 'texto', 2);
+    expect(cmp.openDialog('embed')).toBe(false);
+    expect(cmp.openDialog('image')).toBe(true);
+  });
+
+  it('a barra full ganha image/video/embed; sem provedores, sem embed', async () => {
+    const { fixture } = await setupMedia((h) =>
+      h.options.set({ embedProviders: [] }),
+    );
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[aria-label="Insert image"]')).not.toBeNull();
+    expect(el.querySelector('[aria-label="Insert video"]')).not.toBeNull();
+    expect(
+      el.querySelector('[aria-label="Insert embedded content"]'),
+    ).toBeNull();
+  });
+});
+
+describe('uploadFiles e cancelUpload (05c2a E18)', () => {
+  const png = () => new File(['x'], 'a.png', { type: 'image/png' });
+
+  it('0 antes do editorReady; cancelUpload desconhecido → false', () => {
+    const adapter = createFakeUploadAdapter();
+    TestBed.configureTestingModule({
+      providers: [provideRichText({ upload: { adapter } })],
+    });
+    const fixture = TestBed.createComponent(RteEditor);
+    const cmp = fixture.componentInstance;
+    expect(cmp.uploadFiles([png()])).toBe(0);
+    expect(cmp.cancelUpload('x')).toBe(false);
+    expect(cmp.uploads()).toEqual([]);
+    expect(cmp.pendingUploads()).toBe(0);
+    expect(adapter.calls).toEqual([]);
+  });
+
+  it.each([
+    ['hidden', (h: Host) => h.hidden.set(true)],
+    ['readonly', (h: Host) => h.readonly.set(true)],
+    ['disabled', (h: Host) => h.disabled.set(true)],
+  ] as const)('0 com %s', async (_name, init) => {
+    const adapter = createFakeUploadAdapter();
+    TestBed.configureTestingModule({
+      providers: [provideRichText({ upload: { adapter } })],
+    });
+    const { cmp } = await setup(init);
+    expect(cmp.uploadFiles([png()])).toBe(0);
+    expect(cmp.cancelUpload('x')).toBe(false);
+    expect(adapter.calls).toEqual([]);
+  });
+
+  it('editável: aceita e cancela pelo id', async () => {
+    const adapter = createFakeUploadAdapter();
+    TestBed.configureTestingModule({
+      providers: [provideRichText({ upload: { adapter } })],
+    });
+    const { cmp } = await setup();
+    await whenUploadReady(cmp);
+    expect(cmp.uploadFiles(new Set([png()]))).toBe(1);
+    const id = cmp.uploads()[0]?.id as string;
+    expect(cmp.cancelUpload(id)).toBe(true);
+    expect(adapter.signal(0).aborted).toBe(true);
+    expect(cmp.pendingUploads()).toBe(0);
   });
 });

@@ -18,8 +18,12 @@ import type {
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     rtImage: {
-      /** Insere a imagem (lição 14: substitui o parágrafo vazio do cursor). */
-      setImage: (attrs: RteImageAttrs) => ReturnType;
+      /**
+       * Insere a imagem (lição 14: substitui o parágrafo vazio do cursor).
+       * Com `at` (05c2a E9), as regras usam essa posição em vez da seleção,
+       * sem mexer na seleção nem rolar; `at` inválido devolve `false`.
+       */
+      setImage: (attrs: RteImageAttrs, options?: { at?: number }) => ReturnType;
       /** Muda atributos da imagem selecionada. */
       updateImage: (attrs: Partial<RteImageAttrs>) => ReturnType;
       /** Largura da imagem selecionada; a altura segue a proporção. */
@@ -30,9 +34,9 @@ declare module '@tiptap/core' {
       /**
        * Insere o vídeo (lição 14: substitui o parágrafo vazio do cursor).
        * Faixas inválidas são descartadas, não recusadas; só `tracks` que não
-       * seja lista devolve `false`.
+       * seja lista devolve `false`. `at`: como no `setImage`.
        */
-      setVideo: (attrs: RteVideoAttrs) => ReturnType;
+      setVideo: (attrs: RteVideoAttrs, options?: { at?: number }) => ReturnType;
       /** Muda atributos do vídeo selecionado (faixas inválidas descartadas). */
       updateVideo: (attrs: Partial<RteVideoAttrs>) => ReturnType;
     };
@@ -495,10 +499,11 @@ export function createMediaExtensions(
         return update(props, found.pos, attrs);
       };
       return {
-        setImage: (input) => (props) => {
+        setImage: (input, options) => (props) => {
           const attrs = strict(imageChecks, IMAGE_DEFAULTS, input);
           if (!attrs || attrs['src'] === null) return false;
-          return replaceEmptyParagraphWith(type().create(attrs))(props);
+          const node = type().create(attrs);
+          return replaceEmptyParagraphWith(node, options?.at)(props);
         },
         updateImage: (input) => (props) => patch(props, input),
         setImageAlign: (align) => (props) => patch(props, { align }),
@@ -571,10 +576,11 @@ export function createMediaExtensions(
     addCommands() {
       const type = () => this.type;
       return {
-        setVideo: (input) => (props) => {
+        setVideo: (input, options) => (props) => {
           const attrs = strict(videoChecks, VIDEO_DEFAULTS, input);
           if (!attrs || attrs['src'] === null) return false;
-          return replaceEmptyParagraphWith(type().create(attrs))(props);
+          const node = type().create(attrs);
+          return replaceEmptyParagraphWith(node, options?.at)(props);
         },
         updateVideo: (input) => (props) => {
           const found = selected(props, type());

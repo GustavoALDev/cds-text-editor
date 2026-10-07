@@ -5,13 +5,17 @@ import { menuItem, openMenu, toolbarButton } from './toolbar';
 
 // Ajudantes dos diálogos (spec 05b2a, N16–N20) na página `/dialogs`.
 
-export type DialogKind = 'link' | 'lang' | 'quoteAuthor' | 'table';
+export type DialogKind =
+  'link' | 'lang' | 'quoteAuthor' | 'table' | 'image' | 'video' | 'embed';
 
 /** Rótulos (en) do item da barra de cada diálogo, fora e dentro do trecho. */
 const TOOLBAR_LABELS: Record<Exclude<DialogKind, 'table'>, string[]> = {
   link: ['Link', 'Edit link'],
   lang: ['Language', 'Edit language'],
   quoteAuthor: ['Quote author'],
+  image: ['Insert image', 'Edit image'],
+  video: ['Insert video', 'Edit video'],
+  embed: ['Insert embedded content', 'Edit embedded content'],
 };
 
 /** O `<dialog>` aberto (`showModal`) dentro do host do editor `id`. */
@@ -98,11 +102,15 @@ export interface DialogsChunk {
 
 /**
  * Intercepta os `.js` da página (antes do `gotoApp`): busca a resposta e
- * marca como *chunk* dos diálogos o arquivo que contém `rte-dialog__form`
- * (pré-voo 16); esse é segurado (`hold`) ou abortado (`abort`), os outros
- * seguem intactos.
+ * marca como o *chunk* procurado o arquivo que contém `marker`; esse é
+ * segurado (`hold`) ou abortado (`abort`). Os outros seguem para o próximo
+ * interceptador com `route.fallback()` (Ruling 4 da 05c2a: com dois
+ * interceptadores na página, um `fulfill` aqui engoliria o *chunk* do outro).
  */
-export async function dialogsChunk(page: Page): Promise<DialogsChunk> {
+export async function chunkByMarker(
+  page: Page,
+  marker: string,
+): Promise<DialogsChunk> {
   let mode: 'pass' | 'hold' | 'abort' = 'pass';
   let gate: Promise<void> = Promise.resolve();
   let url = '';
@@ -111,8 +119,8 @@ export async function dialogsChunk(page: Page): Promise<DialogsChunk> {
   await page.route('**/*.js', async (route) => {
     const response = await route.fetch();
     const body = await response.text();
-    if (!body.includes('rte-dialog__form')) {
-      await route.fulfill({ response, body });
+    if (!body.includes(marker)) {
+      await route.fallback();
       return;
     }
     url = route.request().url();
@@ -139,4 +147,22 @@ export async function dialogsChunk(page: Page): Promise<DialogsChunk> {
       mode = 'abort';
     },
   };
+}
+
+/**
+ * *Chunk* dos diálogos de link, idioma, citação e tabela: o `.js` com
+ * `rte-link-form` (o `rte-dialog__form` está também no da mídia, 05c2a E2).
+ * O app compila a biblioteca do fonte: os nomes dos *chunks* não são os do
+ * `dist`, daí a marca no conteúdo.
+ */
+export function dialogsChunk(page: Page): Promise<DialogsChunk> {
+  return chunkByMarker(page, 'rte-link-form');
+}
+
+/**
+ * *Chunk* dos formulários de mídia (`RteMediaForms`, 05c2a E2): o `.js` com
+ * `rte-image-form`.
+ */
+export function mediaFormsChunk(page: Page): Promise<DialogsChunk> {
+  return chunkByMarker(page, 'rte-image-form');
 }

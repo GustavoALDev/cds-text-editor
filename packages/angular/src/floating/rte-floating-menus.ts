@@ -45,9 +45,10 @@ import {
   imageAlignAt,
   linkHrefAt,
   readTableStates,
-  removeImage,
   removeLinkAt,
+  removeMedia,
   RTE_FLOATING_IMAGE_ALIGNS,
+  RTE_FLOATING_MEDIA,
   RTE_FLOATING_TABLE_MORE,
   RTE_FLOATING_TABLE_OPS,
   RTE_FLOATING_TEXT_MARKS,
@@ -128,7 +129,8 @@ export class RteFloatingMenus implements RteFloatingMenusApi {
   protected readonly tableOpIds = RTE_FLOATING_TABLE_OPS;
   protected readonly tableMoreIds = RTE_FLOATING_TABLE_MORE;
   protected readonly imageAligns = RTE_FLOATING_IMAGE_ALIGNS;
-  protected readonly commands = { removeLinkAt, alignImage, removeImage };
+  protected readonly media = RTE_FLOATING_MEDIA;
+  protected readonly commands = { removeLinkAt, alignImage, removeMedia };
   /** Cliques dos itens (M13, M14, M16): só com o editor interativo. */
   protected readonly act = createFloatingActions({
     editor: () => untracked(this.editor),

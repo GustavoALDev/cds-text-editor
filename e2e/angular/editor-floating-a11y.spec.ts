@@ -28,9 +28,10 @@ import { frames, rteHtml, selectIn } from './helpers/toolbar';
 // página com o menu visível sem detecção de mudanças.
 
 const ID = 'floating';
-const KINDS: FloatingKind[] = ['text', 'link', 'table', 'image'];
+type OldKind = Exclude<FloatingKind, 'video' | 'embed'>;
+const KINDS: OldKind[] = ['text', 'link', 'table', 'image'];
 
-const NAMES: Record<FloatingKind, string> = {
+const NAMES: Record<OldKind, string> = {
   text: 'Text formatting',
   link: 'Link',
   table: 'Table',
@@ -149,7 +150,7 @@ test('N25: cada menu tem o nome acessível do rótulo (en e pt-BR)', async ({
     );
   }
   await page.evaluate(() => window.rteE2e.setLang('pt-BR'));
-  const pt: Record<FloatingKind, string> = {
+  const pt: Record<OldKind, string> = {
     text: 'Formatação do texto',
     link: 'Link',
     table: 'Tabela',

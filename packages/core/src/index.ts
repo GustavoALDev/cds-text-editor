@@ -49,6 +49,7 @@ export type { RteTableSizing } from './table-sizing';
 export type { RteResizeCorner, RteResizeInput, SrcsetCandidate } from './image';
 
 export {
+  clearLocalDrafts,
   createDraftStore,
   createLocalDraftStorage,
   createMemoryDraftStorage,

@@ -1,5 +1,16 @@
-import type { RteLabels } from '@cds/rte-angular';
+import type { RteLabels, RteUploadErrorReason } from '@cds/rte-angular';
 import { RTE_CONTENT_LABELS, RTE_SLASH_LABELS } from '@cds/rte-core/extensions';
+
+const UPLOAD_REASONS: Readonly<Record<RteUploadErrorReason, string>> =
+  Object.freeze({
+    type: 'tipo de archivo no aceptado.',
+    size: 'archivo demasiado grande.',
+    count: 'demasiados archivos a la vez.',
+    network: 'fallo de conexión.',
+    server: 'el servidor lo rechazó.',
+    response: 'respuesta del servidor no válida.',
+    unavailable: 'el editor no es editable.',
+  });
 
 /** Rótulos em espanhol, congelados em profundidade. */
 export const RTE_LABELS_ES: RteLabels = Object.freeze({
@@ -62,6 +73,12 @@ export const RTE_LABELS_ES: RteLabels = Object.freeze({
     pullquote: 'Cita destacada',
     readAlso: 'Recuadro "Lee también"',
     clearFormatting: 'Borrar formato',
+    image: 'Insertar imagen',
+    editImage: 'Editar imagen',
+    video: 'Insertar vídeo',
+    editVideo: 'Editar vídeo',
+    embed: 'Insertar contenido incrustado',
+    editEmbed: 'Editar contenido incrustado',
     heading: (level: 2 | 3 | 4) => `Título ${level}`,
     colorNames: Object.freeze({
       gray: 'Gris',
@@ -81,6 +98,14 @@ export const RTE_LABELS_ES: RteLabels = Object.freeze({
       `Usa como máximo ${max} caracteres (${actual} ahora).`,
     rteMaxWords: ({ max, actual }: { max: number; actual: number }) =>
       `Usa como máximo ${max} palabras (${actual} ahora).`,
+    rteUploadsPending: (count: number) =>
+      count === 1
+        ? 'Espera a que termine 1 envío.'
+        : `Espera a que terminen ${count} envíos.`,
+    rteImagesMissingAlt: (count: number) =>
+      count === 1
+        ? '1 imagen sin texto alternativo.'
+        : `${count} imágenes sin texto alternativo.`,
   }),
   dialogs: Object.freeze({
     apply: 'Aplicar',
@@ -121,6 +146,58 @@ export const RTE_LABELS_ES: RteLabels = Object.freeze({
     errorRange: (min: number, max: number) =>
       `Introduce un número entero de ${min} a ${max}.`,
     errorMaxLength: (max: number) => `Usa como máximo ${max} caracteres.`,
+    imageInsertTitle: 'Insertar imagen',
+    imageEditTitle: 'Detalles de la imagen',
+    imageUrl: 'Dirección de la imagen (URL)',
+    videoUrl: 'Dirección del vídeo (URL)',
+    imageUrlHint: 'Usa https://… o una ruta que empiece por /.',
+    imageAlt: 'Texto alternativo',
+    imageDecorative: 'Imagen decorativa',
+    imageAltHint:
+      'Describe lo que muestra la imagen. Marca "Imagen decorativa" solo si no aporta información.',
+    imageCaption: 'Pie de foto',
+    imageCredit: 'Crédito',
+    imageAlign: 'Alineación',
+    imageWidth: 'Ancho (px)',
+    imageWidthHint: 'Déjalo vacío para el tamaño natural.',
+    videoInsertTitle: 'Insertar vídeo',
+    videoEditTitle: 'Detalles del vídeo',
+    videoPoster: 'Dirección de la imagen de portada (opcional)',
+    videoCaption: 'Pie de vídeo',
+    videoTracks: 'Pistas de texto',
+    videoTrackKind: 'Tipo',
+    videoTrackCaptions: 'Subtítulos para sordos (diálogos y sonidos)',
+    videoTrackSubtitles: 'Subtítulos (traducción)',
+    videoTrackUrl: 'Dirección de la pista (.vtt)',
+    videoTrackLang: 'Código de idioma (BCP 47)',
+    videoTrackLabel: 'Etiqueta',
+    videoTrackDefault: 'Predeterminada',
+    videoTrackAdd: 'Añadir pista',
+    videoCaptionsHint:
+      'Sin pista de subtítulos para sordos: los vídeos con habla o sonido relevante la necesitan (WCAG 1.2.2).',
+    embedInsertTitle: 'Insertar contenido incrustado',
+    embedEditTitle: 'Detalles del contenido incrustado',
+    embedUrl: 'Dirección de la página (URL)',
+    embedCaption: 'Pie',
+    errorMediaUrl:
+      'Dirección no aceptada. Usa https:// o una ruta que empiece por /, en un host permitido.',
+    errorEmbedUrl: 'Ningún proveedor activo reconoce esta dirección.',
+    videoUrlHint: 'Usa https://… o una ruta que empiece por /.',
+    videoTrack: (n: number) => `Pista ${n}`,
+    videoTrackRemove: (n: number) => `Quitar pista ${n}`,
+    embedUrlHint: (providers: readonly string[]) =>
+      `Se aceptan: ${providers.join(', ')}.`,
+    mediaSource: 'Origen',
+    mediaSourceFile: 'Archivo',
+    mediaSourceUrl: 'Dirección (URL)',
+    imageFile: 'Archivo de imagen',
+    videoFile: 'Archivo de vídeo',
+    fileHint: (types: readonly string[], maxMegabytes: number) =>
+      `Se aceptan: ${types.join(', ')}. Hasta ${maxMegabytes} MB.`,
+    errorFileRequired: 'Elige un archivo.',
+    errorFileType: 'Este tipo de archivo no se acepta.',
+    errorFileSize: (maxMegabytes: number) =>
+      `El archivo supera ${maxMegabytes} MB.`,
     languageNames: Object.freeze({
       en: 'Inglés',
       es: 'Español',
@@ -149,5 +226,31 @@ export const RTE_LABELS_ES: RteLabels = Object.freeze({
     imageAlignRight: 'Alinear a la derecha',
     imageAlignFull: 'Ancho completo',
     removeImage: 'Quitar imagen',
+    videoMenu: 'Vídeo',
+    embedMenu: 'Contenido incrustado',
+    imageDetails: 'Detalles de la imagen…',
+    videoDetails: 'Detalles del vídeo…',
+    embedDetails: 'Detalles del contenido incrustado…',
+    removeVideo: 'Quitar vídeo',
+    removeEmbed: 'Quitar contenido incrustado',
+  }),
+  upload: Object.freeze({
+    region: 'Envíos',
+    progress: (name: string) => `Enviando ${name}`,
+    queued: (name: string) => `${name} (en cola)`,
+    cancel: (name: string) => `Cancelar envío de ${name}`,
+    announceStart: (count: number) =>
+      count === 1 ? 'Enviando 1 archivo.' : `Enviando ${count} archivos.`,
+    announceDone: (name: string) => `${name} enviado.`,
+    announceCancelled: (name: string) => `Envío de ${name} cancelado.`,
+    announceError: (name: string, reason: RteUploadErrorReason) =>
+      `No se pudo enviar ${name}: ${UPLOAD_REASONS[reason]}`,
+  }),
+  draft: Object.freeze({
+    region: 'Borrador guardado',
+    available: (savedAt: number) =>
+      `Hay un borrador guardado el ${new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' }).format(savedAt)}.`,
+    restore: 'Restaurar',
+    discard: 'Descartar',
   }),
 });
