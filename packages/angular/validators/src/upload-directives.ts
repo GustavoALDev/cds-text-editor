@@ -30,7 +30,7 @@ import { RteEditor } from '@cds/rte-angular';
  * registro, a diretiva se acrescenta ao controle do `NgControl` do próprio
  * elemento (e se retira na destruição) e o revalida ela mesma.
  */
-abstract class RteCountValidator implements Validator {
+export abstract class RteCountValidator implements Validator {
   private readonly injector = inject(Injector);
   private onChange: (() => void) | undefined;
   private control: AbstractControl | null = null;

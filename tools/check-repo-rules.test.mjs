@@ -120,3 +120,40 @@ test('requires governance files in the real repo (root package.json)', () => {
   assert.ok(errors.some((e) => e.startsWith('SECURITY.md:')));
   assert.ok(errors.some((e) => e.startsWith('docs/open-core.md:')));
 });
+
+const RENDER_PKG = {
+  'packages/render/package.json': JSON.stringify({ name: '@cds/rte-render' }),
+  'packages/render/src/index.ts':
+    "export { fb as ɵfb } from './fb';\nexport { ok } from './ok';\n",
+};
+
+test('rejects an ɵ export whose declaration lacks @internal', () => {
+  const root = fixture({
+    ...RENDER_PKG,
+    'packages/render/src/fb.ts':
+      '/** Base. */\nexport function fb(): void {}\n',
+  });
+  const errors = checkRepoRules(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /ɵfb.*@internal/);
+});
+
+test('accepts an ɵ export marked @internal (alias and direct)', () => {
+  const root = fixture({
+    ...RENDER_PKG,
+    'packages/render/src/index.ts':
+      "export { fb as ɵfb } from './fb';\n/** @internal */\nexport const ɵdirect = 1;\n",
+    'packages/render/src/fb.ts':
+      '/**\n * Base.\n * @internal\n */\nexport function fb(): void {}\n',
+  });
+  assert.deepEqual(checkRepoRules(root), []);
+});
+
+test('ignores ɵ in spec files', () => {
+  const root = fixture({
+    ...RENDER_PKG,
+    'packages/render/src/index.ts': "export { ok } from './ok';\n",
+    'packages/render/src/x.spec.ts': 'export const ɵ_nope = 1;\n',
+  });
+  assert.deepEqual(checkRepoRules(root), []);
+});

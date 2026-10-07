@@ -24,5 +24,6 @@ export {
   RteImagesHaveAltValidator,
   RteUploadsFinishedValidator,
 } from './upload-directives';
+export type { RteCountValidator } from './upload-directives';
 export { rteImagesHaveAlt, rteUploadsFinished } from './upload-validators';
 export type { RteEditorRef } from './upload-validators';

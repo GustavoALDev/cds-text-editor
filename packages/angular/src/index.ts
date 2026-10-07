@@ -56,3 +56,17 @@ export type {
   RteUploadType,
   RteUploadVideoMime,
 } from './upload/types';
+export type { RteFloatingMenusApi } from './floating/types';
+export type { RteItemState, RteToolbarState } from './toolbar/state';
+export type { RteSlashMenuApi } from './slash/types';
+export type { RteCounterLevel, RteFooterModel } from './counters/footer';
+export type { RteLimitAnnouncement } from './counters/limit-announcer';
+export type {
+  RteDialogController,
+  RteDialogRequest,
+  RteDialogView,
+} from './dialogs/controller';
+export type { RteDialogMode, RteDialogTarget } from './dialogs/target';
+export type { RteMediaRules } from './dialogs/media-rules';
+export type { RteDialogUploads, RteFileRules } from './upload/dialog-port';
+export type { RteUploadText } from './upload/types';

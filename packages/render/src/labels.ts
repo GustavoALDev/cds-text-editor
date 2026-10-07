@@ -13,7 +13,11 @@ export const RTE_RENDER_LABELS = new InjectionToken<RteRenderLabels>(
   { providedIn: 'root', factory: () => RTE_RENDER_LABELS_EN },
 );
 
-/** Sobrepõe `over` a `base`, aceitando só `string` não vazia; o resto cai na base. */
+/**
+ * Sobrepõe `over` a `base`, aceitando só `string` não vazia; o resto cai na base.
+ *
+ * @internal
+ */
 export function mergeRenderLabels(
   base: RteRenderLabels,
   ...over: (Partial<RteRenderLabels> | undefined)[]

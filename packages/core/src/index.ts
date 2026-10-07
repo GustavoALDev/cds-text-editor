@@ -6,6 +6,7 @@ export {
   matchesRule,
   serializeTokens,
 } from './schema/rules';
+export type { RteTokensRule } from './schema/rules';
 export { isAllowedUrl } from './schema/url';
 export { isAllowedClass } from './schema/classes';
 export { sanitizeStyle, applyStyleFrom } from './schema/style';

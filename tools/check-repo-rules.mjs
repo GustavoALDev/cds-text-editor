@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
@@ -41,6 +41,75 @@ function readTsconfig(path) {
   return config;
 }
 
+// Arquivos .ts de produção de um pacote (sem specs, testing-support, dist e node_modules).
+function sourceFiles(dir) {
+  const out = [];
+  for (const name of readdirSync(dir)) {
+    if (
+      name === 'node_modules' ||
+      name === 'dist' ||
+      name === 'testing-support'
+    )
+      continue;
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) out.push(...sourceFiles(full));
+    else if (/\.ts$/.test(name) && !/\.(spec|d)\.ts$/.test(name))
+      out.push(full);
+  }
+  return out;
+}
+
+// O JSDoc imediatamente antes de `export function|const|class <name>` contém @internal?
+// null = declaração não encontrada neste arquivo.
+function declarationIsInternal(source, name) {
+  const re = new RegExp(
+    String.raw`(?:/\*\*(?:(?!\*/)[\s\S])*\*/\s*)?export\s+(?:declare\s+)?(?:abstract\s+)?(?:async\s+)?(?:function|const|class)\s+` +
+      name.replace(/\$/g, String.raw`\$`) +
+      String.raw`(?![\w$])`,
+  );
+  const m = re.exec(source);
+  return m ? /@internal\b/.test(m[0]) : null;
+}
+
+// Spec 05d2 (Z8): todo export com prefixo `ɵ` precisa de @internal no JSDoc da declaração.
+function checkInternalExports(pkgDir, pkg) {
+  const errors = [];
+  const files = sourceFiles(pkgDir).map((f) => [f, readFileSync(f, 'utf8')]);
+  const decl = (name) => {
+    for (const [, src] of files) {
+      const r = declarationIsInternal(src, name);
+      if (r !== null) return r;
+    }
+    return false;
+  };
+  const seen = new Set();
+  for (const [file, src] of files) {
+    const rel = `packages/${pkg}/${relative(pkgDir, file).split(sep).join('/')}`;
+    for (const m of src.matchAll(/export\s*\{([^}]*)\}/g)) {
+      for (const item of m[1].split(',')) {
+        const mm = /^\s*(?:type\s+)?([\w$]+)\s+as\s+(ɵ[\w$]*)\s*$/.exec(item);
+        if (!mm || seen.has(mm[2])) continue;
+        seen.add(mm[2]);
+        if (!decl(mm[1]))
+          errors.push(
+            `${rel}: o export ${mm[2]} exige @internal no JSDoc de ${mm[1]} (spec 05d2, Z8)`,
+          );
+      }
+    }
+    for (const m of src.matchAll(
+      /export\s+(?:declare\s+)?(?:function|const|class)\s+(ɵ[\w$]*)/g,
+    )) {
+      if (seen.has(m[1])) continue;
+      seen.add(m[1]);
+      if (!declarationIsInternal(src, m[1]))
+        errors.push(
+          `${rel}: o export ${m[1]} exige @internal no JSDoc (spec 05d2, Z8)`,
+        );
+    }
+  }
+  return errors;
+}
+
 export function checkRepoRules(rootDir) {
   const errors = [];
   // Só no repositório real (com package.json na raiz); fixtures parciais de teste ficam de fora.
@@ -58,6 +127,7 @@ export function checkRepoRules(rootDir) {
 
   for (const pkg of readdirSync(packagesDir)) {
     if (!statSync(join(packagesDir, pkg)).isDirectory()) continue;
+    errors.push(...checkInternalExports(join(packagesDir, pkg), pkg));
     const manifestPath = join(packagesDir, pkg, 'package.json');
     if (NO_ANGULAR.includes(pkg) && existsSync(manifestPath)) {
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
