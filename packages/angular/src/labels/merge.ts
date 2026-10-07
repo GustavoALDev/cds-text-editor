@@ -5,6 +5,7 @@ import type {
 import { RTE_DIALOG_LANGUAGES } from '../dialogs/types';
 import type {
   RteDialogLabels,
+  RteDraftLabels,
   RteFloatingMenuLabels,
   RteLabels,
   RteLabelsInput,
@@ -261,6 +262,23 @@ function mergeUpload(base: RteUploadLabels, given: unknown): RteUploadLabels {
   return out as unknown as RteUploadLabels;
 }
 
+function mergeDraft(base: RteDraftLabels, given: unknown): RteDraftLabels {
+  if (!isBag(given)) return base;
+  const out: Record<string, unknown> = { ...base };
+  for (const key of ['region', 'restore', 'discard'] as const) {
+    const value = own(given, key);
+    if (typeof value === 'string') out[key] = value;
+  }
+  const available = own(given, 'available');
+  if (typeof available === 'function') {
+    out['available'] = guard(
+      available as (savedAt: number) => unknown,
+      base.available,
+    );
+  }
+  return out as unknown as RteDraftLabels;
+}
+
 /**
  * Mescla a entrada sobre `base` por seção e por chave: só chaves próprias com
  * o tipo esperado. Sem entrada, devolve `base` (o mesmo objeto).
@@ -302,6 +320,10 @@ export function mergeLabels(
     upload: safely(
       () => mergeUpload(base.upload, own(input, 'upload')),
       base.upload,
+    ),
+    draft: safely(
+      () => mergeDraft(base.draft, own(input, 'draft')),
+      base.draft,
     ),
   };
 }

@@ -246,4 +246,11 @@ export const RTE_LABELS_ES: RteLabels = Object.freeze({
     announceError: (name: string, reason: RteUploadErrorReason) =>
       `No se pudo enviar ${name}: ${UPLOAD_REASONS[reason]}`,
   }),
+  draft: Object.freeze({
+    region: 'Borrador guardado',
+    available: (savedAt: number) =>
+      `Hay un borrador guardado el ${new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' }).format(savedAt)}.`,
+    restore: 'Restaurar',
+    discard: 'Descartar',
+  }),
 });

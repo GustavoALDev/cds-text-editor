@@ -7,6 +7,7 @@
       "cds-rte-angular-rte-dialogs-*.mjs",
       "cds-rte-angular-rte-media-forms-*.mjs",
       "cds-rte-angular-rte-floating-menus-*.mjs",
+      "cds-rte-angular-rte-draft-*.mjs",
       "cds-rte-angular-rte-upload-*.mjs",
       "cds-rte-angular-i18n.mjs",
       "cds-rte-angular-testing.mjs",
@@ -34,7 +35,8 @@
       "forbiddenContent": [
         "marcador de envio sem envio correspondente",
         "rteUploadComposition",
-        "rte-upload-marker__name"
+        "rte-upload-marker__name",
+        "__rte_draft_probe__"
       ]
     },
     "whole": {
@@ -56,7 +58,8 @@
       "forbiddenContent": [
         "marcador de envio sem envio correspondente",
         "rteUploadComposition",
-        "rte-upload-marker__name"
+        "rte-upload-marker__name",
+        "__rte_draft_probe__"
       ]
     },
     "dialogs": {
@@ -109,6 +112,22 @@
     },
     "upload-runtime": {
       "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-upload-*.mjs",
+      "exports": ["*"],
+      "externalChunks": true,
+      "external": [
+        "@angular/*",
+        "@tiptap/*",
+        "@cds/*",
+        "lowlight",
+        "highlight.js",
+        "highlight.js/*",
+        "rxjs",
+        "rxjs/*",
+        "tslib"
+      ]
+    },
+    "draft": {
+      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-draft-*.mjs",
       "exports": ["*"],
       "externalChunks": true,
       "external": [
@@ -178,6 +197,7 @@
     "i18n": 5120,
     "validators": 2368,
     "upload": 1152,
-    "upload-runtime": 7552
+    "upload-runtime": 7552,
+    "draft": 1920
   }
 }

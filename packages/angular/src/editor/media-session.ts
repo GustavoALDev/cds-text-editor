@@ -210,6 +210,21 @@ export class RteMediaTracker {
   }
 
   /**
+   * Documento trocado dentro da sessão (`restoreDraft`, S5): base e vistos
+   * ficam; os endereços novos fora da base entram como vistos, de modo que as
+   * remoções feitas no rascunho continuam contando para o `onMediaRemoved`.
+   */
+  adopt(doc: ProseMirrorNode): void {
+    this.doc = doc;
+    this.counts = countMedia(doc, this.rules);
+    for (const url of this.counts.keys()) {
+      if (!this.base.has(url)) this.seen.add(url);
+    }
+    this.missing = countMissingAlt(doc);
+    this.cached = null;
+  }
+
+  /**
    * Refaz a base da sessão (S8, `markSaved`): a base passa a ser `base`
    * (endereços do HTML confirmado) e os vistos, os atuais fora dela.
    */

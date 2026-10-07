@@ -14,7 +14,14 @@
     (tabOut)="focus()"
     (dialog)="requestDialog($event.kind, $event.origin)"
   />
-  } @if (!editor()) {
+  } @defer (when draftPromptAt() !== null) { @if (draftPromptAt() !== null) {
+  <rte-draft-prompt
+    [savedAt]="draftPromptAt() ?? 0"
+    [labels]="resolvedLabels().draft"
+    (restoreDraft)="onPromptRestore()"
+    (discardDraft)="onPromptDiscard()"
+  />
+  } } @placeholder {} @error {} @if (!editor()) {
   <div
     class="rte-content rte-editor__shell"
     role="textbox"
@@ -63,6 +70,7 @@
     <span>{{ a.text }}</span>
     }
   </div>
+  <div class="rte-draft__status" aria-live="polite">{{ draftStatus() }}</div>
 </div>
 @defer (when dialogRequested(); prefetch on idle) {
 <rte-dialogs

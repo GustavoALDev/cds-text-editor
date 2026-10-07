@@ -19,6 +19,7 @@ export type {
 } from './floating/types';
 export type {
   RteDialogLabels,
+  RteDraftLabels,
   RteEditorLabels,
   RteErrorLabels,
   RteFloatingMenuLabels,
@@ -28,6 +29,11 @@ export type {
   RteToolbarLabels,
   RteUploadLabels,
 } from './labels/types';
+export type {
+  RteDraftAvailable,
+  RteDraftConfig,
+  RteDraftErrorEvent,
+} from './draft/types';
 export { RteUploadError } from './upload/types';
 export type {
   RteUploadAdapter,

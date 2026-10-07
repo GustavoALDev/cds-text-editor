@@ -47,8 +47,7 @@ export interface RteDirtyDeps {
   readonly currentUrls: () => readonly string[];
   /** `adapter.onMediaRemoved`, se houver. */
   readonly deliver: () =>
-    | ((urls: readonly string[]) => void | Promise<void>)
-    | null;
+    ((urls: readonly string[]) => void | Promise<void>) | null;
 }
 
 /**
@@ -62,7 +61,12 @@ export class RteDirtyState {
   readonly isDirty: Signal<boolean> = computed(
     () => this.current() !== this.base(),
   );
-  /** Gancho depois de `markSaved` (a Tarefa 2 apaga o rascunho aqui). */
+  /** A base salva (HTML canônico). */
+  baseValue(): string {
+    return untracked(this.base);
+  }
+
+  /** Gancho depois de `markSaved` (apaga o rascunho, S8). */
   onSaved: (() => void) | null = null;
   private waiting: Set<string> | null = null;
   private disposed = false;

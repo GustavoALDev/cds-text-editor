@@ -1,0 +1,8 @@
+<rte-editor
+    [value]="value()"
+    [draftKey]="key()"
+    [readonly]="ro()"
+    [disabled]="off()"
+    (valueChange)="values.push($event)"
+    (draftError)="errors.push($event)"
+  />

@@ -186,6 +186,15 @@ export interface RteUploadLabels {
   announceError(name: string, reason: RteUploadErrorReason): string;
 }
 
+export interface RteDraftLabels {
+  /** Nome acessível do aviso de restauração. */
+  region: string;
+  /** Texto do aviso: a data e a hora do rascunho (nunca o conteúdo). */
+  available(savedAt: number): string;
+  restore: string;
+  discard: string;
+}
+
 export interface RteFloatingMenuLabels {
   /** Nome acessível do menu de texto. */
   textMenu: string;
@@ -219,6 +228,7 @@ export interface RteLabels {
   readonly dialogs: RteDialogLabels;
   readonly floating: RteFloatingMenuLabels;
   readonly upload: RteUploadLabels;
+  readonly draft: RteDraftLabels;
 }
 
 export interface RteLabelsInput {
@@ -236,6 +246,7 @@ export interface RteLabelsInput {
   };
   floating?: Partial<RteFloatingMenuLabels>;
   upload?: Partial<RteUploadLabels>;
+  draft?: Partial<RteDraftLabels>;
 }
 
 /** Objeto parcial ou função lida dentro de `computed` (pode ler signals) (D15). */

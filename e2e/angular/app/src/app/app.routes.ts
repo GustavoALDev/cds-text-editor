@@ -40,6 +40,11 @@ export const routes: Routes = [
     path: 'media',
     loadComponent: () => import('./pages/media').then((m) => m.MediaPage),
   },
+  // Rascunho (spec 05c2b): `draftKey` e `clearLocalDrafts`.
+  {
+    path: 'draft',
+    loadComponent: () => import('./pages/draft').then((m) => m.DraftPage),
+  },
   // Envio de arquivos (spec 05c2a): providers de rota sob demanda.
   {
     path: 'upload',

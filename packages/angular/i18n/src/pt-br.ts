@@ -246,4 +246,11 @@ export const RTE_LABELS_PT_BR: RteLabels = Object.freeze({
     announceError: (name: string, reason: RteUploadErrorReason) =>
       `Não foi possível enviar ${name}: ${UPLOAD_REASONS[reason]}`,
   }),
+  draft: Object.freeze({
+    region: 'Rascunho salvo',
+    available: (savedAt: number) =>
+      `Há um rascunho salvo em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(savedAt)}.`,
+    restore: 'Restaurar',
+    discard: 'Descartar',
+  }),
 });
