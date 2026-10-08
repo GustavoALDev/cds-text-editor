@@ -4,8 +4,10 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import {
+  checkExternal,
   checkMarkdown,
   checkSite,
+  externalReport,
   githubSlug,
   main,
   parseHtml,
@@ -181,4 +183,116 @@ test('site: diretório inexistente ou sem HTML falha em vez de passar em silênc
     () => checkSite({ siteDir: join(tmpdir(), 'nao-existe-xyz') }),
     /nenhum arquivo \.html/,
   );
+});
+
+// ---------- links externos (links.yml): consulta com fetch falso, nunca falha ----------
+
+/** fetch falso: mapa url -> resposta { status, url?,? } ou função/erro. */
+function fakeFetch(table, calls = []) {
+  return async (url, init = {}) => {
+    calls.push({ url, method: init.method });
+    const entry = table[url];
+    if (typeof entry === 'function') return entry(init);
+    if (!entry) throw new Error('rede indisponível');
+    if (init.method === 'HEAD' && entry.headStatus)
+      return { status: entry.headStatus, url };
+    return { status: entry.status, url: entry.url ?? url };
+  };
+}
+
+test('checkExternal: 200 ok, 404 quebrado, redirecionamento anotado', async () => {
+  const calls = [];
+  const results = await checkExternal(
+    ['https://ok.test/', 'https://sumiu.test/', 'https://velho.test/'],
+    fakeFetch(
+      {
+        'https://ok.test/': { status: 200 },
+        'https://sumiu.test/': { status: 404 },
+        'https://velho.test/': { status: 200, url: 'https://novo.test/' },
+      },
+      calls,
+    ),
+  );
+  const by = Object.fromEntries(results.map((r) => [r.url, r]));
+  assert.equal(by['https://ok.test/'].state, 'ok');
+  assert.equal(by['https://sumiu.test/'].state, 'quebrado');
+  assert.equal(by['https://sumiu.test/'].status, 404);
+  assert.equal(by['https://velho.test/'].state, 'redirecionado');
+  assert.equal(by['https://velho.test/'].to, 'https://novo.test/');
+  assert.ok(calls.every((c) => c.method === 'HEAD' || c.method === 'GET'));
+});
+
+test('checkExternal: HEAD recusado (405) cai para GET', async () => {
+  const calls = [];
+  const results = await checkExternal(
+    ['https://so-get.test/'],
+    fakeFetch(
+      { 'https://so-get.test/': { headStatus: 405, status: 200 } },
+      calls,
+    ),
+  );
+  assert.equal(results[0].state, 'ok');
+  assert.deepEqual(
+    calls.map((c) => c.method),
+    ['HEAD', 'GET'],
+  );
+});
+
+test('checkExternal: timeout vira erro, sem lançar e sem travar os demais', async () => {
+  const hang = (init) =>
+    new Promise((_, reject) => {
+      init.signal.addEventListener('abort', () =>
+        reject(new DOMException('aborted', 'AbortError')),
+      );
+    });
+  const results = await checkExternal(
+    ['https://lento.test/', 'https://ok.test/'],
+    fakeFetch({
+      'https://lento.test/': hang,
+      'https://ok.test/': { status: 200 },
+    }),
+    { timeoutMs: 20 },
+  );
+  assert.equal(results[0].state, 'erro');
+  assert.match(results[0].detail, /tempo|timeout/i);
+  assert.equal(results[1].state, 'ok');
+});
+
+test('checkExternal: erro de rede vira erro anotado', async () => {
+  const results = await checkExternal(['https://fora.test/'], fakeFetch({}));
+  assert.equal(results[0].state, 'erro');
+  assert.match(results[0].detail, /rede indisponível/);
+});
+
+test('externalReport: resumo em Markdown só com o que merece atenção', () => {
+  const md = externalReport([
+    { url: 'https://ok.test/', state: 'ok', status: 200 },
+    { url: 'https://sumiu.test/', state: 'quebrado', status: 404 },
+    {
+      url: 'https://velho.test/',
+      state: 'redirecionado',
+      status: 200,
+      to: 'https://novo.test/',
+    },
+    { url: 'https://fora.test/', state: 'erro', detail: 'tempo esgotado' },
+  ]);
+  assert.match(md, /4 link\(s\) externo\(s\)/);
+  assert.match(md, /1 ok/);
+  assert.match(md, /https:\/\/sumiu\.test\/ \| HTTP 404/);
+  assert.match(md, /redirecionado para https:\/\/novo\.test\//);
+  assert.match(md, /tempo esgotado/);
+  assert.doesNotMatch(md, /https:\/\/ok\.test\//);
+});
+
+test('main --consultar: lê a lista, escreve o resumo e nunca falha', async () => {
+  const root = tree({ 'externos.txt': 'https://a.test/\nhttps://b.test/\n' });
+  const logs = [];
+  const log = { log: (m) => logs.push(m), error: (m) => logs.push(m) };
+  const code = await main(['--consultar', 'externos.txt'], {
+    cwd: root,
+    log,
+    fetchImpl: fakeFetch({ 'https://a.test/': { status: 200 } }),
+  });
+  assert.equal(code, 0);
+  assert.ok(logs.join('\n').includes('https://b.test/'));
 });

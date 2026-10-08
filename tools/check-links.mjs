@@ -1,6 +1,7 @@
 // Verificação de links internos (spec 07c, X9).
 //   node tools/check-links.mjs <siteDir> [--base /cds-text-editor/] [--demo-root <dir>] [--readmes]
 //                              [--externos <arquivo>] [--repo <raiz>]
+//   node tools/check-links.mjs --consultar <links-externos.txt>   (links.yml: consulta e resume, nunca falha)
 // Sobre o HTML construído: todo href/src interno resolve para um arquivo do build e todo #âncora existe
 // na página de destino. Com --readmes, também os links relativos e âncoras (slug do GitHub) dos README.md
 // dos pacotes, do README raiz e de docs/**/*.md. Links externos só são listados (nunca consultados aqui).
@@ -301,7 +302,94 @@ export function checkMarkdown({ repoRoot, files = markdownFiles(repoRoot) }) {
 }
 
 // ---------- CLI ----------
-export function main(argv, { cwd = process.cwd(), log = console } = {}) {
+// ---------- links externos (links.yml, semanal): consulta sem nunca falhar ----------
+
+/**
+ * Consulta cada URL externa (HEAD; se recusado, GET), com tempo limite. Devolve, por URL,
+ * `{ url, state: 'ok' | 'redirecionado' | 'quebrado' | 'erro', status?, to?, detail? }`. Nunca
+ * lança: rede ruidosa não pode bloquear nada (o `links.yml` só registra o resultado).
+ */
+export async function checkExternal(
+  urls,
+  fetchImpl = globalThis.fetch,
+  { timeoutMs = 15_000, concurrency = 8 } = {},
+) {
+  const attempt = async (url, method) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetchImpl(url, {
+        method,
+        redirect: 'follow',
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  const one = async (url) => {
+    try {
+      let res = await attempt(url, 'HEAD');
+      if (res.status === 405 || res.status === 501 || res.status === 403)
+        res = await attempt(url, 'GET');
+      if (res.status >= 400)
+        return { url, state: 'quebrado', status: res.status };
+      if (res.url && res.url !== url)
+        return { url, state: 'redirecionado', status: res.status, to: res.url };
+      return { url, state: 'ok', status: res.status };
+    } catch (e) {
+      const aborted = e?.name === 'AbortError';
+      return {
+        url,
+        state: 'erro',
+        detail: aborted
+          ? `tempo esgotado (${timeoutMs} ms)`
+          : String(e?.message ?? e),
+      };
+    }
+  };
+  const out = new Array(urls.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < urls.length) {
+      const i = next++;
+      out[i] = await one(urls[i]);
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, urls.length) }, worker),
+  );
+  return out;
+}
+
+/** Resumo em Markdown (para `$GITHUB_STEP_SUMMARY`): contagens e só o que merece atenção. */
+export function externalReport(results) {
+  const count = (state) => results.filter((r) => r.state === state).length;
+  const lines = [
+    '## Links externos',
+    '',
+    `${results.length} link(s) externo(s): ${count('ok')} ok, ${count('redirecionado')} redirecionado(s), ${count('quebrado')} quebrado(s), ${count('erro')} com erro de rede.`,
+  ];
+  const problems = results.filter((r) => r.state !== 'ok');
+  if (problems.length) {
+    lines.push('', '| Link | Situação |', '| --- | --- |');
+    for (const r of problems) {
+      const what =
+        r.state === 'quebrado'
+          ? `HTTP ${r.status}`
+          : r.state === 'redirecionado'
+            ? `redirecionado para ${r.to}`
+            : r.detail;
+      lines.push(`| ${r.url} | ${what} |`);
+    }
+  }
+  return lines.join('\n');
+}
+
+export function main(
+  argv,
+  { cwd = process.cwd(), log = console, fetchImpl = globalThis.fetch } = {},
+) {
   const args = argv.slice();
   const opt = (name) => {
     const i = args.indexOf(name);
@@ -316,6 +404,18 @@ export function main(argv, { cwd = process.cwd(), log = console } = {}) {
     args.splice(i, 1);
     return true;
   };
+  const consultar = opt('--consultar');
+  if (consultar) {
+    // Modo do links.yml: devolve uma Promise e nunca falha (código 0).
+    const urls = readFileSync(resolve(cwd, consultar), 'utf8')
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    return checkExternal(urls, fetchImpl).then((results) => {
+      log.log(externalReport(results));
+      return 0;
+    });
+  }
   const base = opt('--base') ?? '/';
   const demoRoot = opt('--demo-root');
   const externosFile = opt('--externos');
@@ -364,5 +464,5 @@ export function main(argv, { cwd = process.cwd(), log = console } = {}) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  process.exit(main(process.argv.slice(2)));
+  process.exit(await main(process.argv.slice(2)));
 }

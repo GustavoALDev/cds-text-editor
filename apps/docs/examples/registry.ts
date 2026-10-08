@@ -8,4 +8,8 @@ import type { Type } from '@angular/core';
 export const EXAMPLES: Readonly<Record<string, () => Promise<Type<unknown>>>> =
   {
     resumo: () => import('./resumo.live').then((m) => m.ResumoLive),
+    'inicio-rapido': () =>
+      import('./inicio-rapido/form-example').then((m) => m.FormExample),
+    configuracao: () =>
+      import('./configuracao/route-live').then((m) => m.RouteLive),
   };

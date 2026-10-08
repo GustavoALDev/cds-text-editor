@@ -153,3 +153,115 @@ body {
   font-size: 0.8em;
   opacity: 0.75;
 }
+
+/* código: paleta do tema (`--rte-code-*`, contraste AA contra `--rte-code-bg` nos dois esquemas);
+   o site não é `.rte-root`, então os valores estáticos do tema entram como reserva idêntica */
+.doc pre {
+  --docs-code-bg: var(--rte-code-bg, light-dark(#f4f4f6, #1e1e24));
+  --docs-code-text: var(--rte-code-text, light-dark(#24242b, #e8e8ee));
+  --docs-code-comment: var(--rte-code-comment, light-dark(#5c5c6b, #9a9aab));
+  --docs-code-keyword: var(--rte-code-keyword, light-dark(#6b21a8, #d2a8ff));
+  --docs-code-string: var(--rte-code-string, light-dark(#0f6a3a, #7ee0a1));
+  --docs-code-number: var(--rte-code-number, light-dark(#b45309, #ffb86b));
+  --docs-code-function: var(--rte-code-function, light-dark(#1d4ed8, #8ab4ff));
+
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-radius: 0.375rem;
+  background: var(--docs-code-bg);
+  color: var(--docs-code-text);
+  font:
+    0.875rem/1.5 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+}
+
+.doc pre code {
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+
+.hljs-comment,
+.hljs-quote,
+.hljs-meta {
+  color: var(--docs-code-comment);
+}
+
+.hljs-keyword,
+.hljs-built_in,
+.hljs-type,
+.hljs-literal,
+.hljs-selector-tag,
+.hljs-name,
+.hljs-tag {
+  color: var(--docs-code-keyword);
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-template-variable,
+.hljs-addition {
+  color: var(--docs-code-string);
+}
+
+.hljs-number,
+.hljs-symbol,
+.hljs-variable,
+.hljs-deletion {
+  color: var(--docs-code-number);
+}
+
+.hljs-title,
+.hljs-function,
+.hljs-attr,
+.hljs-attribute,
+.hljs-selector-class,
+.hljs-selector-id,
+.hljs-property {
+  color: var(--docs-code-function);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 700;
+}
+
+.doc :not(pre) > code {
+  padding: 0.1em 0.3em;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, currentcolor 10%, transparent);
+  font-size: 0.9em;
+}
+
+/* exemplos vivos */
+.doc-live {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, currentcolor 25%, transparent);
+  border-radius: 0.375rem;
+}
+
+.doc a {
+  color: inherit;
+}
+
+.doc table {
+  border-collapse: collapse;
+  inline-size: 100%;
+}
+
+.doc th,
+.doc td {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid color-mix(in srgb, currentcolor 25%, transparent);
+  text-align: start;
+  vertical-align: top;
+}

@@ -1,0 +1,17 @@
+<p>
+  Com o <em>provider</em> da rota (rótulos em pt-BR, barra
+  <code>minimal</code>):
+</p>
+<div data-testid="com-provider">
+  <ng-container
+    [ngComponentOutlet]="article"
+    [ngComponentOutletEnvironmentInjector]="injector"
+  />
+</div>
+<p>
+  Sem <em>provider</em> (padrões: rótulos em inglês, barra
+  <code>article</code>):
+</p>
+<div data-testid="sem-provider">
+  <rte-editor ariaLabel="Sem provider" />
+</div>

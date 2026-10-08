@@ -1,0 +1,6 @@
+<!-- #region template -->
+<rte-editor [formField]="post.body" ariaLabel="Texto do artigo" />
+<p aria-live="polite" data-testid="erros">{{ errors().join(' ') }}</p>
+<button type="button" (click)="fillTooLong()">Preencher acima do limite</button>
+<docs-display-example [html]="model().body" />
+<!-- #endregion -->

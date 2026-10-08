@@ -1,0 +1,47 @@
+name: Links externos
+# Consulta semanal dos links externos da documentação (spec 07c, X9). Só registra o resultado no
+# resumo do job: link externo é rede ruidosa e nunca deve deixar o repositório vermelho.
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # `gh run download` do artefato links-externos.txt do último CI do main.
+  actions: read
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # O resultado é informativo: nenhuma falha deste job deve ser tratada como defeito do main.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      # Links dos README e de docs/**/*.md (não precisa de dependências nem de build).
+      - name: Lista dos externos dos READMEs
+        run: node tools/check-links.mjs --readmes --externos links-readmes.txt || true
+      # Links do site: o artefato do último CI verde do main, se ainda existir (retenção de 14 dias).
+      - name: Lista dos externos do site (último CI do main)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$(gh run list --workflow ci.yml --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId' || true)
+          if [ -n "$run_id" ]; then
+            gh run download "$run_id" --name links-externos.txt --dir links-site || true
+          fi
+          touch links-readmes.txt
+          cat links-readmes.txt links-site/links-externos.txt 2>/dev/null | sort -u | sed '/^$/d' > links-externos.txt
+          wc -l links-externos.txt
+      - name: Consultar (HEAD, com GET de reserva; limite de 15 s por link)
+        run: node tools/check-links.mjs --consultar links-externos.txt >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: links-externos.txt
+          path: links-externos.txt
+          retention-days: 14
+          if-no-files-found: ignore
