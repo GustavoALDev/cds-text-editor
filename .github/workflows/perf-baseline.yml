@@ -62,7 +62,17 @@ jobs:
       # 10 execuções por motor, em série (1 worker, sem retentativa). Cada execução grava
       # e2e/test-results/perf/n45-<motor>.json (amostras das duas voltas); copiamos para perf-runs.
       - name: Rodar o N45 10 vezes por motor
+        env:
+          RTE_E2E_REUSE_SERVER: '1'
         run: |
+          # servidor do app de teste uma vez só: o `webServer` do Playwright, no CI, não é
+          # reaproveitado e deixava a porta ocupada para a execução seguinte
+          npx nx run angular-e2e-app:serve-static > serve.log 2>&1 &
+          for t in $(seq 120); do
+            curl -sf http://127.0.0.1:4317/__health > /dev/null && break
+            sleep 5
+          done
+          curl -sf http://127.0.0.1:4317/__health > /dev/null || { cat serve.log; exit 1; }
           for engine in chromium firefox webkit; do
             mkdir -p "perf-runs/$engine"
             for i in $(seq 10); do

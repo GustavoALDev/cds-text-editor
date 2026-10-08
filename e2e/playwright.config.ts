@@ -20,7 +20,11 @@ export default defineConfig({
   webServer: {
     command: 'npx nx run angular-e2e-app:serve-static',
     url: 'http://127.0.0.1:4317/__health',
-    reuseExistingServer: !process.env['CI'],
+    // `RTE_E2E_REUSE_SERVER=1`: o workflow `perf-baseline.yml` sobe o servidor uma vez e roda o
+    // Playwright 30 vezes contra ele (no CI o servidor do `webServer` ficava no ar e a rodada seguinte
+    // falhava com "already used").
+    reuseExistingServer:
+      !process.env['CI'] || process.env['RTE_E2E_REUSE_SERVER'] === '1',
     timeout: 600_000,
   },
   projects: [
