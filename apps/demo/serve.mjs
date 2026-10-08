@@ -2,11 +2,13 @@
 // `e2e/angular/serve.mjs`: diretório → `index.html` (rotas pré-renderizadas), rota inexistente →
 // 404, só `GET`/`HEAD`. Toda resposta leva a CSP estrita por cabeçalho (o `index.html` repete o
 // mesmo texto numa `<meta>`, para hosts sem cabeçalhos).
-// Uso: node apps/demo/serve.mjs [--dir <browser/>] [--with-server]
+// Uso: node apps/demo/serve.mjs [--dir <browser/>] [--with-server] [--no-csp-header]
 //   (ou RTE_CONSUMER_DIR + dist/demo/browser)
 // `--with-server` (W6): monta o `createApp` do `examples/server-node` (pasta temporária, tokens de
 // desenvolvimento) em `/upload`, `/csrf` e `/media/`, e serve `demo-config.json` com
 // `{"upload":"server"}`. Sem a flag, é só o estático (offline, o envio é simulado).
+// `--no-csp-header`: não envia o cabeçalho (vale só a `<meta>` do `index.html`); o E2E J1 usa para
+// provar que a `<meta>` basta (W4).
 // Variáveis: RTE_DEMO_PORT (padrão 4318), RTE_CONSUMER_DIR.
 import { createReadStream, statSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -114,11 +116,11 @@ export async function createExampleApi({ mediaDir } = {}) {
  * Cria o servidor (sem escutar). `dir` é a pasta `browser/` do build; `api` (opcional) é o
  * handler do servidor de exemplo: liga o modo `server` (rotas da API e `demo-config.json`).
  */
-export function createDemoServer(dir, { api } = {}) {
+export function createDemoServer(dir, { api, cspHeader = true } = {}) {
   const base = resolve(dir);
   return createServer((req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('Content-Security-Policy', CSP);
+    if (cspHeader) res.setHeader('Content-Security-Policy', CSP);
     let pathname;
     try {
       pathname = decodeURIComponent(
@@ -177,7 +179,10 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const example = argv.includes('--with-server')
     ? await createExampleApi()
     : null;
-  const server = createDemoServer(dir, { api: example?.handler });
+  const server = createDemoServer(dir, {
+    api: example?.handler,
+    cspHeader: !argv.includes('--no-csp-header'),
+  });
   const stop = () => {
     server.close();
     Promise.resolve(example?.cleanup()).finally(() => process.exit(0));
@@ -185,7 +190,9 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
   server.listen(PORT, HOST, () => {
-    console.log(`demo em http://${HOST}:${PORT} (${dir}; CSP: ${CSP})`);
+    console.log(
+      `demo em http://${HOST}:${PORT} (${dir}; CSP: ${argv.includes('--no-csp-header') ? 'só a <meta>' : CSP})`,
+    );
     if (example) {
       console.log(`modo servidor: envios gravados em ${example.mediaDir}`);
     }

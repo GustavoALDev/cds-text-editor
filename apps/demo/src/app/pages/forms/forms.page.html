@@ -7,6 +7,12 @@
   texto maior para ver o erro. Veja a <a [href]="readmeUrl">documentação dos formulários</a>.
 </p>
 
+<p>
+  <button type="button" data-testid="fill-long" (click)="fillTooLong()">
+    Preencher com texto acima do limite (por código)
+  </button>
+</p>
+
 <section class="block" aria-labelledby="f-signal">
   <h2 id="f-signal">Signal Forms</h2>
   <rte-editor

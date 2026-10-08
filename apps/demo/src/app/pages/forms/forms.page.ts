@@ -1,4 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  signal,
+} from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { form, FormField } from '@angular/forms/signals';
 import { RteEditor } from '@cds/rte-angular';
@@ -18,7 +23,13 @@ export const FORMS_MAX_CHARS = 60;
 /** Página "Formulários": Signal Forms, Reactive Forms, Template Forms e `[(value)]`. */
 @Component({
   selector: 'demo-forms-page',
-  imports: [RteEditor, FormField, ReactiveFormsModule, FormsModule, MaxCharsDirective],
+  imports: [
+    RteEditor,
+    FormField,
+    ReactiveFormsModule,
+    FormsModule,
+    MaxCharsDirective,
+  ],
   templateUrl: './forms.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -46,7 +57,10 @@ export class FormsPage {
   // 2. Reactive Forms
   readonly control = new FormControl('<p>Reactive Forms</p>', {
     nonNullable: true,
-    validators: [RteValidators.required, RteValidators.maxChars(FORMS_MAX_CHARS)],
+    validators: [
+      RteValidators.required,
+      RteValidators.maxChars(FORMS_MAX_CHARS),
+    ],
   });
 
   // 3. Template Forms
@@ -55,11 +69,25 @@ export class FormsPage {
   // 4. [(value)] sem formulário
   readonly plainValue = signal('<p>Sem formulário</p>');
 
+  /**
+   * Põe, por código, um texto acima do limite nos três formulários. O editor barra a digitação
+   * além do limite (`maxLength`), mas um valor vindo do modelo entra: a validação o reprova.
+   */
+  protected fillTooLong(): void {
+    const html = `<p>${'x'.repeat(FORMS_MAX_CHARS + 20)}</p>`;
+    this.model.set({ body: html });
+    this.control.setValue(html);
+    this.templateValue.set(html);
+  }
+
   protected reactiveErrors(): string {
     return formatRteError(this.control.errors, this.labels);
   }
 
   protected templateErrors(errors: unknown): string {
-    return formatRteError(errors as Record<string, unknown> | null, this.labels);
+    return formatRteError(
+      errors as Record<string, unknown> | null,
+      this.labels,
+    );
   }
 }

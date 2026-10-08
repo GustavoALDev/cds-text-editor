@@ -7,6 +7,7 @@
 // localmente `npx -y npm@11`), RUNNER_TEMP/TMPDIR (padrão do diretório do consumidor).
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
 import * as nodeFs from 'node:fs';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
@@ -24,8 +25,8 @@ export const PACKAGES = [
 ];
 
 const STEPS = ['pack', 'prepare', 'install', 'test', 'build'];
-const NOT_IMPLEMENTED = { 'check-snippets': 5 };
 const LONG_RUNNING = ['dev', 'serve'];
+const CHECKS = ['check-snippets'];
 const DEP_FIELDS = [
   'dependencies',
   'devDependencies',
@@ -369,14 +370,15 @@ export async function main(argv, env = process.env, deps = {}) {
   const fs = deps.fs ?? nodeFs;
   if (!argv.length) {
     throw new Error(
-      `uso: node tools/consumer.mjs <${[...STEPS, ...LONG_RUNNING, ...Object.keys(NOT_IMPLEMENTED)].join('|')}>...`,
+      `uso: node tools/consumer.mjs <${[...STEPS, ...LONG_RUNNING, ...CHECKS].join('|')}>...`,
     );
   }
   for (const step of argv) {
-    if (NOT_IMPLEMENTED[step]) {
-      throw new Error(`Não implementado: tarefa ${NOT_IMPLEMENTED[step]}`);
-    }
-    if (!STEPS.includes(step) && !LONG_RUNNING.includes(step))
+    if (
+      !STEPS.includes(step) &&
+      !LONG_RUNNING.includes(step) &&
+      !CHECKS.includes(step)
+    )
       throw new Error(`subcomando desconhecido: ${step}`);
   }
   const npm = parseNpmCommand(env.RTE_NPM);
@@ -403,6 +405,8 @@ export async function main(argv, env = process.env, deps = {}) {
         throw new Error(`prova de origem reprovada:\n- ${errors.join('\n- ')}`);
       }
       console.log('  prova de origem: ok');
+    } else if (step === 'check-snippets') {
+      await runCheckSnippets({ consumerDir, exec, fs, env: cliEnv });
     } else if (step === 'serve') {
       runServe({ repoRoot, consumerDir, env, flags, exec });
     } else if (step === 'dev') {
@@ -555,6 +559,133 @@ export async function runDev({ repoRoot, consumerDir, env, fs, spawn }) {
     server.kill();
     fs.rmSync(mediaDir, { recursive: true, force: true });
   }
+}
+
+// ---- check-snippets (spec 07b, W13) ---------------------------------------------------------
+
+/** Pasta (dentro do consumidor) onde os *snippets* TypeScript e o `tsconfig` ficam. */
+export const SNIPPETS_DIR = 'check-snippets';
+/** Estado do tema próprio (cor oklch, raio e densidade fora do padrão, neutros cinza, `secondary` inválida). */
+export const CUSTOM_STATE = {
+  primary: 'oklch(0.6 0.2 250)',
+  secondary: 'banana',
+  mode: 'dark',
+  neutral: 'gray',
+  radius: 2,
+  density: 0.9,
+};
+
+/**
+ * Casos dos *snippets*: um por preset (`applyPreset` sobre o estado padrão) e o tema próprio.
+ * `model` é o módulo `model` do playground (`DEFAULT_STATE`, `PRESET_NAMES`, `applyPreset`).
+ */
+export function snippetCases(model) {
+  return [
+    ...model.PRESET_NAMES.map((name) => ({
+      name: `preset-${name}`,
+      state: model.applyPreset(model.DEFAULT_STATE, name),
+    })),
+    {
+      name: 'custom',
+      state: { ...model.DEFAULT_STATE, ...CUSTOM_STATE },
+    },
+  ];
+}
+
+/** Arquivos `.ts` (um módulo por caso) com o texto que `buildTs` gera para cada estado. */
+export function snippetFiles(cases, buildTs) {
+  return cases.map(({ name, state }) => ({
+    file: `${name}.ts`,
+    content: buildTs(state),
+  }));
+}
+
+/** `tsconfig` estrito dos *snippets*: só os `.ts` da pasta (não o `gen/` transpilado). */
+export function snippetsTsconfig() {
+  return {
+    compilerOptions: {
+      strict: true,
+      noEmit: true,
+      skipLibCheck: true,
+      target: 'ES2022',
+      module: 'preserve',
+      moduleResolution: 'bundler',
+      lib: ['ES2022', 'dom'],
+      types: [],
+      experimentalDecorators: true,
+    },
+    include: ['*.ts'],
+  };
+}
+
+/** Importações relativas sem extensão viram `.mjs` (a saída transpilada roda direto no Node). */
+export function withMjsImports(js) {
+  return js.replace(
+    /(\bfrom\s*)(['"])(\.{1,2}\/[^'"\n]+?)\2/g,
+    (_all, from, quote, spec) =>
+      `${from}${quote}${/\.m?js$/.test(spec) ? spec : `${spec}.mjs`}${quote}`,
+  );
+}
+
+/** Comando do `tsc --noEmit` estrito do consumidor sobre a pasta dos *snippets*. */
+export function tscCommand({ consumerDir }) {
+  const tsc = join(consumerDir, 'node_modules', 'typescript', 'bin', 'tsc');
+  return {
+    cmd: process.execPath,
+    args: [tsc, '-p', join(SNIPPETS_DIR, 'tsconfig.json'), '--noEmit'],
+    cwd: consumerDir,
+  };
+}
+
+/**
+ * Grava os *snippets* TypeScript dos 5 presets e do tema próprio em `<consumidor>/check-snippets/`
+ * e roda o `tsc --noEmit` estrito contra os tipos dos tarballs. O texto vem do `buildTs` real do
+ * demo, transpilado com o `typescript` do consumidor.
+ */
+export async function runCheckSnippets({
+  consumerDir,
+  exec,
+  fs = nodeFs,
+  env,
+}) {
+  const source = join(consumerDir, 'src', 'app', 'theme-playground');
+  if (!fs.existsSync(join(source, 'ts-snippet.ts'))) {
+    throw new Error(`${source} não existe: rode "prepare" antes`);
+  }
+  const ts = createRequire(join(consumerDir, 'package.json'))('typescript');
+  const out = join(consumerDir, SNIPPETS_DIR);
+  const gen = join(out, 'gen');
+  fs.rmSync(out, { recursive: true, force: true });
+  fs.mkdirSync(gen, { recursive: true });
+  for (const name of ['model', 'ts-snippet']) {
+    const { outputText } = ts.transpileModule(
+      fs.readFileSync(join(source, `${name}.ts`), 'utf8'),
+      {
+        compilerOptions: {
+          module: ts.ModuleKind.ES2022,
+          target: ts.ScriptTarget.ES2022,
+        },
+      },
+    );
+    fs.writeFileSync(join(gen, `${name}.mjs`), withMjsImports(outputText));
+  }
+  const model = await import(pathToFileURL(join(gen, 'model.mjs')).href);
+  const { buildTs } = await import(
+    pathToFileURL(join(gen, 'ts-snippet.mjs')).href
+  );
+  const files = snippetFiles(snippetCases(model), buildTs);
+  for (const { file, content } of files) {
+    fs.writeFileSync(join(out, file), content);
+  }
+  fs.writeFileSync(
+    join(out, 'tsconfig.json'),
+    `${JSON.stringify(snippetsTsconfig(), null, 2)}\n`,
+  );
+  console.log(
+    `  ${files.length} snippets: ${files.map((f) => f.file).join(', ')}`,
+  );
+  const { cmd, args, cwd } = tscCommand({ consumerDir });
+  exec(cmd, args, { cwd, env });
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

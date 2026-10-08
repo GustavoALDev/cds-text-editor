@@ -10,7 +10,7 @@
     "notices": "node tools/generate-notices.mjs",
     "test:tools": "node --test \"tools/**/*.test.mjs\"",
     "test:examples": "node --test \"examples/server-node/test/*.test.mjs\"",
-    "typecheck:e2e": "tsc -p e2e/tsconfig.json --noEmit"
+    "typecheck:e2e": "tsc -p e2e/tsconfig.json --noEmit && tsc -p apps/demo/e2e/tsconfig.json --noEmit"
   },
   "private": true,
   "engines": {

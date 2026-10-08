@@ -416,11 +416,7 @@ test('commandsFor: ng build/test no cwd do consumidor, sem npx', () => {
   assert.deepEqual(t.args.slice(-2), ['test', '--watch=false']);
 });
 
-test('subcomandos ainda não implementados falham com a tarefa responsável', async () => {
+test('subcomando desconhecido falha', async () => {
   const { main } = await import('./consumer.mjs');
-  await assert.rejects(
-    () => main(['check-snippets'], {}),
-    /Não implementado: tarefa 5/,
-  );
   await assert.rejects(() => main(['nada'], {}), /desconhecido/);
 });

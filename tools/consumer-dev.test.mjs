@@ -183,3 +183,24 @@ test('serve.mjs sem --with-server: sem rotas da API nem demo-config', async () =
     await rm(browser, { recursive: true, force: true });
   }
 });
+
+test('serve.mjs: o cabeçalho de CSP vai por padrão e some com cspHeader: false', async () => {
+  const browser = await mkdtemp(join(tmpdir(), 'cds-rte-browser-'));
+  try {
+    for (const [options, expected] of [
+      [{}, true],
+      [{ cspHeader: false }, false],
+    ]) {
+      const server = createDemoServer(browser, options);
+      const base = await listen(server);
+      try {
+        const response = await fetch(`${base}/__health`);
+        assert.equal(response.headers.has('content-security-policy'), expected);
+      } finally {
+        await new Promise((resolve) => server.close(resolve));
+      }
+    }
+  } finally {
+    await rm(browser, { recursive: true, force: true });
+  }
+});

@@ -17,7 +17,12 @@ async function setup() {
   await fixture.whenStable();
   const root = fixture.nativeElement as HTMLElement;
   const text = (id: string) =>
-    (el => (el instanceof HTMLTextAreaElement ? el.value : el?.textContent?.trim()) ?? '')(root.querySelector(`[data-testid="${id}"]`));
+    ((el) =>
+      (el instanceof HTMLTextAreaElement
+        ? el.value
+        : el?.textContent?.trim()) ?? '')(
+      root.querySelector(`[data-testid="${id}"]`),
+    );
   return { fixture, root, text, errors, spy };
 }
 
@@ -45,6 +50,24 @@ describe('página /forms', () => {
     fixture.componentInstance.model.set({ body: '<p>curto</p>' });
     await fixture.whenStable();
     expect(text('signal-errors')).toBe('');
+    spy.mockRestore();
+  });
+
+  it('o botão "Preencher com texto acima do limite" reprova os três formulários', async () => {
+    const { fixture, root, text, spy } = await setup();
+    (
+      root.querySelector('[data-testid="fill-long"]') as HTMLButtonElement
+    ).click();
+    const cdr = fixture.componentRef.injector.get(ChangeDetectorRef);
+    for (let i = 0; i < 4; i++) {
+      cdr.markForCheck();
+      fixture.detectChanges();
+      await fixture.whenStable();
+    }
+    for (const id of ['signal', 'reactive', 'template']) {
+      expect(text(`${id}-state`)).toContain('não');
+      expect(text(`${id}-errors`)).toContain(String(FORMS_MAX_CHARS));
+    }
     spy.mockRestore();
   });
 

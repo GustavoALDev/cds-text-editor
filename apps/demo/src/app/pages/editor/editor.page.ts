@@ -16,8 +16,8 @@ export class EditorPage {
   protected readonly labels = RTE_LABELS_PT_BR;
   protected readonly maxChars = EDITOR_MAX_CHARS;
   protected readonly html = signal(
-    '<h2>Olá, editor</h2><p>Digite <strong>/</strong> numa linha vazia para o menu de comandos, ' +
-      'use <kbd>Ctrl</kbd>+<kbd>F</kbd> para buscar e selecione um trecho para ver o menu flutuante.</p>',
+    '<h2 id="rt-ola-editor">Olá, editor</h2><p>Digite <strong>/</strong> numa linha vazia para o menu de comandos, ' +
+      'use <code>Ctrl</code>+<code>F</code> para buscar e selecione um trecho para ver o menu flutuante.</p>',
   );
   protected readonly readmeUrl =
     'https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/angular/README.md#uso';
