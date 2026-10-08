@@ -536,3 +536,45 @@ test('demo: bypassSecurityTrust* é proibido em qualquer arquivo', () => {
   assert.equal(errors.length, 1);
   assert.match(errors[0], /x\.ts.*bypassSecurityTrust/);
 });
+
+test('docs: bloco cercado do conteúdo exige diretiva na linha anterior', () => {
+  const F = '```';
+  const bloco = `${F}ts\nconst a = 1;\n${F}\n`;
+  const com = (d) => `Texto.\n\n${d}\n\n${bloco}`;
+  for (const d of [
+    '<!-- example: examples/a.ts#x -->',
+    '<!-- generated: install-command -->',
+    '<!-- no-compile: saída do terminal -->',
+  ]) {
+    const root = fixture({
+      ...CLEAN_DOCS,
+      'apps/docs/content/guia/a.md': com(d),
+    });
+    assert.deepEqual(docsErrors(root), [], d);
+  }
+  const bad = docsErrors(
+    fixture({
+      ...CLEAN_DOCS,
+      'apps/docs/content/guia/a.md': `Texto.\n\n${bloco}`,
+    }),
+  );
+  assert.equal(bad.length, 1);
+  assert.match(
+    bad[0],
+    /apps\/docs\/content\/guia\/a\.md:3: bloco de código sem diretiva/,
+  );
+  const semMotivo = docsErrors(
+    fixture({
+      ...CLEAN_DOCS,
+      'apps/docs/content/guia/b.md': com('<!-- no-compile: -->'),
+    }),
+  );
+  assert.equal(semMotivo.length, 1);
+  const aninhado = `<!-- no-compile: sintaxe -->\n${F}${F}md\n${F}ts\nx\n${F}\n${F}${F}\n`;
+  assert.deepEqual(
+    docsErrors(
+      fixture({ ...CLEAN_DOCS, 'apps/docs/content/guia/c.md': aninhado }),
+    ),
+    [],
+  );
+});

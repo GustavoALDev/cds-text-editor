@@ -208,12 +208,48 @@ function importSpecifiers(source) {
   return [...source.matchAll(re)].map((m) => m[2]);
 }
 
+// Blocos cercados do conteúdo do site (spec 07c, X6/R4): cada um precisa de uma diretiva
+// example|generated|no-compile na linha anterior (ignorando linhas em branco).
+const CONTENT_DIRECTIVE =
+  /^\s*<!--\s*(?:example|generated|no-compile)\s*:\s*\S.*-->\s*$/;
+const CONTENT_FENCE = /^( {0,3})(`{3,}|~{3,})/;
+
+export function checkContentFences(text, where) {
+  const errors = [];
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  let fence = null;
+  let previous = '';
+  lines.forEach((line, i) => {
+    const m = CONTENT_FENCE.exec(line);
+    if (fence) {
+      if (m && m[2][0] === fence[0] && m[2].length >= fence.length)
+        fence = null;
+      return;
+    }
+    if (m) {
+      if (!CONTENT_DIRECTIVE.test(previous))
+        errors.push(
+          `${where}:${i + 1}: bloco de código sem diretiva na linha anterior (<!-- example: ... -->, <!-- generated: ... --> ou <!-- no-compile: motivo -->; spec 07c, X6)`,
+        );
+      fence = m[2];
+    }
+    if (line.trim()) previous = line;
+  });
+  return errors;
+}
+
 function checkApp(rootDir, app) {
   const demo = join(rootDir, 'apps', app);
   if (!existsSync(demo)) return [];
   const errors = [];
   const rel = (file) =>
     `apps/${app}/${relative(demo, file).split(sep).join('/')}`;
+
+  if (app === 'docs' && existsSync(join(demo, 'content'))) {
+    for (const file of walk(join(demo, 'content'), (n) => /\.md$/.test(n))) {
+      errors.push(...checkContentFences(readFileSync(file, 'utf8'), rel(file)));
+    }
+  }
 
   for (const name of readdirSync(demo)) {
     if (name === 'package-lock.json') {

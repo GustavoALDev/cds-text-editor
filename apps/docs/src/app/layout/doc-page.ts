@@ -11,7 +11,8 @@ import {
 import { RouterLink } from '@angular/router';
 import { NAV } from '../../generated/nav';
 import { DocHtml } from '../content/doc-html';
-import type { PageData } from '../content/page';
+import { LiveExample } from '../content/live-example';
+import type { PageData, PageExamples } from '../content/page';
 
 /** Repositório (a 07c não muda pacotes); `TODO-AUTOR`: confirmar a organização final. */
 const EDIT_BASE = 'https://github.com/GustavoALDev/cds-text-editor/edit/main/';
@@ -19,7 +20,7 @@ const EDIT_BASE = 'https://github.com/GustavoALDev/cds-text-editor/edit/main/';
 /** Página de conteúdo: título, sumário, segmentos, anterior/próximo e “editar esta página”. */
 @Component({
   selector: 'docs-page',
-  imports: [DocHtml, RouterLink],
+  imports: [DocHtml, LiveExample, RouterLink],
   templateUrl: './doc-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
@@ -27,6 +28,8 @@ const EDIT_BASE = 'https://github.com/GustavoALDev/cds-text-editor/edit/main/';
 export class DocPage {
   /** Preenchido pelo resolver `page` (binding de dados da rota). */
   readonly page = input<PageData | null>(null);
+  /** Componentes dos exemplos vivos da página (resolver `examples`). */
+  readonly examples = input<PageExamples>({});
   /** Parâmetros da rota (`slug` ou `entry`), só para localizar a página na navegação. */
   readonly slug = input<string>();
   readonly entry = input<string>();

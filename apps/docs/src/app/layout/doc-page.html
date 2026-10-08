@@ -3,6 +3,8 @@
   <h1>{{ page.title }}</h1>
   @for (segment of page.segments; track $index) { @if ('html' in segment) {
   <docs-html [html]="segment.html" />
+  } @else if ('live' in segment) {
+  <docs-live [component]="examples()[segment.live]" />
   } }
   <nav class="doc__pager" aria-label="Navegação entre páginas">
     @if (previous(); as prev) {
