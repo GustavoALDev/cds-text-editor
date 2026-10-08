@@ -27,3 +27,11 @@ export {
 } from './upload-directives';
 export { rteImagesHaveAlt, rteUploadsFinished } from './upload-validators';
 export type { RteEditorRef } from './upload-validators';
+export {
+  RteMaxCharsValidator,
+  RteMaxWordsValidator,
+  RteNoEmptyHeadingsValidator,
+  RteRequiredValidator,
+  RteSafeLinksValidator,
+  RteTextValidator,
+} from './text-directives';

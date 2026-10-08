@@ -72,6 +72,18 @@ export interface RteMaxCharsError extends ValidationError {
 }
 
 // @public
+export class RteMaxCharsValidator extends RteTextValidator {
+    // (undocumented)
+    protected build(): ValidatorFn;
+    // (undocumented)
+    readonly rteMaxChars: i0.InputSignalWithTransform<number, unknown>;
+    // (undocumented)
+    static ɵdir: i0.ɵɵDirectiveDeclaration<RteMaxCharsValidator, "rte-editor[rteMaxChars]", never, { "rteMaxChars": { "alias": "rteMaxChars"; "required": true; "isSignal": true; }; }, {}, never, never, true, never>;
+    // (undocumented)
+    static ɵfac: i0.ɵɵFactoryDeclaration<RteMaxCharsValidator, never>;
+}
+
+// @public
 export function rteMaxWords<K extends PathKind = PathKind.Root>(path: RtePath<K>, max: number | LogicFn<string, number | undefined, K>): void;
 
 // @public (undocumented)
@@ -85,7 +97,31 @@ export interface RteMaxWordsError extends ValidationError {
 }
 
 // @public
+export class RteMaxWordsValidator extends RteTextValidator {
+    // (undocumented)
+    protected build(): ValidatorFn;
+    // (undocumented)
+    readonly rteMaxWords: i0.InputSignalWithTransform<number, unknown>;
+    // (undocumented)
+    static ɵdir: i0.ɵɵDirectiveDeclaration<RteMaxWordsValidator, "rte-editor[rteMaxWords]", never, { "rteMaxWords": { "alias": "rteMaxWords"; "required": true; "isSignal": true; }; }, {}, never, never, true, never>;
+    // (undocumented)
+    static ɵfac: i0.ɵɵFactoryDeclaration<RteMaxWordsValidator, never>;
+}
+
+// @public
 export function rteNoEmptyHeadings<K extends PathKind = PathKind.Root>(path: RtePath<K>): void;
+
+// @public
+export class RteNoEmptyHeadingsValidator extends RteTextValidator {
+    // (undocumented)
+    protected build(): ValidatorFn | null;
+    // (undocumented)
+    readonly rteNoEmptyHeadings: i0.InputSignalWithTransform<boolean, unknown>;
+    // (undocumented)
+    static ɵdir: i0.ɵɵDirectiveDeclaration<RteNoEmptyHeadingsValidator, "rte-editor[rteNoEmptyHeadings]", never, { "rteNoEmptyHeadings": { "alias": "rteNoEmptyHeadings"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;
+    // (undocumented)
+    static ɵfac: i0.ɵɵFactoryDeclaration<RteNoEmptyHeadingsValidator, never>;
+}
 
 // @public (undocumented)
 export type RtePath<K extends PathKind> = SchemaPath<string, SchemaPathRules.Supported, K>;
@@ -110,11 +146,35 @@ export interface RteRequiredError extends ValidationError {
 }
 
 // @public
+export class RteRequiredValidator extends RteTextValidator {
+    // (undocumented)
+    protected build(): ValidatorFn | null;
+    // (undocumented)
+    readonly rteRequired: i0.InputSignalWithTransform<boolean, unknown>;
+    // (undocumented)
+    static ɵdir: i0.ɵɵDirectiveDeclaration<RteRequiredValidator, "rte-editor[rteRequired]", never, { "rteRequired": { "alias": "rteRequired"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;
+    // (undocumented)
+    static ɵfac: i0.ɵɵFactoryDeclaration<RteRequiredValidator, never>;
+}
+
+// @public
 export function rteSafeLinks<K extends PathKind = PathKind.Root>(path: RtePath<K>, options?: RteSafeLinksOptions): void;
 
 // @public
 export interface RteSafeLinksOptions {
     readonly policy?: Partial<RteLinkPolicy>;
+}
+
+// @public
+export class RteSafeLinksValidator extends RteTextValidator {
+    // (undocumented)
+    protected build(): ValidatorFn;
+    // (undocumented)
+    readonly rteSafeLinks: i0.InputSignal<"" | RteSafeLinksOptions | undefined>;
+    // (undocumented)
+    static ɵdir: i0.ɵɵDirectiveDeclaration<RteSafeLinksValidator, "rte-editor[rteSafeLinks]", never, { "rteSafeLinks": { "alias": "rteSafeLinks"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;
+    // (undocumented)
+    static ɵfac: i0.ɵɵFactoryDeclaration<RteSafeLinksValidator, never>;
 }
 
 // @public

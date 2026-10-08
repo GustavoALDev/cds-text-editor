@@ -30,9 +30,9 @@ O pacote não injeta CSS em tempo de execução (nem o Tiptap). Inclua os três 
 
 ```json
 "styles": [
-  "node_modules/@cds/rte-theme/theme.css",
-  "node_modules/@cds/rte-core/styles/content.css",
-  "node_modules/@cds/rte-angular/styles/editor.css"
+  "@cds/rte-theme/theme.css",
+  "@cds/rte-core/styles/content.css",
+  "@cds/rte-angular/styles/editor.css"
 ]
 ```
 
@@ -91,9 +91,35 @@ No Angular 22.2 o `NgControl` liga um controle customizado (`FormValueControl`) 
 <!-- com `name` num <form>, ou [ngModelOptions]="{standalone: true}" -->
 ```
 
-`setValue(null)` vale `''`; `setValue` chega ao editor sem emitir de volta (o controle fica `pristine`); `disable()`/`enable()` ligam o editável. Limitação importante: nesses dois modos o limite do validador **não** chega ao componente (não há metadados de Signal Forms); para o limite barrar a digitação, ligue `[maxLength]="5000"` no elemento; o mesmo vale para `[readonly]` e `[hidden]` (o controle nativo entrega `disabled`, `required`, `invalid` e `touched`; `maxLength`, `readonly` e `hidden` não). `Validators.required` e o atributo `required` valem; use `RteValidators.required`, `maxChars(n)` e `maxWords(n)` para medir o **texto** e não a string HTML.
+`setValue(null)` vale `''`; `setValue` chega ao editor sem emitir de volta (o controle fica `pristine`); `disable()`/`enable()` ligam o editável. Limitação importante: nesses dois modos o limite do validador **não** chega ao componente (não há metadados de Signal Forms); para o limite barrar a digitação, ligue `[maxLength]="5000"` no elemento; o mesmo vale para `[readonly]` e `[hidden]` (o controle nativo entrega `disabled`, `required`, `invalid` e `touched`; `maxLength`, `readonly` e `hidden` não). `Validators.required` e o atributo `required` valem; use `RteValidators.required`, `maxChars(n)` e `maxWords(n)` (Reactive) ou as diretivas abaixo (Template e Reactive) para medir o **texto** e não a string HTML.
 
 Sem formulário: `<rte-editor [(value)]="html" />`. Se o pai devolve `value` ao valor anterior antes da detecção de mudanças, a mudança nunca chega ao editor (comportamento do `model()` do Angular).
+
+### Diretivas de validação de texto (Template e Reactive Forms)
+
+O caminho de controle nativo do `FormValueControl` não lê `NG_VALIDATORS`; por isso as diretivas do entry `/validators` acrescentam o validador de `RteValidators` ao controle do próprio elemento (`addValidators`, sem `setValidators`: os validadores do consumidor ficam) e o retiram quando a entrada muda ou o elemento é destruído. Importe a que usar:
+
+```html
+<rte-editor
+  [(ngModel)]="text"
+  name="body"
+  rteRequired
+  [rteMaxChars]="5000"
+  [rteMaxWords]="800"
+  rteSafeLinks
+  rteNoEmptyHeadings
+/>
+```
+
+| Diretiva (classe)             | Seletor                                         | Erro                                 |
+| ----------------------------- | ----------------------------------------------- | ------------------------------------ |
+| `RteRequiredValidator`        | `rte-editor[rteRequired]`                       | `{ rteRequired: true }`              |
+| `RteMaxCharsValidator`        | `rte-editor[rteMaxChars]="n"`                   | `{ rteMaxChars: { max, actual } }`   |
+| `RteMaxWordsValidator`        | `rte-editor[rteMaxWords]="n"`                   | `{ rteMaxWords: { max, actual } }`   |
+| `RteSafeLinksValidator`       | `rte-editor[rteSafeLinks]` (ou `="{ policy }"`) | `{ rteUnsafeLinks: { count, ... } }` |
+| `RteNoEmptyHeadingsValidator` | `rte-editor[rteNoEmptyHeadings]`                | `{ rteEmptyHeadings: { count } }`    |
+
+O seletor é `rteRequired` (e não `required`) para não colidir com o `required` nativo do Angular, que continua valendo e mede a string HTML. `[rteRequired]="false"` e `[rteNoEmptyHeadings]="false"` desligam. Como no caminho funcional, o limite não chega ao editor (use `[maxLength]` para barrar a digitação).
 
 ### `maxLength` nativo × `rteMaxChars`
 

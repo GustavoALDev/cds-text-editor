@@ -253,7 +253,7 @@
     "search": 3200,
     "overlay-shared": 1600,
     "i18n": 6144,
-    "validators": 2816,
+    "validators": 3200,
     "upload": 1152,
     "upload-runtime": 8512,
     "draft": 1920
