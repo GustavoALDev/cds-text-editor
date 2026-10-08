@@ -1,6 +1,8 @@
 # Spec 08 — Qualidade (E2E, acessibilidade, desempenho, visual, pacote)
 
 > Depende da spec 05 (e usa 02, 06 e 07). Referência: plano seções 3.4, 6.6, 8 (Fase 6), 9 e 9.1.
+>
+> **Divisão (2026-10-07):** dividida em duas partes. **08a** ([`08a-matriz-de-versoes-e-relatorios.md`](08a-matriz-de-versoes-e-relatorios.md)): matriz de versões no CI (resolve o [DECIDIR] da §3), E2E contra o `examples/server-node` e auditoria dos fluxos da §4, propriedade do tema nos 3 motores (R6), relatórios de cobertura, tamanho, desempenho e *flakes* como artefatos (R8), branch protegida. **08b** (diretrizes L1–L10 no Apêndice A da 08a): regressão visual, teclado virtual/móvel, roteiro manual de leitor de tela (inclui a K4 do ADR 0015), matriz de navegadores documentada (R7) e pendências de desempenho do ADR 0016 (degrau quente, máquina ociosa, *baseline* e regra de 10%).
 
 ## 1. Objetivo
 
@@ -10,9 +12,9 @@ Portas de qualidade **obrigatórias para merge**: nenhum recurso é "feito" sem 
 
 Publicação (spec 09). Teste manual com leitor de tela é um roteiro documentado, executado antes da 1.0 (spec 09).
 
-## 3. [DECIDIR]
+## 3. Decisões (antes [DECIDIR])
 
-- **Matriz de CI:** Angular 22 mínimo e mais recente × Tiptap 3 mínimo e mais recente; `next`/canário do Angular **não bloqueante**. Recomendação acima; confirmar faixas ao implementar.
+- **Matriz de CI (decidida em 2026-10-07 na 08a, X2–X4):** mínimo = piso dos peers lido dos `package.json` (hoje Angular 22.2.1 e Tiptap 3.31.4; Angular < 22.2.1 não é suportado); último = maior estável dos *majors* 22 e 3, resolvido a cada execução; `next` do Angular **não bloqueante**. O PR roda `latest×latest` (o `min×min` é o próprio `verify`/`demo`); as pernas cruzadas e o `next` rodam toda semana, em `main` e sob demanda.
 
 ## 4. Camadas
 
