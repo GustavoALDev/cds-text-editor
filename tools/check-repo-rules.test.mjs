@@ -471,3 +471,47 @@ test('demo: style no host de componente ou diretiva é recusado', () => {
   });
   assert.deepEqual(demoErrors(ok), []);
 });
+
+test('compat.json: teto ou skip sem reason/adr reprova', () => {
+  const cap = fixture({
+    'tools/compat.json': JSON.stringify({
+      cap: { angular: { version: '22.4' }, tiptap: null },
+      skip: [],
+    }),
+  });
+  assert.match(
+    checkRepoRules(cap).join('\n'),
+    /teto de angular sem reason e adr/,
+  );
+  const skip = fixture({
+    'tools/compat.json': JSON.stringify({
+      cap: { angular: null, tiptap: null },
+      skip: [{ leg: 'compat (next×latest)', reason: 'x' }],
+    }),
+  });
+  assert.match(
+    checkRepoRules(skip).join('\n'),
+    /skip "compat \(next×latest\)" sem adr/,
+  );
+});
+
+test('compat.json: com reason e adr passa; teto null passa; sem arquivo não faz nada', () => {
+  const ok = fixture({
+    'tools/compat.json': JSON.stringify({
+      cap: {
+        angular: { version: '22.4', reason: 'quebra', adr: '0019' },
+        tiptap: null,
+      },
+      skip: [{ leg: 'compat (next×latest)', reason: 'x', adr: '0019' }],
+    }),
+  });
+  assert.deepEqual(checkRepoRules(ok), []);
+  const nulls = fixture({
+    'tools/compat.json': JSON.stringify({
+      cap: { angular: null, tiptap: null },
+      skip: [],
+    }),
+  });
+  assert.deepEqual(checkRepoRules(nulls), []);
+  assert.deepEqual(checkRepoRules(fixture({ 'x.txt': '' })), []);
+});

@@ -1,0 +1,128 @@
+# Matriz de versões (spec 08a, X3-X6). Reutilizável: o ci.yml chama com `set: pr` (só a perna
+# latest×latest, bloqueante); `full` roda semanal, no push em main e por disparo manual.
+# As pernas vêm de `node tools/compat.mjs legs` (resolve os pisos do package.json e os tetos de
+# tools/compat.json com `npm view`). Cada perna roda a fase A (consumidor externo, tarballs com as
+# versões da perna) e depois a fase B (reinstala as famílias @angular/* e @tiptap/* no próprio
+# repositório e roda build/typecheck/test/test-zone + E2E `@compat` no Chromium).
+name: Compat
+on:
+  workflow_call:
+    inputs:
+      set:
+        description: 'Conjunto de pernas: pr (latest×latest) ou full'
+        type: string
+        default: pr
+  workflow_dispatch:
+    inputs:
+      set:
+        description: 'Conjunto de pernas: pr (latest×latest) ou full'
+        type: choice
+        options: [pr, full]
+        default: full
+  schedule:
+    - cron: '0 6 * * 1'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# `set` vem vazio no schedule e no push: ambos são `full`.
+concurrency:
+  group: compat-${{ github.ref }}-${{ inputs.set || 'full' }}
+  cancel-in-progress: true
+
+jobs:
+  legs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.legs.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - run: npm i -g npm@11
+      - id: legs
+        env:
+          SET: ${{ inputs.set || 'full' }}
+        run: |
+          node tools/compat.mjs legs --set "$SET" > legs.json 2> legs.log
+          cat legs.log
+          # O workflow lê cada perna como `matrix.leg`.
+          echo "matrix=$(node -e "const {include}=JSON.parse(require('fs').readFileSync('legs.json','utf8'));console.log(JSON.stringify({include:include.map((leg)=>({leg}))}))")" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Pernas da matriz de versões (${SET})"
+            echo '```'
+            cat legs.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # O nome do check é o da perna: `compat (<angular>×<tiptap>)`. Quando chamado pelo ci.yml, o
+  # GitHub antepõe o nome do job chamador: `compat / compat (latest×latest)`.
+  compat:
+    needs: legs
+    name: ${{ matrix.leg.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: ${{ matrix.leg.optional }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.legs.outputs.matrix) }}
+    env:
+      # Fase B sem cache do Nx: o cache não distingue as versões instaladas por cima.
+      NX_SKIP_NX_CACHE: 'true'
+      NX_DAEMON: 'false'
+      LEG_JSON: ${{ toJson(matrix.leg) }}
+      RTE_DEMO_PORT: 4318
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "RTE_CONSUMER_DIR=$RUNNER_TEMP/cds-rte-consumer/demo" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm i -g npm@11
+      - run: npm ci
+      - name: Resumo da perna
+        run: |
+          {
+            echo "### ${{ matrix.leg.name }}"
+            echo '```json'
+            echo "$LEG_JSON"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Fase A (antes da B, para que o pack seja da cadeia da raiz): pacotes construídos com as
+      # versões do lockfile, instalados no consumidor externo com as versões da perna.
+      - run: npx nx run-many -t build -p core sanitizer theme angular render
+      - name: Arquivo de versões da perna
+        run: node tools/compat.mjs versions --leg-json "$LEG_JSON" --out "$RUNNER_TEMP/versions.json"
+      - name: Fase A, consumidor externo
+        run: node tools/consumer.mjs pack prepare --versions "$RUNNER_TEMP/versions.json" install test build check-snippets
+      - run: npx playwright install --with-deps chromium
+      - name: Fase A, E2E do demo (J1-J8, Chromium)
+        run: npx playwright test -c apps/demo/e2e --project=chromium
+
+      # Fase B: reinstala as famílias no repositório (um único `npm install --no-save`) e prova
+      # por `npm ls`; só nas pernas com `phaseB`.
+      - name: Fase B, instalar as versões da perna
+        if: matrix.leg.phaseB
+        run: node tools/compat.mjs install --leg-json "$LEG_JSON"
+      - name: Fase B, build, typecheck e testes
+        if: matrix.leg.phaseB
+        run: npx nx run-many -t build typecheck test test-zone -p core sanitizer theme angular render
+      - name: Fase B, E2E @compat (Chromium)
+        if: matrix.leg.phaseB
+        run: npx playwright test -c e2e --grep @compat --project=chromium --workers=2
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: compat-report-${{ strategy.job-index }}
+          path: |
+            playwright-report/
+            e2e/test-results/
+            apps/demo/e2e/test-results/
+          if-no-files-found: ignore

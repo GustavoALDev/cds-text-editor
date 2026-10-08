@@ -14,6 +14,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Matriz de versões (spec 08a): no PR roda só latest×latest (bloqueante); a matriz completa fica
+  # no compat.yml (semanal, push em main e disparo manual). O check aparece como
+  # `compat / compat (latest×latest)` (nome do job chamador antes do nome da perna).
+  compat:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/compat.yml
+    with:
+      set: pr
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 45

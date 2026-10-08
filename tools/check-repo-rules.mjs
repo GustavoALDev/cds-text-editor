@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { validateCompat } from './compat.mjs';
 
 const NO_ANGULAR = ['core', 'sanitizer', 'theme'];
 const DEP_FIELDS = [
@@ -340,9 +341,23 @@ function checkDemo(rootDir) {
   return errors;
 }
 
+// Spec 08a (X5): todo teto e todo `skip` de tools/compat.json exigem `reason` e `adr`.
+// Sem o arquivo (fixtures parciais), a regra não faz nada.
+function checkCompat(rootDir) {
+  const path = join(rootDir, 'tools', 'compat.json');
+  if (!existsSync(path)) return [];
+  try {
+    validateCompat(JSON.parse(readFileSync(path, 'utf8')));
+    return [];
+  } catch (e) {
+    return [e.message];
+  }
+}
+
 export function checkRepoRules(rootDir) {
   const errors = [];
   errors.push(...checkDemo(rootDir));
+  errors.push(...checkCompat(rootDir));
   // Só no repositório real (com package.json na raiz); fixtures parciais de teste ficam de fora.
   if (existsSync(join(rootDir, 'package.json'))) {
     for (const file of GOVERNANCE_FILES) {
