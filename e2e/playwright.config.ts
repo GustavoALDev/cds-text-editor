@@ -5,6 +5,11 @@ const chrome = process.env['CHROME'];
 export default defineConfig({
   testDir: '.',
   retries: process.env['CI'] ? 2 : 0,
+  // No CI o repórter `json` alimenta `tools/quality-summary.mjs` (spec 08a, X11): um teste que
+  // passou só na repetição aparece como `flaky`.
+  reporter: process.env['CI']
+    ? [['list'], ['json', { outputFile: 'test-results/report.json' }]]
+    : 'list',
   // App de teste Angular (spec 05a, D22): builds zoneless e zone pré-renderizados
   // (em cache do Nx), servidos com CSP estrita por `e2e/angular/serve.mjs`.
   webServer: {

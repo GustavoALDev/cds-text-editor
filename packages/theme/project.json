@@ -53,9 +53,10 @@
       ],
       "cache": true,
       "options": {
-        "command": "node tools/check-size.mjs packages/theme/dist/index.js",
+        "command": "node tools/check-size.mjs packages/theme/dist/index.js --report dist/reports/size/theme.json",
         "cwd": "{workspaceRoot}"
-      }
+      },
+      "outputs": ["{workspaceRoot}/dist/reports/size/theme.json"]
     },
     "api": {
       "executor": "nx:run-commands",
@@ -63,7 +64,10 @@
       "inputs": [
         "production",
         "^production",
-        { "dependentTasksOutputFiles": "**/*.d.ts", "transitive": true },
+        {
+          "dependentTasksOutputFiles": "**/*.d.ts",
+          "transitive": true
+        },
         "{projectRoot}/api/**/*",
         "{workspaceRoot}/tools/api-report.mjs",
         {
@@ -75,6 +79,16 @@
       "options": {
         "command": "node tools/api-report.mjs packages/theme",
         "cwd": "{workspaceRoot}"
+      }
+    },
+    "coverage": {
+      "executor": "nx:run-commands",
+      "inputs": ["default", "^production"],
+      "outputs": ["{workspaceRoot}/coverage/packages/theme"],
+      "cache": true,
+      "options": {
+        "command": "vitest run --coverage --coverage.reporter=json-summary --coverage.reporter=lcov --coverage.reporter=html",
+        "cwd": "packages/theme"
       }
     }
   }

@@ -58,12 +58,38 @@ jobs:
           npm run notices
           git diff --exit-code THIRD-PARTY-NOTICES.md
       # `typecheck` cobre os testes dos pacotes tsup (Vitest não checa tipos); `build` cobre o código.
-      - run: npx nx affected -t lint typecheck build test test-zone verify-package api size --parallel=3
+      # `coverage` roda a suíte unitária (zoneless) uma vez, no lugar do `test`, e gera os
+      # relatórios de cobertura (spec 08a, X10; informativo, sem limiar).
+      - run: npx nx affected -t lint typecheck build coverage test-zone verify-package api size --parallel=3
+      # Os testes de tempo do sanitizer (limits, perf, timed) ficam fora do `coverage` (a instrumentação v8
+      # os torna lentos demais); rodam aqui, sem cobertura.
+      - run: npx nx affected -t test -p sanitizer
+      # Completa os relatórios de cobertura e de tamanho dos pacotes não afetados (vêm do cache do Nx),
+      # para o resumo e o artefato `quality-reports` terem sempre os cinco pacotes.
+      - run: npx nx run-many -t coverage size --parallel=3
       # Depois do build: lê também as `dependencies` dos manifestos em dist/packages/* (ex.: tslib).
       - run: npm run check:licenses
       - run: npm run typecheck:e2e
       - run: npx playwright install --with-deps
+      # CI=1: repórter `json` em e2e/test-results/report.json (testes instáveis) e retentativas.
       - run: npx playwright test -c e2e
+        env:
+          CI: '1'
+      # Resumo do job (tamanho x orçamento, cobertura, testes instáveis, N45) e avisos de flakes.
+      - name: Resumo de qualidade
+        if: always()
+        run: node tools/quality-summary.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-reports
+          path: |
+            coverage/packages/
+            dist/reports/size/
+            e2e/test-results/report.json
+            e2e/test-results/perf/
+          retention-days: 14
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

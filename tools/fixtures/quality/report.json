@@ -1,0 +1,37 @@
+{
+  "suites": [
+    {
+      "title": "angular/editor-a.spec.ts",
+      "file": "angular/editor-a.spec.ts",
+      "specs": [],
+      "suites": [
+        {
+          "title": "grupo",
+          "specs": [
+            {
+              "title": "estável",
+              "file": "angular/editor-a.spec.ts",
+              "line": 5,
+              "tests": [
+                { "projectName": "chromium", "status": "expected", "results": [{ "status": "passed" }] }
+              ]
+            },
+            {
+              "title": "instável",
+              "file": "angular/editor-a.spec.ts",
+              "line": 20,
+              "tests": [
+                {
+                  "projectName": "firefox",
+                  "status": "flaky",
+                  "results": [{ "status": "failed" }, { "status": "passed" }]
+                },
+                { "projectName": "chromium", "status": "expected", "results": [{ "status": "passed" }] }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

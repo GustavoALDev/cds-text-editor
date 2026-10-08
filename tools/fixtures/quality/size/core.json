@@ -1,0 +1,7 @@
+{
+  "package": "core",
+  "scenarios": [
+    { "name": "whole", "measured": 9000, "budget": 10000, "margin": 1000 },
+    { "name": "schema", "measured": 1500, "budget": 1600, "margin": 100 }
+  ]
+}

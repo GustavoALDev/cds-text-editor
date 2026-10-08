@@ -1,4 +1,10 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
@@ -280,6 +286,57 @@ export function formatTable(measurements, budgets) {
     .join('\n');
 }
 
+/**
+ * Separa `--report <arquivo.json>` dos demais argumentos (em qualquer posição e em qualquer
+ * modo de chamada). Sem a opção, `report` é `undefined` e a saída não muda.
+ */
+export function extractReport(argv) {
+  const rest = [];
+  let report;
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--report') {
+      report = argv[i + 1];
+      if (!report || report.startsWith('--')) {
+        throw new Error('--report exige um arquivo .json');
+      }
+      i++;
+    } else {
+      rest.push(argv[i]);
+    }
+  }
+  return { report, rest };
+}
+
+/** Nome do pacote a partir de um caminho (`packages/<p>/…` ou `dist/packages/<p>/…`). */
+export function packageName(path) {
+  const m = /(?:^|[/\\])packages[/\\]([^/\\]+)[/\\]/.exec(path);
+  return m ? m[1] : basename(dirname(resolve(path)));
+}
+
+/**
+ * Relatório `{ package, scenarios: [{ name, measured, budget, margin }] }` (bytes min+gzip;
+ * `margin` = orçamento − medido; `budget`/`margin` nulos sem orçamento). Spec 08a, X10.
+ */
+export function buildReport(pkg, measurements, budgets) {
+  return {
+    package: pkg,
+    scenarios: Object.entries(measurements).map(([name, { gzip }]) => {
+      const budget = budgets[name] ?? null;
+      return {
+        name,
+        measured: gzip,
+        budget,
+        margin: budget === null ? null : budget - gzip,
+      };
+    }),
+  };
+}
+
+function writeReport(file, report) {
+  mkdirSync(dirname(resolve(file)), { recursive: true });
+  writeFileSync(file, `${JSON.stringify(report, null, 2)}\n`);
+}
+
 export function parseArgs(argv, fileBudgets) {
   const [file, ...rest] = argv;
   const budgets = { ...fileBudgets };
@@ -296,11 +353,19 @@ export function parseArgs(argv, fileBudgets) {
 }
 
 async function main() {
-  const argv = process.argv.slice(2);
+  let argv = process.argv.slice(2);
+  let reportFile;
+  try {
+    ({ report: reportFile, rest: argv } = extractReport(argv));
+  } catch (e) {
+    console.error(`erro: ${e.message}`);
+    process.exit(2);
+  }
   if (argv.length === 0) {
     console.error(
       'uso: node tools/check-size.mjs <dist/index.js> [--budget cenário=bytes …]\n' +
-        '     node tools/check-size.mjs --config <arquivo.json>',
+        '     node tools/check-size.mjs --config <arquivo.json>\n' +
+        '     (opção --report <arquivo.json> grava a medida e a folga por cenário)',
     );
     process.exit(2);
   }
@@ -312,21 +377,27 @@ async function main() {
     let measurements = {};
     let budgets;
     let fileErrors = [];
+    let pkg;
     if (argv[0] === '--config') {
       if (!argv[1]) throw new Error('--config exige um arquivo .json');
       if (!existsSync(argv[1])) {
         throw new Error(`arquivo não encontrado: ${resolve(argv[1])}`);
       }
       const config = JSON.parse(readFileSync(argv[1], 'utf8'));
+      pkg = packageName(argv[1]);
       measurements = await measureConfig(config);
       budgets = config.budgets ?? {};
       if (config.files) fileErrors = checkFiles(config.files);
     } else {
       parsed = parseArgs(argv, fileBudgets);
+      pkg = packageName(parsed.file);
       for (const name of Object.keys(SCENARIOS)) {
         measurements[name] = await measureScenario(parsed.file, name);
       }
       budgets = parsed.budgets;
+    }
+    if (reportFile) {
+      writeReport(reportFile, buildReport(pkg, measurements, budgets));
     }
     const errors = [...fileErrors, ...checkSizes(measurements, budgets)];
     if (errors.length > 0) {

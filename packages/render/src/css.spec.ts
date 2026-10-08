@@ -1,6 +1,5 @@
 // @vitest-environment node
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import {
   parse,
   type AtRule,
@@ -10,10 +9,12 @@ import {
   type Rule,
 } from 'postcss';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { workspacePath } from './testing-support/workspace';
 
 // Spec 06 (H12/H13): o `render.css` é lido como texto (postcss).
 
-const CSS_FILE = resolve(import.meta.dirname, '../styles/render.css');
+// `import.meta.dirname` não vale nos specs empacotados (muda com a cobertura): parte da raiz do repositório.
+const CSS_FILE = workspacePath('packages/render/styles/render.css');
 const LAYER_ORDER =
   'rte.reset, rte.base, rte.theme, rte.components, rte.content';
 const COLOR_PROPS =

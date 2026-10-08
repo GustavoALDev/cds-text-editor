@@ -202,6 +202,8 @@ describe('RteEditor: ciclo de vida (D2, R2)', () => {
       const last = median(durations.slice(-10));
       expect(last).toBeLessThanOrEqual(first * 3);
     },
+    // com a cobertura (v8) os 100 ciclos passam de 30 s
+    120_000,
   );
 
   it('criar e destruir antes de estabilizar não cria editor', async () => {
