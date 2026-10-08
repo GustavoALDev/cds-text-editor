@@ -15,7 +15,9 @@ O repositório traz o [`examples/server-node`](https://github.com/GustavoALDev/c
 
 - **Tipo pelo conteúdo (_magic bytes_)**, nunca pelo MIME ou pela extensão que o navegador declara; SVG é recusado.
 - **Revalidação no servidor.** A conferência de tipo e de tamanho no editor é conveniência; só a do servidor vale.
-- Autenticação, proteção contra CSRF, nome de arquivo gerado por você, limite de tamanho e `X-Content-Type-Options: nosniff` ao servir.
+- Autenticação (o exemplo exige `Authorization: Bearer` em `/upload`, `/csrf` e `/content`), CSRF ligado à sessão, nome de arquivo gerado por você, limites (tamanho, teto de pixels, envios simultâneos), `Range` e `X-Content-Type-Options: nosniff` ao servir.
+
+A lista completa de deveres do servidor, com o porquê de cada um, está em [`docs/security.md`](https://github.com/GustavoALDev/cds-text-editor/blob/main/docs/security.md); esta página não a repete.
 
 O servidor de exemplo não implementa CORS de propósito: o caminho esperado é o app e o servidor na mesma origem, que em desenvolvimento se resolve com um _proxy_ (veja abaixo).
 
@@ -50,7 +52,9 @@ O servidor de exemplo escuta em `http://localhost:3000` e não responde a CORS. 
 }
 ```
 
-Inicie o servidor com `ADMIN_TOKEN` (obrigatório para subir) e `AUTH_TOKEN` (sem ele o envio fica aberto a qualquer um), por exemplo `ADMIN_TOKEN=troque-me AUTH_TOKEN=outro-segredo node examples/server-node/server.mjs`, e o app com `ng serve --proxy-config proxy.conf.json`. O token do `AUTH_TOKEN` é o que o seu `getToken` devolve. As URLs devolvidas começam em `/media/`; são relativas, então o texto as aceita enquanto `allowRelativeMedia` for `true` (o padrão), e a entrada `/media` do _proxy_ as leva ao servidor. Em produção, sirva a mídia de um host próprio e liste-o em `mediaHosts`.
+Inicie o servidor com `ADMIN_TOKEN` e `AUTH_TOKEN`, **os dois obrigatórios para subir**: sem `AUTH_TOKEN` o servidor se recusa a iniciar (só em desenvolvimento, `ALLOW_ANON=1` dispensa a autenticação, com aviso no log). Por exemplo, `ADMIN_TOKEN=troque-me AUTH_TOKEN=outro-segredo node examples/server-node/server.mjs`, e o app com `ng serve --proxy-config proxy.conf.json`. O token do `AUTH_TOKEN` é o que o seu `getToken` devolve, enviado como `Authorization: Bearer`. Atrás de https, ligue `COOKIE_SECURE=1` (cookie `__Host-csrf` com `Secure`) e fixe `CSRF_SECRET`; o `ADMIN_TOKEN` só abre as rotas de limpeza.
+
+**CSRF:** o `/csrf` também exige o bearer, emite um cookie `SameSite=Strict` e devolve o token ligado à sessão. Cada chamada ao `/csrf` troca o cookie e o adaptador envia até dois arquivos ao mesmo tempo, então busque o token **uma vez** e reaproveite (o exemplo acima faz isso). Como o `ng serve` fala só com a sua origem, o cookie e o proxy funcionam sem CORS. As URLs devolvidas começam em `/media/`; são relativas, então o texto as aceita enquanto `allowRelativeMedia` for `true` (o padrão), e a entrada `/media` do _proxy_ as leva ao servidor. Em produção, sirva a mídia de um host próprio e liste-o em `mediaHosts`.
 
 ## Adaptador próprio
 
@@ -74,7 +78,7 @@ A saída `mediaChange` avisa a cada mudança no conjunto de endereços. Para sal
 
 ## Limpar arquivos órfãos, no servidor
 
-O editor nunca apaga arquivo: desfazer pode trazer de volta um endereço que já tinha saído, e outro texto pode usar o mesmo arquivo. A limpeza é do **servidor**, **com carência** e olhando **todos** os textos que citam o arquivo. O adaptador pode ajudar com `onMediaRemoved`, chamado depois de `markSaved` e sem envios pendentes:
+O editor nunca apaga arquivo: desfazer pode trazer de volta um endereço que já tinha saído, e outro texto pode usar o mesmo arquivo. A limpeza é do **servidor**, **com carência** (o exemplo usa 7 dias, a vida do rascunho no navegador) e olhando **todos** os textos que citam o arquivo. O adaptador pode ajudar com `onMediaRemoved`, chamado depois de `markSaved` e sem envios pendentes:
 
 <!-- example: examples/envio-e-midia/media-change.ts#remocao -->
 

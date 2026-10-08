@@ -9,7 +9,7 @@ Para mostrar o texto publicado, use o `@cds/rte-render`: a diretiva `[rteContent
 
 ## Diretiva e sumário
 
-`provideRteRender` recebe o sanitizador, e `rte-toc` monta o sumário a partir do HTML já tratado. Passe ao sanitizador as **mesmas opções do editor** (provedores de _embed_, `mediaHosts`, `linkPolicy`); com outras, a exibição remove mais ou menos que o editor. Sem `sanitize`, a diretiva lança na criação.
+`provideRteRender` recebe o sanitizador, e `rte-toc` monta o sumário a partir do HTML já tratado. Passe ao sanitizador as **mesmas opções do editor** (provedores de _embed_, `mediaHosts`, `allowRelativeMedia`, `linkPolicy` com `protocols` e `allowRelative`, `idPrefix`); com outras, a exibição remove mais ou menos que o editor. Sem `sanitize`, a diretiva lança na criação.
 
 <!-- example: examples/exibicao/display.ts#opcoes -->
 

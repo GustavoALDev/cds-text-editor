@@ -39,7 +39,11 @@ A sanitização não substitui a CSP; as duas se somam. O resumo do que o modelo
 
 ## Envio de arquivos
 
-O editor não envia nada sem um gesto da pessoa, mas o servidor que recebe o arquivo precisa conferir o tipo real, limitar tamanho e autenticar. A lista está em [Envio e mídia](guia/envio-e-midia).
+O editor não envia nada sem um gesto da pessoa, mas o servidor que recebe o arquivo precisa autenticar, proteger contra CSRF (token ligado à sessão, cookie `SameSite=Strict`), conferir o tipo real, limitar tamanho, pixels e envios simultâneos, e apagar órfãs só depois de uma carência de pelo menos a vida do rascunho (7 dias). A lista completa e atual está na seção "O que o servidor DEVE fazer" de [`docs/security.md`](https://github.com/GustavoALDev/cds-text-editor/blob/main/docs/security.md); o caminho com o servidor de exemplo está em [Envio e mídia](guia/envio-e-midia).
+
+## Links e mídia: configure para sites com vários autores
+
+O padrão é permissivo: sem `mediaHosts`, qualquer host `https` vale como mídia, e `allowRelativeMedia` é `true`. Em sites com vários autores, informe `mediaHosts` e `allowRelativeMedia: false` e alinhe `img-src`/`media-src` da CSP. A política de links (`linkPolicy`) aceita `blockedDomains`, `forceRel`, `protocols` e `allowRelative`, e **as quatro valem no editor e no sanitizador**: passe o mesmo objeto aos dois.
 
 ## Reportar uma vulnerabilidade
 
