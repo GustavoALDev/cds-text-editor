@@ -1,2 +1,17 @@
-<h1>Tema</h1>
-<p>Em construção.</p>
+<demo-theme-playground #playground>
+  <div preview>
+    @defer (on idle) {
+      <rte-editor
+        class="theme-preview__editor"
+        data-testid="preview-editor"
+        toolbar="article"
+        ariaLabel="Texto de exemplo para o tema"
+        [labels]="labels"
+        [value]="sample"
+        [theme]="playground.theme()"
+      />
+    } @placeholder {
+      <div class="theme-preview__skeleton" aria-hidden="true"></div>
+    }
+  </div>
+</demo-theme-playground>

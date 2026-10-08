@@ -1,0 +1,228 @@
+<h1>Tema</h1>
+<p class="page-note">
+  <strong>O que isto mostra:</strong> o tema do editor em tempo real. Escolha um preset ou digite suas
+  cores, ajuste raio, densidade, modo e neutros, veja o contraste das combinações (72 verificações)
+  e copie o CSS ou o TypeScript que reproduz o resultado. Veja a
+  <a href="https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/theme/README.md"
+    >documentação do tema</a
+  >.
+</p>
+
+<div class="theme-grid">
+  <section class="theme-controls" aria-labelledby="theme-controls-title">
+    <h2 id="theme-controls-title">Ajustes</h2>
+
+    <fieldset class="theme-group">
+      <legend>Presets</legend>
+      <div class="theme-presets">
+        @for (name of presetNames; track name) {
+          <button
+            type="button"
+            [attr.data-testid]="'preset-' + name"
+            [attr.aria-pressed]="activePreset() === name"
+            (click)="choosePreset(name)"
+          >
+            {{ presetLabels[name] }}
+          </button>
+        }
+      </div>
+    </fieldset>
+
+    <fieldset class="theme-group">
+      <legend>Cores</legend>
+      @for (f of fields(); track f.field) {
+        <div class="theme-color">
+          <label [for]="'theme-' + f.field + '-text'">{{ f.label }}</label>
+          <div class="theme-color__inputs">
+            <input
+              type="color"
+              [value]="f.picker"
+              [attr.aria-label]="f.label + ' (seletor de cor)'"
+              [attr.data-testid]="'picker-' + f.field"
+              (input)="onColor(f.field, $event)"
+            />
+            <input
+              type="text"
+              spellcheck="false"
+              autocomplete="off"
+              [id]="'theme-' + f.field + '-text'"
+              [value]="f.text"
+              [attr.aria-invalid]="f.error ? 'true' : null"
+              [attr.aria-describedby]="f.error ? 'theme-' + f.field + '-error' : null"
+              [attr.data-testid]="'color-' + f.field"
+              (input)="onColor(f.field, $event)"
+            />
+          </div>
+          @if (f.error) {
+            <p class="theme-error" [id]="'theme-' + f.field + '-error'">{{ f.error }}</p>
+          }
+        </div>
+      }
+    </fieldset>
+
+    <fieldset class="theme-group">
+      <legend>Forma</legend>
+      <div class="theme-range">
+        <label for="theme-radius">Raio: {{ state().radius }} px</label>
+        <input
+          id="theme-radius"
+          type="range"
+          data-testid="radius"
+          [min]="radiusLimits.min"
+          [max]="radiusLimits.max"
+          [step]="radiusLimits.step"
+          [value]="state().radius"
+          (input)="setRadius($event)"
+        />
+      </div>
+      <div class="theme-range">
+        <label for="theme-density">Densidade: {{ state().density }}</label>
+        <input
+          id="theme-density"
+          type="range"
+          data-testid="density"
+          [min]="densityLimits.min"
+          [max]="densityLimits.max"
+          [step]="densityLimits.step"
+          [value]="state().density"
+          (input)="setDensity($event)"
+        />
+      </div>
+    </fieldset>
+
+    <fieldset class="theme-group">
+      <legend>Modo e neutros</legend>
+      <div class="theme-select">
+        <label for="theme-mode">Modo</label>
+        <select id="theme-mode" data-testid="mode" (change)="setMode($event)">
+          @for (m of modes; track m.value) {
+            <option [value]="m.value" [selected]="m.value === state().mode">{{ m.label }}</option>
+          }
+        </select>
+      </div>
+      <div class="theme-select">
+        <label for="theme-neutral">Neutros</label>
+        <select id="theme-neutral" data-testid="neutral" (change)="setNeutral($event)">
+          @for (n of neutrals; track n.value) {
+            <option [value]="n.value" [selected]="n.value === state().neutral">{{ n.label }}</option>
+          }
+        </select>
+      </div>
+      <label class="theme-check">
+        <input
+          type="checkbox"
+          data-testid="site-dark"
+          [checked]="siteDark()"
+          (change)="setSiteDark($event)"
+        />
+        Site escuro (põe <code>color-scheme: dark</code> no <code>&lt;html&gt;</code>; mostra a regra do
+        modo “Herdar do site”)
+      </label>
+    </fieldset>
+
+    <p><button type="button" data-testid="reset" (click)="reset()">Restaurar padrões</button></p>
+  </section>
+
+  <section class="theme-preview" aria-labelledby="theme-preview-title" [demoCssVars]="cssVars()">
+    <h2 id="theme-preview-title">Pré-visualização</h2>
+    <p class="theme-support" data-testid="relative-colors">
+      @if (nativeColors() === null) {
+        Cores relativas nativas: verificando…
+      } @else if (nativeColors()) {
+        Cores relativas nativas: sim (o <code>theme.css</code> deriva os tokens).
+      } @else {
+        Cores relativas nativas: não (plano B: os tokens são calculados em JavaScript).
+      }
+    </p>
+    <ng-content select="[preview]" />
+
+    <h3>Tokens derivados</h3>
+    <div class="theme-swatches">
+      <div
+        class="theme-swatch-panel rte-root"
+        data-rte-mode="light"
+        data-testid="panel-light"
+        [demoThemeScope]="lightTheme()"
+      >
+        <h4>Claro</h4>
+        <ul>
+          @for (token of swatchTokens; track token) {
+            <li><span class="theme-swatch" [demoSwatch]="token"></span> <code>--rte-{{ token }}</code></li>
+          }
+        </ul>
+      </div>
+      <div
+        class="theme-swatch-panel rte-root"
+        data-rte-mode="dark"
+        data-testid="panel-dark"
+        [demoThemeScope]="darkTheme()"
+      >
+        <h4>Escuro</h4>
+        <ul>
+          @for (token of swatchTokens; track token) {
+            <li><span class="theme-swatch" [demoSwatch]="token"></span> <code>--rte-{{ token }}</code></li>
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+<section class="theme-report" aria-labelledby="theme-report-title">
+  <h2 id="theme-report-title">Contraste</h2>
+  <p role="status" aria-live="polite" data-testid="contrast-summary">{{ report().summary }}</p>
+  <ul class="theme-report__modes">
+    @for (m of report().modes; track m.mode) {
+      <li>{{ m.label }}: {{ m.total }} verificações, {{ m.failed }} reprovadas</li>
+    }
+  </ul>
+  @if (report().invalid.length > 0) {
+    <p class="theme-error" data-testid="contrast-invalid">
+      Cor não lida (vale a cor padrão): {{ report().invalid.join(', ') }}.
+    </p>
+  }
+  @if (report().failedChecks.length > 0) {
+    <ul class="theme-report__failed" data-testid="contrast-failed">
+      @for (c of report().failedChecks; track c.id + c.mode) {
+        <li>
+          {{ c.mode === 'light' ? 'Claro' : 'Escuro' }}: {{ c.label }}: {{ c.ratio }} (mínimo
+          {{ c.min }})
+        </li>
+      }
+    </ul>
+  }
+  @for (s of report().suggestions; track s.field) {
+    <p>
+      <button type="button" data-testid="use-suggestion" (click)="setColor(s.field, s.color)">
+        Usar sugestão para a primária: {{ s.color }}
+      </button>
+    </p>
+  }
+</section>
+
+<section class="theme-snippets" aria-labelledby="theme-snippets-title">
+  <h2 id="theme-snippets-title">Copiar</h2>
+  <p class="page-note">
+    O CSS funciona sozinho com o <code>theme.css</code>; o TypeScript também cobre navegadores sem cores
+    relativas. Raio e densidade só existem no CSS.
+  </p>
+  <div class="theme-snippets__grid">
+    <div>
+      <h3>CSS</h3>
+      <pre data-testid="css-snippet" tabindex="0">{{ css() }}</pre>
+      <button type="button" data-testid="copy-css" (click)="copy('css')">Copiar CSS</button>
+    </div>
+    <div>
+      <h3>TypeScript</h3>
+      <pre data-testid="ts-snippet" tabindex="0">{{ ts() }}</pre>
+      <button type="button" data-testid="copy-ts" (click)="copy('ts')">Copiar TypeScript</button>
+    </div>
+  </div>
+  @if (fallbackKind()) {
+    <label class="theme-fallback">
+      Copie manualmente com Ctrl/Cmd+C:
+      <textarea #fallbackArea readonly rows="8" data-testid="copy-fallback" [value]="fallbackText()"></textarea>
+    </label>
+  }
+  <p role="status" aria-live="polite" data-testid="copied">{{ copiedMessage() }}</p>
+</section>
