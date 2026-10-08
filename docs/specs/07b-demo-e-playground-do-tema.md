@@ -9,7 +9,7 @@ Um app Angular 22 de demonstração (`apps/demo`) que mostra o editor completo, 
 
 ## 2. Fora de escopo
 
-Site de documentação, referência de API, exemplos compilados do guia, README raiz e teste de 15 minutos (07c/07d, Apêndice A). **Publicação** do demo (GitHub Pages) — a 07c publica docs e demo juntos; aqui só o *build* estático como artefato do CI. Publicação no npm e Verdaccio (spec 09). Matriz Angular 22.0 × último, leitores de tela e regressão visual (spec 08; o demo fica disponível para ela). Recurso novo nos pacotes: se o demo achar defeito, a correção vai ao pacote com teste próprio e *changeset*, sem API nova sem registro no ADR 0017. Persistência do estado do playground (URL, `localStorage`). Demo em outro idioma de interface.
+Site de documentação, referência de API, exemplos compilados do guia, README raiz e teste de 15 minutos (07c/07d, Apêndice A). **Publicação** do demo (GitHub Pages) — a 07c publica docs e demo juntos; aqui só o *build* estático como artefato do CI. Publicação no npm e Verdaccio (spec 09). Matriz Angular 22.2.1 (piso real dos peers) × último, leitores de tela e regressão visual (spec 08; o demo fica disponível para ela). Recurso novo nos pacotes: se o demo achar defeito, a correção vai ao pacote com teste próprio e *changeset*, sem API nova sem registro no ADR 0017. Persistência do estado do playground (URL, `localStorage`). Demo em outro idioma de interface.
 
 ## 3. Decisões
 
@@ -78,7 +78,7 @@ Divergências na execução viram o **ADR 0017** (demo e consumo por tarball). N
 ## 8. Consequências
 
 - **Spec 07 (07c/07d):** o site de docs reaproveita o `consumer.mjs` (outro app consumidor), a CSP por `<meta>`, o *job* de CI e o artefato estático do demo para publicar os dois juntos; o guia do tema aponta para o playground.
-- **Spec 08:** o demo vira alvo pronto para a matriz Angular 22.0 × último (trocar as versões exatas do consumidor), leitores de tela e regressão visual; o `consumer.mjs` é a base do "app limpo".
+- **Spec 08:** o demo vira alvo pronto para a matriz Angular 22.2.1 × último (trocar as versões exatas do consumidor), leitores de tela e regressão visual; o `consumer.mjs` é a base do "app limpo".
 - **Spec 09:** o mesmo fluxo de tarballs é o ensaio da publicação; trocar `file:` pelo registro real é o teste pós-publicação.
 - **Pacotes:** toda mudança que quebre o consumo externo (entry, `exports`, peer, CSS publicado) passa a quebrar o *job* `demo` do PR.
 

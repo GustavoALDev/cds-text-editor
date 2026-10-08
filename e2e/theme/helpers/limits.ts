@@ -14,13 +14,17 @@ export type Group = 'linear' | 'text' | 'neutral' | 'border';
  * Medidos aqui (matriz OKLab corrigida), neutros e bordas ficam em ~0,0035 (1 unidade de 8 bits),
  * então 0,019 e 0,041 não detectariam uma constante de neutro alterada; os limites de neutro e de
  * borda abaixo são mais apertados que os da spec de propósito (a spec continua válida com folga).
+ * `neutral` e `border` sobem de 0,006 para 0,0075 (achado da propriedade (b) com 1000 execuções, 3 motores
+ * iguais: neutro tingido de semente quase acromática e quase preta, `hsl(240 2% 1%)`: `primary-border`
+ * 122,122,126 × 123,123,123, ΔE 0,0064, e `text` 28,25,28 × 26,26,27, ΔE 0,0060; o matiz de uma semente
+ * com croma ~0 é decidido pela quantização da própria semente). Segue 5× abaixo dos limites da spec.
  * `linear` e `text` ficam no piso de quantização (0 e 1 unidade de 8 bits, ~0,0028).
  */
 export const LIMITS: Record<Group, number> = {
   linear: 0.002,
   text: 0.004,
-  neutral: 0.006,
-  border: 0.006,
+  neutral: 0.0075,
+  border: 0.0075,
 };
 
 /** Desvio máximo de matiz (distância (a, b) em OKLab, ver o teste) por neutro e token. */

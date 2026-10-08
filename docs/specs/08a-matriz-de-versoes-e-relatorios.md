@@ -63,11 +63,11 @@ Nenhuma API pública muda. **Interno:** `tools/compat.mjs` e `tools/compat.json`
 
 ## 7. Critérios de aceite
 
-- [ ] `npx nx run-many -t lint,typecheck,build,test,test-zone,coverage,verify-package,api,size` verde; `check:rules`, `test:tools`, `test:examples`, `check:licenses` e `typecheck:e2e` verdes.
-- [ ] No CI do PR: `verify`, `demo` e `compat (latest×latest)` verdes; artefato `quality-reports` e resumo com as quatro tabelas presentes.
-- [ ] Uma execução `full` (manual) com `latest×latest`, `min×latest` e `latest×min` verdes ou com quebra registrada e teto no `compat.json`; `next` executado (resultado registrado, não bloqueia).
-- [ ] N47, J8 e as propriedades do tema verdes nos 3 motores; tabela de rastreabilidade no ADR 0019 sem lacuna fora do teclado virtual.
-- [ ] Proteção de `main` aplicada com os 3 *checks* (ou `TODO-AUTOR` com o comando); ADR 0019, `CLAUDE.md`, `e2e/README.md` e `docs/specs/README.md` atualizados.
+- [x] `npx nx run-many -t lint,typecheck,build,test,test-zone,coverage,verify-package,api,size` verde; `check:rules`, `test:tools`, `test:examples`, `check:licenses` e `typecheck:e2e` verdes.
+- [ ] (pendente: só o CI do PR e a execução `full` o provam) No CI do PR: `verify`, `demo` e `compat (latest×latest)` verdes; artefato `quality-reports` e resumo com as quatro tabelas presentes.
+- [ ] (pendente: disparar `compat.yml` com `set: full` após o merge; ADR 0019, seção h) Uma execução `full` (manual) com `latest×latest`, `min×latest` e `latest×min` verdes ou com quebra registrada e teto no `compat.json`; `next` executado (resultado registrado, não bloqueia).
+- [x] N47, J8 e as propriedades do tema verdes no Chromium local (Firefox e WebKit: J8, N47 e N48 verificados localmente na T3; os 3 motores no CI do PR); tabela de rastreabilidade no ADR 0019 sem lacuna fora do teclado virtual.
+- [x] Proteção de `main`: `TODO-AUTOR` com o comando no ADR 0019 (não aplicada sem confirmação do dono); ADR 0019, `CLAUDE.md`, `e2e/README.md` e `docs/specs/README.md` atualizados.
 
 ## 8. Consequências
 

@@ -2,7 +2,7 @@
 
 > Depende da spec 05 (e usa 02, 06 e 07). Referência: plano seções 3.4, 6.6, 8 (Fase 6), 9 e 9.1.
 >
-> **Divisão (2026-10-07):** dividida em duas partes. **08a** ([`08a-matriz-de-versoes-e-relatorios.md`](08a-matriz-de-versoes-e-relatorios.md)): matriz de versões no CI (resolve o [DECIDIR] da §3), E2E contra o `examples/server-node` e auditoria dos fluxos da §4, propriedade do tema nos 3 motores (R6), relatórios de cobertura, tamanho, desempenho e *flakes* como artefatos (R8), branch protegida. **08b** (diretrizes L1–L10 no Apêndice A da 08a): regressão visual, teclado virtual/móvel, roteiro manual de leitor de tela (inclui a K4 do ADR 0015), matriz de navegadores documentada (R7) e pendências de desempenho do ADR 0016 (degrau quente, máquina ociosa, *baseline* e regra de 10%).
+> **Divisão (2026-10-07):** dividida em duas partes. **08a** ([`08a-matriz-de-versoes-e-relatorios.md`](08a-matriz-de-versoes-e-relatorios.md)): matriz de versões no CI (resolve o [DECIDIR] da §3), E2E contra o `examples/server-node` e auditoria dos fluxos da §4, propriedade do tema nos 3 motores (R6), relatórios de cobertura, tamanho, desempenho e *flakes* como artefatos (R8), branch protegida. **08a concluída** (ADR 0019; falta o CI do PR). **08b** (diretrizes L1–L10 no Apêndice A da 08a): regressão visual, teclado virtual/móvel, roteiro manual de leitor de tela (inclui a K4 do ADR 0015), matriz de navegadores documentada (R7) e pendências de desempenho do ADR 0016 (degrau quente, máquina ociosa, *baseline* e regra de 10%).
 
 ## 1. Objetivo
 
