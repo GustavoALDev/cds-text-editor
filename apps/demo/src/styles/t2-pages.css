@@ -1,0 +1,41 @@
+/* Estilos das páginas /editor, /toolbar, /forms e /i18n (tarefa 2 da spec 07b). Ficam num arquivo
+   global porque `styleUrl` gera <style> inline, barrado pela CSP `style-src 'self'`. */
+.page-note {
+  max-width: 70ch;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+  margin-block: 16px;
+}
+
+.controls fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.lang {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  margin-block: 16px;
+}
+
+.block {
+  margin-block: 24px;
+}
+
+.errors {
+  color: var(--rte-danger-text, #b00020);
+  min-height: 1.5em;
+}
+
+textarea[readonly] {
+  max-width: 100%;
+  box-sizing: border-box;
+}
