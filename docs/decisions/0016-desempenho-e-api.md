@@ -91,3 +91,7 @@ O salto do `editor` vem do que as partes 05b2 a 05d1 colocaram no principal (ARI
 - **Toda mudança de API pública** atualiza o relatório no mesmo commit (`UPDATE_API=1`); o CI falha com relatório desatualizado.
 - Mudança que afete o custo por tecla ou de criação roda o N45 com `RTE_PERF_ENFORCE=1`.
 - Changesets: `minor` para `@cds/rte-angular` e `@cds/rte-core` (tipos novos exportados), `patch` para `@cds/rte-render` (só `@internal`/JSDoc).
+
+## Adendo (2026-10-08): números do CI Linux
+
+No CI do PR #18 o regime quente do N45 não sobe: Chromium p95 frio com render 48,8 ms e quente 36,6; Firefox 59/54; WebKit 70/50; criação completa 232 a 300 ms; INP 56 a 72 ms. Isso confirma o degrau como do ambiente local (CPU sob carga sustentada). Os runners são ~2x mais lentos que a máquina local, mas sem degrau. `valueEmission` segue dispensado (Z5) e os orçamentos continuam só locais (`RTE_PERF_ENFORCE=1`).

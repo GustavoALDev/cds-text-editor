@@ -7,8 +7,8 @@
 | Parte | Escopo | Estado |
 |---|---|---|
 | 07a | `examples/server-node` (§3.2, R3, R4) | concluída (PR #13) |
-| [07b](07b-demo-e-playground-do-tema.md) | `apps/demo` (§3.1): páginas, playground do tema, consumo por tarball fora do *workspace* e *job* `demo` no CI; R2 | spec escrita |
-| 07c | Infraestrutura do site de docs (§3.3): app Angular próprio pré-renderizado, Markdown no *build*, referência de API do `api-extractor` (`docModel` + `api-documenter`), exemplos compilados (R1), links, publicação de docs + demo; páginas de início rápido, instalação e configuração | diretrizes no Apêndice A da 07b |
+| [07b](07b-demo-e-playground-do-tema.md) | `apps/demo` (§3.1): páginas, playground do tema, consumo por tarball fora do *workspace* e *job* `demo` no CI; R2 | concluída; falta o CI do PR (ADR 0017) |
+| [07c](07c-site-de-docs.md) | Infraestrutura do site de docs (§3.3): app Angular próprio pré-renderizado, Markdown no *build*, referência de API do `api-extractor` (`docModel` + `api-documenter`), exemplos compilados (R1), links, publicação de docs + demo; páginas de início rápido, instalação e configuração | diretrizes no Apêndice A da 07b |
 | 07d | Conteúdo restante do guia (§3.3), README raiz (R5), teste de 15 minutos e fechamento da spec 07 | diretrizes no Apêndice A da 07b |
 
 A ferramenta de docs fica decidida (Apêndice A da 07b, Y2): app Angular 22 próprio, não TypeDoc nem Compodoc; a referência de API sai dos modelos do `api-extractor` (ADR 0016), não de nova análise do fonte.
@@ -23,7 +23,7 @@ Governança e publicação (spec 09); testes de qualidade automatizados em 3 eng
 
 ## 3. Entregáveis
 
-### 3.1 `apps/demo` (Angular 22) — **parte 07b**
+### 3.1 `apps/demo` (Angular 22) — **parte 07b, concluída** (ADR 0017; Chromium local, os 3 motores no job `demo` do CI do PR)
 - Páginas: editor completo; toolbar e features configuráveis; formulários (3 modos); i18n (pt-BR/en/es); upload com progresso e cancelamento; renderização do conteúdo (`render`).
 - **Playground do tema:** seletores das 3 cores, modo, raio e densidade com **pré-visualização ao vivo**, relatório de contraste (`checkRteTheme`), botões **"copiar CSS"** e **"copiar TypeScript"**, presets (Angular, Oceano, Floresta, Pôr do sol, Monocromático).
 - Consome os pacotes **como um consumidor externo** (via tarball/Verdaccio no CI), não por path alias, para provar o empacotamento.
@@ -51,7 +51,7 @@ Guia: início rápido (5 min), instalação, configuração, **tema (escada 0 a 
 - [ ] Playground gera CSS/TS que, colados num app limpo, reproduzem o tema mostrado.
 - [ ] Testes de API do `server-node` verdes contra o upload e a limpeza de órfãs.
 - [ ] Exemplos da documentação compilam no CI; links verificados.
-- [ ] Demo consumindo os tarballs (não path alias) funciona.
+- [x] Demo consumindo os tarballs (não path alias) funciona (07b: `consumer.mjs` com prova de origem, 53 E2E no Chromium; ADR 0017).
 
 ## 6. Riscos
 
