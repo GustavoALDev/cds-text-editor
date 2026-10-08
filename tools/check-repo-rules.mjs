@@ -402,6 +402,38 @@ function checkApp(rootDir, app) {
   return errors;
 }
 
+// Spec 08b (O2): capturas da regressão visual versionadas em git comum, com teto por arquivo e total.
+const SHOT_MAX_FILE = 300 * 1024;
+const SHOT_MAX_TOTAL = 20 * 1024 * 1024;
+function checkScreenshots(rootDir) {
+  const base = join(rootDir, 'e2e', 'visual', '__screenshots__');
+  if (!existsSync(base)) return [];
+  const errors = [];
+  let total = 0;
+  const walkShots = (dir) => {
+    for (const name of readdirSync(dir)) {
+      const full = join(dir, name);
+      const st = statSync(full);
+      if (st.isDirectory()) walkShots(full);
+      else {
+        total += st.size;
+        if (st.size > SHOT_MAX_FILE) {
+          errors.push(
+            `${relative(rootDir, full).split(sep).join('/')}: captura com ${Math.ceil(st.size / 1024)} KB acima do teto de 300 KB por arquivo (spec 08b, O2)`,
+          );
+        }
+      }
+    }
+  };
+  walkShots(base);
+  if (total > SHOT_MAX_TOTAL) {
+    errors.push(
+      `e2e/visual/__screenshots__: ${(total / 1024 / 1024).toFixed(1)} MB acima do teto de 20 MB no total (spec 08b, O2)`,
+    );
+  }
+  return errors;
+}
+
 // Spec 08a (X5): todo teto e todo `skip` de tools/compat.json exigem `reason` e `adr`.
 // Sem o arquivo (fixtures parciais), a regra não faz nada.
 function checkCompat(rootDir) {
@@ -419,6 +451,7 @@ export function checkRepoRules(rootDir) {
   const errors = [];
   errors.push(...checkApp(rootDir, 'demo'), ...checkApp(rootDir, 'docs'));
   errors.push(...checkCompat(rootDir));
+  errors.push(...checkScreenshots(rootDir));
   // Só no repositório real (com package.json na raiz); fixtures parciais de teste ficam de fora.
   if (existsSync(join(rootDir, 'package.json'))) {
     for (const file of GOVERNANCE_FILES) {
