@@ -366,3 +366,47 @@ describe('prepareRteHtml (R14): custo relativo ao sanitizador', () => {
     expect(prepareMs / sanitizeMs).toBeLessThanOrEqual(0.1);
   });
 });
+
+describe('prepareRteHtml: tabelas com caption (R9 A1)', () => {
+  const base = { fragmentBase: null };
+  const median = (xs: number[]): number =>
+    [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
+  const time = (html: string): number => {
+    const runs: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      const start = performance.now();
+      prepareRteHtml(html, base);
+      runs.push(performance.now() - start);
+    }
+    return median(runs);
+  };
+
+  it('custo linear com milhares de tabelas com caption e sem colgroup', () => {
+    const unit = '<table><caption></caption></table>';
+    const small = unit.repeat(10_000);
+    const big = unit.repeat(20_000);
+    prepareRteHtml(small, base); // aquece
+    const ratio = time(big) / Math.max(time(small), 0.05);
+    expect(ratio).toBeLessThanOrEqual(2.5);
+  });
+
+  it('só a tabela com colgroup próprio recebe a classe, não a seguinte', () => {
+    const html =
+      '<table><caption>x</caption><tbody><tr><td></td></tr></tbody></table>' +
+      '<table><colgroup><col style="width:10px"></colgroup><tbody><tr><td></td></tr></tbody></table>';
+    const out = prepareRteHtml(html, base);
+    const first = out.indexOf('<table');
+    const second = out.indexOf('<table', first + 1);
+    expect(out.slice(first, first + 20)).toBe('<table><caption>x</c');
+    expect(out.slice(second, second + 30)).toContain(RTE_TABLE_SIZED_CLASS);
+    expect(out.split(RTE_TABLE_SIZED_CLASS)).toHaveLength(2);
+  });
+
+  it('caption seguida de colgroup com largura recebe a classe', () => {
+    const out = prepareRteHtml(
+      '<table><caption>x</caption><colgroup><col style="width:10px"></colgroup></table>',
+      base,
+    );
+    expect(out).toContain(`<table class="${RTE_TABLE_SIZED_CLASS}">`);
+  });
+});
