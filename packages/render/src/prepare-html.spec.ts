@@ -2,7 +2,7 @@
 import { escapeHtmlAttribute } from '@cds/rte-core';
 import { createSanitizer } from '@cds/rte-sanitizer';
 import fc from 'fast-check';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   RTE_TABLE_SCROLL_CLASS,
   RTE_TABLE_SIZED_CLASS,
@@ -381,13 +381,50 @@ describe('prepareRteHtml: tabelas com caption (R9 A1)', () => {
     return median(runs);
   };
 
+  it('procura cada </caption> uma vez só, mesmo sem nenhum fechamento (prova sem relógio)', () => {
+    // O custo quadrático antigo vinha de uma busca por `</caption>` por tabela, cada uma
+    // varrendo até o fim do documento. O cache faz a busca atravessar cada trecho uma vez.
+    const spy = vi.spyOn(String.prototype, 'indexOf');
+    try {
+      for (const html of [
+        '<table><caption>'.repeat(5_000),
+        '<table><caption>x</caption></table>'.repeat(5_000),
+        '<table><caption>'.repeat(2_500) +
+          '</caption>' +
+          '<table><caption>'.repeat(2_500),
+      ]) {
+        spy.mockClear();
+        prepareRteHtml(html, base);
+        const searches = spy.mock.calls.filter(
+          ([needle]) => needle === '</caption>',
+        ).length;
+        // Sem cache seriam ~5 000 buscas; com ele, no máximo uma por `</caption>` + uma final.
+        expect(searches).toBeLessThanOrEqual(5_001);
+      }
+      spy.mockClear();
+      prepareRteHtml('<table><caption>'.repeat(5_000), base);
+      expect(
+        spy.mock.calls.filter(([needle]) => needle === '</caption>').length,
+      ).toBe(1);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('custo linear com milhares de tabelas com caption e sem colgroup', () => {
-    const unit = '<table><caption></caption></table>';
+    // Respaldo por relógio, folgado para runners ruidosos: o quadrático dá ~4 na razão e
+    // leva dezenas de segundos em 20 mil tabelas sem fechamento.
+    const unit = '<table><caption>';
     const small = unit.repeat(10_000);
     const big = unit.repeat(20_000);
     prepareRteHtml(small, base); // aquece
-    const ratio = time(big) / Math.max(time(small), 0.05);
-    expect(ratio).toBeLessThanOrEqual(2.5);
+    prepareRteHtml(big, base);
+    let best = Infinity;
+    for (let i = 0; i < 3 && best > 3.2; i++) {
+      best = Math.min(best, time(big) / Math.max(time(small), 1));
+    }
+    expect(best).toBeLessThanOrEqual(3.2);
+    expect(time(big)).toBeLessThan(2_000);
   });
 
   it('só a tabela com colgroup próprio recebe a classe, não a seguinte', () => {

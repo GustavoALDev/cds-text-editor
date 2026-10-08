@@ -9,6 +9,8 @@ import { prepareRteHtml } from './prepare-html';
 const SEED = Number(process.env['FC_SEED'] ?? 20261008);
 const PERF_RUNS = Math.min(Number(process.env['FC_RUNS'] ?? 2000), 6);
 const FLOOR_MS = 4;
+/** Linear ≈ 2, quadrático ≈ 4: o limite fica no meio, folgado para runners ruidosos. */
+const MAX_RATIO = 3.2;
 
 function cost(run: () => unknown): number {
   const start = performance.now();
@@ -45,7 +47,8 @@ function doublingRatio(
     median(large) / Math.max(median(small), FLOOR_MS);
   // Até 3 medidas: o ruído (GC, núcleos disputados) só infla; uma regressão quadrática infla todas.
   let best = measure();
-  for (let i = 0; i < 2 && best > 2.5; i++) best = Math.min(best, measure());
+  for (let i = 0; i < 2 && best > MAX_RATIO; i++)
+    best = Math.min(best, measure());
   return best;
 }
 
@@ -104,7 +107,7 @@ const GENERATORS: Record<
 describe('fuzz (1): custo linear da exibição', () => {
   const sanitize = createSanitizer();
   for (const [name, { arbitrary }] of Object.entries(GENERATORS)) {
-    it(`prepareRteHtml, ${name}: custo(2N)/custo(N) ≤ 2,5`, () => {
+    it(`prepareRteHtml, ${name}: custo(2N)/custo(N) ≤ 3,2`, () => {
       fc.assert(
         fc.property(arbitrary, (gen) => {
           const ratio = doublingRatio((html) => {
@@ -112,13 +115,13 @@ describe('fuzz (1): custo linear da exibição', () => {
             return () =>
               prepareRteHtml(canonical, { fragmentBase: '/blog/post' });
           }, gen);
-          expect(ratio).toBeLessThanOrEqual(2.5);
+          expect(ratio).toBeLessThanOrEqual(MAX_RATIO);
         }),
         { seed: SEED, numRuns: PERF_RUNS },
       );
     });
 
-    it(`restoreContentStyles, ${name}: custo(2N)/custo(N) ≤ 2,5`, () => {
+    it(`restoreContentStyles, ${name}: custo(2N)/custo(N) ≤ 3,2`, () => {
       fc.assert(
         fc.property(arbitrary, (gen) => {
           const ratio = doublingRatio(
@@ -133,7 +136,7 @@ describe('fuzz (1): custo linear da exibição', () => {
             gen,
             RESTORE_TARGET_LENGTH,
           );
-          expect(ratio).toBeLessThanOrEqual(2.5);
+          expect(ratio).toBeLessThanOrEqual(MAX_RATIO);
         }),
         { seed: SEED, numRuns: Math.min(PERF_RUNS, 2) },
       );

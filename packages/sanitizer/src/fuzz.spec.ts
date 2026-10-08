@@ -43,6 +43,8 @@ function median(run: () => unknown, reps = 5): number {
 
 /** Piso do denominador (ms): abaixo disto o relógio só mede ruído. */
 const FLOOR_MS = 4;
+/** Linear ≈ 2, quadrático ≈ 4: o limite fica no meio, folgado para runners ruidosos. */
+const MAX_RATIO = 3.2;
 
 /**
  * Tamanho da entrada de N: ~250 mil unidades (2N fica bem abaixo do `maxInputLength` de 1 000 000).
@@ -71,7 +73,8 @@ function doublingRatio(
     );
   // Até 3 medidas: o ruído (GC, núcleos disputados) só infla; uma regressão quadrática infla todas.
   let best = measure();
-  for (let i = 0; i < 2 && best > 2.5; i++) best = Math.min(best, measure());
+  for (let i = 0; i < 2 && best > MAX_RATIO; i++)
+    best = Math.min(best, measure());
   return best;
 }
 
@@ -160,11 +163,11 @@ describe('fuzz (1): custo linear de s(x)', () => {
     }
   };
   for (const [name, arbitrary] of Object.entries(WORST_CASES)) {
-    it(`${name}: custo(2N)/custo(N) ≤ 2,5`, () => {
+    it(`${name}: custo(2N)/custo(N) ≤ 3,2`, () => {
       fc.assert(
         fc.property(arbitrary, (gen) => {
           const ratio = doublingRatio(run, gen);
-          expect(ratio).toBeLessThanOrEqual(2.5);
+          expect(ratio).toBeLessThanOrEqual(MAX_RATIO);
         }),
         { seed: SEED, numRuns: PERF_RUNS },
       );
