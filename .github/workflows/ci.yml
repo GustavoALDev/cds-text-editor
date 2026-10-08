@@ -104,6 +104,50 @@ jobs:
             e2e/test-results/
           if-no-files-found: ignore
 
+  # Regressão visual (spec 08b, O1–O5): captura por elemento no contêiner oficial do Playwright
+  # (tag = versão exata do @playwright/test; conferida por tools/visual-image.test.mjs). Roda em todo
+  # PR (CSS atravessa pacotes; o `affected` não enxerga isso). Baselines: workflow visual-update.yml.
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --init --ipc=host
+    env:
+      HOME: /root
+      RTE_VISUAL_CONTAINER: '1'
+      CI: '1'
+      NX_DAEMON: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm i -g npm@11
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-visual-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            nx-visual-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+      # O `serve-static` do app de teste depende do build (Nx); o webServer do Playwright o sobe.
+      - run: npx playwright test -c e2e/visual
+      # Capturas que passaram só na repetição viram aviso (O2).
+      - name: Resumo do visual
+        if: always()
+        run: node tools/quality-summary.mjs --visual e2e/test-results/report-visual.json
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-report
+          path: |
+            playwright-report/visual/
+            e2e/test-results/visual/
+          retention-days: 14
+          if-no-files-found: ignore
+
   # Demo (spec 07b, W14): consome os tarballs dos pacotes como um app externo (fora do repositório),
   # roda os unitários e o build do demo, confere os snippets do tema e executa o E2E J1–J8 nos 3
   # navegadores. Paralelo ao `verify`; sempre roda (sem `affected`).

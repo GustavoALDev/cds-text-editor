@@ -1,0 +1,87 @@
+name: Atualizar capturas visuais
+
+# Spec 08b (O3): gera as baselines da regressão visual no mesmo contêiner do job `visual` do ci.yml e
+# faz commit no próprio branch. Único workflow (além do release.yml) com `contents: write`.
+# Nunca roda em `main` (a guarda abaixo recusa) nem atualiza capturas em PR automaticamente.
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch que recebe o commit com as capturas (nunca main)'
+        required: true
+        type: string
+      reason:
+        description: 'Motivo da atualização (vai na mensagem do commit)'
+        required: true
+        type: string
+  # BOOTSTRAP temporário (ADR 0021): `workflow_dispatch` só dispara de um workflow que já existe no
+  # branch padrão. Enquanto o PR da 08b não entra no main, o push nestes branches gera as capturas.
+  # O último commit da tarefa 6 remove este gatilho.
+  push:
+    branches:
+      - 'feat/spec-08b*'
+      - 'visual-bootstrap/**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: visual-update-${{ inputs.branch || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --init --ipc=host
+    env:
+      HOME: /root
+      RTE_VISUAL_CONTAINER: '1'
+      CI: '1'
+      NX_DAEMON: 'false'
+      TARGET_BRANCH: ${{ inputs.branch || github.ref_name }}
+      REASON: ${{ inputs.reason || 'bootstrap da 08b' }}
+    steps:
+      # Guarda: o branch e o motivo chegam por variável de ambiente, nunca interpolados no script.
+      - name: Recusar main e branches protegidos
+        run: |
+          case "$TARGET_BRANCH" in
+            main|master|HEAD|'')
+              echo "::error::Recusado: este workflow não atualiza capturas em '$TARGET_BRANCH'. Use um branch de trabalho e abra um PR."
+              exit 1
+              ;;
+          esac
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - run: npm i -g npm@11
+      - run: npm ci
+      # Apagar antes remove capturas órfãs; `all` regrava tudo (PNG determinístico: imagem igual não gera diff).
+      - name: Regenerar as capturas
+        run: |
+          rm -rf e2e/visual/__screenshots__
+          npx playwright test -c e2e/visual --update-snapshots=all
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-screenshots
+          path: e2e/visual/__screenshots__/
+          retention-days: 14
+          if-no-files-found: ignore
+      - name: Commit das capturas
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f e2e/visual/__screenshots__
+          if git diff --cached --quiet; then
+            echo "Nenhuma captura mudou."
+          else
+            git commit -m "test(visual): atualiza capturas ($REASON)"
+            git push origin "HEAD:refs/heads/$TARGET_BRANCH"
+          fi
