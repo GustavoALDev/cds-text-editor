@@ -115,7 +115,9 @@ test.describe('R10', () => {
       description: `${browserName}: mediana por lote ${batched.toFixed(4)} ms por troca (mediana individual ${perChange.toFixed(4)} ms, limitada pela resolução do relógio)`,
     });
     // 0,5 ms (R10) foi medido só no Chromium; Firefox/WebKit têm limite de 2 ms.
-    const limit = browserName === 'chromium' ? 0.5 : 2;
+    // Sem `RTE_PERF_ENFORCE=1` (CI) vale a guarda frouxa de 2x (ADR 0016/0019).
+    const guard = process.env['RTE_PERF_ENFORCE'] === '1' ? 1 : 2;
+    const limit = (browserName === 'chromium' ? 0.5 : 2) * guard;
     expect(batched, `${browserName} mediana ${batched} ms`).toBeLessThanOrEqual(
       limit,
     );
