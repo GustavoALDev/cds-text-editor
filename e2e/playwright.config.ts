@@ -26,6 +26,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      grepInvert: /@mobile/,
       use: {
         ...devices['Desktop Chrome'],
         ...(chrome ? { launchOptions: { executablePath: chrome } } : {}),
@@ -33,11 +34,31 @@ export default defineConfig({
     },
     {
       name: 'firefox',
+      grepInvert: /@mobile/,
       use: { ...devices['Desktop Firefox'] },
     },
     {
       name: 'webkit',
+      grepInvert: /@mobile/,
       use: { ...devices['Desktop Safari'] },
+    },
+    // Móvel e toque (spec 08b O6/O7): só as especificações marcadas com @mobile. O WebKit do
+    // Playwright com o descritor do iPhone NÃO é o Safari do iOS (sem teclado real, sem alças
+    // de seleção); o aparelho real fica no roteiro móvel (O9).
+    {
+      name: 'mobile-chromium',
+      grep: /@mobile/,
+      use: {
+        ...devices['Pixel 7'],
+        ...(chrome ? { launchOptions: { executablePath: chrome } } : {}),
+      },
+    },
+    {
+      name: 'mobile-webkit',
+      grep: /@mobile/,
+      // a pinça por CDP (@cdp) não existe no WebKit
+      grepInvert: /@cdp/,
+      use: { ...devices['iPhone 15'] },
     },
   ],
 });
