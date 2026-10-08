@@ -80,7 +80,13 @@ jobs:
         env:
           CI: '1'
           FC_RUNS: '100'
+      # Portão de desempenho (spec 08b, O12): N45 x baseline do CI Linux (regra dos 10%); informativo
+      # sem baseline ou com motor/CPU diferentes. Roda antes do resumo; o código de saída reprova o job.
+      - name: Desempenho (perf-gate)
+        if: always()
+        run: node tools/perf-gate.mjs
       # Resumo do job (tamanho x orçamento, cobertura, testes instáveis, N45) e avisos de flakes.
+      # Pisos de cobertura por pacote (O13, tools/coverage-floor.json): abaixo do piso o passo sai com 1.
       - name: Resumo de qualidade
         if: always()
         run: node tools/quality-summary.mjs
@@ -220,6 +226,46 @@ jobs:
         with:
           name: demo-npm-ls
           path: ${{ runner.temp }}/npm-ls.txt
+          if-no-files-found: ignore
+
+  # Regressão visual do demo (spec 08b, O5): só Chromium, no mesmo contêiner do job visual, sobre o
+  # artefato demo-static que o job demo já provou (servido por apps/demo/serve.mjs, CSP estrita).
+  # Baselines: workflow visual-update.yml (que reconstrói o demo).
+  visual-demo:
+    needs: demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --init --ipc=host
+    env:
+      HOME: /root
+      RTE_VISUAL_CONTAINER: '1'
+      CI: '1'
+      NX_DAEMON: 'false'
+      RTE_DEMO_PORT: 4318
+      RTE_DEMO_DIR: demo-static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm i -g npm@11
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: demo-static
+          path: demo-static
+      - run: npx playwright test -c apps/demo/e2e/visual/playwright.config.ts --project=visual-demo-chromium
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-demo-report
+          path: |
+            playwright-report/visual-demo/
+            apps/demo/e2e/test-results/visual/
+          retention-days: 14
           if-no-files-found: ignore
 
   # Site de documentação (spec 07c, X12): gera o modelo de API e o conteúdo, constrói o site como

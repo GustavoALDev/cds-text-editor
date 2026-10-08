@@ -61,16 +61,25 @@ jobs:
           node-version: lts/*
       - run: npm i -g npm@11
       - run: npm ci
+      # O demo (O5) é reconstruído aqui, com os mesmos passos do job demo do ci.yml (pack, prepare,
+      # install, build), em vez de baixar o artefato demo-static de outro run: determinístico e sem
+      # depender do ci.yml da mesma ref já ter terminado.
+      - run: echo "RTE_CONSUMER_DIR=$RUNNER_TEMP/cds-rte-consumer/demo" >> "$GITHUB_ENV"
+      - run: npx nx run-many -t build -p core sanitizer theme angular render
+      - run: node tools/consumer.mjs pack prepare install build
       # Apagar antes remove capturas órfãs; `all` regrava tudo (PNG determinístico: imagem igual não gera diff).
       - name: Regenerar as capturas
         run: |
-          rm -rf e2e/visual/__screenshots__
+          rm -rf e2e/visual/__screenshots__ apps/demo/e2e/visual/__screenshots__
           npx playwright test -c e2e/visual --update-snapshots=all
+          RTE_DEMO_DIR="$RTE_CONSUMER_DIR/dist/demo/browser" npx playwright test -c apps/demo/e2e/visual/playwright.config.ts --update-snapshots=all
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: visual-screenshots
-          path: e2e/visual/__screenshots__/
+          path: |
+            e2e/visual/__screenshots__/
+            apps/demo/e2e/visual/__screenshots__/
           retention-days: 14
           if-no-files-found: ignore
       - name: Commit das capturas
@@ -78,7 +87,7 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f e2e/visual/__screenshots__
+          git add -f e2e/visual/__screenshots__ apps/demo/e2e/visual/__screenshots__
           if git diff --cached --quiet; then
             echo "Nenhuma captura mudou."
           else
