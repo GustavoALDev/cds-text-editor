@@ -1,6 +1,7 @@
-<a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+<a class="skip-link" [routerLink]="currentPath()" fragment="conteudo">Ir para o conteúdo</a>
 <div class="shell">
   <nav class="shell__nav" aria-label="Documentação">
+    <docs-search-box />
     <p class="shell__brand">cds-text-editor</p>
     @for (group of nav; track group.title) {
     <h2 class="shell__group">{{ group.title }}</h2>

@@ -26,6 +26,10 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "search-index.json",
+                "input": "src/generated"
               }
             ],
             "styles": [
