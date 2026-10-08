@@ -11,11 +11,11 @@ import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
 import {
   formatRteError,
   isRteValidationError,
+  RteMaxCharsValidator,
   RteValidators,
   rteMaxChars,
   rteRequired,
 } from '@cds/rte-angular/validators';
-import { MaxCharsDirective } from './max-chars.directive';
 
 /** Limite curto para o erro ser fácil de provocar (texto colado acima dele fica inválido). */
 export const FORMS_MAX_CHARS = 60;
@@ -28,7 +28,7 @@ export const FORMS_MAX_CHARS = 60;
     FormField,
     ReactiveFormsModule,
     FormsModule,
-    MaxCharsDirective,
+    RteMaxCharsValidator,
   ],
   templateUrl: './forms.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

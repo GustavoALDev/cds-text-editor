@@ -29,10 +29,10 @@
               }
             ],
             "styles": [
-              "node_modules/@cds/rte-theme/dist/theme.css",
-              "node_modules/@cds/rte-core/styles/content.css",
-              "node_modules/@cds/rte-angular/styles/editor.css",
-              "node_modules/@cds/rte-render/styles/render.css",
+              "@cds/rte-theme/theme.css",
+              "@cds/rte-core/styles/content.css",
+              "@cds/rte-angular/styles/editor.css",
+              "@cds/rte-render/styles/render.css",
               "src/styles.css"
             ],
             "optimization": {
