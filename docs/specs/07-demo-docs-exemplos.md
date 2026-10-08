@@ -8,7 +8,7 @@
 |---|---|---|
 | 07a | `examples/server-node` (§3.2, R3, R4) | concluída (PR #13) |
 | [07b](07b-demo-e-playground-do-tema.md) | `apps/demo` (§3.1): páginas, playground do tema, consumo por tarball fora do *workspace* e *job* `demo` no CI; R2 | concluída; falta o CI do PR (ADR 0017) |
-| [07c](07c-site-de-docs.md) | Infraestrutura do site de docs (§3.3): app Angular próprio pré-renderizado, Markdown no *build*, referência de API do `api-extractor` (`docModel` + `api-documenter`), exemplos compilados (R1), links, publicação de docs + demo; páginas de início rápido, instalação e configuração | diretrizes no Apêndice A da 07b |
+| [07c](07c-site-de-docs.md) | Infraestrutura do site de docs (§3.3): app Angular próprio pré-renderizado, Markdown no *build*, referência de API do `api-extractor` (`docModel` + `api-documenter`), exemplos compilados (R1), links, publicação de docs + demo; páginas de início rápido, instalação e configuração | concluída; falta o CI do PR (ADR 0018) |
 | 07d | Conteúdo restante do guia (§3.3), README raiz (R5), teste de 15 minutos e fechamento da spec 07 | diretrizes no Apêndice A da 07b |
 
 A ferramenta de docs fica decidida (Apêndice A da 07b, Y2): app Angular 22 próprio, não TypeDoc nem Compodoc; a referência de API sai dos modelos do `api-extractor` (ADR 0016), não de nova análise do fonte.
@@ -50,7 +50,7 @@ Guia: início rápido (5 min), instalação, configuração, **tema (escada 0 a 
 - [ ] **Teste de 15 minutos:** alguém que não participou do projeto, só com a documentação, instala os pacotes num app Angular 22 limpo e obtém editor + upload + exibição. Tempo e tropeços registrados; docs corrigidas.
 - [ ] Playground gera CSS/TS que, colados num app limpo, reproduzem o tema mostrado.
 - [ ] Testes de API do `server-node` verdes contra o upload e a limpeza de órfãs.
-- [ ] Exemplos da documentação compilam no CI; links verificados.
+- [x] Exemplos da documentação compilam no CI; links verificados (07c: exemplos compilados em modo estrito pelo `ng build` do consumidor e `check-links` sobre o site e os READMEs; falta a rodada do CI do PR; as demais páginas são da 07d; ADR 0018).
 - [x] Demo consumindo os tarballs (não path alias) funciona (07b: `consumer.mjs` com prova de origem, 53 E2E no Chromium; ADR 0017).
 
 ## 6. Riscos
