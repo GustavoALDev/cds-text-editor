@@ -16,6 +16,7 @@ import type { RteSlashMenuState } from '@cds/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 import { clipAncestors, readVisibleArea } from '../floating/anchor';
 import { touches } from '../floating/place';
+import { readViewport } from '../floating/visual-viewport';
 import { RteViewportWatch } from '../floating/viewport-watch';
 import type { RteSlashMenuLabels } from '../labels/types';
 import {
@@ -119,11 +120,7 @@ export class RteSlashMenu implements RteSlashMenuApi {
     this.watch.start();
     const el = this.list()?.nativeElement;
     if (!el) return;
-    const root = view.document.documentElement;
-    const viewport = {
-      width: root.clientWidth || view.innerWidth,
-      height: root.clientHeight || view.innerHeight,
-    };
+    const viewport = readViewport(view);
     this.ancestors ??= clipAncestors(editor.view.dom);
     // A lista é `position: fixed` e pode passar da caixa do editável (a linha
     // do `/` costuma ser a última): só a janela e os ancestrais que cortam
@@ -131,7 +128,12 @@ export class RteSlashMenu implements RteSlashMenuApi {
     const [first, ...rest] = this.ancestors;
     const visible: RteRect | null = first
       ? readVisibleArea(first, rest, viewport)
-      : { top: 0, right: viewport.width, bottom: viewport.height, left: 0 };
+      : {
+          top: viewport.top,
+          right: viewport.left + viewport.width,
+          bottom: viewport.top + viewport.height,
+          left: viewport.left,
+        };
     const anchor = editor.view.coordsAtPos(state.range.from);
     if (!visible || !touches(anchor, visible)) {
       this.hide();
@@ -155,8 +157,11 @@ export class RteSlashMenu implements RteSlashMenuApi {
     // Alinhada ao `/` (não centrada na âncora, que tem largura zero).
     const left = Math.round(
       Math.max(
-        RTE_MENU_MARGIN,
-        Math.min(anchor.left, viewport.width - RTE_MENU_MARGIN - menu.width),
+        viewport.left + RTE_MENU_MARGIN,
+        Math.min(
+          anchor.left,
+          viewport.left + viewport.width - RTE_MENU_MARGIN - menu.width,
+        ),
       ),
     );
     const top = Math.round(p.top);

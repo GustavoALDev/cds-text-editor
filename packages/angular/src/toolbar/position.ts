@@ -53,6 +53,17 @@ export interface RteRect {
   readonly left: number;
 }
 
+/**
+ * Viewport em coordenadas de layout; `left`/`top` (padrão 0) deslocam a
+ * viewport visual em relação à de layout (spec 08b O7).
+ */
+export interface RteViewportBox {
+  readonly left?: number;
+  readonly top?: number;
+  readonly width: number;
+  readonly height: number;
+}
+
 /** Posição do menu flutuante em coordenadas da viewport (`position: fixed`). */
 export interface RteFloatingPlacement {
   left: number;
@@ -71,23 +82,26 @@ export function positionFloating(i: {
   anchor: RteRect;
   visible: RteRect;
   menu: { width: number; height: number };
-  viewport: { width: number; height: number };
+  viewport: RteViewportBox;
   prefer: 'above' | 'below';
 }): RteFloatingPlacement {
   const { anchor, visible, menu, viewport, prefer } = i;
   const m = RTE_MENU_MARGIN;
   const gap = RTE_FLOATING_GAP;
+  const vTop = viewport.top ?? 0;
+  const vLeft = viewport.left ?? 0;
   const aboveTop = anchor.top - gap - menu.height;
   const belowTop = anchor.bottom + gap;
   const fits = {
-    above: aboveTop >= Math.max(m, visible.top),
+    above: aboveTop >= Math.max(vTop + m, visible.top),
     below:
-      belowTop + menu.height <= Math.min(viewport.height - m, visible.bottom),
+      belowTop + menu.height <=
+      Math.min(vTop + viewport.height - m, visible.bottom),
   };
   const center = (anchor.left + anchor.right) / 2;
   const left = Math.max(
-    m,
-    Math.min(center - menu.width / 2, viewport.width - m - menu.width),
+    vLeft + m,
+    Math.min(center - menu.width / 2, vLeft + viewport.width - m - menu.width),
   );
   const other = prefer === 'above' ? 'below' : 'above';
   const side = fits[prefer] ? prefer : fits[other] ? other : null;

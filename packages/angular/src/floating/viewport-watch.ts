@@ -28,6 +28,16 @@ export class RteViewportWatch {
     });
   };
 
+  /** `resize`/`scroll` da viewport visual (O7): só reposicionam, no quadro. */
+  private readonly onVisual = (): void => {
+    const view = this.view;
+    if (!view || this.frame !== null) return;
+    this.frame = view.requestAnimationFrame(() => {
+      this.frame = null;
+      this.onFrame();
+    });
+  };
+
   start(): void {
     const view = this.view;
     if (!view || this.listening) return;
@@ -38,6 +48,12 @@ export class RteViewportWatch {
         passive: true,
       });
       view.addEventListener('resize', this.onEvent, { passive: true });
+      view.visualViewport?.addEventListener('resize', this.onVisual, {
+        passive: true,
+      });
+      view.visualViewport?.addEventListener('scroll', this.onVisual, {
+        passive: true,
+      });
     });
   }
 
@@ -49,5 +65,7 @@ export class RteViewportWatch {
     this.listening = false;
     view.removeEventListener('scroll', this.onEvent, { capture: true });
     view.removeEventListener('resize', this.onEvent);
+    view.visualViewport?.removeEventListener('resize', this.onVisual);
+    view.visualViewport?.removeEventListener('scroll', this.onVisual);
   }
 }

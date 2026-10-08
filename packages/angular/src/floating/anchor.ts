@@ -1,5 +1,5 @@
 import type { Editor } from '@tiptap/core';
-import type { RteRect } from '../toolbar/position';
+import type { RteRect, RteViewportBox } from '../toolbar/position';
 import type { RteFloatingContext } from './visibility';
 
 /** Menor retângulo que contém os dois. */
@@ -62,13 +62,15 @@ const toRect = (r: RteRect): RteRect => ({
 export function readVisibleArea(
   editable: HTMLElement,
   ancestors: readonly HTMLElement[],
-  viewport: { width: number; height: number },
+  viewport: RteViewportBox,
 ): RteRect | null {
+  const top = viewport.top ?? 0;
+  const left = viewport.left ?? 0;
   let area: RteRect | null = {
-    top: 0,
-    right: viewport.width,
-    bottom: viewport.height,
-    left: 0,
+    top,
+    right: left + viewport.width,
+    bottom: top + viewport.height,
+    left,
   };
   for (const el of [editable, ...ancestors]) {
     area = intersectRect(area, toRect(el.getBoundingClientRect()));
