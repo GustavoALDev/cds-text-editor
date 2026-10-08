@@ -131,7 +131,9 @@ export async function fitsWidth(
  */
 export async function mobileViolations(page: Page) {
   const found = await severeViolations(page);
-  const known = /(\.tableWrapper|-slash-list)$/;
+  // seletor do axe termina no próprio alvo (com no máximo pseudoclasses como :nth-child(5)): um
+  // descendente ou um nome parecido não entra
+  const known = /(\.tableWrapper|-slash-list)(:[a-z-]+(\([^)]*\))?)*$/;
   return found.filter(
     (v) =>
       !(
