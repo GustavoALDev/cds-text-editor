@@ -593,3 +593,30 @@ test('docs: bloco cercado em lista (recuo >= 4) ou citação é recusado', () =>
     assert.match(errors[0], /aninhado em lista ou citação/, nome);
   }
 });
+
+test('docs: CSS de exemplo (src/styles/exemplos*.css) não mira :root, html nem body (07d, L4)', () => {
+  const ok = fixture({
+    ...CLEAN_DOCS,
+    'apps/docs/src/styles/exemplos.css':
+      '/* :root só no comentário */\n.meu-tema { --rte-primary: #123456; }\n.meu-tema .rte-root, .outro .body { color: red; }\n',
+  });
+  assert.deepEqual(docsErrors(ok), []);
+  for (const seletor of [':root', 'html', 'body', 'html.escuro', '.a, body > p']) {
+    const bad = fixture({
+      ...CLEAN_DOCS,
+      'apps/docs/src/styles/exemplos-tema.css': `${seletor} { color: red; }\n`,
+    });
+    const errors = docsErrors(bad);
+    assert.equal(errors.length, 1, seletor);
+    assert.match(
+      errors[0],
+      /apps\/docs\/src\/styles\/exemplos-tema\.css: .*(:root|html|body).*classe envolvente/,
+    );
+  }
+  // docs.css (o chrome do site) pode usar :root
+  const chrome = fixture({
+    ...CLEAN_DOCS,
+    'apps/docs/src/styles/docs.css': ':root { color-scheme: light dark; }\n',
+  });
+  assert.deepEqual(docsErrors(chrome), []);
+});

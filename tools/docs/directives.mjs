@@ -32,6 +32,12 @@ const LANG_BY_EXT = {
 const REGION_START =
   /^\s*(?:\/\/\s*#region\b\s*(.*?)|<!--\s*#region\b\s*(.*?)\s*-->)\s*$/;
 const REGION_END = /^\s*(?:\/\/\s*#endregion\b.*|<!--\s*#endregion\b.*-->)\s*$/;
+// Só em arquivos .css (07d, L4): `/* #region nome */` ... `/* #endregion */`.
+const CSS_REGION_START = /^\s*\/\*\s*#region\b\s*(.*?)\s*\*\/\s*$/;
+const CSS_REGION_END = /^\s*\/\*\s*#endregion\b.*\*\/\s*$/;
+
+/** Linguagem do bloco cercado pela extensão do arquivo. */
+export const langOf = (path) => LANG_BY_EXT[path.split('.').pop()] ?? 'text';
 
 function dedent(lines) {
   const indents = lines
@@ -46,18 +52,20 @@ function dedent(lines) {
  * Lança se a região não existe ou não fecha.
  */
 export function extractRegion(text, name, file = '(arquivo)') {
+  const css = /\.css$/i.test(file);
   const lines = text.replace(/\r\n/g, '\n').split('\n');
   const out = [];
   const open = []; // pilha de regiões abertas
   let found = false;
   for (const line of lines) {
-    const start = REGION_START.exec(line);
+    const start =
+      REGION_START.exec(line) ?? (css ? CSS_REGION_START.exec(line) : null);
     if (start) {
       open.push((start[1] ?? start[2] ?? '').trim());
       if (name !== undefined && open.at(-1) === name) found = true;
       continue;
     }
-    if (REGION_END.test(line)) {
+    if (REGION_END.test(line) || (css && CSS_REGION_END.test(line))) {
       if (!open.length)
         throw new Error(`${file}: #endregion sem #region correspondente`);
       open.pop();
@@ -239,8 +247,7 @@ export function expandDirectives(body, ctx) {
         } catch (e) {
           fail(n, e.message);
         }
-        const ext = path.split('.').pop();
-        out.push(fenced(code, LANG_BY_EXT[ext] ?? 'text'));
+        out.push(fenced(code, langOf(path)));
         produced = 'example';
         return;
       }

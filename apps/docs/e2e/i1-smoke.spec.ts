@@ -20,11 +20,24 @@ import {
 // pré-renderizado é lido do disco: sem `style=` nem `<style>`.
 
 test.describe('I1: o conjunto de rotas', () => {
-  test('o guia tem as 3 páginas e a API tem uma página por entry', () => {
+  test('o guia tem as 16 páginas (4 grupos, spec 07d L1) e a API tem uma página por entry', () => {
     expect(GUIDE_ROUTES).toEqual([
       'guia/inicio-rapido',
       'guia/instalacao',
       'guia/configuracao',
+      'guia/formularios',
+      'guia/barra-e-recursos',
+      'guia/idiomas',
+      'guia/tema',
+      'guia/envio-e-midia',
+      'guia/embeds',
+      'guia/exibicao',
+      'guia/seguranca',
+      'guia/ssr-e-csp',
+      'guia/navegadores',
+      'guia/desempenho',
+      'guia/migracao',
+      'guia/faq',
     ]);
     expect(API_ROUTES.length).toBeGreaterThanOrEqual(15);
   });

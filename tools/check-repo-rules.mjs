@@ -269,6 +269,23 @@ function checkApp(rootDir, app) {
     }
   }
 
+  // CSS de exemplo do guia (07d, L4): classe envolvente, nunca o chrome do site.
+  const stylesDir = join(demo, 'src', 'styles');
+  if (app === 'docs' && existsSync(stylesDir)) {
+    for (const file of walk(stylesDir, (n) => /^exemplos.*\.css$/.test(n))) {
+      const css = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+      for (const m of css.matchAll(/([^{}]+)\{/g)) {
+        const bad = /(^|[\s,>+~(])(:root|html|body)(?![\w-])/.exec(m[1]);
+        if (bad) {
+          errors.push(
+            `${rel(file)}: o seletor "${m[1].trim()}" mira ${bad[2]}; CSS de exemplo usa uma classe envolvente (.meu-tema), para não mudar o chrome do site (spec 07d, L4)`,
+          );
+          break;
+        }
+      }
+    }
+  }
+
   for (const name of readdirSync(demo)) {
     if (name === 'package-lock.json') {
       errors.push(
