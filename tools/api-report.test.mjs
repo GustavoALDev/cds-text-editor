@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -160,8 +161,9 @@ test('internalLeaks: só os static ɵ do compilador do Angular passam', () => {
     'class A {\n    static ɵcmp: X<A>;\n    protected static ɵfac: Y;\n    static ɵprov: Z;\n}\n';
   assert.deepEqual(internalLeaks(ok), []);
   assert.equal(
-    internalLeaks('class A {\n    protected static readonly ɵdialogKit: 1;\n}\n')
-      .length,
+    internalLeaks(
+      'class A {\n    protected static readonly ɵdialogKit: 1;\n}\n',
+    ).length,
     1,
   );
 });
@@ -179,4 +181,45 @@ test('main: ɵ público fora do permitido falha; com @internal passa', async () 
     errs.some((e) => e.includes('ɵ')),
     JSON.stringify(errs),
   );
+});
+
+test('main: com modelDir grava .api.json por entry e o relatório não muda', async () => {
+  const dir = fixture(files(BASE), EXPORTS);
+  const modelDir = join(dir, 'model');
+  await main(dir, { root: dir, update: true });
+  const antes = readFileSync(join(dir, 'api', 'rte-demo.api.md'), 'utf8');
+  const errs = await main(dir, { root: dir, modelDir });
+  assert.deepEqual(errs, []);
+  assert.equal(
+    readFileSync(join(dir, 'api', 'rte-demo.api.md'), 'utf8'),
+    antes,
+  );
+  const model = JSON.parse(
+    readFileSync(join(modelDir, 'rte-demo.api.json'), 'utf8'),
+  );
+  assert.equal(model.name, 'rte-demo');
+  assert.equal(model.kind, 'Package');
+  const sub = JSON.parse(
+    readFileSync(join(modelDir, 'rte-demo-html.api.json'), 'utf8'),
+  );
+  assert.equal(sub.name, 'rte-demo-html');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('main: com modelDir e UPDATE_API o relatório fica byte a byte igual ao sem modelo', async () => {
+  const a = fixture(files(BASE), EXPORTS);
+  const b = fixture(files(BASE), EXPORTS);
+  await main(a, { root: a, update: true });
+  await main(b, { root: b, update: true, modelDir: join(b, 'model') });
+  for (const f of ['rte-demo.api.md', 'rte-demo-html.api.md'])
+    assert.equal(
+      readFileSync(join(a, 'api', f), 'utf8'),
+      readFileSync(join(b, 'api', f), 'utf8'),
+    );
+});
+
+test('runExtractor: sem modelDir o docModel segue desligado (nenhum .api.json)', async () => {
+  const dir = fixture(files(BASE), EXPORTS);
+  await main(dir, { root: dir, update: true });
+  assert.equal(existsSync(join(dir, 'model')), false);
 });

@@ -515,3 +515,125 @@ test('compat.json: com reason e adr passa; teto null passa; sem arquivo não faz
   assert.deepEqual(checkRepoRules(nulls), []);
   assert.deepEqual(checkRepoRules(fixture({ 'x.txt': '' })), []);
 });
+
+// ---- Docs (spec 07c, X2/X11): as regras do demo valem também para apps/docs ----
+
+const docsErrors = (root) =>
+  checkRepoRules(root).filter((e) => e.startsWith('apps/docs'));
+
+const CLEAN_DOCS = Object.fromEntries(
+  Object.entries(CLEAN_DEMO).map(([path, content]) => [
+    path.replace('apps/demo/', 'apps/docs/'),
+    content,
+  ]),
+);
+CLEAN_DOCS['package.json'] = ROOT_PKG;
+
+test('docs: sem apps/docs as regras não fazem nada', () => {
+  assert.deepEqual(docsErrors(fixture({ 'package.json': ROOT_PKG })), []);
+});
+
+test('docs: um site limpo passa', () => {
+  assert.deepEqual(docsErrors(fixture(CLEAN_DOCS)), []);
+});
+
+test('docs: lockfile, paths, import de packages/, style= e styleUrl são recusados com o nome do app', () => {
+  const cases = {
+    'apps/docs/package-lock.json': '{}',
+    'apps/docs/tsconfig.json': JSON.stringify({
+      compilerOptions: { paths: { '@cds/x': ['../x'] } },
+    }),
+    'apps/docs/src/app/bad.ts': "import { a } from '../../../../packages/x';\n",
+    'apps/docs/src/app/p.html': '<p style="color:red">x</p>',
+    'apps/docs/src/app/c.ts':
+      "@Component({ selector: 'x', styleUrl: './c.css' })\nexport class C {}\n",
+  };
+  for (const [path, content] of Object.entries(cases)) {
+    const errors = docsErrors(fixture({ ...CLEAN_DOCS, [path]: content }));
+    assert.ok(errors.length >= 1, path);
+    assert.ok(
+      errors.every((e) => e.startsWith('apps/docs')),
+      path,
+    );
+  }
+});
+
+test('docs: bypassSecurityTrust* só em src/app/content/doc-html.ts', () => {
+  const code = "const x = sanitizer.bypassSecurityTrustHtml('<b>x</b>');\n";
+  const ok = fixture({
+    ...CLEAN_DOCS,
+    'apps/docs/src/app/content/doc-html.ts': code,
+  });
+  assert.deepEqual(docsErrors(ok), []);
+  const bad = fixture({ ...CLEAN_DOCS, 'apps/docs/src/app/outro.ts': code });
+  const errors = docsErrors(bad);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /outro\.ts.*bypassSecurityTrust/);
+});
+
+test('demo: bypassSecurityTrust* é proibido em qualquer arquivo', () => {
+  const root = fixture({
+    ...CLEAN_DEMO,
+    'apps/demo/src/app/x.ts': "s.bypassSecurityTrustResourceUrl('x');\n",
+  });
+  const errors = demoErrors(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /x\.ts.*bypassSecurityTrust/);
+});
+
+test('docs: bloco cercado do conteúdo exige diretiva na linha anterior', () => {
+  const F = '```';
+  const bloco = `${F}ts\nconst a = 1;\n${F}\n`;
+  const com = (d) => `Texto.\n\n${d}\n\n${bloco}`;
+  for (const d of [
+    '<!-- example: examples/a.ts#x -->',
+    '<!-- generated: install-command -->',
+    '<!-- no-compile: saída do terminal -->',
+  ]) {
+    const root = fixture({
+      ...CLEAN_DOCS,
+      'apps/docs/content/guia/a.md': com(d),
+    });
+    assert.deepEqual(docsErrors(root), [], d);
+  }
+  const bad = docsErrors(
+    fixture({
+      ...CLEAN_DOCS,
+      'apps/docs/content/guia/a.md': `Texto.\n\n${bloco}`,
+    }),
+  );
+  assert.equal(bad.length, 1);
+  assert.match(
+    bad[0],
+    /apps\/docs\/content\/guia\/a\.md:3: bloco de código sem diretiva/,
+  );
+  const semMotivo = docsErrors(
+    fixture({
+      ...CLEAN_DOCS,
+      'apps/docs/content/guia/b.md': com('<!-- no-compile: -->'),
+    }),
+  );
+  assert.equal(semMotivo.length, 1);
+  const aninhado = `<!-- no-compile: sintaxe -->\n${F}${F}md\n${F}ts\nx\n${F}\n${F}${F}\n`;
+  assert.deepEqual(
+    docsErrors(
+      fixture({ ...CLEAN_DOCS, 'apps/docs/content/guia/c.md': aninhado }),
+    ),
+    [],
+  );
+});
+
+test('docs: bloco cercado em lista (recuo >= 4) ou citação é recusado', () => {
+  const F = '```';
+  const casos = {
+    lista: `- item\n\n    ${F}ts\n    x\n    ${F}\n`,
+    citacao: `> ${F}ts\n> x\n> ${F}\n`,
+  };
+  for (const [nome, md] of Object.entries(casos)) {
+    const errors = docsErrors(
+      fixture({ ...CLEAN_DOCS, 'apps/docs/content/guia/a.md': md }),
+    );
+    assert.equal(errors.length, 1, nome);
+    assert.match(errors[0], /aninhado em lista ou citação/, nome);
+  }
+});

@@ -11,7 +11,7 @@ const ROOT = resolve(import.meta.dirname, '..');
 test('a CSP do serve.mjs é a estrita da spec 07b (W4)', () => {
   assert.equal(
     CSP,
-    "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; connect-src 'self'",
+    "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'",
   );
 });
 

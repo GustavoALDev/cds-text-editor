@@ -1,2 +1,4 @@
 # O demo é um consumidor externo dos tarballs (spec 07b): fora do grafo do Nx.
 apps/demo
+# O site de documentação também (spec 07c).
+apps/docs

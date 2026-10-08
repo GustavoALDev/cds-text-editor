@@ -16,6 +16,7 @@ import { join, resolve } from 'node:path';
 import {
   CONSUMER_MARK,
   applyVersions,
+  flattenPrerender,
   PACKAGES,
   buildManifest,
   commandsFor,
@@ -673,4 +674,155 @@ test('main com --versions repassa --legacy-peer-deps ao npm install quando a per
     { exec, repoRoot: root, fs },
   );
   assert.deepEqual(installs[0].args, ['install', '--no-audit', '--no-fund']);
+});
+
+// ---- --app (spec 07c, X1) ----
+
+test('resolveConsumerDir: o app define a subpasta (padrão demo); RTE_CONSUMER_DIR vence', () => {
+  const root = tmp('repo-');
+  const out = tmp('out-');
+  assert.equal(
+    resolveConsumerDir({ TMPDIR: out }, root, fs, 'docs'),
+    join(resolve(out), 'cds-rte-consumer', 'docs'),
+  );
+  assert.equal(
+    resolveConsumerDir({ TMPDIR: out }, root),
+    join(resolve(out), 'cds-rte-consumer', 'demo'),
+  );
+  const dir = tmp('out-');
+  assert.equal(
+    resolveConsumerDir({ RTE_CONSUMER_DIR: dir }, root, fs, 'docs'),
+    resolve(dir),
+  );
+});
+
+test('main: --app inválido ou checagens do demo em outro app falham em pt-BR', async () => {
+  const { main } = await import('./consumer.mjs');
+  await assert.rejects(
+    () => main(['--app', 'x', 'pack'], {}),
+    /--app inválido/,
+  );
+  await assert.rejects(() => main(['--app'], {}), /--app inválido/);
+  const out = tmp('out-');
+  for (const step of ['check-snippets', 'dev', 'serve']) {
+    await assert.rejects(
+      () => main(['--app', 'docs', step], { TMPDIR: out }),
+      /só existe para o demo/,
+    );
+  }
+});
+
+function docsRepo() {
+  const root = tmp('repo-');
+  const docs = join(root, 'apps', 'docs');
+  for (const dir of [
+    'src/app/content',
+    'content/guia',
+    'e2e',
+    'examples',
+    'dist',
+  ]) {
+    mkdirSync(join(docs, dir), { recursive: true });
+  }
+  writeFileSync(join(docs, 'src', 'a.ts'), 'a');
+  writeFileSync(join(docs, 'src', 'app', 'content', 'page.ts'), 'page');
+  writeFileSync(join(docs, 'content', 'guia', 'x.md'), '# x');
+  writeFileSync(join(docs, 'e2e', 'e.ts'), 'e');
+  writeFileSync(join(docs, 'examples', 'ex.ts'), 'ex');
+  writeFileSync(
+    join(docs, 'package.json'),
+    JSON.stringify({ dependencies: { '@cds/rte-core': '0.0.0' } }),
+  );
+  mkdirSync(join(root, 'dist', 'tarballs'), { recursive: true });
+  writeFileSync(
+    join(root, 'dist', 'tarballs', 'manifest.json'),
+    JSON.stringify(MANIFEST),
+  );
+  return root;
+}
+
+test('prepareConsumer(docs): sem content/ e e2e/, com o conteúdo gerado em src/generated; falha sem ele', () => {
+  const root = docsRepo();
+  const consumer = join(tmp('out-'), 'c');
+  assert.throws(
+    () =>
+      prepareConsumer({
+        repoRoot: root,
+        consumerDir: consumer,
+        fs,
+        app: 'docs',
+      }),
+    /docs-content/,
+  );
+  mkdirSync(join(root, 'dist', 'docs-content', 'pages'), { recursive: true });
+  writeFileSync(join(root, 'dist', 'docs-content', 'nav.ts'), 'nav');
+  writeFileSync(join(root, 'dist', 'docs-content', 'pages', 'p.ts'), 'p');
+  prepareConsumer({ repoRoot: root, consumerDir: consumer, fs, app: 'docs' });
+  assert.ok(existsSync(join(consumer, 'src', 'a.ts')));
+  assert.ok(existsSync(join(consumer, 'examples', 'ex.ts')));
+  assert.ok(!existsSync(join(consumer, 'content')));
+  // só o content/ da raiz do app sai; src/app/content/ é código
+  assert.ok(existsSync(join(consumer, 'src', 'app', 'content', 'page.ts')));
+  assert.ok(!existsSync(join(consumer, 'e2e')));
+  assert.ok(!existsSync(join(consumer, 'dist')));
+  assert.equal(
+    readFileSync(join(consumer, 'src', 'generated', 'pages', 'p.ts'), 'utf8'),
+    'p',
+  );
+  const pkg = JSON.parse(readFileSync(join(consumer, 'package.json'), 'utf8'));
+  assert.match(pkg.dependencies['@cds/rte-core'], /^file:/);
+});
+
+test('prepareConsumer(demo) não exige o conteúdo gerado e não copia src/generated', () => {
+  const root = docsRepo();
+  mkdirSync(join(root, 'apps', 'demo', 'src'), { recursive: true });
+  writeFileSync(join(root, 'apps', 'demo', 'package.json'), '{}');
+  const consumer = join(tmp('out-'), 'c');
+  prepareConsumer({ repoRoot: root, consumerDir: consumer, fs });
+  assert.ok(!existsSync(join(consumer, 'src', 'generated')));
+});
+
+test('commandsFor: --base-href só quando pedido', () => {
+  const c = join(tmp('c-'));
+  assert.deepEqual(commandsFor('build', { consumerDir: c }).args.slice(1), [
+    'build',
+  ]);
+  assert.deepEqual(
+    commandsFor('build', { consumerDir: c, baseHref: '/x/' }).args.slice(1),
+    ['build', '--base-href', '/x/'],
+  );
+});
+
+test('flattenPrerender: sobe browser/<base>/ para a raiz e cria 404.html', () => {
+  const browser = tmp('browser-');
+  mkdirSync(join(browser, 'a', 'b', 'guia', 'x'), { recursive: true });
+  mkdirSync(join(browser, 'a', 'b', '404'), { recursive: true });
+  writeFileSync(
+    join(browser, 'index.csr.html'),
+    '<html><base href="/a/b/"></html>',
+  );
+  writeFileSync(join(browser, 'main.js'), 'js');
+  writeFileSync(join(browser, 'a', 'b', 'index.html'), 'raiz');
+  writeFileSync(join(browser, 'a', 'b', 'guia', 'x', 'index.html'), 'x');
+  writeFileSync(join(browser, 'a', 'b', '404', 'index.html'), 'nf');
+  const done = flattenPrerender(browser, fs);
+  assert.deepEqual(done, ['a/b/ → raiz', '404.html']);
+  assert.equal(readFileSync(join(browser, 'index.html'), 'utf8'), 'raiz');
+  assert.equal(
+    readFileSync(join(browser, 'guia', 'x', 'index.html'), 'utf8'),
+    'x',
+  );
+  assert.equal(readFileSync(join(browser, '404.html'), 'utf8'), 'nf');
+  assert.ok(existsSync(join(browser, 'main.js')));
+  assert.ok(!existsSync(join(browser, 'a')));
+});
+
+test('flattenPrerender: base "/" ou sem aninhamento não muda nada', () => {
+  const browser = tmp('browser-');
+  writeFileSync(join(browser, 'index.csr.html'), '<base href="/">');
+  writeFileSync(join(browser, 'index.html'), 'raiz');
+  assert.deepEqual(flattenPrerender(browser, fs), []);
+  assert.equal(readFileSync(join(browser, 'index.html'), 'utf8'), 'raiz');
+  const empty = tmp('browser-');
+  assert.deepEqual(flattenPrerender(empty, fs), []);
 });

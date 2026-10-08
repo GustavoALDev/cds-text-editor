@@ -1,0 +1,45 @@
+<div class="search" role="search" [hidden]="!ready()">
+  <label class="search__label" for="docs-search-input"
+    >Buscar na documentação</label
+  >
+  <input
+    #field
+    id="docs-search-input"
+    class="search__input"
+    type="search"
+    role="combobox"
+    autocomplete="off"
+    placeholder="Buscar ( / )"
+    aria-autocomplete="list"
+    aria-controls="docs-search-list"
+    [attr.aria-expanded]="expanded()"
+    [attr.aria-activedescendant]="activeId()"
+    (focus)="onFocus()"
+    (input)="onInput($event)"
+    (keydown)="onKeydown($event)"
+    (blur)="onBlur()"
+  />
+  <ul
+    id="docs-search-list"
+    class="search__list"
+    role="listbox"
+    aria-label="Resultados da busca"
+    [hidden]="!expanded()"
+  >
+    @for (r of results(); track $index) {
+    <li
+      class="search__option"
+      role="option"
+      [id]="optionId($index)"
+      [attr.aria-selected]="$index === active()"
+      [class.is-active]="$index === active()"
+      (mousedown)="hold($event)"
+      (click)="go(r)"
+    >
+      <span class="search__title">{{ r.title }}</span>
+      <span class="search__page">{{ r.pageTitle }}</span>
+    </li>
+    }
+  </ul>
+  <p class="search__status" role="status" aria-live="polite">{{ status() }}</p>
+</div>
