@@ -1,0 +1,29 @@
+<p>
+  <label>
+    <input
+      type="checkbox"
+      [checked]="aplicar()"
+      (change)="setAplicar($event)"
+    />
+    Aplicar a classe <code>meu-tema</code>
+  </label>
+  <label>
+    <input type="checkbox" [checked]="escuro()" (change)="setEscuro($event)" />
+    Site escuro
+  </label>
+</p>
+<!-- #region template -->
+<div
+  data-testid="tema"
+  [class.meu-tema]="aplicar()"
+  [class.meu-site--claro]="!escuro()"
+  [class.meu-site--escuro]="escuro()"
+>
+  <rte-editor
+    [(value)]="html"
+    [theme]="theme"
+    [labels]="labels"
+    ariaLabel="Texto do exemplo do tema"
+  />
+</div>
+<!-- #endregion -->
