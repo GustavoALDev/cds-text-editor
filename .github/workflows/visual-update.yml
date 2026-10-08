@@ -14,13 +14,6 @@ on:
         description: 'Motivo da atualização (vai na mensagem do commit)'
         required: true
         type: string
-  # BOOTSTRAP temporário (ADR 0021): `workflow_dispatch` só dispara de um workflow que já existe no
-  # branch padrão. Enquanto o PR da 08b não entra no main, o push nestes branches gera as capturas.
-  # O último commit da tarefa 6 remove este gatilho.
-  push:
-    branches:
-      - 'feat/spec-08b*'
-      - 'visual-bootstrap/**'
 
 permissions:
   contents: write
@@ -42,7 +35,7 @@ jobs:
       CI: '1'
       NX_DAEMON: 'false'
       TARGET_BRANCH: ${{ inputs.branch || github.ref_name }}
-      REASON: ${{ inputs.reason || 'bootstrap da 08b' }}
+      REASON: ${{ inputs.reason }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
       # Guarda: o branch e o motivo chegam por variável de ambiente, nunca interpolados no script.

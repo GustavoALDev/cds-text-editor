@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { runBodies } from './workflow-writers.mjs';
 
-// Enquanto o PR da 08b está aberto, o workflow tem o gatilho `push` temporário (ADR 0021);
-// a tarefa 6 vira esta constante para false e remove o gatilho.
-const BOOTSTRAP = true;
+// Estado de release: sem o gatilho `push` temporário de bootstrap (ADR 0021). Se alguém o recolocar, a
+// constante precisa virar true de propósito.
+const BOOTSTRAP = false;
 const perf = readFileSync('.github/workflows/perf-baseline.yml', 'utf8').replace(/\r\n/g, '\n');
 
 const read = (p) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n');

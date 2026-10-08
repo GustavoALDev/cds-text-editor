@@ -88,13 +88,13 @@ Nenhuma API pública muda. **Comportamento:** posicionamento pela *viewport* vis
 
 ## 8. Critérios de aceite
 
-- [ ] `npx nx run-many -t lint,typecheck,build,test,test-zone,coverage,verify-package,api,size` verde; `check:rules`, `test:tools`, `check:licenses` e `typecheck:e2e` verdes.
-- [ ] No CI do PR: `verify`, `demo`, `compat (latest×latest)`, `visual` e `visual-demo` verdes e exigidos; `perf-gate` e pisos de cobertura ativos no `verify`; resumo com versões dos motores.
-- [ ] *Baselines* visuais e de desempenho geradas pelos *workflows* e versionadas; uma atualização de captura feita pelo `visual-update.yml` num *branch* de prova.
-- [ ] Projetos móveis verdes; menus dentro da *viewport* visual; alvos ≥ 24 px; *reflow* a 320 px.
-- [ ] O14 diagnosticado e resolvido (correção ou aceite com teste); cada linha da §4 com evidência ou dono.
-- [ ] Roteiro de leitor de tela publicado com o critério da K4 (execução: `TODO-AUTOR`, spec 09); matriz de navegadores no README raiz.
-- [ ] §6 da spec 08 marcada com evidência; ADR 0021, `CLAUDE.md`, `e2e/README.md` e `docs/specs/README.md` atualizados.
+- [x] `npx nx run-many -t lint,typecheck,build,test,test-zone,coverage,verify-package,api,size` verde; `check:rules`, `test:tools`, `check:licenses` e `typecheck:e2e` verdes. Evidência: execução local de 2026-10-08 (39 tarefas, também `test-timed`) e ADR 0021.
+- [ ] **[AUTOR/CI]** No CI do PR: `verify`, `demo`, `compat (latest×latest)`, `visual` e `visual-demo` verdes e exigidos; `perf-gate` e pisos de cobertura ativos no `verify`; resumo com versões dos motores.
+- [x] *Baselines* visuais e de desempenho geradas pelos *workflows* e versionadas; uma atualização de captura feita pelo `visual-update.yml` num *branch* de prova. Evidência: runs 37828841294 (atualizou o playground) e 37833080487 (sem mudança) do `visual-update.yml` em `feat/spec-08b`; baseline do run 37822212209 do `perf-baseline.yml`.
+- [x] Projetos móveis verdes; menus dentro da *viewport* visual; alvos ≥ 24 px; *reflow* a 320 px. Evidência: `editor-mobile-*.spec.ts` no `mobile-chromium` local (ADR 0021); o `mobile-webkit` roda no CI do PR.
+- [x] O14 diagnosticado e resolvido (correção ou aceite com teste); cada linha da §4 com evidência ou dono. Evidência: N60 e ADR 0021, seção (c) e (h).
+- [x] Roteiro de leitor de tela publicado com o critério da K4 (execução: `TODO-AUTOR`, spec 09); matriz de navegadores no README raiz. Evidência: `docs/quality/roteiro-leitor-de-tela.md` (regra em `check:rules`) e `README.md`.
+- [x] §6 da spec 08 marcada com evidência; ADR 0021, `CLAUDE.md`, `e2e/README.md` e `docs/specs/README.md` atualizados.
 
 ## 9. Consequências
 
