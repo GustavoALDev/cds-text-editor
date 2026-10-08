@@ -145,7 +145,7 @@ describe('RteEditor: ciclo de vida (D2, R2)', () => {
 
     fixture.componentInstance.options.set({});
     await settle(fixture);
-    fixture.componentInstance.options.set({ idPrefix: 'x' });
+    fixture.componentInstance.options.set({ idPrefix: 'x-' });
     await settle(fixture);
 
     expect(warn.mock.calls).toEqual([[OPTIONS_WARNING]]);

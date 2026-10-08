@@ -12,7 +12,11 @@ import {
   tablesFeature,
   tasksFeature,
 } from './features';
-import { normalizeHosts, normalizeRelTokens } from './hosts';
+import {
+  normalizeHosts,
+  normalizeLinkProtocols,
+  normalizeRelTokens,
+} from './hosts';
 import { DEFAULT_ID_PREFIX, assertIdPrefix } from './id-prefix';
 import { RTE_HIGHLIGHT_COLORS, RTE_TEXT_COLORS } from './palette';
 import type {
@@ -218,6 +222,11 @@ function buildContext(options: RteHtmlSchemaOptions): FeatureContext {
       options.linkPolicy?.blockedDomains,
       false,
     ),
+    linkProtocols: normalizeLinkProtocols(
+      'linkPolicy.protocols',
+      options.linkPolicy?.protocols,
+    ),
+    allowRelativeLinks: options.linkPolicy?.allowRelative ?? true,
     forceRel: normalizeRelTokens(
       'linkPolicy.forceRel',
       options.linkPolicy?.forceRel,

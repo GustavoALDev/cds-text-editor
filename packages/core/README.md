@@ -23,6 +23,8 @@ Os entries `.`, `/embeds` e `/html` não importam Tiptap: quem só usa o esquema
 
 `getHtmlSchema` devolve o contrato do HTML (tags, atributos, estilos) como dados congelados e serializáveis em JSON. O sanitizador e a renderização derivam tudo dele. A referência gerada fica em [`docs/html-schema.md`](../../docs/html-schema.md); a decisão, em [ADR 0003](../../docs/decisions/0003-esquema-do-html.md).
 
+> **Segurança da mídia: o padrão é permissivo.** Sem `mediaHosts`, `img`/`video`/`poster`/`srcset` aceitam **qualquer host `https`**, e `allowRelativeMedia` é `true` (caminhos do próprio site). Isso deixa um autor mal-intencionado usar o navegador do leitor para rastreá-lo ou para disparar `GET`s no seu site. **Em sites com vários autores configure `mediaHosts` com os seus hosts de mídia e `allowRelativeMedia: false`**, alinhe `img-src`/`media-src` da CSP e mantenha todo `GET` do seu site sem efeito colateral. O mesmo vale para o sanitizador e a exibição (passe as mesmas opções). Detalhes em [`docs/security.md`](../../docs/security.md).
+
 ```ts
 import { getHtmlSchema } from '@cds/rte-core';
 
@@ -145,10 +147,11 @@ const editor = new Editor({
 getRteHtml(editor); // '<h2 id="rt-titulo">Título</h2><p>Texto</p>'
 ```
 
-As opções são as de `getHtmlSchema` (`features`, `embedProviders`, `idPrefix`, `mediaHosts`, `allowRelativeMedia`) mais `linkPolicy`, `codeLanguages` (padrão `[]`: sem realce), `labels`, `image.minWidth` e `extensions` (do consumidor, no fim da lista; nome repetido lança `TypeError`). Recurso desligado não registra nós, marcas nem comandos.
+As opções são as de `getHtmlSchema` (`features`, `embedProviders`, `idPrefix`, `mediaHosts`, `allowRelativeMedia`) mais `linkPolicy` (`blockedDomains`, `forceRel`, `protocols`, `allowRelative`, também no sanitizador), `codeLanguages` (padrão `[]`: sem realce), `labels`, `image.minWidth` e `extensions` (do consumidor, no fim da lista; nome repetido lança `TypeError`). Recurso desligado não registra nós, marcas nem comandos.
 
 ### `getRteHtml` × `getHTML()`
 
+- **`caption` de tabela:** o sanitizador (e o esquema) aceitam `caption`, mas o editor ainda **a descarta ao reeditar**: abrir um conteúdo com legenda de tabela no editor e salvar a perde. A exibição (sem reeditar) a mantém.
 - **`getRteHtml(editor)` é a saída oficial**: serializada sem DOM, igual byte a byte em Node, jsdom e nos navegadores, com ids de título e títulos de caixa preenchidos. `serializeRteHtml(doc, { idPrefix, labels })` faz o mesmo a partir de um documento (inclusive no servidor, de JSON, sem DOM).
 - `editor.getHTML()` continua funcionando e é **aceito** pelo esquema, mas não é canônico: não tem ids de título, e o `style` sai no formato do CSSOM de cada navegador (`color: rgb(…);`, posição variável).
 
@@ -242,6 +245,8 @@ htmlToText('<p>Olá</p><script>x()</script>'); // 'Olá'
 `htmlToText` devolve texto (escape antes de voltar ao HTML). Os dois aceitam `maxDepth` (padrão 256): acima disso a leitura é truncada, sem lançar.
 
 ## Rascunho
+
+> O rascunho fica no `localStorage` em texto claro e **sem escopo por usuário**: ponha o id do usuário na chave (`user-7:doc-42`) e chame `clearLocalDrafts()`/`drafts.clear()` no logout. A vida do rascunho (`maxAgeMs`, 7 dias) é o mínimo para a carência de mídia órfã no servidor.
 
 ```ts
 import { createDraftStore, createLocalDraftStorage } from '@cds/rte-core';

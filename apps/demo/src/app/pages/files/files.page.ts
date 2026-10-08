@@ -53,6 +53,17 @@ export class FilesPage {
   protected readonly mode = signal<UploadMode>('simulated');
   /** Token do servidor local desta execução (vem do `demo-config.json`, não do bundle). */
   private authToken = '';
+  /** O token CSRF é buscado UMA vez: cada GET /csrf troca o cookie e o adaptador envia até 2 arquivos juntos. */
+  private csrf: Promise<string> | undefined;
+  private csrfToken(): Promise<string> {
+    this.csrf ??= fetch('/csrf', {
+      credentials: 'include',
+      headers: { Authorization: `Bearer ${this.authToken}` },
+    })
+      .then((response) => response.json() as Promise<{ token: string }>)
+      .then(({ token }) => token);
+    return this.csrf;
+  }
   /** Trocar o modo recria o editor (a configuração de envio é lida por referência). */
   protected readonly modes = computed(() => [this.mode()]);
 
@@ -68,14 +79,10 @@ export class FilesPage {
     adapter: httpUploadAdapter({
       endpoint: '/upload',
       withCredentials: true,
-      headers: async () => {
-        const response = await fetch('/csrf', { credentials: 'include' });
-        const { token } = (await response.json()) as { token: string };
-        return {
-          Authorization: `Bearer ${this.authToken}`,
-          'X-CSRF-Token': token,
-        };
-      },
+      headers: async () => ({
+        Authorization: `Bearer ${this.authToken}`,
+        'X-CSRF-Token': await this.csrfToken(),
+      }),
     }),
   };
   protected readonly uploadConfig = computed(() =>

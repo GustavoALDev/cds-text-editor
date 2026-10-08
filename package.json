@@ -4,6 +4,7 @@
   "license": "MIT",
   "scripts": {
     "check:licenses": "node tools/check-licenses.mjs",
+    "audit": "npm audit --omit=dev --audit-level=high",
     "check:pack": "nx run-many -t verify-package",
     "check:size": "nx run theme:size",
     "check:rules": "node tools/check-repo-rules.mjs",
