@@ -11,33 +11,8 @@ import {
   type BothCase,
   type Mode,
 } from './helpers/page';
+import { HUE_LIMITS, LIMITS, groupOf, type Group } from './helpers/limits';
 import { srgbSeeds, thresholdSeeds } from './helpers/seeds';
-
-type Group = 'linear' | 'text' | 'neutral' | 'border';
-
-/**
- * Limites de ΔE por grupo. Limites da spec (R7): linear ~0, neutro <= 0,019, borda <= 0,041.
- * Medidos aqui (matriz OKLab corrigida), neutros e bordas ficam em ~0,0035 (1 unidade de 8 bits),
- * então 0,019 e 0,041 não detectariam uma constante de neutro alterada; os limites de neutro e de
- * borda abaixo são mais apertados que os da spec de propósito (a spec continua válida com folga).
- * `linear` e `text` ficam no piso de quantização (0 e 1 unidade de 8 bits, ~0,0028).
- */
-const LIMITS: Record<Group, number> = {
-  linear: 0.002,
-  text: 0.004,
-  neutral: 0.006,
-  border: 0.006,
-};
-
-function groupOf(token: string): Group | null {
-  if (/^(primary|secondary|tertiary)$/.test(token)) return null; // semente: idêntica nos dois planos
-  if (/^on-|-hover$|-active$/.test(token)) return 'linear';
-  if (token === 'focus' || token.endsWith('-text')) {
-    return token === 'text' ? 'neutral' : 'text';
-  }
-  if (token.endsWith('-border')) return 'border';
-  return 'neutral'; // surface, surface-raised, text, text-muted, border, *-subtle
-}
 
 /** 30 sementes de marca/extremos (início da lista do spike) + 30 espalhadas da grade + limiar + extras. */
 function sampleSeeds(): string[] {
@@ -59,14 +34,6 @@ function sampleSeeds(): string[] {
     ]),
   ];
 }
-
-/** Desvio máximo de matiz (distância (a, b) em OKLab, ver o teste) por neutro e token. */
-const HUE_LIMITS = {
-  'gray-subtle': 0.004,
-  'gray-border': 0.004,
-  'tinted-subtle': 0.016,
-  'tinted-border': 0.01,
-};
 
 const MODES: Mode[] = ['light', 'dark'];
 
