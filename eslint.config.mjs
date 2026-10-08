@@ -33,6 +33,8 @@ export default [
       // O demo é um consumidor externo (spec 07b): fora do grafo do Nx e do lint do repositório.
       'apps/demo/src/**',
       'apps/demo/*.mjs',
+      // O site de documentação também (spec 07c, X1).
+      'apps/docs/**',
     ],
   },
   {

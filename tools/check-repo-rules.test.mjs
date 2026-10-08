@@ -471,3 +471,68 @@ test('demo: style no host de componente ou diretiva é recusado', () => {
   });
   assert.deepEqual(demoErrors(ok), []);
 });
+
+// ---- Docs (spec 07c, X2/X11): as regras do demo valem também para apps/docs ----
+
+const docsErrors = (root) =>
+  checkRepoRules(root).filter((e) => e.startsWith('apps/docs'));
+
+const CLEAN_DOCS = Object.fromEntries(
+  Object.entries(CLEAN_DEMO).map(([path, content]) => [
+    path.replace('apps/demo/', 'apps/docs/'),
+    content,
+  ]),
+);
+CLEAN_DOCS['package.json'] = ROOT_PKG;
+
+test('docs: sem apps/docs as regras não fazem nada', () => {
+  assert.deepEqual(docsErrors(fixture({ 'package.json': ROOT_PKG })), []);
+});
+
+test('docs: um site limpo passa', () => {
+  assert.deepEqual(docsErrors(fixture(CLEAN_DOCS)), []);
+});
+
+test('docs: lockfile, paths, import de packages/, style= e styleUrl são recusados com o nome do app', () => {
+  const cases = {
+    'apps/docs/package-lock.json': '{}',
+    'apps/docs/tsconfig.json': JSON.stringify({
+      compilerOptions: { paths: { '@cds/x': ['../x'] } },
+    }),
+    'apps/docs/src/app/bad.ts': "import { a } from '../../../../packages/x';\n",
+    'apps/docs/src/app/p.html': '<p style="color:red">x</p>',
+    'apps/docs/src/app/c.ts':
+      "@Component({ selector: 'x', styleUrl: './c.css' })\nexport class C {}\n",
+  };
+  for (const [path, content] of Object.entries(cases)) {
+    const errors = docsErrors(fixture({ ...CLEAN_DOCS, [path]: content }));
+    assert.ok(errors.length >= 1, path);
+    assert.ok(
+      errors.every((e) => e.startsWith('apps/docs')),
+      path,
+    );
+  }
+});
+
+test('docs: bypassSecurityTrust* só em src/app/content/doc-html.ts', () => {
+  const code = "const x = sanitizer.bypassSecurityTrustHtml('<b>x</b>');\n";
+  const ok = fixture({
+    ...CLEAN_DOCS,
+    'apps/docs/src/app/content/doc-html.ts': code,
+  });
+  assert.deepEqual(docsErrors(ok), []);
+  const bad = fixture({ ...CLEAN_DOCS, 'apps/docs/src/app/outro.ts': code });
+  const errors = docsErrors(bad);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /outro\.ts.*bypassSecurityTrust/);
+});
+
+test('demo: bypassSecurityTrust* é proibido em qualquer arquivo', () => {
+  const root = fixture({
+    ...CLEAN_DEMO,
+    'apps/demo/src/app/x.ts': "s.bypassSecurityTrustResourceUrl('x');\n",
+  });
+  const errors = demoErrors(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /x\.ts.*bypassSecurityTrust/);
+});

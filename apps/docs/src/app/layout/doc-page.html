@@ -1,0 +1,33 @@
+@if (page(); as page) {
+<article class="doc">
+  <h1>{{ page.title }}</h1>
+  @for (segment of page.segments; track $index) { @if ('html' in segment) {
+  <docs-html [html]="segment.html" />
+  } }
+  <nav class="doc__pager" aria-label="Navegação entre páginas">
+    @if (previous(); as prev) {
+    <a [routerLink]="'/' + prev.path" rel="prev">← {{ prev.title }}</a>
+    } @if (next(); as nxt) {
+    <a [routerLink]="'/' + nxt.path" rel="next">{{ nxt.title }} →</a>
+    }
+  </nav>
+  @if (editUrl(); as url) {
+  <p class="doc__edit">
+    <a [href]="url" rel="noopener noreferrer">Editar esta página</a>
+  </p>
+  }
+</article>
+@if (toc().length) {
+<nav class="doc__toc" aria-label="Nesta página">
+  <p>Nesta página</p>
+  <ul>
+    @for (h of toc(); track h.id) {
+    <li [class.doc__toc--sub]="h.depth === 3">
+      <a [routerLink]="[]" [fragment]="h.id">{{ h.text }}</a>
+    </li>
+    }
+  </ul>
+</nav>
+} } @else {
+<h1>Página não encontrada</h1>
+}

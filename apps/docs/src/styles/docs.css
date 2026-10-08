@@ -1,0 +1,92 @@
+/* Estilos do site (global; a CSP barra <style> inline e `style=`). As cores do *chrome* vêm dos
+   tokens `--rte-*` do tema; os editores vivos usam `mode: 'inherit'`. */
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  background: var(--rte-surface, Canvas);
+  color: var(--rte-on-surface, CanvasText);
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  padding: 8px 12px;
+  background: Canvas;
+  color: CanvasText;
+  border: 2px solid currentcolor;
+  z-index: 10;
+}
+
+.skip-link:focus {
+  top: 8px;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 16rem minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.shell__nav {
+  padding: 1rem;
+  border-inline-end: 1px solid color-mix(in srgb, currentcolor 20%, transparent);
+}
+
+.shell__brand {
+  font-weight: 700;
+  margin: 0 0 1rem;
+}
+
+.shell__group {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 1rem 0 0.25rem;
+}
+
+.shell__nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.shell__nav a.is-active {
+  font-weight: 700;
+}
+
+.shell__main {
+  display: grid;
+  grid-template-columns: minmax(0, 46rem) 14rem;
+  gap: 2rem;
+  padding: 1.5rem 2rem;
+}
+
+.doc__pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.doc__toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.doc__toc--sub {
+  padding-inline-start: 1rem;
+}
+
+@media (max-width: 60rem) {
+  .shell,
+  .shell__main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
