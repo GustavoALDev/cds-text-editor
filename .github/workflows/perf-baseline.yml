@@ -1,0 +1,95 @@
+name: Atualizar baseline de desempenho
+
+# Spec 08b (O11, O12): roda o N45 10 vezes por motor no mesmo tipo de máquina do job `verify`
+# (ubuntu-latest), agrega mediana e CV por métrica (`node tools/perf-gate.mjs baseline`) e faz commit de
+# `e2e/perf/baseline.linux.json` no próprio branch. O `perf-gate` do ci.yml compara com ele.
+# Único workflow (além do visual-update.yml e do release.yml) com `contents: write`; nunca roda em `main`.
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch que recebe o commit da baseline (nunca main)'
+        required: true
+        type: string
+      reason:
+        description: 'Motivo da atualização (vai na mensagem do commit)'
+        required: true
+        type: string
+  # BOOTSTRAP temporário (ADR 0021): `workflow_dispatch` só dispara de um workflow que já existe no
+  # branch padrão. Enquanto o PR da 08b não entra no main, o push nestes branches gera a baseline.
+  # O último commit da tarefa 6 remove este gatilho.
+  push:
+    branches:
+      - 'feat/spec-08b*'
+      - 'visual-bootstrap/**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: perf-baseline-${{ inputs.branch || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      CI: '1'
+      NX_DAEMON: 'false'
+      TARGET_BRANCH: ${{ inputs.branch || github.ref_name }}
+      REASON: ${{ inputs.reason || 'bootstrap da 08b' }}
+    steps:
+      # Guarda: o branch e o motivo chegam por variável de ambiente, nunca interpolados no script.
+      - name: Recusar main e branches protegidos
+        run: |
+          case "$TARGET_BRANCH" in
+            main|master|HEAD|'')
+              echo "::error::Recusado: este workflow não atualiza a baseline em '$TARGET_BRANCH'. Use um branch de trabalho e abra um PR."
+              exit 1
+              ;;
+          esac
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm i -g npm@11
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      # 10 execuções por motor, em série (1 worker, sem retentativa). Cada execução grava
+      # e2e/test-results/perf/n45-<motor>.json (amostras das duas voltas); copiamos para perf-runs.
+      - name: Rodar o N45 10 vezes por motor
+        run: |
+          for engine in chromium firefox webkit; do
+            mkdir -p "perf-runs/$engine"
+            for i in $(seq 10); do
+              npx playwright test -c e2e e2e/angular/editor-perf-budget.spec.ts --project="$engine" --workers=1 --retries=0
+              cp "e2e/test-results/perf/n45-$engine.json" "perf-runs/$engine/run-$i.json"
+            done
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf-runs
+          path: perf-runs/
+          retention-days: 14
+          if-no-files-found: ignore
+      - name: Agregar a baseline
+        run: |
+          PW_VERSION=$(npx playwright --version | awk '{print $2}')
+          node tools/perf-gate.mjs baseline perf-runs --playwright "$PW_VERSION"
+          cat e2e/perf/baseline.linux.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Commit da baseline
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f e2e/perf/baseline.linux.json
+          if git diff --cached --quiet; then
+            echo "A baseline não mudou."
+          else
+            git commit -m "test(perf): atualiza baseline do N45 ($REASON)"
+            git push origin "HEAD:refs/heads/$TARGET_BRANCH"
+          fi

@@ -31,13 +31,13 @@ test('branch e motivo chegam por env, nunca interpolados no script', () => {
   );
 });
 
-test('contents: write só neste workflow e no release.yml', () => {
+test('contents: write só neste workflow, no perf-baseline.yml e no release.yml', () => {
   const dir = '.github/workflows';
   const writers = readdirSync(dir)
     .filter((f) => f.endsWith('.yml'))
     .filter((f) => /contents:\s*write/.test(read(`${dir}/${f}`)))
     .sort();
-  assert.deepEqual(writers, ['release.yml', 'visual-update.yml']);
+  assert.deepEqual(writers, ['perf-baseline.yml', 'release.yml', 'visual-update.yml']);
 });
 
 test('apaga as capturas, regrava tudo, comita e sobe o artefato', () => {

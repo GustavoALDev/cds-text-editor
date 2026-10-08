@@ -1,4 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpus } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { editableOf, editorHost, gotoApp, waitForEditor } from './helpers/app';
@@ -55,9 +56,15 @@ function check(name: string, value: number, budget: number, on = true): void {
 /** Números do N45 gravados em `e2e/test-results/perf/n45-<motor>.json` (spec 08a, X11). */
 const PERF_DIR = join(__dirname, '..', 'test-results', 'perf');
 
+/** Amostras brutas das duas voltas alternadas (A, B), lidas por `tools/perf-gate.mjs` (spec 08b, O12). */
+type Rounds = { A: number[]; B: number[] };
+
 interface PerfFile {
   browser: string;
+  browserVersion?: string;
+  cpu?: string;
   entries: Record<string, { text: string; metrics: Record<string, number> }>;
+  samples?: Record<string, Rounds>;
 }
 
 function perfFile(browserName: string): string {
@@ -68,7 +75,12 @@ function report(
   type: string,
   text: string,
   browserName: string,
-  entry?: { key: string; metrics: Record<string, number> },
+  entry?: {
+    key: string;
+    metrics: Record<string, number>;
+    samples?: Record<string, Rounds>;
+    browserVersion?: string;
+  },
 ): void {
   const description = `${browserName}: ${text}`;
   test.info().annotations.push({ type, description });
@@ -83,6 +95,10 @@ function report(
     // primeiro registro do motor nesta execução
   }
   data.entries[entry.key] = { text, metrics: entry.metrics };
+  const cpu = cpus()[0]?.model;
+  if (cpu) data.cpu = cpu;
+  if (entry.browserVersion) data.browserVersion = entry.browserVersion;
+  if (entry.samples) data.samples = { ...data.samples, ...entry.samples };
   writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
@@ -203,9 +219,15 @@ test('N45: custo por tecla nos dois regimes, criação completa e linha de base 
 }) => {
   test.setTimeout(900_000);
   const samples: Record<string, number[]> = {};
+  const rounds: Record<string, Rounds> = {};
   const creations: number[] = [];
-  const add = (key: string, times: number[]) =>
+  const creationRounds: Rounds = { A: [], B: [] };
+  const add = (key: string, times: number[], round: number) => {
     (samples[key] ??= []).push(...times);
+    ((rounds[`${key} p95`] ??= { A: [], B: [] })[round === 0 ? 'A' : 'B']).push(
+      ...times,
+    );
+  };
 
   for (let round = 0; round < 2; round++) {
     // linha de base: cenário do N8 (sem ?full), regime frio, sem render
@@ -213,17 +235,20 @@ test('N45: custo por tecla nos dois regimes, criação completa e linha de base 
       const context = await browser.newContext();
       const page = await context.newPage();
       await fresh(page, { full: false, search: null });
-      add('base N8 frio', await measure(page, KEYS, 0, false));
+      add('base N8 frio', await measure(page, KEYS, 0, false), round);
       await context.close();
     }
     for (const regime of ['frio', 'quente'] as const) {
       for (const render of [true, false]) {
         const context = await browser.newContext();
         const page = await context.newPage();
-        creations.push(await fresh(page, { full: true, search: 'banana' }));
+        const created = await fresh(page, { full: true, search: 'banana' });
+        creations.push(created);
+        creationRounds[round === 0 ? 'A' : 'B'].push(created);
         add(
           `completo ${regime} ${render ? '+render' : 'N8'}`,
           await measure(page, KEYS, regime === 'frio' ? 0 : WARM_KEYS, render),
+          round,
         );
         await context.close();
       }
@@ -243,6 +268,8 @@ test('N45: custo por tecla nos dois regimes, criação completa e linha de base 
     browserName,
     {
       key: 'completo',
+      browserVersion: browser.version(),
+      samples: { ...rounds, 'criação mediana': creationRounds },
       metrics: {
         ...Object.fromEntries(
           Object.entries(results).flatMap(([k, r]) => [
@@ -284,11 +311,14 @@ test('N45: busca capada (1000+) por tecla', async ({
 }) => {
   test.setTimeout(600_000);
   const times: number[] = [];
+  const cappedRounds: Rounds = { A: [], B: [] };
   for (let round = 0; round < 2; round++) {
     const context = await browser.newContext();
     const page = await context.newPage();
     await fresh(page, { full: true, search: 'palavra' });
-    times.push(...(await measure(page, KEYS, 0, true)));
+    const round1 = await measure(page, KEYS, 0, true);
+    times.push(...round1);
+    cappedRounds[round === 0 ? 'A' : 'B'].push(...round1);
     await context.close();
   }
   const r = summarize(times);
@@ -296,7 +326,12 @@ test('N45: busca capada (1000+) por tecla', async ({
     'N45',
     `busca capada (consulta com 20 mil ocorrências): ${fmt(r)}`,
     browserName,
-    { key: 'busca', metrics: { mediana: r.median, p95: r.p95 } },
+    {
+      key: 'busca',
+      browserVersion: browser.version(),
+      samples: { 'busca p95': cappedRounds },
+      metrics: { mediana: r.median, p95: r.p95 },
+    },
   );
   check('busca capada', r.p95, BUDGET.cappedP95);
 });
