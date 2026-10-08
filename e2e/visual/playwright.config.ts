@@ -7,6 +7,14 @@ import { defineConfig, devices } from '@playwright/test';
 const root = resolve(__dirname, '..');
 const inCi = !!process.env['CI'];
 
+// Só Chromium (O4): a cor é CSS (já provada nos 3 motores por ΔE e propriedade) e a emulação de
+// forced-colors/prefers-contrast só é confiável nele. testIgnore, não skip, para não esconder nada.
+const CHROMIUM_ONLY = [
+  '**/theme-matrix.spec.ts',
+  '**/forced-colors.spec.ts',
+  '**/contrast-more.spec.ts',
+];
+
 export default defineConfig({
   testDir: '.',
   snapshotPathTemplate:
@@ -54,10 +62,12 @@ export default defineConfig({
     {
       name: 'visual-firefox',
       use: { ...devices['Desktop Firefox'], deviceScaleFactor: 1 },
+      testIgnore: CHROMIUM_ONLY,
     },
     {
       name: 'visual-webkit',
       use: { ...devices['Desktop Safari'], deviceScaleFactor: 1 },
+      testIgnore: CHROMIUM_ONLY,
     },
   ],
 });

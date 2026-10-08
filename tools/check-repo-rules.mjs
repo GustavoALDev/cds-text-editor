@@ -405,8 +405,16 @@ function checkApp(rootDir, app) {
 // Spec 08b (O2): capturas da regressão visual versionadas em git comum, com teto por arquivo e total.
 const SHOT_MAX_FILE = 300 * 1024;
 const SHOT_MAX_TOTAL = 20 * 1024 * 1024;
+const SHOT_DIRS = [
+  ['e2e', 'visual', '__screenshots__'],
+  ['apps', 'demo', 'e2e', 'visual', '__screenshots__'],
+];
 function checkScreenshots(rootDir) {
-  const base = join(rootDir, 'e2e', 'visual', '__screenshots__');
+  return SHOT_DIRS.flatMap((parts) =>
+    checkScreenshotsIn(rootDir, join(rootDir, ...parts)),
+  );
+}
+function checkScreenshotsIn(rootDir, base) {
   if (!existsSync(base)) return [];
   const errors = [];
   let total = 0;
@@ -428,7 +436,7 @@ function checkScreenshots(rootDir) {
   walkShots(base);
   if (total > SHOT_MAX_TOTAL) {
     errors.push(
-      `e2e/visual/__screenshots__: ${(total / 1024 / 1024).toFixed(1)} MB acima do teto de 20 MB no total (spec 08b, O2)`,
+      `${relative(rootDir, base).split(sep).join('/')}: ${(total / 1024 / 1024).toFixed(1)} MB acima do teto de 20 MB no total (spec 08b, O2)`,
     );
   }
   return errors;

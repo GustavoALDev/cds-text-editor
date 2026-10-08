@@ -22,6 +22,8 @@ const server = (port: number, flags = '') => ({
 
 export default defineConfig({
   testDir: here,
+  // As capturas do demo (visual/) têm config própria e rodam no contêiner (job visual-demo).
+  testIgnore: '**/visual/**',
   retries: process.env['CI'] ? 2 : 0,
   // O servidor de exemplo `--with-server` (J5 e J8) é um só e limita a 4 envios simultâneos (#21):
   // cada teste envia no máximo um arquivo, então 3 workers nunca estouram o teto.
