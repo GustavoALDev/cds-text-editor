@@ -270,6 +270,22 @@ test('demo: um demo limpo passa (vitest fora da lista exata)', () => {
   assert.deepEqual(demoErrors(fixture(CLEAN_DEMO)), []);
 });
 
+test('demo: componente com styleUrl ou styles é recusado', () => {
+  for (const decl of [
+    "styleUrl: './a.css'",
+    "styles: ['p{}']",
+    "styleUrls: ['./a.css']",
+  ]) {
+    const root = fixture({
+      ...CLEAN_DEMO,
+      'apps/demo/src/app/c.ts': `@Component({ selector: 'x', ${decl} })\nexport class C {}\n`,
+    });
+    const errors = demoErrors(root);
+    assert.equal(errors.length, 1, decl);
+    assert.match(errors[0], /apps\/demo\/src\/app\/c\.ts.*styleUrl/);
+  }
+});
+
 test('demo: tsconfig com paths é recusado', () => {
   const root = fixture({
     ...CLEAN_DEMO,

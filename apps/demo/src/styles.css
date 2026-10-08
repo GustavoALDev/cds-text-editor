@@ -1,3 +1,8 @@
+/* Estilos de página (global, sem styleUrl: a CSP barra o <style> inline). */
+@import "./styles/editor-pages.css";
+@import "./styles/files-render-pages.css";
+@import "./styles/theme-page.css";
+
 /* Layout do demo (app, não pacote). O visual do editor vem do tema e do editor.css; nada aqui
    usa o atributo `style` (CSP estrita). */
 :root {
@@ -6,6 +11,8 @@
 
 body {
   margin: 0;
+  background: Canvas;
+  color: CanvasText;
   font-family: system-ui, sans-serif;
   line-height: 1.5;
 }

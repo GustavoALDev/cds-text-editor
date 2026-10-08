@@ -285,6 +285,14 @@ function checkDemo(rootDir) {
           );
         }
       }
+      if (
+        /@Component\b/.test(source) &&
+        /\b(?:styleUrls?|styles)\s*:/.test(source)
+      ) {
+        errors.push(
+          `${rel(file)}: componente com styleUrl/styleUrls/styles (gera <style> inline barrado pela CSP; o CSS vai em src/styles/ e é importado por src/styles.css; spec 07b, W4)`,
+        );
+      }
       for (const m of source.matchAll(
         /\btemplate\s*:\s*(`[\s\S]*?`|'[^'\n]*'|"[^"\n]*")/g,
       )) {

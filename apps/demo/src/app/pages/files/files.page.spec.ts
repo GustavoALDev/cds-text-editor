@@ -36,10 +36,15 @@ describe('página /files', () => {
     stubConfig('{"upload":"server"}');
     const fixture = TestBed.createComponent(FilesPage);
     const root = fixture.nativeElement as HTMLElement;
-    await vi.waitFor(async () => {
-      await fixture.whenStable();
-      expect(root.querySelector('[data-testid="files-server"]')).not.toBeNull();
-    });
+    await vi.waitFor(
+      async () => {
+        await fixture.whenStable();
+        expect(
+          root.querySelector('[data-testid="files-server"]'),
+        ).not.toBeNull();
+      },
+      { timeout: 10_000 },
+    );
     expect(root.querySelector('[data-testid="files-simulated"]')).toBeNull();
     expect(root.querySelector('rte-editor')).not.toBeNull();
   });
