@@ -33,6 +33,8 @@ export async function settle(locator: Locator): Promise<void> {
   const page = locator.page();
   await page.evaluate(async () => {
     await document.fonts.ready;
+    // Imagens preguiçosas fora da tela (ou bloqueadas) nunca disparam load/error no Firefox:
+    // cada espera tem teto de 2 s.
     await Promise.all(
       [...document.images]
         .filter((img) => !img.complete)
@@ -41,6 +43,7 @@ export async function settle(locator: Locator): Promise<void> {
             new Promise((r) => {
               img.addEventListener('load', r, { once: true });
               img.addEventListener('error', r, { once: true });
+              setTimeout(r, 2000);
             }),
         ),
     );
