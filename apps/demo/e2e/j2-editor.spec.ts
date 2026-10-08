@@ -35,10 +35,14 @@ test('J2: digitar, negrito, menu /, busca, contador e rascunho', async ({
   await page.keyboard.press('Enter');
   await expect.poll(() => textOf(page, 'editor-html')).toContain('<table');
 
-  // Negrito pela barra: seleciona o parágrafo digitado e aciona o botão.
-  await editor.locator('p', { hasText: 'frase-e2e' }).click({ clickCount: 3 });
+  // Negrito pela barra: seleciona o parágrafo digitado e aciona o botão. O menu flutuante da
+  // tabela (cursor na primeira célula) cobre o parágrafo acima no Firefox/WebKit e intercepta o
+  // clique; a seleção vai por teclado (sobe para o parágrafo e seleciona a linha).
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('Home');
+  await page.keyboard.press('Shift+End');
   await page
-    .getByRole('toolbar')
+    .getByRole('toolbar', { name: 'Formatação', exact: true })
     .getByRole('button', { name: 'Negrito' })
     .click();
   await expect

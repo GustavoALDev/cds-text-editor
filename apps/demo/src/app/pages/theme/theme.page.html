@@ -1,6 +1,6 @@
 <demo-theme-playground #playground>
   <div preview>
-    @defer (on idle) {
+    @defer (on idle; on timer(1s)) {
       <rte-editor
         class="theme-preview__editor"
         data-testid="preview-editor"

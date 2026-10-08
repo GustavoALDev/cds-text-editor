@@ -14,7 +14,7 @@ const SAMPLE_HTML =
 
 /**
  * Página "Tema": o playground e, projetado nele, o `rte-editor` real da pré-visualização, criado
- * só no navegador (`@defer (on idle)`; no prerender sai um esqueleto do mesmo tamanho).
+ * só no navegador (`@defer (on idle; on timer(1s))`: o `timer` limita a espera se o navegador não ceder ociosidade; no prerender sai um esqueleto do mesmo tamanho).
  */
 @Component({
   selector: 'demo-theme-page',
