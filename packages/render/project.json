@@ -129,7 +129,8 @@
         "buildTarget": "render:unit-test-build:zoneless",
         "providersFile": "packages/render/src/testing-support/providers.zoneless.ts",
         "coverage": true,
-        "coverageReporters": ["json-summary", "lcov", "html"]
+        "coverageReporters": ["json-summary", "lcov", "html"],
+        "exclude": ["**/fuzz.spec.ts"]
       }
     }
   }

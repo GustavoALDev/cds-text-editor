@@ -30,7 +30,8 @@ permissions:
 # `set` vem vazio no schedule e no push: ambos são `full`.
 concurrency:
   group: compat-${{ github.ref }}-${{ inputs.set || 'full' }}
-  cancel-in-progress: true
+  # No main nenhuma execução é cancelada (cada push precisa do seu relatório da matriz completa).
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   legs:
@@ -38,12 +39,28 @@ jobs:
     timeout-minutes: 10
     outputs:
       matrix: ${{ steps.legs.outputs.matrix }}
+      docs_only: ${{ steps.changed.outputs.docs_only }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # O commit de merge do PR e o primeiro pai (a base) bastam para listar os arquivos alterados.
+          fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
       - run: npm i -g npm@11
+      # PR só de documentação (docs/** e *.md): as pernas rodam vazias e o check continua verde, sem
+      # pagar ~40 min. `paths-ignore` não serve: o nome do check exigido precisa sempre ser reportado.
+      - id: changed
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            git diff --name-only HEAD^1 HEAD > changed.txt
+            echo "docs_only=$(node tools/compat.mjs docs-only --files changed.txt)" >> "$GITHUB_OUTPUT"
+          else
+            echo docs_only=false >> "$GITHUB_OUTPUT"
+          fi
       - id: legs
         env:
           SET: ${{ inputs.set || 'full' }}
@@ -65,7 +82,8 @@ jobs:
     needs: legs
     name: ${{ matrix.leg.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Fase A + fase B + E2E do demo e @compat: a frio passa de 40 min; 60 evita cancelar por pouco.
+    timeout-minutes: 60
     continue-on-error: ${{ matrix.leg.optional }}
     strategy:
       fail-fast: false
@@ -77,18 +95,28 @@ jobs:
       LEG_JSON: ${{ toJson(matrix.leg) }}
       RTE_DEMO_PORT: 4318
     steps:
+      - name: Só documentação, nada a verificar
+        if: needs.legs.outputs.docs_only == 'true'
+        run: echo "PR só de documentação, perna dispensada (docs/** e *.md)" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@v4
+        if: needs.legs.outputs.docs_only != 'true'
       - run: echo "RTE_CONSUMER_DIR=$RUNNER_TEMP/cds-rte-consumer/demo" >> "$GITHUB_ENV"
+        if: needs.legs.outputs.docs_only != 'true'
       - uses: actions/setup-node@v4
+        if: needs.legs.outputs.docs_only != 'true'
         with:
           node-version: lts/*
           cache: npm
       - run: npm i -g npm@11
+        if: needs.legs.outputs.docs_only != 'true'
       - run: npm ci
+        if: needs.legs.outputs.docs_only != 'true'
       - name: Resumo da perna
+        if: needs.legs.outputs.docs_only != 'true'
         run: |
+          NAME=$(node -p "JSON.parse(process.env.LEG_JSON).name")
           {
-            echo "### ${{ matrix.leg.name }}"
+            echo "### $NAME"
             echo '```json'
             echo "$LEG_JSON"
             echo '```'
@@ -97,24 +125,29 @@ jobs:
       # Fase A (antes da B, para que o pack seja da cadeia da raiz): pacotes construídos com as
       # versões do lockfile, instalados no consumidor externo com as versões da perna.
       - run: npx nx run-many -t build -p core sanitizer theme angular render
+        if: needs.legs.outputs.docs_only != 'true'
       - name: Arquivo de versões da perna
+        if: needs.legs.outputs.docs_only != 'true'
         run: node tools/compat.mjs versions --leg-json "$LEG_JSON" --out "$RUNNER_TEMP/versions.json"
       - name: Fase A, consumidor externo
+        if: needs.legs.outputs.docs_only != 'true'
         run: node tools/consumer.mjs pack prepare --versions "$RUNNER_TEMP/versions.json" install test build check-snippets
       - run: npx playwright install --with-deps chromium
-      - name: Fase A, E2E do demo (J1-J8, Chromium)
+        if: needs.legs.outputs.docs_only != 'true'
+      - name: Fase A, E2E do demo (J1–J8, Chromium)
+        if: needs.legs.outputs.docs_only != 'true'
         run: npx playwright test -c apps/demo/e2e --project=chromium
 
       # Fase B: reinstala as famílias no repositório (um único `npm install --no-save`) e prova
       # por `npm ls`; só nas pernas com `phaseB`.
       - name: Fase B, instalar as versões da perna
-        if: matrix.leg.phaseB
+        if: needs.legs.outputs.docs_only != 'true' && matrix.leg.phaseB
         run: node tools/compat.mjs install --leg-json "$LEG_JSON"
       - name: Fase B, build, typecheck e testes
-        if: matrix.leg.phaseB
+        if: needs.legs.outputs.docs_only != 'true' && matrix.leg.phaseB
         run: npx nx run-many -t build typecheck test test-zone -p core sanitizer theme angular render
       - name: Fase B, E2E @compat (Chromium)
-        if: matrix.leg.phaseB
+        if: needs.legs.outputs.docs_only != 'true' && matrix.leg.phaseB
         run: npx playwright test -c e2e --grep @compat --project=chromium --workers=2
 
       - uses: actions/upload-artifact@v4

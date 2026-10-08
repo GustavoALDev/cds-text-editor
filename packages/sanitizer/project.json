@@ -87,7 +87,16 @@
       "outputs": ["{workspaceRoot}/coverage/packages/sanitizer"],
       "cache": true,
       "options": {
-        "command": "vitest run --coverage --coverage.reporter=json-summary --coverage.reporter=lcov --coverage.reporter=html --exclude \"**/node_modules/**\" --exclude src/limits.spec.ts --exclude src/perf.spec.ts --exclude src/timed.spec.ts --coverage.thresholds.lines=0 --coverage.thresholds.branches=0",
+        "command": "vitest run --coverage --coverage.reporter=json-summary --coverage.reporter=lcov --coverage.reporter=html --exclude \"**/node_modules/**\" --exclude src/limits.spec.ts --exclude src/perf.spec.ts --exclude src/timed.spec.ts --exclude src/fuzz.spec.ts --coverage.thresholds.lines=0 --coverage.thresholds.branches=0",
+        "cwd": "packages/sanitizer"
+      }
+    },
+    "test-timed": {
+      "executor": "nx:run-commands",
+      "inputs": ["default", "^production"],
+      "cache": true,
+      "options": {
+        "command": "vitest run limits perf timed fuzz",
         "cwd": "packages/sanitizer"
       }
     }

@@ -61,9 +61,9 @@ jobs:
       # `coverage` roda a suíte unitária (zoneless) uma vez, no lugar do `test`, e gera os
       # relatórios de cobertura (spec 08a, X10; informativo, sem limiar).
       - run: npx nx affected -t lint typecheck build coverage test-zone verify-package api size --parallel=3
-      # Os testes de tempo do sanitizer (limits, perf, timed) ficam fora do `coverage` (a instrumentação v8
-      # os torna lentos demais); rodam aqui, sem cobertura.
-      - run: npx nx affected -t test -p sanitizer
+      # Os testes de tempo e de fuzz (sanitizer e render: limits, perf, timed, fuzz) ficam fora do `coverage`
+      # (a instrumentação v8 os torna lentos demais); rodam aqui, sem cobertura, pelo alvo `test-timed`.
+      - run: npx nx affected -t test-timed
       # Completa os relatórios de cobertura e de tamanho dos pacotes não afetados (vêm do cache do Nx),
       # para o resumo e o artefato `quality-reports` terem sempre os cinco pacotes.
       - run: npx nx run-many -t coverage size --parallel=3
@@ -72,9 +72,12 @@ jobs:
       - run: npm run typecheck:e2e
       - run: npx playwright install --with-deps
       # CI=1: repórter `json` em e2e/test-results/report.json (testes instáveis) e retentativas.
+      # FC_RUNS=100: as propriedades do tema (e2e/theme/property.spec.ts) custam ~1,5 s por execução e
+      # por motor; o padrão local é 200 e quem quiser mais roda com FC_RUNS=1000.
       - run: npx playwright test -c e2e
         env:
           CI: '1'
+          FC_RUNS: '100'
       # Resumo do job (tamanho x orçamento, cobertura, testes instáveis, N45) e avisos de flakes.
       - name: Resumo de qualidade
         if: always()
@@ -100,7 +103,7 @@ jobs:
           if-no-files-found: ignore
 
   # Demo (spec 07b, W14): consome os tarballs dos pacotes como um app externo (fora do repositório),
-  # roda os unitários e o build do demo, confere os snippets do tema e executa o E2E J1-J7 nos 3
+  # roda os unitários e o build do demo, confere os snippets do tema e executa o E2E J1–J8 nos 3
   # navegadores. Paralelo ao `verify`; sempre roda (sem `affected`).
   demo:
     runs-on: ubuntu-latest
