@@ -98,6 +98,10 @@ O PAT vem de arquivo temporário e nunca entra no repositório. Antes de aplicar
 
 `TODO-AUTOR`: depois do merge, disparar `compat.yml` com `set: full` (Actions > Compat > Run workflow) e registrar aqui as quatro pernas (`latest×latest`, `min×latest`, `latest×min`, `next×latest`), os tetos ativos e a quebra, se houver. Hoje último = piso para `@angular/core` e `@tiptap/core`; `min×latest` e `latest×min` repetem as versões de `min×min` e de `latest×latest` e são descartadas com o motivo "repete as versões resolvidas" até algum lado publicar versão nova; só `latest×latest` (ferramentas 22.2.2) e `next` (opcional) diferem do `verify`.
 
+### (h.1) Execução `full` da matriz (registrada na 08b)
+
+Run 37805712076 (`compat.yml`, `set: full`, 2026-10-08): as pernas de `latest×latest` e `next×latest` ficaram **verdes**; `min×latest` e `latest×min` foram **descartadas** com o motivo "repete as versões resolvidas", porque hoje o último estável é igual ao piso para `@angular/core` e `@tiptap/core` (nenhum lado publicou versão nova depois do piso). Nenhum teto ativo e nenhuma quebra a registrar. As pernas cruzadas passam a divergir sozinhas quando Angular ou Tiptap publicarem uma versão acima do piso; até lá a evidência é `min×min` (piso) mais `latest×latest`. O item (h) acima fica cumprido para o que é possível hoje.
+
 ### Guardas de tempo de parede nos E2E (adendo)
 
 O runner Linux do CI é ~2x mais lento e ruidoso, e as guardas de N32 (`editor-media-perf.spec.ts`: B-A do rastreador, rastreador com 200 imagens e teto de alarme da tecla inteira) e R10 (`behavior-a11y.spec.ts`: custo de trocar `--rte-primary`) falharam por ruído. Passam ao regime da Z4/ADR 0016: com `RTE_PERF_ENFORCE=1` vale o teto original; sem a variável (CI) vale o teto x2. Medidas, anotações e logs seguem sempre emitidos. As demais guardas de tempo (`editor-perf`, `editor-floating-perf`, `editor-toolbar-perf`, `render-perf`) já são tetos grosseiros (1 s e 5 s) e não mudam.

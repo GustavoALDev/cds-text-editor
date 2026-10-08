@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { checkRepoRules } from './check-repo-rules.mjs';
+import { checkRepoRules, checkRoteiro } from './check-repo-rules.mjs';
 
 function fixture(files) {
   const root = mkdtempSync(join(tmpdir(), 'rules-'));
@@ -673,4 +673,26 @@ test('capturas: total acima de 20 MB reprova', () => {
   const errors = shotsErrors(files);
   assert.equal(errors.length, 1);
   assert.match(errors[0], /20 MB/);
+});
+
+// Spec 08b (O9): roteiro manual de leitor de tela.
+test('roteiro: o repositório real tem o roteiro completo', () => {
+  assert.deepEqual(checkRoteiro(resolve('.')), []);
+});
+
+test('roteiro: sem o arquivo reprova (pt-BR) no repositório com package.json', () => {
+  const errors = checkRepoRules(
+    fixture({ 'package.json': '{}', 'packages/core/src/index.ts': '' }),
+  );
+  assert.ok(errors.some((e) => /roteiro-leitor-de-tela\.md.*ausente/.test(e)));
+});
+
+test('roteiro: seção, campo do modelo e critério da K4 faltando reprovam', () => {
+  const root = fixture({
+    'docs/quality/roteiro-leitor-de-tela.md': '# Roteiro\n\n## Severidade\n',
+  });
+  const errors = checkRoteiro(root);
+  assert.ok(errors.some((e) => e.includes('F4. Menu')));
+  assert.ok(errors.some((e) => e.includes('"Executor:"')));
+  assert.ok(errors.some((e) => e.includes('critério da K4')));
 });

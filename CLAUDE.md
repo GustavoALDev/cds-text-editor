@@ -100,6 +100,12 @@ Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp`
 - CI: job `docs` (build dos pacotes, modelo de API, ciclo do consumidor, `check-links`, E2E nos 3 motores; artefatos `docs-static` e `links-externos.txt`), job `pages` (só push no `main` com `vars.RTE_PAGES == 'true'`, TODO-AUTOR; monta `docs-static` + `demo-pages` em `demo/`, `check-links --demo-root`, fumaça I1 em duas rotas) e `links.yml` semanal (consulta os externos, nunca falha). `RTE_SITE_BASE` só vale no `consumer.mjs`/`serve.mjs`: domínio próprio mexe também em `demo-pages`, `check-links --base`, `BASE` dos E2E e no `<base>` do `index.html`.
 - Decisões: ADR 0018 (`docs/decisions/0018-site-de-docs.md`).
 
+## Qualidade visual, móvel e desempenho (spec 08b, ADR 0021)
+
+- **Visual:** `npm run visual` (Docker; `tools/visual.mjs`) roda `e2e/visual` no contêiner oficial do Playwright (tag = versão exata do `@playwright/test`); fora dele recusa (`RTE_VISUAL_CONTAINER`). `RTE_VISUAL_DRYRUN=1` só confere estados no Windows, nunca em workflow. Sem Docker, as baselines (`**/__screenshots__/`, git comum, 300 KB por arquivo e 20 MB no total) saem do workflow `visual-update.yml` (Actions > "Atualizar capturas visuais", `workflow_dispatch` com branch e motivo; recusa `main`). Jobs `visual` e `visual-demo` no `ci.yml`.
+- **Móvel:** projetos `mobile-chromium` e `mobile-webkit` (`e2e/playwright.config.ts`) só rodam testes com `@mobile` (`@cdp` fora do WebKit); os menus flutuantes e a lista do `/` posicionam pela viewport visual. Roteiro de leitor de tela e aparelho real: `docs/quality/roteiro-leitor-de-tela.md` (execução do dono).
+- **Desempenho:** `tools/perf-gate.mjs` compara o N45 com `e2e/perf/baseline.linux.json` (aviso; `RTE_PERF_GATE_ENFORCE=1` bloqueia); a baseline vem do workflow `perf-baseline.yml`. Pisos de cobertura por pacote em `tools/coverage-floor.json` (só sobem; `quality-summary.mjs` reprova o `verify` abaixo deles).
+
 ## Convenções
 
 - Grafo de dependências: `theme` e `core` não dependem de nenhum pacote do workspace; `sanitizer` depende só de `core`; `angular` de `core` e `theme`; `render` de `core` e `sanitizer`. Os limites são impostos por lint (tags `scope:*` em `eslint.config.mjs`).

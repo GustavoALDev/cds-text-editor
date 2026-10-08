@@ -455,6 +455,64 @@ function checkCompat(rootDir) {
   }
 }
 
+// Spec 08b (O9): o roteiro manual de leitor de tela existe e traz os fluxos, o critério da K4 e o
+// modelo de registro. Só no repositório real (com package.json na raiz).
+const ROTEIRO = 'docs/quality/roteiro-leitor-de-tela.md';
+const ROTEIRO_SECOES = [
+  '### F1. Rótulo e descrição do editável',
+  '### F2. Barra de ferramentas',
+  '### F3. `Alt+F10` e menus flutuantes',
+  '### F4. Menu `/` (inserção de blocos), critério da K4',
+  '### F5. Busca',
+  '### F6. Diálogos',
+  '### F7. Contadores e limite',
+  '### F8. Envio de arquivos',
+  '### F9. Rascunho',
+  '### F10. `rte-render`',
+  '### F11. Modo de navegação × foco do NVDA',
+  '## Seção móvel real',
+  '## Critério da K4',
+  '## Severidade',
+  '## Modelo de registro',
+];
+const ROTEIRO_CAMPOS = [
+  'Data:',
+  'Executor:',
+  'Commit:',
+  'Sistema operacional:',
+  'Leitor de tela e versão:',
+  'Navegador e versão:',
+  'Resultado da K4:',
+];
+export function checkRoteiro(rootDir) {
+  const path = join(rootDir, ROTEIRO);
+  if (!existsSync(path)) {
+    return [
+      `${ROTEIRO}: roteiro manual de leitor de tela obrigatório ausente (spec 08b, O9)`,
+    ];
+  }
+  const text = readFileSync(path, 'utf8').replace(/\r\n/g, '\n');
+  const errors = [];
+  for (const secao of ROTEIRO_SECOES) {
+    if (!text.includes(`\n${secao}`)) {
+      errors.push(`${ROTEIRO}: seção ausente "${secao}" (spec 08b, O9)`);
+    }
+  }
+  for (const campo of ROTEIRO_CAMPOS) {
+    if (!text.includes(campo)) {
+      errors.push(
+        `${ROTEIRO}: campo "${campo}" ausente do modelo de registro (spec 08b, O9)`,
+      );
+    }
+  }
+  if (!/aria-activedescendant/.test(text) || !/região viva/.test(text)) {
+    errors.push(
+      `${ROTEIRO}: o critério da K4 deve citar aria-activedescendant e a região viva (spec 08b, O9)`,
+    );
+  }
+  return errors;
+}
+
 export function checkRepoRules(rootDir) {
   const errors = [];
   errors.push(...checkApp(rootDir, 'demo'), ...checkApp(rootDir, 'docs'));
@@ -462,6 +520,7 @@ export function checkRepoRules(rootDir) {
   errors.push(...checkScreenshots(rootDir));
   // Só no repositório real (com package.json na raiz); fixtures parciais de teste ficam de fora.
   if (existsSync(join(rootDir, 'package.json'))) {
+    errors.push(...checkRoteiro(rootDir));
     for (const file of GOVERNANCE_FILES) {
       if (!existsSync(join(rootDir, file))) {
         errors.push(
