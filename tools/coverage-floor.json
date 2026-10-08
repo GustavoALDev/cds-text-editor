@@ -1,0 +1,7 @@
+{
+  "angular": { "lines": 88, "branches": 77 },
+  "core": { "lines": 95, "branches": 87 },
+  "render": { "lines": 87, "branches": 70 },
+  "sanitizer": { "lines": 93, "branches": 87 },
+  "theme": { "lines": 96, "branches": 90 }
+}
