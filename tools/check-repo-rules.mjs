@@ -208,17 +208,71 @@ function importSpecifiers(source) {
   return [...source.matchAll(re)].map((m) => m[2]);
 }
 
-function checkDemo(rootDir) {
-  const demo = join(rootDir, 'apps', 'demo');
+// Blocos cercados do conteúdo do site (spec 07c, X6/R4): cada um precisa de uma diretiva
+// example|generated|no-compile na linha anterior (ignorando linhas em branco).
+const CONTENT_DIRECTIVE =
+  /^\s*<!--\s*(?:example|generated|no-compile)\s*:\s*\S.*-->\s*$/;
+const CONTENT_FENCE = /^( {0,3})(`{3,}|~{3,})/;
+// Cerca em lista (recuo >= 4, ou na própria linha do marcador) ou citação: o conversor também
+// as recusa (marca das diretivas), aqui a mensagem aponta a linha.
+const CONTENT_NESTED_FENCE =
+  /^(?: {4,}|\t|[ \t]*(?:>|[-*+]\s|\d+[.)]\s))[ \t>]*(?:[-*+]\s+|\d+[.)]\s+)?(`{3,}|~{3,})/;
+
+export function checkContentFences(text, where) {
+  const errors = [];
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  let fence = null;
+  let previous = '';
+  let nested = null;
+  lines.forEach((line, i) => {
+    const m = CONTENT_FENCE.exec(line);
+    if (fence) {
+      if (m && m[2][0] === fence[0] && m[2].length >= fence.length)
+        fence = null;
+      return;
+    }
+    const n = m ? null : CONTENT_NESTED_FENCE.exec(line);
+    if (nested) {
+      if (n && n[1][0] === nested[0] && n[1].length >= nested.length)
+        nested = null;
+      return;
+    }
+    if (n) {
+      errors.push(
+        `${where}:${i + 1}: bloco de código aninhado em lista ou citação não é suportado; leve-o para o nível raiz da página com uma diretiva (spec 07c, X6)`,
+      );
+      nested = n[1];
+      return;
+    }
+    if (m) {
+      if (!CONTENT_DIRECTIVE.test(previous))
+        errors.push(
+          `${where}:${i + 1}: bloco de código sem diretiva na linha anterior (<!-- example: ... -->, <!-- generated: ... --> ou <!-- no-compile: motivo -->; spec 07c, X6)`,
+        );
+      fence = m[2];
+    }
+    if (line.trim()) previous = line;
+  });
+  return errors;
+}
+
+function checkApp(rootDir, app) {
+  const demo = join(rootDir, 'apps', app);
   if (!existsSync(demo)) return [];
   const errors = [];
   const rel = (file) =>
-    `apps/demo/${relative(demo, file).split(sep).join('/')}`;
+    `apps/${app}/${relative(demo, file).split(sep).join('/')}`;
+
+  if (app === 'docs' && existsSync(join(demo, 'content'))) {
+    for (const file of walk(join(demo, 'content'), (n) => /\.md$/.test(n))) {
+      errors.push(...checkContentFences(readFileSync(file, 'utf8'), rel(file)));
+    }
+  }
 
   for (const name of readdirSync(demo)) {
     if (name === 'package-lock.json') {
       errors.push(
-        'apps/demo/package-lock.json: o demo não tem lockfile (o hash dos tarballs muda a cada build; spec 07b, W2)',
+        `apps/${app}/package-lock.json: o ${app} não tem lockfile (o hash dos tarballs muda a cada build; spec 07b, W2)`,
       );
     }
     if (!/^tsconfig.*\.json$/.test(name)) continue;
@@ -226,12 +280,12 @@ function checkDemo(rootDir) {
     try {
       config = readTsconfig(join(demo, name));
     } catch (e) {
-      errors.push(`apps/demo/${name}: não foi possível ler (${e.message})`);
+      errors.push(`apps/${app}/${name}: não foi possível ler (${e.message})`);
       continue;
     }
     if (config.compilerOptions?.paths !== undefined) {
       errors.push(
-        `apps/demo/${name}: "paths" é proibido no demo (consome @cds/* só pelos tarballs; spec 07b, W3)`,
+        `apps/${app}/${name}: "paths" é proibido no ${app} (consome @cds/* só pelos tarballs; spec 07b, W3)`,
       );
     }
     for (const target of [config.extends].flat().filter(Boolean)) {
@@ -241,7 +295,7 @@ function checkDemo(rootDir) {
         !insideDir(demo, resolve(demo, target))
       ) {
         errors.push(
-          `apps/demo/${name}: "extends" (${target}) sai de apps/demo (spec 07b, W3)`,
+          `apps/${app}/${name}: "extends" (${target}) sai de apps/${app} (spec 07b, W3)`,
         );
       }
     }
@@ -264,7 +318,7 @@ function checkDemo(rootDir) {
         const exact = rootVersions[dep].replace(/^[\^~]/, '');
         if (version !== exact) {
           errors.push(
-            `apps/demo/package.json: ${dep} deve ser exatamente ${exact} (a da raiz), está "${version}" (spec 07b, W3)`,
+            `apps/${app}/package.json: ${dep} deve ser exatamente ${exact} (a da raiz), está "${version}" (spec 07b, W3)`,
           );
         }
       }
@@ -295,9 +349,16 @@ function checkDemo(rootDir) {
           : /^(packages|dist)\//.test(spec);
         if (bad) {
           errors.push(
-            `${rel(file)}: import "${spec}" sai de apps/demo ou aponta para packages/ ou dist/ (spec 07b, W3)`,
+            `${rel(file)}: import "${spec}" sai de apps/${app} ou aponta para packages/ ou dist/ (spec 07b, W3)`,
           );
         }
+      }
+      const allowedTrust =
+        app === 'docs' && rel(file) === 'apps/docs/src/app/content/doc-html.ts';
+      if (!allowedTrust && /\bbypassSecurityTrust\w*/.test(source)) {
+        errors.push(
+          `${rel(file)}: bypassSecurityTrust* só é permitido em apps/docs/src/app/content/doc-html.ts (spec 07c, X2)`,
+        );
       }
       if (
         /@Component\b/.test(source) &&
@@ -342,7 +403,7 @@ function checkDemo(rootDir) {
 
 export function checkRepoRules(rootDir) {
   const errors = [];
-  errors.push(...checkDemo(rootDir));
+  errors.push(...checkApp(rootDir, 'demo'), ...checkApp(rootDir, 'docs'));
   // Só no repositório real (com package.json na raiz); fixtures parciais de teste ficam de fora.
   if (existsSync(join(rootDir, 'package.json'))) {
     for (const file of GOVERNANCE_FILES) {

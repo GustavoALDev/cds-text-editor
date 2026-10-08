@@ -1,0 +1,8 @@
+{
+  "sections": [
+    {
+      "title": "Guia",
+      "items": [{ "page": "guia/pagina-minima", "title": "Página mínima" }]
+    }
+  ]
+}

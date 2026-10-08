@@ -1,0 +1,12 @@
+{
+  "sections": [
+    {
+      "title": "Guia",
+      "items": [
+        { "page": "guia/inicio-rapido", "title": "Início rápido" },
+        { "page": "guia/instalacao", "title": "Instalação" },
+        { "page": "guia/configuracao", "title": "Configuração" }
+      ]
+    }
+  ]
+}

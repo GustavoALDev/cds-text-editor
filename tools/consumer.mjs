@@ -2,7 +2,8 @@
 // diretório FORA do repositório, instala os tarballs ali e constrói/testa o demo como um
 // consumidor externo. Node puro, sem dependências. Funções puras e executor/`fs` injetados para
 // `test:tools` (nenhum teste roda npm). Uso:
-//   node tools/consumer.mjs pack prepare install test build [check-snippets]
+//   node tools/consumer.mjs [--app demo|docs] pack prepare install test build [check-snippets]
+// `--app docs` (spec 07c, X1) consome o site de documentação (`apps/docs`); o padrão é `demo`.
 // Variáveis: RTE_CONSUMER_DIR (diretório do consumidor), RTE_NPM (npm a usar; padrão `npm`,
 // localmente `npx -y npm@11`), RUNNER_TEMP/TMPDIR (padrão do diretório do consumidor).
 import { spawnSync } from 'node:child_process';
@@ -49,6 +50,11 @@ const COPY_EXCLUDE = new Set([
   'e2e',
   'package-lock.json',
 ]);
+/** Apps consumidores e o que mais não vai de cada um (o `content/` do site é lido só pelo `docs-content`). */
+export const APPS = ['demo', 'docs'];
+export const APP_EXCLUDE = { demo: [], docs: ['content'] };
+/** Conteúdo gerado do site (`tools/docs-content.mjs`), copiado para `<consumidor>/src/generated/`. */
+export const DOCS_GENERATED = join('dist', 'docs-content');
 
 const toSlash = (path) => path.replaceAll('\\', '/');
 
@@ -151,7 +157,7 @@ export function buildManifest(entries) {
 }
 
 /** Diretório do consumidor: RTE_CONSUMER_DIR, senão RUNNER_TEMP (CI) ou TMPDIR. Fora do repositório. */
-export function resolveConsumerDir(env, repoRoot, fs = nodeFs) {
+export function resolveConsumerDir(env, repoRoot, fs = nodeFs, app = 'demo') {
   let dir;
   if (env.RTE_CONSUMER_DIR) {
     dir = resolve(env.RTE_CONSUMER_DIR);
@@ -160,7 +166,7 @@ export function resolveConsumerDir(env, repoRoot, fs = nodeFs) {
       env.CI && env.RUNNER_TEMP
         ? env.RUNNER_TEMP
         : (env.TMPDIR ?? env.RUNNER_TEMP ?? tmpdir());
-    dir = join(resolve(base), 'cds-rte-consumer', 'demo');
+    dir = join(resolve(base), 'cds-rte-consumer', app);
   }
   assertOutsideRepo(dir, repoRoot, fs);
   return dir;
@@ -227,7 +233,13 @@ export function runPack({ repoRoot, npm, exec, fs = nodeFs }) {
  * npm reinstalar os tarballs novos). Só apaga um diretório com a marca `.cds-rte-consumer`
  * (gravada na criação); um diretório não vazio sem a marca é recusado.
  */
-export function prepareConsumer({ repoRoot, consumerDir, fs = nodeFs }) {
+export function prepareConsumer({
+  repoRoot,
+  consumerDir,
+  fs = nodeFs,
+  app = 'demo',
+}) {
+  if (!APPS.includes(app)) throw new Error(`app desconhecido: ${app}`);
   assertOutsideRepo(consumerDir, repoRoot, fs);
   if (fs.existsSync(consumerDir)) {
     const entries = fs.readdirSync(consumerDir);
@@ -243,7 +255,13 @@ export function prepareConsumer({ repoRoot, consumerDir, fs = nodeFs }) {
     throw new Error(`${manifestPath} não existe: rode "pack" antes`);
   }
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  const demo = join(repoRoot, 'apps', 'demo');
+  const demo = join(repoRoot, 'apps', app);
+  const generated = join(repoRoot, DOCS_GENERATED);
+  if (app === 'docs' && !fs.existsSync(generated)) {
+    throw new Error(
+      `${generated} não existe: rode "node tools/docs-content.mjs" (docs-content) antes`,
+    );
+  }
 
   fs.mkdirSync(consumerDir, { recursive: true });
   fs.writeFileSync(
@@ -263,9 +281,17 @@ export function prepareConsumer({ repoRoot, consumerDir, fs = nodeFs }) {
     recursive: true,
     filter: (src) => {
       const parts = relative(demo, src).split(sep).filter(Boolean);
-      return !parts.some((part) => COPY_EXCLUDE.has(part));
+      return (
+        !APP_EXCLUDE[app].includes(parts[0]) &&
+        !parts.some((part) => COPY_EXCLUDE.has(part))
+      );
     },
   });
+  if (app === 'docs') {
+    fs.cpSync(generated, join(consumerDir, 'src', 'generated'), {
+      recursive: true,
+    });
+  }
   const pkg = JSON.parse(fs.readFileSync(join(demo, 'package.json'), 'utf8'));
   fs.writeFileSync(
     join(consumerDir, 'package.json'),
@@ -372,7 +398,7 @@ export function verifyOrigin(consumerDir, manifest, fs, { repoRoot }) {
 }
 
 /** Comando de `build`/`test` do Angular CLI do consumidor, sem `npx` (o `ng.js` local). */
-export function commandsFor(step, { consumerDir }) {
+export function commandsFor(step, { consumerDir, baseHref }) {
   const ng = join(
     consumerDir,
     'node_modules',
@@ -382,11 +408,51 @@ export function commandsFor(step, { consumerDir }) {
     'ng.js',
   );
   const args = {
-    build: ['build'],
+    build: ['build', ...(baseHref ? ['--base-href', baseHref] : [])],
     test: ['test', '--watch=false'],
   }[step];
   if (!args) throw new Error(`subcomando sem comando de CLI: ${step}`);
   return { cmd: process.execPath, args: [ng, ...args], cwd: consumerDir };
+}
+
+/**
+ * O Angular grava o HTML pré-renderizado em `browser/<base>/…` (`<base href>` com prefixo) e os
+ * arquivos estáticos em `browser/`, e não gera `404.html` para a `**` (achado da 07c, X7).
+ * Esta etapa deixa `browser/` como a raiz publicável: sobe o conteúdo de `browser/<base>/` para
+ * `browser/` e copia a rota pré-renderizada `404/index.html` para `404.html`. Devolve o que fez.
+ */
+export function flattenPrerender(browserDir, fs = nodeFs) {
+  const done = [];
+  let base = '/';
+  try {
+    const csr = fs.readFileSync(join(browserDir, 'index.csr.html'), 'utf8');
+    base = /<base\s+href="([^"]*)"/.exec(csr)?.[1] ?? '/';
+  } catch {
+    // sem index.csr.html: nada sobre a base
+  }
+  const segments = base.split('/').filter(Boolean);
+  if (segments.length) {
+    const nested = join(browserDir, ...segments);
+    if (fs.existsSync(nested)) {
+      for (const name of fs.readdirSync(nested)) {
+        fs.cpSync(join(nested, name), join(browserDir, name), {
+          recursive: true,
+          force: true,
+        });
+      }
+      fs.rmSync(join(browserDir, segments[0]), {
+        recursive: true,
+        force: true,
+      });
+      done.push(`${segments.join('/')}/ → raiz`);
+    }
+  }
+  const notFound = join(browserDir, '404', 'index.html');
+  if (fs.existsSync(notFound)) {
+    fs.copyFileSync(notFound, join(browserDir, '404.html'));
+    done.push('404.html');
+  }
+  return done;
 }
 
 function quote(arg) {
@@ -423,6 +489,15 @@ export function defaultExec(cmd, args, { cwd, capture = false, env } = {}) {
 
 /** Executa os subcomandos na ordem dada. `deps` permite injetar o executor nos testes. */
 export async function main(argv, env = process.env, deps = {}) {
+  let app = 'demo';
+  const appFlag = argv.indexOf('--app');
+  if (appFlag !== -1) {
+    app = argv[appFlag + 1] ?? '';
+    if (!APPS.includes(app)) {
+      throw new Error(`--app inválido: "${app}" (use ${APPS.join(' ou ')})`);
+    }
+    argv = argv.filter((_, i) => i !== appFlag && i !== appFlag + 1);
+  }
   const flags = argv.filter((arg) => arg.startsWith('--'));
   argv = argv.filter((arg) => !arg.startsWith('--'));
   const exec = deps.exec ?? defaultExec;
@@ -441,8 +516,15 @@ export async function main(argv, env = process.env, deps = {}) {
     )
       throw new Error(`subcomando desconhecido: ${step}`);
   }
+  if (app !== 'demo') {
+    for (const step of argv) {
+      if (CHECKS.includes(step) || LONG_RUNNING.includes(step)) {
+        throw new Error(`"${step}" só existe para o demo (--app ${app})`);
+      }
+    }
+  }
   const npm = parseNpmCommand(env.RTE_NPM);
-  const consumerDir = resolveConsumerDir(env, repoRoot, fs);
+  const consumerDir = resolveConsumerDir(env, repoRoot, fs, app);
   const cliEnv = { NG_CLI_ANALYTICS: 'false' };
   for (const step of argv) {
     console.log(`\n[consumer] ${step} (${consumerDir})`);
@@ -452,7 +534,7 @@ export async function main(argv, env = process.env, deps = {}) {
         console.log(`  ${p.name}@${p.version} ${p.file} ${p.integrity}`);
       }
     } else if (step === 'prepare') {
-      prepareConsumer({ repoRoot, consumerDir, fs });
+      prepareConsumer({ repoRoot, consumerDir, fs, app });
     } else if (step === 'install') {
       exec(npm[0], [...npm.slice(1), 'install', '--no-audit', '--no-fund'], {
         cwd: consumerDir,
@@ -472,8 +554,16 @@ export async function main(argv, env = process.env, deps = {}) {
     } else if (step === 'dev') {
       await runDev({ repoRoot, consumerDir, env, fs, spawn: deps.spawn });
     } else {
-      const { cmd, args, cwd } = commandsFor(step, { consumerDir });
+      const baseHref = app === 'docs' ? env.RTE_SITE_BASE : undefined;
+      const { cmd, args, cwd } = commandsFor(step, { consumerDir, baseHref });
       exec(cmd, args, { cwd, env: cliEnv });
+      if (app === 'docs' && step === 'build') {
+        const done = flattenPrerender(
+          join(consumerDir, 'dist', 'docs', 'browser'),
+          fs,
+        );
+        console.log(`  site achatado: ${done.join(', ') || 'nada a fazer'}`);
+      }
     }
   }
 }

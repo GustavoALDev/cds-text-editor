@@ -1,5 +1,7 @@
 // Relatórios de API (api-extractor) dos .d.ts publicados (spec 05d2, Z6–Z8).
-// Uso: node tools/api-report.mjs <dir-do-pacote-publicado>   (UPDATE_API=1 reescreve)
+// Uso: node tools/api-report.mjs <dir-do-pacote-publicado> [--model <dir>]
+//   UPDATE_API=1 reescreve; RTE_API_MODEL=<dir> (ou --model) grava também um <entry>.api.json
+//   por entry, com nome sintético (rte-core-html), para o api-documenter do site (07c).
 //   tsup: packages/<p>; ng-packagr: dist/packages/<p>. Relatórios ficam em packages/<p>/api/.
 import {
   existsSync,
@@ -15,6 +17,7 @@ import {
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { syntheticName } from './docs/api-model.mjs';
 
 export function reportFileName(packageName, subpath = '.') {
   const base = packageName.replace(/^@[^/]+\//, '');
@@ -122,6 +125,13 @@ export function internalLeaks(report) {
   return out;
 }
 
+// package.json sintético no estágio: o nome do pacote do modelo é o nome do entry.
+function syntheticPackageJson(work, { name, version }) {
+  const file = join(work, 'package.json');
+  writeFileSync(file, JSON.stringify({ name, version }));
+  return file;
+}
+
 // Retorna { ok, succeeded, apiReportChanged, errors } para um entry.
 export async function runExtractor({
   entry,
@@ -130,50 +140,64 @@ export async function runExtractor({
   paths = {},
   projectFolder,
   packageJsonFullPath,
+  modelDir,
+  syntheticPackage,
 }) {
   const { Extractor, ExtractorConfig } =
     await import('@microsoft/api-extractor');
   const work = mkdtempSync(join(tmpdir(), 'api-report-'));
   mkdirSync(join(work, 'out'));
   try {
-    const cfg = ExtractorConfig.prepare({
-      configObject: {
-        projectFolder: projectFolder ?? dirname(entry.dts),
-        mainEntryPointFilePath: entry.dts,
-        bundledPackages: [],
-        compiler: {
-          overrideTsconfig: {
-            compilerOptions: {
-              target: 'ES2022',
-              module: 'ESNext',
-              moduleResolution: 'bundler',
-              lib: ['ES2022', 'dom'],
-              skipLibCheck: true,
-              strict: true,
-              paths,
+    // Duas passadas: o relatório usa o nome real do pacote (cabeçalho "API Report File for"),
+    // o modelo usa o nome sintético do entry; a passada do modelo não toca no relatório.
+    const makeConfig = (model) =>
+      ExtractorConfig.prepare({
+        configObject: {
+          projectFolder: projectFolder ?? dirname(entry.dts),
+          mainEntryPointFilePath: entry.dts,
+          bundledPackages: [],
+          compiler: {
+            overrideTsconfig: {
+              compilerOptions: {
+                target: 'ES2022',
+                module: 'ESNext',
+                moduleResolution: 'bundler',
+                lib: ['ES2022', 'dom'],
+                skipLibCheck: true,
+                strict: true,
+                paths,
+              },
+              files: [entry.dts],
             },
-            files: [entry.dts],
           },
+          apiReport: {
+            enabled: !model,
+            reportFileName: entry.name.replace(/\.api\.md$/, ''),
+            reportFolder: join(work, 'out'),
+            reportTempFolder: work,
+            reportVariants: ['public'],
+          },
+          docModel: model
+            ? {
+                enabled: true,
+                apiJsonFilePath: join(
+                  modelDir,
+                  `${syntheticPackage.name}.api.json`,
+                ),
+              }
+            : { enabled: false },
+          dtsRollup: { enabled: false },
+          tsdocMetadata: { enabled: false },
+          messages: REPORT_MESSAGES(),
         },
-        apiReport: {
-          enabled: true,
-          reportFileName: entry.name.replace(/\.api\.md$/, ''),
-          reportFolder: join(work, 'out'),
-          reportTempFolder: work,
-          reportVariants: ['public'],
-        },
-        docModel: { enabled: false },
-        dtsRollup: { enabled: false },
-        tsdocMetadata: { enabled: false },
-        messages: REPORT_MESSAGES(),
-      },
-      configObjectFullPath: join(work, 'api-extractor.json'),
-      packageJsonFullPath:
-        packageJsonFullPath ??
-        join(projectFolder ?? dirname(entry.dts), 'package.json'),
-    });
+        configObjectFullPath: join(work, 'api-extractor.json'),
+        packageJsonFullPath: model
+          ? syntheticPackageJson(work, syntheticPackage)
+          : (packageJsonFullPath ??
+            join(projectFolder ?? dirname(entry.dts), 'package.json')),
+      });
     const messages = [];
-    const res = Extractor.invoke(cfg, {
+    const res = Extractor.invoke(makeConfig(false), {
       localBuild: true,
       showVerboseMessages: false,
       messageCallback: (m) => {
@@ -207,19 +231,40 @@ export async function runExtractor({
         `relatório desatualizado: ${target} (rode com UPDATE_API=1 e revise a diferença)`,
       );
     }
+    if (modelDir) {
+      const modelMessages = [];
+      Extractor.invoke(makeConfig(true), {
+        localBuild: true,
+        showVerboseMessages: false,
+        messageCallback: (m) => {
+          if (
+            (m.logLevel === 'error' || m.logLevel === 'warning') &&
+            !String(m.messageId).startsWith('console-')
+          )
+            modelMessages.push(`${m.messageId}: ${m.text}`);
+          m.handled = true;
+        },
+      });
+      for (const e of modelMessages) if (!errors.includes(e)) errors.push(e);
+    }
     return { ok: errors.length === 0, apiReportChanged: changed, errors };
   } finally {
     rmSync(work, { recursive: true, force: true });
   }
 }
 
-export async function main(packageDir, { update, root = process.cwd() } = {}) {
+export async function main(
+  packageDir,
+  { update, root = process.cwd(), modelDir } = {},
+) {
   const dir = resolve(packageDir);
   const entries = listEntries(dir);
   const pkgDir = existsSync(join(dir, 'fesm2022'))
     ? resolve(root, 'packages', basename(dir))
     : dir;
   const reportDir = join(pkgDir, 'api');
+  const realPkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
+  if (modelDir) mkdirSync(modelDir, { recursive: true });
   if (update) mkdirSync(reportDir, { recursive: true });
   const errors = [];
   if (update) {
@@ -243,6 +288,11 @@ export async function main(packageDir, { update, root = process.cwd() } = {}) {
         paths,
         projectFolder: root,
         packageJsonFullPath: join(dir, 'package.json'),
+        modelDir,
+        syntheticPackage: {
+          name: syntheticName({ report: entry.name }, realPkg.name),
+          version: realPkg.version,
+        },
       });
       for (const e of r.errors) errors.push(`${entry.name}: ${e}`);
     }
@@ -262,10 +312,17 @@ export async function main(packageDir, { update, root = process.cwd() } = {}) {
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const dir = process.argv[2];
   if (!dir) {
-    console.error('uso: node tools/api-report.mjs <dir-do-pacote-publicado>');
+    console.error(
+      'uso: node tools/api-report.mjs <dir-do-pacote-publicado> [--model <dir>]',
+    );
     process.exit(2);
   }
-  const errors = await main(dir, { update: process.env.UPDATE_API === '1' });
+  const i = process.argv.indexOf('--model');
+  const modelArg = i > 0 ? process.argv[i + 1] : process.env.RTE_API_MODEL;
+  const errors = await main(dir, {
+    update: process.env.UPDATE_API === '1',
+    modelDir: modelArg ? resolve(modelArg) : undefined,
+  });
   if (errors.length) {
     console.error(`api: ${errors.length} problema(s):`);
     for (const e of errors) console.error(`  - ${e}`);
