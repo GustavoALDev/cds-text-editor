@@ -5,7 +5,12 @@ import { RteSanitizeError } from './errors';
 
 /** Opções do sanitizador: as do esquema (S9) mais os limites de S8. */
 export interface RteSanitizeOptions extends RteHtmlSchemaOptions {
-  /** Comprimento máximo da entrada em unidades UTF-16. Padrão `1_000_000`. */
+  /**
+   * Comprimento máximo da entrada em unidades UTF-16. Padrão `1_000_000`.
+   * O limite vale para a **entrada**: a saída pode ser maior (`&` vira `&amp;`, NBSP vira
+   * `&nbsp;`, até ~5x), e `s(s(x))` pode lançar `input-too-long`. Quem grava o resultado
+   * (servidor) deve recusar saída acima do tamanho que guarda: `s(html).length <= limite`.
+   */
   maxInputLength?: number;
   /**
    * Profundidade máxima de elementos abertos, de 1 a 512. Padrão `256`.
