@@ -1,2 +1,56 @@
 <h1>Exibição</h1>
-<p>Em construção.</p>
+<p class="page-note">
+  <strong>O que isto mostra:</strong> o HTML do editor exibido por
+  <code>[rteContent]</code> (sem carregar o editor), com sumário
+  <code>rte-toc</code>, com o sanitizador configurado pelas
+  <em>mesmas opções</em> do editor. Veja a
+  <a [href]="readmeUrl">documentação da exibição</a>.
+</p>
+
+<div class="render-grid">
+  <section aria-labelledby="render-editor-title">
+    <h2 id="render-editor-title">Editor</h2>
+    <rte-editor
+      [(value)]="html"
+      toolbar="minimal"
+      [labels]="editorLabels"
+      [options]="options"
+      ariaLabel="Texto a exibir"
+    />
+  </section>
+  <section aria-labelledby="render-view-title">
+    <h2 id="render-view-title">Exibição</h2>
+    <rte-toc [html]="view.renderedHtml()" [labels]="tocLabels" />
+    <article
+      class="render-view"
+      data-testid="render-view"
+      #view="rteContent"
+      [rteContent]="html()"
+      [labels]="tocLabels"
+      data-rte-mode="auto"
+    ></article>
+  </section>
+</div>
+
+<section aria-labelledby="render-raw-title">
+  <h2 id="render-raw-title">HTML bruto, fora do editor</h2>
+  <p class="page-note">
+    Este HTML não passou pelo editor. A exibição o sanitiza: o
+    <code>&lt;script&gt;</code> e os atributos <code>on*</code> somem.
+  </p>
+  <label for="render-raw">HTML de entrada</label>
+  <textarea
+    id="render-raw"
+    class="render-raw"
+    rows="6"
+    [value]="raw()"
+    (input)="setRaw($event)"
+  ></textarea>
+  <div
+    class="render-view"
+    data-testid="render-raw-view"
+    [rteContent]="raw()"
+    [labels]="tocLabels"
+    data-rte-mode="auto"
+  ></div>
+</section>

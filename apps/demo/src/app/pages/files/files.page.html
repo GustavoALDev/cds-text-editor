@@ -1,2 +1,59 @@
 <h1>Arquivos</h1>
-<p>Em construção.</p>
+<p class="page-note">
+  <strong>O que isto mostra:</strong> o envio de imagens por diálogo, colar e
+  soltar, com progresso, cancelamento e erro (<code>RteUploadAdapter</code>).
+  Veja a <a [href]="readmeUrl">documentação do envio</a>.
+</p>
+
+@if (mode() === 'simulated') {
+<p class="files-warning" data-testid="files-simulated">
+  <strong>Envio simulado: nenhum arquivo sai do navegador.</strong> O conteúdo
+  do arquivo nem é lido; só o andamento é encenado e a imagem inserida é um
+  exemplo do próprio demo.
+</p>
+<fieldset class="files-switches">
+  <legend>Comportamento do envio simulado</legend>
+  <label
+    ><input type="checkbox" [checked]="slow()" (change)="slow.set(!slow())" />
+    Lento (6 s, para dar tempo de cancelar)</label
+  >
+  <label
+    ><input type="checkbox" [checked]="fail()" (change)="fail.set(!fail())" />
+    Falhar no meio do caminho</label
+  >
+</fieldset>
+} @else {
+<p class="files-warning files-warning--server" data-testid="files-server">
+  <strong>Envio real:</strong> as imagens vão para o servidor de exemplo
+  (<code>examples/server-node</code>) em <code>/upload</code>, com cookie,
+  <code>X-CSRF-Token</code> e <em>bearer</em> de desenvolvimento.
+</p>
+} @for (m of modes(); track m) {
+<rte-editor
+  [(value)]="html"
+  toolbar="full"
+  [labels]="labels"
+  [upload]="uploadConfig()"
+  ariaLabel="Texto com envio de imagens"
+  placeholder="Use o botão de imagem, cole ou solte um arquivo…"
+  (uploadError)="onError($event)"
+  (mediaChange)="onMedia($event)"
+/>
+}
+
+<p class="files-actions">
+  <button type="button" (click)="cancelAll()">Cancelar todos os envios</button>
+</p>
+<p
+  class="files-status"
+  role="status"
+  aria-live="polite"
+  data-testid="files-status"
+>
+  {{ status() }}
+</p>
+
+<details class="page-output">
+  <summary>HTML canônico do valor</summary>
+  <pre data-testid="files-html">{{ html() }}</pre>
+</details>

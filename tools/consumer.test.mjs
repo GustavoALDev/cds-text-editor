@@ -418,8 +418,6 @@ test('commandsFor: ng build/test no cwd do consumidor, sem npx', () => {
 
 test('subcomandos ainda não implementados falham com a tarefa responsável', async () => {
   const { main } = await import('./consumer.mjs');
-  await assert.rejects(() => main(['dev'], {}), /Não implementado: tarefa 3/);
-  await assert.rejects(() => main(['serve'], {}), /Não implementado: tarefa 3/);
   await assert.rejects(
     () => main(['check-snippets'], {}),
     /Não implementado: tarefa 5/,

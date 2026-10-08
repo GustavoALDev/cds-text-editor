@@ -1,0 +1,5 @@
+{
+  "/upload": { "target": "http://localhost:3000", "secure": false },
+  "/csrf": { "target": "http://localhost:3000", "secure": false },
+  "/media/": { "target": "http://localhost:3000", "secure": false }
+}

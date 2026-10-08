@@ -24,7 +24,8 @@ export const PACKAGES = [
 ];
 
 const STEPS = ['pack', 'prepare', 'install', 'test', 'build'];
-const NOT_IMPLEMENTED = { dev: 3, serve: 3, 'check-snippets': 5 };
+const NOT_IMPLEMENTED = { 'check-snippets': 5 };
+const LONG_RUNNING = ['dev', 'serve'];
 const DEP_FIELDS = [
   'dependencies',
   'devDependencies',
@@ -361,19 +362,21 @@ export function defaultExec(cmd, args, { cwd, capture = false, env } = {}) {
 
 /** Executa os subcomandos na ordem dada. `deps` permite injetar o executor nos testes. */
 export async function main(argv, env = process.env, deps = {}) {
+  const flags = argv.filter((arg) => arg.startsWith('--'));
+  argv = argv.filter((arg) => !arg.startsWith('--'));
   const exec = deps.exec ?? defaultExec;
   const repoRoot = deps.repoRoot ?? REPO_ROOT;
   const fs = deps.fs ?? nodeFs;
   if (!argv.length) {
     throw new Error(
-      `uso: node tools/consumer.mjs <${[...STEPS, ...Object.keys(NOT_IMPLEMENTED)].join('|')}>...`,
+      `uso: node tools/consumer.mjs <${[...STEPS, ...LONG_RUNNING, ...Object.keys(NOT_IMPLEMENTED)].join('|')}>...`,
     );
   }
   for (const step of argv) {
     if (NOT_IMPLEMENTED[step]) {
       throw new Error(`Não implementado: tarefa ${NOT_IMPLEMENTED[step]}`);
     }
-    if (!STEPS.includes(step))
+    if (!STEPS.includes(step) && !LONG_RUNNING.includes(step))
       throw new Error(`subcomando desconhecido: ${step}`);
   }
   const npm = parseNpmCommand(env.RTE_NPM);
@@ -400,10 +403,157 @@ export async function main(argv, env = process.env, deps = {}) {
         throw new Error(`prova de origem reprovada:\n- ${errors.join('\n- ')}`);
       }
       console.log('  prova de origem: ok');
+    } else if (step === 'serve') {
+      runServe({ repoRoot, consumerDir, env, flags, exec });
+    } else if (step === 'dev') {
+      await runDev({ repoRoot, consumerDir, env, fs, spawn: deps.spawn });
     } else {
       const { cmd, args, cwd } = commandsFor(step, { consumerDir });
       exec(cmd, args, { cwd, env: cliEnv });
     }
+  }
+}
+
+// ---- dev e serve (spec 07b, W6) -------------------------------------------------------------
+
+/** Porta e *token* do servidor de exemplo no `dev` (o *proxy* do demo aponta para 3000). */
+export const DEV_SERVER_PORT = 3000;
+export const DEV_AUTH_TOKEN = 'demo-dev-token';
+
+/** Argumentos de `node apps/demo/serve.mjs`: pasta `browser/` do consumidor e `--with-server`. */
+export function serveArgs({ repoRoot, consumerDir, withServer }) {
+  return [
+    join(repoRoot, 'apps', 'demo', 'serve.mjs'),
+    '--dir',
+    join(consumerDir, 'dist', 'demo', 'browser'),
+    ...(withServer ? ['--with-server'] : []),
+  ];
+}
+
+/** Argumentos do `ng serve` do consumidor com o *proxy* (arquivo relativo ao `cwd`). */
+export function ngServeArgs({
+  consumerDir,
+  proxyConfig = 'proxy.conf.json',
+  port,
+}) {
+  const ng = join(
+    consumerDir,
+    'node_modules',
+    '@angular',
+    'cli',
+    'bin',
+    'ng.js',
+  );
+  return [
+    ng,
+    'serve',
+    '--proxy-config',
+    proxyConfig,
+    ...(port ? ['--port', String(port)] : []),
+  ];
+}
+
+/** Reaponta o destino do *proxy* (`localhost:3000`) para a porta do servidor de exemplo. */
+export function retargetProxy(config, serverPort) {
+  const out = structuredClone(config);
+  for (const entry of Object.values(out)) {
+    entry.target = `http://localhost:${serverPort}`;
+  }
+  return out;
+}
+
+/** Variáveis do servidor de exemplo no `dev`: pasta temporária, tokens de desenvolvimento. */
+export function exampleServerEnv({ mediaDir, port, adminToken }) {
+  return {
+    PORT: String(port),
+    MEDIA_DIR: mediaDir,
+    AUTH_TOKEN: DEV_AUTH_TOKEN,
+    ADMIN_TOKEN: adminToken,
+  };
+}
+
+/** `consumer.mjs serve [--with-server]`: serve o `browser/` do consumidor (sem `ng`). */
+function runServe({ repoRoot, consumerDir, env, flags, exec }) {
+  exec(
+    process.execPath,
+    serveArgs({
+      repoRoot,
+      consumerDir,
+      withServer: flags.includes('--with-server'),
+    }),
+    { cwd: repoRoot, env },
+  );
+}
+
+/**
+ * `consumer.mjs dev`: `ng serve` do consumidor com *proxy* (`/upload`, `/csrf`, `/media/`) e o
+ * servidor de exemplo ao lado; `demo-config.json` do consumidor passa a dizer `server`. Segue
+ * até o `ng serve` terminar; derruba o servidor e apaga a pasta temporária ao fim.
+ */
+export async function runDev({ repoRoot, consumerDir, env, fs, spawn }) {
+  const run = spawn ?? (await import('node:child_process')).spawn;
+  const serverPort = Number(env.RTE_SERVER_PORT ?? DEV_SERVER_PORT);
+  const port = env.RTE_DEMO_PORT ? Number(env.RTE_DEMO_PORT) : undefined;
+  const ng = join(
+    consumerDir,
+    'node_modules',
+    '@angular',
+    'cli',
+    'bin',
+    'ng.js',
+  );
+  if (!fs.existsSync(ng)) {
+    throw new Error(`${ng} não existe: rode "pack prepare install" antes`);
+  }
+  const proxy = retargetProxy(
+    JSON.parse(fs.readFileSync(join(consumerDir, 'proxy.conf.json'), 'utf8')),
+    serverPort,
+  );
+  fs.writeFileSync(
+    join(consumerDir, 'proxy.dev.json'),
+    `${JSON.stringify(proxy, null, 2)}\n`,
+  );
+  fs.mkdirSync(join(consumerDir, 'public'), { recursive: true });
+  fs.writeFileSync(
+    join(consumerDir, 'public', 'demo-config.json'),
+    '{"upload":"server"}\n',
+  );
+  const mediaDir = fs.mkdtempSync(join(tmpdir(), 'cds-rte-dev-media-'));
+  const server = run(
+    process.execPath,
+    [join(repoRoot, 'examples', 'server-node', 'server.mjs')],
+    {
+      env: {
+        ...process.env,
+        ...exampleServerEnv({
+          mediaDir,
+          port: serverPort,
+          adminToken: `admin-${Date.now()}`,
+        }),
+      },
+      stdio: 'inherit',
+    },
+  );
+  const ngServe = run(
+    process.execPath,
+    ngServeArgs({ consumerDir, proxyConfig: 'proxy.dev.json', port }),
+    {
+      cwd: consumerDir,
+      env: { ...process.env, NG_CLI_ANALYTICS: 'false' },
+      stdio: 'inherit',
+    },
+  );
+  const stop = () => {
+    server.kill();
+    ngServe.kill();
+  };
+  process.once('SIGINT', stop);
+  process.once('SIGTERM', stop);
+  try {
+    await new Promise((resolveExit) => ngServe.once('exit', resolveExit));
+  } finally {
+    server.kill();
+    fs.rmSync(mediaDir, { recursive: true, force: true });
   }
 }
 
