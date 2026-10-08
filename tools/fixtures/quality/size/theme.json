@@ -1,0 +1,6 @@
+{
+  "package": "theme",
+  "scenarios": [
+    { "name": "parse", "measured": 700, "budget": 1024, "margin": 324 }
+  ]
+}

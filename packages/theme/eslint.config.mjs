@@ -14,6 +14,7 @@ export default [
             '{projectRoot}/vitest.config.{js,ts,mjs,mts}',
             '{projectRoot}/tsup.config.ts',
             '{projectRoot}/src/**/*.spec.ts',
+            '{projectRoot}/src/testing/**',
           ],
         },
       ],

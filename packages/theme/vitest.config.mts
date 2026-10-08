@@ -18,6 +18,8 @@ export default defineConfig(() => ({
     coverage: {
       reportsDirectory: '../../coverage/packages/theme',
       provider: 'v8' as const,
+      include: ['src/**/*.ts'],
+      exclude: ['**/*.{test,spec}.ts', 'src/testing/**'],
     },
   },
 }));

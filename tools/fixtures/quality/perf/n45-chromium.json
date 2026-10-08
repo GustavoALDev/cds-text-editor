@@ -1,0 +1,20 @@
+{
+  "browser": "chromium",
+  "entries": {
+    "completo": {
+      "text": "x",
+      "metrics": {
+        "completo frio +render mediana": 10,
+        "completo frio +render p95": 20.5,
+        "completo quente +render mediana": 8,
+        "completo quente +render p95": 15,
+        "criação mediana": 120,
+        "criação p95": 150
+      }
+    },
+    "busca": { "text": "x", "metrics": { "mediana": 5, "p95": 9 } },
+    "vazio": { "text": "x", "metrics": { "mediana": 3, "p95": 4, "max": 6 } },
+    "inp": { "text": "x", "metrics": { "inp": 48 } },
+    "rascunho": { "text": "x", "metrics": { "max": 2.5 } }
+  }
+}

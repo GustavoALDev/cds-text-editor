@@ -29,9 +29,17 @@ npx changeset                                           # registrar mudança de 
 UPDATE_FIXTURES=1 npx nx test core --skip-nx-cache     # regenera fixtures/content/all-features.json (drift do JSON do fixture)
 ```
 
-CI: `.github/workflows/ci.yml` roda no PR e no push para `main` (check:rules, test:tools, notices sem drift, `nx affected -t lint typecheck build test test-zone verify-package api size`, check:licenses (depois do build, para ler o `dist`), `typecheck:e2e`, E2E nos 3 navegadores com `playwright install --with-deps`; job `demo` paralelo: `nx build` dos 5 pacotes, `consumer.mjs pack prepare install test build check-snippets`, `tools/fesm-eval.test.mjs` com `RTE_REQUIRE_DIST=1` e E2E do demo nos 3 navegadores).
+CI: `.github/workflows/ci.yml` roda no PR e no push para `main` (check:rules, test:tools, notices sem drift, `nx affected -t lint typecheck build coverage test-zone verify-package api size`, depois `nx affected -t test-timed` e `nx run-many -t coverage size` para os relatórios, check:licenses (depois do build, para ler o `dist`), `typecheck:e2e`, E2E nos 3 navegadores com `playwright install --with-deps`; job `demo` paralelo: `nx build` dos 5 pacotes, `consumer.mjs pack prepare install test build check-snippets`, `tools/fesm-eval.test.mjs` com `RTE_REQUIRE_DIST=1` e E2E do demo J1–J8 nos 3 navegadores; no PR, o job `compat` chama `compat.yml` com `set: pr`, e o check exigido se chama `compat / compat (latest×latest)`). Resumo do job e artefato `quality-reports` (cobertura, tamanho, testes instáveis, N45) por `tools/quality-summary.mjs`. `FC_RUNS=100` no E2E do CI (padrão local 200).
 
 Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp` (e `NX_DAEMON=false` se o daemon do Nx atrapalhar).
+
+## Qualidade (matriz e relatórios, spec 08a, ADR 0019)
+
+- Matriz de versões: `node tools/compat.mjs legs --set pr|full` resolve as pernas (piso lido dos peers, último por _major_ via `npm view`, `next` opcional); `install --leg-json` reinstala as famílias `@angular/*` e `@tiptap/*` por cima do `npm ci` (um único `npm install --no-save`, provado por `npm ls`); `versions` grava o arquivo do `consumer.mjs prepare --versions <arq>`; `docs-only --files <arq>` diz se o PR é só documentação. `tools/compat.json` guarda tetos (`cap`) e `skip`, que exigem `reason` e `adr` (`check:rules`). `.github/workflows/compat.yml` (PR: `latest×latest`; semanal, `main` e manual: `full`).
+- Marca `@compat` no E2E principal (`test.describe('compat: ...', { tag: '@compat' })`); a lista fica em `tools/compat-tags.json` (conferida por `tools/compat-list.test.mjs`); a fase B roda `npx playwright test -c e2e --grep @compat --project=chromium`.
+- Alvos Nx: `coverage` (v8, `coverage/packages/<p>`, sem limiar; `sanitizer` e `render` ficam sem os specs de tempo/fuzz) e `test-timed` (`sanitizer`: `limits`, `perf`, `timed`, `fuzz`, sem cobertura); `npm run check:size` aceita `--report <arq.json>` e os alvos `size` gravam `dist/reports/size/<p>.json`; `node tools/quality-summary.mjs` monta o resumo (4 tabelas) e os avisos de testes instáveis.
+- J8 (`apps/demo/e2e/j8-server.spec.ts`, contra `examples/server-node`), N47/N48 e as propriedades do tema (`e2e/theme/property.spec.ts`, `FC_SEED`/`FC_RUNS`; tolerância de 1 unidade de 8 bits só onde ela já excede o limite do grupo, `quantExcused` em `helpers/limits.ts`).
+- `.github/branch-protection.json` (checks exigidos: `verify`, `demo`, `docs`, `compat / compat (latest×latest)`), conferido por `tools/branch-protection.test.mjs`; só se aplica pela API com confirmação do dono (comando no ADR 0019).
 
 ## Core (`packages/core`)
 
