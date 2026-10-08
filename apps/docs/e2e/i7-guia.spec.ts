@@ -280,7 +280,13 @@ test.describe('I7 exibicao', () => {
       hasText: 'Configuração',
     });
     await heading.click();
-    await page.keyboard.press('End');
+    // Caret no fim do título pela Selection API: o clique no centro e a tecla End dependem da fonte
+    // e da medida do sistema (no Ubuntu do CI o caret ficava no meio da palavra).
+    await heading.evaluate((h) => {
+      const sel = window.getSelection();
+      sel?.selectAllChildren(h);
+      sel?.collapseToEnd();
+    });
     await page.keyboard.type(' extra');
     await expect(links.nth(1)).toHaveText('Configuração extra');
     await expect(links.nth(1)).toHaveAttribute(
