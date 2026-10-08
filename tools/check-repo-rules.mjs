@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
@@ -165,8 +165,150 @@ function checkReadmeEntries(pkgDir, pkg) {
   return errors;
 }
 
+// ---- Demo (spec 07b, W3/W4): `apps/demo` é um consumidor externo dos tarballs ----
+
+// Dependências de terceiros do demo que precisam ser exatamente as da raiz (W3).
+const DEMO_EXACT = [
+  /^@angular\//,
+  /^@tiptap\//,
+  /^lowlight$/,
+  /^highlight\.js$/,
+  /^rxjs$/,
+  /^typescript$/,
+];
+
+const insideDir = (parent, child) => {
+  const rel = relative(resolve(parent), resolve(child));
+  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+};
+
+function walk(dir, accept) {
+  const out = [];
+  for (const name of readdirSync(dir)) {
+    if (['node_modules', 'dist', '.angular'].includes(name)) continue;
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) out.push(...walk(full, accept));
+    else if (accept(name)) out.push(full);
+  }
+  return out;
+}
+
+// Atributos que o CSP `style-src 'self'` bloqueia no HTML pré-renderizado (W4).
+const STYLE_ATTR =
+  /(?:\s|^)(?:style\s*=|\[style[\].]|\[ngStyle\]|\[attr\.style\])/;
+
+// Especificadores de import/export/import()/require de um arquivo TypeScript.
+function importSpecifiers(source) {
+  const re =
+    /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|\brequire\s*\(\s*)(['"])([^'"\n]+)\1/g;
+  return [...source.matchAll(re)].map((m) => m[2]);
+}
+
+function checkDemo(rootDir) {
+  const demo = join(rootDir, 'apps', 'demo');
+  if (!existsSync(demo)) return [];
+  const errors = [];
+  const rel = (file) =>
+    `apps/demo/${relative(demo, file).split(sep).join('/')}`;
+
+  for (const name of readdirSync(demo)) {
+    if (name === 'package-lock.json') {
+      errors.push(
+        'apps/demo/package-lock.json: o demo não tem lockfile (o hash dos tarballs muda a cada build; spec 07b, W2)',
+      );
+    }
+    if (!/^tsconfig.*\.json$/.test(name)) continue;
+    let config;
+    try {
+      config = readTsconfig(join(demo, name));
+    } catch (e) {
+      errors.push(`apps/demo/${name}: não foi possível ler (${e.message})`);
+      continue;
+    }
+    if (config.compilerOptions?.paths !== undefined) {
+      errors.push(
+        `apps/demo/${name}: "paths" é proibido no demo (consome @cds/* só pelos tarballs; spec 07b, W3)`,
+      );
+    }
+    for (const target of [config.extends].flat().filter(Boolean)) {
+      if (
+        typeof target === 'string' &&
+        target.startsWith('.') &&
+        !insideDir(demo, resolve(demo, target))
+      ) {
+        errors.push(
+          `apps/demo/${name}: "extends" (${target}) sai de apps/demo (spec 07b, W3)`,
+        );
+      }
+    }
+  }
+
+  const manifestPath = join(demo, 'package.json');
+  const rootManifestPath = join(rootDir, 'package.json');
+  if (existsSync(manifestPath) && existsSync(rootManifestPath)) {
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const rootManifest = JSON.parse(readFileSync(rootManifestPath, 'utf8'));
+    const rootVersions = {
+      ...rootManifest.dependencies,
+      ...rootManifest.devDependencies,
+    };
+    for (const field of ['dependencies', 'devDependencies']) {
+      for (const [dep, version] of Object.entries(manifest[field] ?? {})) {
+        if (!DEMO_EXACT.some((re) => re.test(dep)) || !rootVersions[dep]) {
+          continue;
+        }
+        const exact = rootVersions[dep].replace(/^[\^~]/, '');
+        if (version !== exact) {
+          errors.push(
+            `apps/demo/package.json: ${dep} deve ser exatamente ${exact} (a da raiz), está "${version}" (spec 07b, W3)`,
+          );
+        }
+      }
+    }
+  }
+
+  // `serve.mjs`, `e2e/` e demais arquivos fora de `src/` são ferramentas do repositório.
+  const src = join(demo, 'src');
+  if (existsSync(src)) {
+    const sources = walk(src, (n) => /\.ts$/.test(n) && !/\.d\.ts$/.test(n));
+    for (const file of sources) {
+      const source = readFileSync(file, 'utf8');
+      for (const spec of importSpecifiers(source)) {
+        const isRelative = spec.startsWith('.');
+        const bad = isRelative
+          ? !insideDir(demo, resolve(dirname(file), spec)) ||
+            /(^|\/)(packages|dist)\//.test(spec)
+          : /^(packages|dist)\//.test(spec);
+        if (bad) {
+          errors.push(
+            `${rel(file)}: import "${spec}" sai de apps/demo ou aponta para packages/ ou dist/ (spec 07b, W3)`,
+          );
+        }
+      }
+      for (const m of source.matchAll(
+        /\btemplate\s*:\s*(`[\s\S]*?`|'[^'\n]*'|"[^"\n]*")/g,
+      )) {
+        if (STYLE_ATTR.test(m[1])) {
+          errors.push(
+            `${rel(file)}: template inline com style=, [style…] ou [ngStyle] (CSP estrita; spec 07b, W4)`,
+          );
+        }
+      }
+    }
+    for (const file of walk(src, (n) => /\.html$/.test(n))) {
+      if (STYLE_ATTR.test(readFileSync(file, 'utf8'))) {
+        errors.push(
+          `${rel(file)}: style=, [style…] ou [ngStyle] no template (CSP estrita; spec 07b, W4)`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
 export function checkRepoRules(rootDir) {
   const errors = [];
+  errors.push(...checkDemo(rootDir));
   // Só no repositório real (com package.json na raiz); fixtures parciais de teste ficam de fora.
   if (existsSync(join(rootDir, 'package.json'))) {
     for (const file of GOVERNANCE_FILES) {

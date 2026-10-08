@@ -220,3 +220,184 @@ test('rejects a secondary entry (ng-package.json) missing from the README', () =
   );
   assert.deepEqual(ok, []);
 });
+
+// ---- Demo (spec 07b, W3/W4): apps/demo é um consumidor externo ----
+
+const demoErrors = (root) =>
+  checkRepoRules(root).filter((e) => e.startsWith('apps/demo'));
+
+const ROOT_PKG = JSON.stringify({
+  devDependencies: {
+    '@angular/core': '22.2.1',
+    '@tiptap/core': '3.31.4',
+    lowlight: '3.3.0',
+    'highlight.js': '11.11.1',
+    rxjs: '^7.8.2',
+    typescript: '6.0.3',
+    vitest: '^4.1.11',
+  },
+});
+
+const CLEAN_DEMO = {
+  'package.json': ROOT_PKG,
+  'apps/demo/package.json': JSON.stringify({
+    dependencies: {
+      '@angular/core': '22.2.1',
+      '@cds/rte-core': '0.0.0',
+      '@tiptap/core': '3.31.4',
+      lowlight: '3.3.0',
+      'highlight.js': '11.11.1',
+      rxjs: '7.8.2',
+    },
+    devDependencies: { typescript: '6.0.3', vitest: '4.1.12' },
+  }),
+  'apps/demo/tsconfig.json': JSON.stringify({
+    compilerOptions: { strict: true },
+  }),
+  'apps/demo/tsconfig.app.json': JSON.stringify({
+    extends: './tsconfig.json',
+  }),
+  'apps/demo/src/app/app.ts':
+    "import { Component } from '@angular/core';\nimport { x } from './x';\nexport const y = import('./lazy');\n",
+  'apps/demo/src/app/app.html': '<p class="a">oi</p>\n',
+};
+
+test('demo: sem apps/demo as regras não fazem nada', () => {
+  assert.deepEqual(demoErrors(fixture({ 'package.json': ROOT_PKG })), []);
+});
+
+test('demo: um demo limpo passa (vitest fora da lista exata)', () => {
+  assert.deepEqual(demoErrors(fixture(CLEAN_DEMO)), []);
+});
+
+test('demo: tsconfig com paths é recusado', () => {
+  const root = fixture({
+    ...CLEAN_DEMO,
+    'apps/demo/tsconfig.json': JSON.stringify({
+      compilerOptions: { paths: { '@cds/rte-core': ['../../x'] } },
+    }),
+  });
+  const errors = demoErrors(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /tsconfig\.json.*paths/);
+});
+
+test('demo: tsconfig com extends que sai de apps/demo é recusado; extends interno passa', () => {
+  const bad = fixture({
+    ...CLEAN_DEMO,
+    'apps/demo/tsconfig.app.json': JSON.stringify({
+      extends: '../../tsconfig.base.json',
+    }),
+  });
+  const errors = demoErrors(bad);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /tsconfig\.app\.json.*extends/);
+  assert.deepEqual(demoErrors(fixture(CLEAN_DEMO)), []);
+});
+
+test('demo: tsconfig com comentários é lido', () => {
+  const root = fixture({
+    ...CLEAN_DEMO,
+    'apps/demo/tsconfig.spec.json':
+      '// c\n{ /* b */ "extends": "../../tsconfig.base.json" }\n',
+  });
+  assert.equal(demoErrors(root).length, 1);
+});
+
+test('demo: import de packages/, dist/ ou relativo que sai do demo é recusado', () => {
+  for (const spec of [
+    '../../../../packages/core/src/index',
+    '../../../../../dist/packages/angular',
+    '../../../../outro/arquivo',
+    'packages/core/src/index',
+  ]) {
+    const root = fixture({
+      ...CLEAN_DEMO,
+      'apps/demo/src/app/bad.ts': `import { a } from '${spec}';\n`,
+    });
+    const errors = demoErrors(root);
+    assert.equal(errors.length, 1, spec);
+    assert.match(errors[0], /bad\.ts/);
+  }
+  const dyn = fixture({
+    ...CLEAN_DEMO,
+    'apps/demo/src/app/dyn.ts': "const m = import('../../../../packages/x');\n",
+  });
+  assert.equal(demoErrors(dyn).length, 1);
+});
+
+test('demo: serve.mjs e e2e/ ficam fora da regra de import', () => {
+  const root = fixture({
+    ...CLEAN_DEMO,
+    'apps/demo/serve.mjs':
+      "import x from '../../examples/server-node/server.mjs';\n",
+    'apps/demo/e2e/helpers.ts':
+      "import { a } from '../../../packages/core/src';\n",
+  });
+  assert.deepEqual(demoErrors(root), []);
+});
+
+test('demo: versão de terceiro diferente da exata da raiz é recusada', () => {
+  const root = fixture({
+    ...CLEAN_DEMO,
+    'apps/demo/package.json': JSON.stringify({
+      dependencies: {
+        '@angular/core': '^22.2.1',
+        '@tiptap/core': '3.31.3',
+        lowlight: '3.3.0',
+        rxjs: '7.8.1',
+      },
+      devDependencies: { typescript: '6.0.3' },
+    }),
+  });
+  const errors = demoErrors(root);
+  assert.equal(errors.length, 3);
+  assert.ok(errors.some((e) => /@angular\/core/.test(e) && /22\.2\.1/.test(e)));
+  assert.ok(errors.some((e) => /@tiptap\/core/.test(e)));
+  assert.ok(errors.some((e) => /rxjs/.test(e) && /7\.8\.2/.test(e)));
+});
+
+test('demo: package-lock.json em apps/demo é recusado', () => {
+  const root = fixture({ ...CLEAN_DEMO, 'apps/demo/package-lock.json': '{}' });
+  const errors = demoErrors(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /package-lock\.json/);
+});
+
+test('demo: style=, [style…] e [ngStyle] em templates são recusados', () => {
+  for (const html of [
+    '<p style="color:red">x</p>',
+    '<p [style.width.px]="w">x</p>',
+    '<p [style]="s">x</p>',
+    '<p [ngStyle]="s">x</p>',
+    '<p [attr.style]="s">x</p>',
+    "<p\n  style='a:b'>x</p>",
+  ]) {
+    const root = fixture({ ...CLEAN_DEMO, 'apps/demo/src/app/p.html': html });
+    const errors = demoErrors(root);
+    assert.equal(errors.length, 1, html);
+    assert.match(errors[0], /p\.html/);
+  }
+  const ok = fixture({
+    ...CLEAN_DEMO,
+    'apps/demo/src/app/p.html': '<p class="styled" data-style="x">x</p>',
+  });
+  assert.deepEqual(demoErrors(ok), []);
+});
+
+test('demo: style= em template inline é recusado', () => {
+  const root = fixture({
+    ...CLEAN_DEMO,
+    'apps/demo/src/app/inline.ts':
+      '@Component({ selector: \'a\', template: `<p style="x:y">a</p>` })\nexport class A {}\n',
+  });
+  const errors = demoErrors(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /inline\.ts/);
+  const ok = fixture({
+    ...CLEAN_DEMO,
+    'apps/demo/src/app/inline.ts':
+      '@Component({ selector: \'a\', template: `<p class="a">a</p>` })\nexport class A {}\n',
+  });
+  assert.deepEqual(demoErrors(ok), []);
+});

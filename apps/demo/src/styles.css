@@ -1,0 +1,94 @@
+/* Layout do demo (app, não pacote). O visual do editor vem do tema e do editor.css; nada aqui
+   usa o atributo `style` (CSP estrita). */
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  padding: 8px 12px;
+  background: Canvas;
+  color: CanvasText;
+  border: 2px solid currentcolor;
+  z-index: 10;
+}
+
+.skip-link:focus {
+  top: 8px;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.shell__nav {
+  padding: 16px;
+  border-right: 1px solid color-mix(in srgb, currentcolor 20%, transparent);
+}
+
+.shell__brand {
+  margin: 0 0 16px;
+  font-weight: 700;
+}
+
+.shell__nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.shell__nav a {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.shell__nav a:hover {
+  background: color-mix(in srgb, currentcolor 10%, transparent);
+}
+
+.shell__nav a.is-active {
+  background: color-mix(in srgb, currentcolor 16%, transparent);
+  font-weight: 600;
+}
+
+.shell__main {
+  padding: 24px;
+  max-width: 960px;
+}
+
+.shell__main:focus {
+  outline: none;
+}
+
+/* Telas estreitas: a navegação vira uma faixa no topo, sem rolagem horizontal da página. */
+@media (max-width: 640px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shell__nav {
+    border-right: 0;
+    border-bottom: 1px solid color-mix(in srgb, currentcolor 20%, transparent);
+  }
+
+  .shell__nav ul {
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    overflow-x: auto;
+  }
+}

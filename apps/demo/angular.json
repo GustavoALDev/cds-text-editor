@@ -1,0 +1,67 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": { "analytics": false },
+  "newProjectRoot": "projects",
+  "projects": {
+    "demo": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "demo",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": "dist/demo",
+            "browser": "src/main.ts",
+            "server": "src/main.server.ts",
+            "outputMode": "static",
+            "index": "src/index.html",
+            "tsConfig": "tsconfig.app.json",
+            "polyfills": [],
+            "assets": [
+              { "glob": "**/*", "input": "public" },
+              {
+                "glob": "theme.css",
+                "input": "node_modules/@cds/rte-theme/dist",
+                "output": "/"
+              }
+            ],
+            "styles": [
+              "node_modules/@cds/rte-theme/dist/theme.css",
+              "node_modules/@cds/rte-core/styles/content.css",
+              "node_modules/@cds/rte-angular/styles/editor.css",
+              "node_modules/@cds/rte-render/styles/render.css",
+              "src/styles.css"
+            ],
+            "optimization": {
+              "scripts": true,
+              "styles": { "minify": true, "inlineCritical": false },
+              "fonts": false
+            },
+            "outputHashing": "all",
+            "sourceMap": false,
+            "extractLicenses": false
+          },
+          "configurations": {
+            "production": {},
+            "development": {
+              "optimization": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "tsconfig.spec.json",
+            "buildTarget": "::development",
+            "runner": "vitest"
+          }
+        }
+      }
+    }
+  }
+}

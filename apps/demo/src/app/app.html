@@ -1,0 +1,22 @@
+<a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+<div class="shell">
+  <nav class="shell__nav" aria-label="Páginas do demo">
+    <p class="shell__brand">cds-text-editor</p>
+    <ul>
+      @for (item of items; track item.path) {
+      <li>
+        <a
+          [routerLink]="'/' + item.path"
+          routerLinkActive="is-active"
+          ariaCurrentWhenActive="page"
+          [routerLinkActiveOptions]="{ exact: true }"
+          >{{ item.label }}</a
+        >
+      </li>
+      }
+    </ul>
+  </nav>
+  <main id="conteudo" class="shell__main" tabindex="-1">
+    <router-outlet />
+  </main>
+</div>
