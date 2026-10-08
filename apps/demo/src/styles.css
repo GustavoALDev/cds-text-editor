@@ -99,3 +99,15 @@ body {
     overflow-x: auto;
   }
 }
+
+/* Botões da página (fora do editor): cores explícitas a partir de Canvas/CanvasText. O botão nativo
+   usa ButtonFace/ButtonText, que no WebKit no escuro vêm descasados (texto branco sobre fundo
+   cinza-claro: contraste reprovado pelo axe); Canvas/CanvasText seguem o esquema como o corpo. */
+.shell__main button:not(rte-editor button) {
+  background-color: color-mix(in srgb, CanvasText 12%, Canvas);
+  color: CanvasText;
+  border: 1px solid color-mix(in srgb, CanvasText 45%, transparent);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font: inherit;
+}
