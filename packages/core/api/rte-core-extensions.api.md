@@ -255,6 +255,8 @@ export interface RteHtmlSchemaOptions {
     linkPolicy?: {
         blockedDomains?: string[];
         forceRel?: string[];
+        protocols?: string[];
+        allowRelative?: boolean;
     };
     // (undocumented)
     mediaHosts?: readonly string[];

@@ -29,3 +29,24 @@ export function normalizeRelTokens(
   }
   return REL_VALUES.filter((v) => given.has(v));
 }
+
+/** Esquemas que o `href` de um link pode ter (a lista segura; `RteLinkPolicy.protocols` só restringe). */
+export const SAFE_LINK_PROTOCOLS = ['https', 'http', 'mailto', 'tel'];
+
+export function normalizeLinkProtocols(
+  option: string,
+  protocols: readonly unknown[] | undefined,
+): string[] {
+  if (protocols === undefined) return [...SAFE_LINK_PROTOCOLS];
+  const given = new Set<string>();
+  for (const p of protocols) {
+    const v = typeof p === 'string' ? p.trim().toLowerCase() : '';
+    if (!SAFE_LINK_PROTOCOLS.includes(v)) {
+      throw new TypeError(
+        `${option}: "${String(p)}" fora de ${SAFE_LINK_PROTOCOLS.join(' ')}.`,
+      );
+    }
+    given.add(v);
+  }
+  return SAFE_LINK_PROTOCOLS.filter((v) => given.has(v));
+}
