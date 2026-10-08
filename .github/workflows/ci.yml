@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   verify:
@@ -254,9 +254,13 @@ jobs:
       - run: touch site/.nojekyll
       # Links internos do site montado, inclusive docs <-> demo.
       - run: node tools/check-links.mjs site --base /cds-text-editor/ --demo-root site/demo
-      # Fumaça I1 (Chromium) sobre o site montado, servido sob o prefixo.
+      # O demo montado existe (os links docs <-> demo já foram conferidos acima).
+      - run: test -s site/demo/index.html
+      # Fumaça I1 (Chromium) sobre o site montado, servido sob o prefixo: uma página do guia e uma
+      # de API (a suíte inteira já rodou no job docs; aqui só se confere a montagem sob o prefixo).
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test -c apps/docs/e2e --project=chromium i1-smoke
+      - run: |
+          npx playwright test -c apps/docs/e2e --project=chromium i1-smoke -g '(guia/inicio-rapido|api/core): sem'
         env:
           RTE_DOCS_DIR: ${{ github.workspace }}/site
       - uses: actions/upload-pages-artifact@v3

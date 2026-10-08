@@ -296,3 +296,28 @@ test('main --consultar: lê a lista, escreve o resumo e nunca falha', async () =
   assert.equal(code, 0);
   assert.ok(logs.join('\n').includes('https://b.test/'));
 });
+
+test('checkExternal: a URL sem barra final que o fetch normaliza não vira redirecionamento', async () => {
+  const results = await checkExternal(
+    ['https://ok.test', 'https://ok.test/a b'],
+    async (url) => ({ status: 200, url: new URL(url).href }),
+  );
+  assert.deepEqual(
+    results.map((r) => r.state),
+    ['ok', 'ok'],
+  );
+});
+
+test('checkExternal: só consulta http(s); outros esquemas viram erro sem rede', async () => {
+  const calls = [];
+  const results = await checkExternal(
+    ['file:///etc/passwd', 'ftp://x.test/a', 'http://127.0.0.1:1/'],
+    fakeFetch({ 'http://127.0.0.1:1/': { status: 200 } }, calls),
+  );
+  assert.deepEqual(
+    results.map((r) => r.state),
+    ['erro', 'erro', 'ok'],
+  );
+  assert.match(results[0].detail, /http\(s\)/);
+  assert.ok(calls.every((c) => c.url.startsWith('http://')));
+});

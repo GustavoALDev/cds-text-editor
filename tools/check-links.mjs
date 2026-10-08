@@ -328,13 +328,21 @@ export async function checkExternal(
     }
   };
   const one = async (url) => {
+    // Só http(s): a lista vem de arquivo (artefato do CI), então nada de file:, ftp: etc.
+    if (!/^https?:\/\//i.test(url))
+      return {
+        url,
+        state: 'erro',
+        detail: 'esquema não suportado (só http(s) é consultado)',
+      };
     try {
       let res = await attempt(url, 'HEAD');
       if (res.status === 405 || res.status === 501 || res.status === 403)
         res = await attempt(url, 'GET');
       if (res.status >= 400)
         return { url, state: 'quebrado', status: res.status };
-      if (res.url && res.url !== url)
+      // `res.url` já vem normalizado (barra final, %20): compara com a forma normalizada.
+      if (res.url && res.url !== new URL(url).href)
         return { url, state: 'redirecionado', status: res.status, to: res.url };
       return { url, state: 'ok', status: res.status };
     } catch (e) {
