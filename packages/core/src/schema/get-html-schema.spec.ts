@@ -53,11 +53,24 @@ function isDeepFrozen(v: unknown): boolean {
 }
 
 describe('assertIdPrefix', () => {
-  it.each(['rt-', 'a', 'x-', 'a'.repeat(16), 'news-2-'])('aceita %j', (p) => {
+  it.each(['rt-', 'x-', 'a'.repeat(15) + '-', 'news-2-', 'a--'])('aceita %j', (p) => {
     expect(() => assertIdPrefix(p)).not.toThrow();
   });
 
-  it.each(['X', '1a', 'a'.repeat(17), '', '-a', 'a_b', 'á'])(
+  it.each([
+    'X',
+    '1a',
+    'a'.repeat(17),
+    '',
+    '-a',
+    'a_b',
+    'á',
+    'a',
+    'doc',
+    'location',
+    '-',
+    'a'.repeat(16) + '-',
+  ])(
     'recusa %j com RangeError',
     (p) => {
       expect(() => assertIdPrefix(p)).toThrow(RangeError);
@@ -472,7 +485,7 @@ describe('getHtmlSchema: opções', () => {
     );
   });
 
-  it.each(['X', '1a', 'a'.repeat(17)])('idPrefix %j lança RangeError', (p) => {
+  it.each(['X', '1a', 'a'.repeat(17), 'x', 'doc'])('idPrefix %j lança RangeError', (p) => {
     expect(() => getHtmlSchema({ idPrefix: p })).toThrow(RangeError);
   });
 

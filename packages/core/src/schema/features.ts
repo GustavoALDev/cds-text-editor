@@ -19,6 +19,10 @@ export interface FeatureContext {
   allowRelativeMedia: boolean;
   /** Domínios bloqueados normalizados (ASCII, minúsculas, sem ponto final). */
   blockedDomains: string[];
+  /** Esquemas do `href` dos links (subconjunto de https, http, mailto, tel). */
+  linkProtocols: string[];
+  /** `false` recusa `href` relativo e fragmento. */
+  allowRelativeLinks: boolean;
   /** Tokens de `rel` garantidos em todo link, em ordem canônica. */
   forceRel: string[];
   /** Provedores ativos, já validados. */
@@ -112,9 +116,9 @@ export function baseFeature(ctx: FeatureContext): Elements {
 export function linksFeature(ctx: FeatureContext): Elements {
   const href: RteUrlRule = {
     kind: 'url',
-    schemes: ['https', 'http', 'mailto', 'tel'],
-    relative: true,
-    fragment: true,
+    schemes: [...ctx.linkProtocols],
+    relative: ctx.allowRelativeLinks,
+    fragment: ctx.allowRelativeLinks,
     maxLength: URL_MAX,
   };
   if (ctx.blockedDomains.length > 0)

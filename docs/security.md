@@ -1,19 +1,55 @@
-# Modelo de ameaças (resumo)
+# Segurança: garantias da biblioteca e deveres do servidor
 
-Escopo: XSS e abuso a partir de conteúdo não confiável. Reporte falhas conforme o [SECURITY.md](../SECURITY.md).
+Escopo: XSS e abuso a partir de conteúdo não confiável (HTML salvo, colado ou exibido) e o envio de arquivos. Reporte falhas conforme o [SECURITY.md](../SECURITY.md). A decisão e as evidências do sanitizador estão no [ADR 0006](decisions/0006-sanitizador.md); o esquema, no [ADR 0003](decisions/0003-esquema-do-html.md); a exibição, no [ADR 0012](decisions/0012-renderizacao.md); o envio e o rascunho, no [ADR 0013](decisions/0013-envio-de-arquivos.md); a mídia, no [ADR 0011](decisions/0011-midia.md).
 
-| Ameaça                | Vetor                                             | Defesa                                                                                                                                                                   |
-| --------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| XSS via HTML          | Conteúdo salvo, importado ou exibido no site      | `@cds/rte-sanitizer` (lista de permissões do esquema, ADR 0003); `validateHtml` em `@cds/rte-core/html` e nos validadores do Angular; exibição por `@cds/rte-render`     |
-| XSS via colagem       | HTML/Markdown colado no editor                    | Esquema do Tiptap descarta o que não é do esquema; classes e estilos filtrados por `isAllowedClass`; links e URLs validados                                              |
-| Respostas de servidor | Adaptador de upload devolvendo URL ou HTML hostil | `mapResponse` do consumidor + `readUploadedMedia` validam a mídia (ADR 0011); nada da resposta vira HTML sem passar pelo esquema                                         |
-| Upload                | Tipo, tamanho e origem do arquivo                 | Limites e tipos permitidos no adaptador; verificação de tamanho/MIME no cliente é conveniência, o servidor precisa revalidar                                             |
-| CSP                   | Estilos e scripts inline                          | A lib não usa `eval`, scripts inline nem `style` inline injetado; o app de teste roda com CSP estrita (`e2e/angular/serve.mjs`); embeds exigem `frame-src` do consumidor |
-| SSR                   | Execução no servidor                              | Sem globais de DOM no código da lib (lint, D25); HTML renderizado sem `<script>`                                                                                         |
+## Resumo do modelo de ameaças
 
-Pendente (spec 09, parte seguinte): fuzzing do sanitizador, revisão do `httpUploadAdapter` e do exemplo de servidor. Dependências: `npm audit --omit=dev --audit-level=high` roda no CI (informativo).
+| Ameaça                | Vetor                                             | Defesa da biblioteca                                                                                                                                    |
+| --------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| XSS via HTML          | Conteúdo salvo, importado ou exibido no site      | `@cds/rte-sanitizer` (lista de permissões do esquema); `validateHtml` e os validadores do Angular; exibição por `@cds/rte-render`                       |
+| XSS via colagem       | HTML/Markdown colado no editor                    | O esquema do Tiptap descarta o que não é do esquema; classes e estilos filtrados; links e URLs validados                                                |
+| Respostas de servidor | Adaptador de upload devolvendo URL ou HTML hostil | `mapResponse` do consumidor + `readUploadedMedia` validam a mídia; nada da resposta vira HTML sem passar pelo esquema                                   |
+| Upload                | Tipo, tamanho e origem do arquivo                 | Limites e tipos no adaptador são conveniência; **o servidor revalida tudo** (seção abaixo)                                                              |
+| CSP                   | Estilos e scripts inline                          | Sem `eval`, scripts inline nem `style` inline injetado; o app de teste roda com CSP estrita; embeds exigem `frame-src` do consumidor                    |
+| SSR                   | Execução no servidor                              | Sem globais de DOM no código da lib (lint, D25); HTML renderizado sem `<script>`                                                                        |
+| Cadeia de suprimentos | Dependência comprometida                          | Única dependência de runtime: `htmlparser2` (só em `@cds/rte-core/html`); `npm audit --omit=dev --audit-level=high` **bloqueia** o CI; gate de licenças |
 
-# Modelo de ameaças do sanitizador
+## O que o servidor DEVE fazer
+
+A biblioteca garante o formato do HTML e a validade das URLs; **não** garante quem pode enviar, o que é gravado nem como a mídia é servida. O `examples/server-node` ([README](../examples/server-node/README.md)) implementa a maior parte e é uma referência, não um produto.
+
+1. **Sanitizar na gravação**, com `createSanitizer(opçõesDoEditor)` e **as mesmas opções** do editor, numa versão maior igual ou mais nova. O sanitizador no navegador é segunda barreira, nunca a única (hipótese 1).
+2. **Recusar saída acima do limite que o servidor guarda.** `maxInputLength` vale para a _entrada_; a saída pode ser maior (`&` vira `&amp;`, NBSP vira `&nbsp;`) e re-sanitizar uma saída grande pode lançar `input-too-long`. Compare `sanitize(html).length` com o seu teto antes de gravar.
+3. **Autenticar e proteger contra CSRF o envio** (e a gravação). Token CSRF ligado à sessão, cookie `SameSite=Strict` (`__Host-` e `Secure` atrás de https). O `httpUploadAdapter` usa `XMLHttpRequest`: os interceptors do Angular e o cabeçalho XSRF automático **não** valem; envie o cabeçalho por `headers` (o `Content-Type` do multipart não pode ser sobrescrito). CORS por **lista de origens permitidas**, nunca refletindo o `Origin` com credenciais.
+4. **Validar o arquivo:** tipo por _magic bytes_ (nunca o MIME ou a extensão do cliente), **sem SVG**, tamanho máximo, **teto de pixels** (por exemplo 40 Mpx, contra bombas de descompressão), limite de envios simultâneos e cota; gerar o nome guardado (o do cliente é só texto); recodificar a imagem elimina payloads em metadados.
+5. **Servir a mídia** com `Content-Type` correto, `X-Content-Type-Options: nosniff`, `Content-Disposition: inline` e `Content-Security-Policy: default-src 'none'; sandbox`, de preferência de **outro domínio sem cookies**, com `Range` (vídeo no Safari). Todo `GET` deve ser **sem efeito colateral**: mídia relativa ou de qualquer host `https` pode ser pedida por um autor hostil via `<img>` na página de outro leitor.
+6. **SSRF no `registerExternal`:** o re-hospedamento de imagens externas faz o _servidor_ buscar uma URL escolhida pelo autor. Valide o esquema (`https`), resolva o DNS e recuse IPs privados, _loopback_, _link-local_ e metadados de nuvem; limite tamanho, tempo e redirecionamentos; aplique o item 4 ao que baixar.
+7. **Dono da mídia no `onMediaRemoved`:** a remoção é um _pedido_ do navegador. Confira se a mídia pertence ao texto e ao usuário antes de apagar; apague só depois da carência e só o que nenhum outro texto referencia.
+8. **Carência de órfãs ≥ vida do rascunho** (7 dias por padrão, `maxAgeMs`): um rascunho restaurável pode referenciar mídia ainda não gravada.
+
+## Rascunho no navegador
+
+O rascunho (`draftKey`) fica no `localStorage`, em texto claro, **sem escopo por usuário**: quem usa o mesmo navegador e a mesma chave lê o rascunho. Ponha o **id do usuário na chave** (`user-7:doc-42`) e chame `clearLocalDrafts()` no logout. O conteúdo restaurado volta a passar pelo esquema e nunca é restaurado sem a pessoa pedir.
+
+## Mídia e links
+
+- **Mídia é só `https`** (e relativa, por padrão). `http:` passa só em links (`href`), não em `src`/`poster`/`srcset`.
+- **Padrão permissivo (decisão consciente):** sem `mediaHosts`, qualquer host `https` é aceito, e `allowRelativeMedia` é `true`. Isso permite rastreamento por imagem (o host vê o leitor) e `GET`s com efeito colateral no próprio site. **Em sites com vários autores configure `mediaHosts` (a lista dos seus hosts de mídia) e `allowRelativeMedia: false`** e alinhe `img-src`/`media-src` da CSP.
+- `/\host/x` e `//host/x` são **rejeitados** (relativo só com `/` simples; barra invertida nunca passa).
+- `linkPolicy.protocols` e `allowRelative` valem no editor **e no sanitizador** (mesmas opções, mesmo resultado), assim como `blockedDomains` e `forceRel`.
+- `caption` de tabela: o sanitizador a aceita, mas o editor ainda a descarta ao reeditar. Reeditar um conteúdo com legenda de tabela a perde; o HTML exibido (sem reeditar) a mantém.
+
+## Exibição (`trusted`)
+
+`[mode]="'trusted'"` dispensa o sanitizador no navegador e vale **só** para HTML que o servidor já sanitizou com `createSanitizer` (mesma versão maior e mesmas opções): as transformações de exibição são varreduras de _tags_ seguras apenas sobre a saída canônica. Detalhes na seção "Exibição" mais abaixo.
+
+## Cadeia de suprimentos
+
+- Dependência de runtime: só `htmlparser2` (e só no entry `@cds/rte-core/html`); `@angular/*`, `@tiptap/*` etc. são peers.
+- `npm run audit` (`npm audit --omit=dev --audit-level=high`) roda no job `verify` do CI e **bloqueia**; `npm run check:licenses` confere as licenças; `THIRD-PARTY-NOTICES.md` é gerado.
+- Publicação (provenance, assinatura, 2FA do registro) fica para a spec 09b. TODO-AUTOR: definir o registro e a política de publicação.
+
+# Sanitizador: o que protege e o que não protege
 
 Este documento descreve o que o `@cds/rte-sanitizer` protege, o que ele não protege, as hipóteses em que a garantia vale, a CSP recomendada e como reportar vulnerabilidades. A decisão e as evidências estão no [ADR 0006](decisions/0006-sanitizador.md); o contrato, na [spec 04](specs/04-sanitizador.md).
 
@@ -22,7 +58,7 @@ Este documento descreve o que o `@cds/rte-sanitizer` protege, o que ele não pro
 As garantias abaixo valem para o **esquema padrão**. Opções personalizadas (`features`, `linkPolicy`, `mediaHosts`, provedores de embed) mudam o esquema e podem alargar o que passa; quem as muda responde pelo esquema resultante.
 
 - **Execução de script:** nenhum `script`, atributo `on*`, `svg`/`math`, `object`/`embed` nem conteúdo de texto cru na saída.
-- **`javascript:`, `data:` e similares:** só `https`, `http`, `mailto` e `tel` (e relativos e fragmentos) passam em `href`, `src`, `poster` e candidatos de `srcset`, inclusive ofuscados por entidades, TAB/LF, maiúsculas, caracteres de controle e `\`.
+- **`javascript:`, `data:` e similares:** em `href` só `https`, `http`, `mailto` e `tel` (e relativos e fragmentos); em `src`, `poster` e candidatos de `srcset` (mídia) só `https` (e relativos). Vale também ofuscado por entidades, TAB/LF, maiúsculas, caracteres de controle e `\`.
 - **CSS perigoso:** `style` só com as propriedades e valores do esquema; `url(`, `expression`, `\`, comentários, `!important`, `image-set(`, `src(` e `@import` são descartados.
 - **`iframe` fora dos provedores:** só os provedores ativos (`src` canônico), sempre vazio e com `sandbox`, `allow` e `referrerpolicy` fixos.
 - **_DOM clobbering_:** `name` nunca passa (o esquema não tem esse atributo); `id` só passa com o padrão `rt-…` do esquema (títulos `h2`–`h4`), e um `id` repetido perde o `id`.
@@ -33,11 +69,11 @@ As garantias abaixo valem para o **esquema padrão**. Opções personalizadas (`
 
 - **_Phishing_ por link `https`/`http` válido:** um link bem formado para um site malicioso continua válido (a política `blockedDomains` ajuda, mas não substitui moderação).
 - **`http:` sem TLS:** links, imagens e mídia `http:` passam; podem ser alterados no caminho (_man-in-the-middle_) e, numa página `https`, viram conteúdo misto.
-- **Rastreamento por imagem de qualquer host** quando `mediaHosts` não está configurado: carregar a imagem revela o leitor ao host. Um `src` relativo como `/\host/x` é lido pelo navegador como `//host/x`, outro host (não é XSS; imagens `https` absolutas já passam).
+- **Rastreamento por imagem de qualquer host** quando `mediaHosts` não está configurado: carregar a imagem revela o leitor ao host. Configure `mediaHosts` (e `allowRelativeMedia: false`) em sites com vários autores. O `src` relativo `/\host/x` (que o navegador leria como `//host/x`) e `//host/x` são rejeitados.
 - **Conteúdo dos provedores de embed:** o que o YouTube, o Vimeo ou o Spotify servem dentro do `iframe` não é controlado por nós. O `sandbox` fixo é `allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox`: o provedor **executa scripts** com a origem dele (não a da página hospedeira, porque o `src` é sempre de outra origem) e **pode abrir janelas sem _sandbox_**. O `sandbox` não isola de um provedor comprometido; quem não confia nos provedores desliga `embeds`.
 - **_UI redress_ por CSS e layout:** o conteúdo permitido ainda pode imitar a interface da página (textos, links e imagens dispostos como botões ou avisos), esconder texto com cores próximas do fundo (as cores da paleta) e ocupar espaço demais: `img` e `iframe` aceitam `width`/`height` até 10000. A página hospedeira deve limitar o conteúdo (por exemplo `max-width: 100%` e `overflow` no contêiner).
 - **Links relativos fora do site:** um `href` relativo vale no domínio onde o HTML for exibido.
-- **`mailto:` vindo direto ao servidor:** só `blockedDomains` e `forceRel` da política de links chegam ao esquema; `protocols` e `allowRelative` valem só no editor (ADR 0003, decisão 17).
+- **Opções só do editor:** `linkPolicy.defaultRel` e `target` são do editor; o servidor impõe `blockedDomains`, `forceRel`, `protocols` e `allowRelative` (passe as **mesmas opções** a `createSanitizer`).
 
 ## Hipóteses
 
@@ -72,6 +108,6 @@ A exibição do HTML publicado (spec 06, [ADR 0012](decisions/0012-renderizacao.
 
 ## Como reportar
 
-Reporte vulnerabilidades de forma privada, sem abrir _issue_ pública. O canal e os prazos estão no [SECURITY.md](../SECURITY.md) (spec 09). TODO-AUTOR: o e-mail de contato alternativo do `SECURITY.md` ainda é um marcador; vale o _GitHub Private Vulnerability Reporting_ até o autor confirmá-lo.
+Reporte vulnerabilidades de forma **privada**, sem abrir _issue_ pública, pelo canal privado do GitHub (aba **Security** do repositório, **Report a vulnerability**). Não há canal por e-mail. Prazos e versões suportadas: [SECURITY.md](../SECURITY.md).
 
 Mudanças no esquema, em `sanitizeStyle`, `serializeTokens` ou nos interpretadores afetam a segurança e exigem um `changeset` que as descreva.

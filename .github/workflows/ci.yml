@@ -52,6 +52,8 @@ jobs:
       - run: npx nx affected -t lint typecheck build test test-zone verify-package api size --parallel=3
       # Depois do build: lê também as `dependencies` dos manifestos em dist/packages/* (ex.: tslib).
       - run: npm run check:licenses
+      - name: npm audit (dependências de runtime, bloqueante)
+        run: npm run audit
       - run: npm run typecheck:e2e
       - run: npx playwright install --with-deps
       - run: npx playwright test -c e2e

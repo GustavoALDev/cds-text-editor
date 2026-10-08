@@ -112,14 +112,24 @@ export interface RteEmbedProvider {
 export interface RteHtmlSchemaOptions {
   features?: Partial<RteFeatures>;
   embedProviders?: readonly RteEmbedProvider[];
-  /** Padrão `rt-`; casa `^[a-z][a-z0-9-]{0,15}$` (senão lança). */
+  /** Padrão `rt-`; casa `^[a-z][a-z0-9-]{0,14}-$` (termina em hífen, senão lança; evita _DOM clobbering_). */
   idPrefix?: string;
   mediaHosts?: readonly string[];
-  /** Padrão `true`. */
+  /**
+   * Padrão `true` (caminhos do próprio site). Em sites com vários autores use `false` e `mediaHosts`:
+   * sem `mediaHosts`, qualquer host `https` é aceito (rastreamento por imagem; `GET` com efeito colateral).
+   */
   allowRelativeMedia?: boolean;
   /**
-   * Só `blockedDomains` e `forceRel` chegam ao esquema (e ao sanitizador);
-   * `protocols` e `allowRelative` do `RteLinkPolicy` valem só no editor.
+   * `blockedDomains`, `forceRel`, `protocols` e `allowRelative` chegam ao esquema (e ao
+   * sanitizador), com o mesmo efeito do `normalizeHref` do editor; `defaultRel` e `target` valem só
+   * no editor. `protocols` (padrão `https`, `http`, `mailto`, `tel`) só pode restringir; um valor fora
+   * dessa lista lança `TypeError`. `allowRelative: false` recusa também o fragmento (`#x`).
    */
-  linkPolicy?: { blockedDomains?: string[]; forceRel?: string[] };
+  linkPolicy?: {
+    blockedDomains?: string[];
+    forceRel?: string[];
+    protocols?: string[];
+    allowRelative?: boolean;
+  };
 }

@@ -20,7 +20,6 @@ export interface RteHttpUploadOptions {
         video?: string;
     };
     fieldName?: string;
-    // (undocumented)
     headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
     // (undocumented)
     mapResponse?(body: unknown, info: {

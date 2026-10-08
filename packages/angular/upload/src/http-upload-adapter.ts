@@ -10,6 +10,11 @@ export interface RteHttpUploadOptions {
   endpoint: string | { image: string; video?: string };
   /** Nome do campo do arquivo no multipart; padrão `'file'`. */
   fieldName?: string;
+  /**
+   * Cabeçalhos extras (objeto ou função chamada a cada envio). `Content-Type` é ignorado. O envio usa
+   * `XMLHttpRequest`: **os interceptors do `HttpClient` não passam por aqui** (nenhum cabeçalho XSRF do
+   * Angular é acrescentado; envie o seu por `headers`) e, com `withCredentials`, os cookies vão ao endpoint.
+   */
   headers?:
     | Record<string, string>
     | (() => Record<string, string> | Promise<Record<string, string>>);
@@ -98,6 +103,8 @@ export function httpUploadAdapter(
       xhr.withCredentials = options.withCredentials ?? false;
       if (options.timeoutMs) xhr.timeout = options.timeoutMs;
       for (const [name, value] of Object.entries(extra ?? {})) {
+        // O `Content-Type` do multipart (com o `boundary`) é do navegador: sobrescrevê-lo quebra o envio.
+        if (name.toLowerCase() === 'content-type') continue;
         xhr.setRequestHeader(name, value);
       }
       xhr.upload.onprogress = (e) => {
