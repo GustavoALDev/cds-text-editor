@@ -34,6 +34,7 @@
     "@arethetypeswrong/cli": "^0.18.5",
     "@axe-core/playwright": "4.13.0",
     "@changesets/cli": "^3.0.3",
+    "@microsoft/api-extractor": "7.59.4",
     "@nx/angular": "23.2.1",
     "@nx/eslint": "^23.2.1",
     "@nx/eslint-plugin": "^23.2.1",

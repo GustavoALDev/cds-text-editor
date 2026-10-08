@@ -35,13 +35,13 @@
     }
   },
   "budgets": {
-    "whole": 10560,
-    "schema": 6272,
-    "links": 3136,
+    "whole": 10944,
+    "schema": 6336,
+    "links": 3264,
     "draft": 896,
     "embeds": 3392,
-    "html": 35712,
-    "extensions": 39680,
+    "html": 36224,
+    "extensions": 40448,
     "code-languages": 39744
   }
 }

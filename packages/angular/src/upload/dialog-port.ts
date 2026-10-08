@@ -2,7 +2,11 @@ import { RTE_UPLOAD_EXTENSIONS, type RteResolvedUpload } from './config';
 import type { RteUploadText, RteUploadType } from './types';
 import { validateUploadFile } from './validate';
 
-/** O que o campo de arquivo do diálogo mostra (pré-voo 13). */
+/**
+ * O que o campo de arquivo do diálogo mostra (pré-voo 13).
+ *
+ * @internal
+ */
 export interface RteFileRules {
   /** `accept` do `<input type="file">`: os MIMEs e depois as extensões. */
   readonly accept: string;
@@ -19,6 +23,8 @@ export interface RteFileRules {
  * Porta do envio para os diálogos de imagem e vídeo (05c2a E14, pré-voo 13):
  * fica no principal e chega ao *chunk* `rte-media-forms` por entrada, que
  * assim não importa o gerenciador. `null` no `RteEditor` sem adaptador.
+ *
+ * @internal
  */
 export interface RteDialogUploads {
   /** `null` sem tipo de imagem aceito. */

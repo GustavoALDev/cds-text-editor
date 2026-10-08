@@ -29,6 +29,7 @@ describe('@cds/rte-angular', () => {
       'RTE_LABELS',
       'RTE_LABELS_EN',
       'RTE_TOOLBAR_PRESETS',
+      'RteDialogController',
       'RteEditor',
       'RteUploadError',
       'clearLocalDrafts',
@@ -111,6 +112,7 @@ describe('@cds/rte-angular', () => {
 
   it('o /validators exporta só validadores, diretivas, tipos de erro e formatRteError', () => {
     expect(Object.keys(validators).sort()).toEqual([
+      'RteCountValidator',
       'RteImagesHaveAltValidator',
       'RteUploadsFinishedValidator',
       'RteValidators',

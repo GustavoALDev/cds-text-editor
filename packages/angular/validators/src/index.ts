@@ -21,6 +21,7 @@ export {
 } from './signal-validators';
 export type { RtePath, RteSafeLinksOptions } from './signal-validators';
 export {
+  RteCountValidator,
   RteImagesHaveAltValidator,
   RteUploadsFinishedValidator,
 } from './upload-directives';

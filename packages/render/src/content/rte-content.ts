@@ -93,10 +93,12 @@ export class RteContent implements OnInit {
     prepareRteHtml(this.renderedHtml(), { fragmentBase: this.fragmentBase() }),
   );
 
+  /** @internal */
   protected readonly safeHtml: Signal<SafeHtml> = computed(() =>
     this.domSanitizer.bypassSecurityTrustHtml(this.preparedHtml()),
   );
 
+  /** @internal */
   protected readonly effectiveLabels: Signal<RteRenderLabels> = computed(() =>
     mergeRenderLabels(this.providedLabels, this.labels()),
   );

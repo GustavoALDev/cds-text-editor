@@ -5,6 +5,9 @@
   [options]="options"
   [formField]="f.body"
   [toolbar]="toolbar()"
+  [showCharCount]="full"
+  [showWordCount]="full"
+  [draftKey]="full ? 'perf-full' : null"
   (editorReady)="bridge.ready('perf')"
 />
 }

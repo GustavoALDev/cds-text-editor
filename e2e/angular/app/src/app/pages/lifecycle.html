@@ -1,3 +1,13 @@
 @if (bridge.show()) {
-<rte-editor data-testid="lifecycle" ariaLabel="Lifecycle" />
+<rte-editor
+  data-testid="lifecycle"
+  ariaLabel="Lifecycle"
+  [options]="options"
+  [toolbar]="full ? 'full' : undefined"
+  [showCharCount]="full"
+  [showWordCount]="full"
+  [draftKey]="full ? 'lifecycle-full' : null"
+  [value]="value()"
+  (editorReady)="bridge.track($event)"
+/>
 }

@@ -235,6 +235,8 @@ export class RteEditor implements FormValueControl<string> {
    * Âncora de *chunk* (05c2a E2, ruling 20 do ADR 0011): mantém no principal
    * os auxiliares de formulário usados pelos *chunks* `rte-dialogs` e
    * `rte-media-forms` (sem terceiro *chunk* compartilhado).
+   *
+   * @internal
    */
   protected static readonly ɵdialogKit = RTE_DIALOG_KIT;
 
@@ -292,7 +294,11 @@ export class RteEditor implements FormValueControl<string> {
   private readonly injector = inject(Injector);
   private readonly ngZone = inject(NgZone);
 
-  /** O foco está em algum ponto do host (D11). */
+  /**
+   * O foco está em algum ponto do host (D11).
+   *
+   * @internal
+   */
   protected readonly hostFocused = signal(false);
   private readonly bridge = createRteBridge(this.instance, () =>
     isEmptyValue(this.value()),
@@ -321,7 +327,11 @@ export class RteEditor implements FormValueControl<string> {
 
   private readonly providerLabels = inject(RTE_LABELS);
 
-  /** Rótulos efetivos: entrada `labels` > `provideRichText` > `en` (D15). */
+  /**
+   * Rótulos efetivos: entrada `labels` > `provideRichText` > `en` (D15).
+   *
+   * @internal
+   */
   protected readonly resolvedLabels: Signal<RteLabels> = computed(() =>
     mergeLabels(this.providerLabels(), readLabelsSource(this.labels())),
   );
@@ -330,17 +340,27 @@ export class RteEditor implements FormValueControl<string> {
    * Desabilitado efetivo: a entrada `disabled`, que os formulários (Signal,
    * Reactive e Template) também ligam pelo caminho nativo de controle
    * customizado (sem CVA).
+   *
+   * @internal
    */
   protected readonly effectiveDisabled: Signal<boolean> = computed(() =>
     this.disabled(),
   );
 
-  /** `aria-labelledby` da casca; texto vazio ou só espaços vale como ausente. */
+  /**
+   * `aria-labelledby` da casca; texto vazio ou só espaços vale como ausente.
+   *
+   * @internal
+   */
   protected readonly shellLabelledBy = computed(() =>
     presentText(this.ariaLabelledBy()),
   );
 
-  /** Nome acessível da casca: `ariaLabelledBy` vence `ariaLabel`. */
+  /**
+   * Nome acessível da casca: `ariaLabelledBy` vence `ariaLabel`.
+   *
+   * @internal
+   */
   protected readonly shellLabel = computed(() =>
     this.shellLabelledBy()
       ? null
@@ -348,6 +368,7 @@ export class RteEditor implements FormValueControl<string> {
         this.resolvedLabels().editor.ariaLabel),
   );
 
+  /** @internal */
   protected readonly showShellPlaceholder = computed(
     () => isEmptyValue(this.value()) && this.placeholder() !== '',
   );
@@ -358,6 +379,8 @@ export class RteEditor implements FormValueControl<string> {
    * Menus flutuantes (M2), pelo token: a classe no `viewChild` a puxaria
    * para o chunk principal. `undefined` antes da criação, sem tipos ou antes
    * de o chunk do `@defer` chegar.
+   *
+   * @internal
    */
   protected readonly floatingRef = viewChild(RTE_FLOATING_MENUS);
 
@@ -365,12 +388,20 @@ export class RteEditor implements FormValueControl<string> {
   /** Configuração fixada na criação (`null` antes dela). */
   private readonly creationConfig = signal<RteEditorConfig | null>(null);
 
-  /** Comandos da barra só com editor editável (U10). */
+  /**
+   * Comandos da barra só com editor editável (U10).
+   *
+   * @internal
+   */
   protected readonly interactive = computed(
     () => !!this.instance() && !this.effectiveDisabled() && !this.readonly(),
   );
 
-  /** O item `search` da barra vale também com `readonly` (K7). */
+  /**
+   * O item `search` da barra vale também com `readonly` (K7).
+   *
+   * @internal
+   */
   protected readonly searchable = computed(
     () => !!this.instance() && !this.effectiveDisabled(),
   );
@@ -385,6 +416,8 @@ export class RteEditor implements FormValueControl<string> {
   /**
    * Esquema da configuração (pré-voo 7): recursos da barra e paleta iguais
    * no SSR, na casca e depois da criação; opção inválida cai no padrão.
+   *
+   * @internal
    */
   protected readonly schema: Signal<RteHtmlSchema> = computed(() => {
     try {
@@ -399,11 +432,16 @@ export class RteEditor implements FormValueControl<string> {
    * a condição do item `embed`. `DEFAULT_EMBED_PROVIDERS` fica no *chunk*
    * principal; o `rte-dialogs` só recebe os nomes.
    */
-  /** `features.search` (padrão do core: ligado); entrada > provider (D20). */
+  /**
+   * `features.search` (padrão do core: ligado); entrada > provider (D20).
+   *
+   * @internal
+   */
   protected readonly searchEnabled: Signal<boolean> = computed(
     () => this.editorConfig().features?.search !== false,
   );
 
+  /** @internal */
   protected readonly embedProviderNames: Signal<readonly string[]> = computed(
     () =>
       (this.editorConfig().embedProviders ?? DEFAULT_EMBED_PROVIDERS).map(
@@ -412,11 +450,13 @@ export class RteEditor implements FormValueControl<string> {
     { equal: sameIds },
   );
 
+  /** @internal */
   protected readonly codeLanguages = computed(
     () => this.editorConfig().codeLanguages ?? NO_LANGUAGES,
   );
 
   private readonly toolbarWarned = new Set<string>();
+  /** @internal */
   protected readonly toolbarGroups: Signal<
     readonly (readonly RteToolbarItemId[])[]
   > = computed(
@@ -435,7 +475,11 @@ export class RteEditor implements FormValueControl<string> {
   );
 
   private readonly floatingWarned = new Set<string>();
-  /** Tipos de menu flutuante ligados (M17), na ordem de prioridade. */
+  /**
+   * Tipos de menu flutuante ligados (M17), na ordem de prioridade.
+   *
+   * @internal
+   */
   protected readonly floatingKinds: Signal<readonly RteFloatingMenuKind[]> =
     computed(
       () =>
@@ -452,6 +496,8 @@ export class RteEditor implements FormValueControl<string> {
    * Estado único da barra e dos menus flutuantes (M15, pré-voo 1): união sem
    * repetição dos itens da barra e dos do menu de texto, calculada uma vez
    * por transação mesmo com `toolbar: false`.
+   *
+   * @internal
    */
   protected readonly toolbarState: RteToolbarState = createToolbarState({
     editor: this.instance,
@@ -478,19 +524,32 @@ export class RteEditor implements FormValueControl<string> {
     }),
   });
 
-  /** Paleta do esquema; igual por valor (a criação não re-renderiza os menus). */
+  /**
+   * Paleta do esquema; igual por valor (a criação não re-renderiza os menus).
+   *
+   * @internal
+   */
   protected readonly palette = computed(() => this.schema().palette, {
     equal: samePalette,
   });
 
-  /** Tema efetivo (U15): instância > provider por chave; igual por valor. */
+  /**
+   * Tema efetivo (U15): instância > provider por chave; igual por valor.
+   *
+   * @internal
+   */
   protected readonly effectiveTheme = computed(
     () => mergeTheme(this.config.theme, this.theme()),
     { equal: sameTheme },
   );
 
-  /** Versão da ponte, para a barra (U5). */
+  /**
+   * Versão da ponte, para a barra (U5).
+   *
+   * @internal
+   */
   protected readonly version = this.bridge.version;
+  /** @internal */
   protected readonly contentLabels = computed(
     () => this.resolvedLabels().content,
   );
@@ -498,16 +557,24 @@ export class RteEditor implements FormValueControl<string> {
 
   /** Menu `/` (K3–K6): estado sobre a versão da ponte; a lista é o *chunk* `rte-slash-menu`. */
   private readonly slashId = nextSlashInstanceId();
+  /** @internal */
   protected readonly slashState = createSlashState({
     editor: this.instance,
     version: this.bridge.version,
   });
+  /** @internal */
   protected readonly slashOpen = computed(() => this.slashState().open);
+  /** @internal */
   protected readonly slashMenuLabels = computed(
     () => this.resolvedLabels().slashMenu,
   );
-  /** Lista do menu `/`, pelo token (a classe a puxaria para o principal). */
+  /**
+   * Lista do menu `/`, pelo token (a classe a puxaria para o principal).
+   *
+   * @internal
+   */
   protected readonly slashRef = viewChild(RTE_SLASH_MENU);
+  /** @internal */
   protected readonly slashAria = computed(
     () =>
       slashAriaAttributes(
@@ -517,15 +584,21 @@ export class RteEditor implements FormValueControl<string> {
       ),
     { equal: sameAttributes },
   );
+  /** @internal */
   protected readonly slashAnnouncement = createSlashAnnouncement({
     state: this.slashState,
     labels: this.slashMenuLabels,
     view: this.host.ownerDocument.defaultView,
     zone: this.ngZone,
   });
+  /** @internal */
   protected readonly slashInstance = this.slashId;
 
-  /** Rodapé de contadores (K11): só com o editor pronto, nunca no servidor. */
+  /**
+   * Rodapé de contadores (K11): só com o editor pronto, nunca no servidor.
+   *
+   * @internal
+   */
   protected readonly footer = computed(() =>
     buildFooter(
       this.bridge.textStats(),
@@ -543,50 +616,88 @@ export class RteEditor implements FormValueControl<string> {
     view: this.host.ownerDocument.defaultView,
     zone: this.ngZone,
   });
+  /** @internal */
   protected readonly limitAnnouncements = this.limitAnnouncer.announcements;
 
   /** Barra de busca (K7–K10): o estado é do core; a barra é o *chunk* `rte-search`. */
   private readonly searchOpenState = signal(false);
   readonly searchOpen: Signal<boolean> = this.searchOpenState.asReadonly();
+  /** @internal */
   protected readonly searchState = createSearchState({
     editor: this.instance,
     version: this.bridge.version,
   });
+  /** @internal */
   protected readonly searchFocus = signal(0);
-  /** Sobe a cada `F3` do editável com resultados (a barra reanuncia a posição). */
+  /**
+   * Sobe a cada `F3` do editável com resultados (a barra reanuncia a posição).
+   *
+   * @internal
+   */
   protected readonly searchStep = signal(0);
   private readonly searchFailed = signal(false);
+  /** @internal */
   protected readonly searchLabels = computed(() => this.resolvedLabels().search);
 
-  /** Diálogos (G2–G7): o pedido e o G5 ficam aqui; a interface, no chunk. */
+  /**
+   * Diálogos (G2–G7): o pedido e o G5 ficam aqui; a interface, no chunk.
+   *
+   * @internal
+   */
   protected readonly dialogs = new RteDialogController({
     editor: this.instance,
   });
+  /** @internal */
   protected readonly dialogRequested = this.dialogs.requested;
+  /** @internal */
   protected readonly onDialogsFailed = () => this.dialogs.fail();
-  /** `@error` do chunk dos menus (M2): o editor segue sem eles. */
+  /**
+   * `@error` do chunk dos menus (M2): o editor segue sem eles.
+   *
+   * @internal
+   */
   protected readonly onFloatingFailed = () => {
     if (isDevMode()) console.warn(FLOATING_FAILED);
   };
-  /** `@error` do chunk da barra de busca (K3): sem barra, `Mod-F` é do navegador. */
+  /**
+   * `@error` do chunk da barra de busca (K3): sem barra, `Mod-F` é do navegador.
+   *
+   * @internal
+   */
   protected readonly onSearchFailed = () => {
     this.searchFailed.set(true);
     this.endSearch(false);
     if (isDevMode()) console.warn(SEARCH_FAILED);
   };
-  /** `@error` do chunk da lista do menu `/` (K3): o teclado do core segue valendo. */
+  /**
+   * `@error` do chunk da lista do menu `/` (K3): o teclado do core segue valendo.
+   *
+   * @internal
+   */
   protected readonly onSlashFailed = () => {
     if (isDevMode()) console.warn(SLASH_FAILED);
   };
-  /** Dispara o `@defer` dos menus: editor criado e algum tipo ligado (M2). */
+  /**
+   * Dispara o `@defer` dos menus: editor criado e algum tipo ligado (M2).
+   *
+   * @internal
+   */
   protected readonly floatingWanted = computed(
     () => this.editor() !== null && this.floatingKinds().length > 0,
   );
-  /** Menus flutuantes só com editor interativo e visível (M5). */
+  /**
+   * Menus flutuantes só com editor interativo e visível (M5).
+   *
+   * @internal
+   */
   protected readonly floatingEnabled = computed(
     () => this.interactive() && !this.hidden(),
   );
-  /** Pedido de diálogo deste editor ou de outro do documento (M5, G6). */
+  /**
+   * Pedido de diálogo deste editor ou de outro do documento (M5, G6).
+   *
+   * @internal
+   */
   protected readonly floatingBlocked = computed(
     () =>
       this.dialogs.request() !== null ||
@@ -594,15 +705,27 @@ export class RteEditor implements FormValueControl<string> {
       // Com o menu `/` aberto, os menus flutuantes ficam ocultos (K5).
       this.slashOpen(),
   );
-  /** Política de links da criação (G9): a mesma que o editor usa. */
+  /**
+   * Política de links da criação (G9): a mesma que o editor usa.
+   *
+   * @internal
+   */
   protected readonly linkPolicy = computed(
     () => this.editorConfig().linkPolicy,
   );
-  /** Regras de URL/idioma das mídias do esquema (V4); `null` sem `media`. */
+  /**
+   * Regras de URL/idioma das mídias do esquema (V4); `null` sem `media`.
+   *
+   * @internal
+   */
   protected readonly mediaRules: Signal<RteMediaRules | null> = computed(() =>
     readMediaRules(this.schema()),
   );
-  /** Nomes dos alinhamentos de imagem no diálogo, de `floating` (V14). */
+  /**
+   * Nomes dos alinhamentos de imagem no diálogo, de `floating` (V14).
+   *
+   * @internal
+   */
   protected readonly alignNames: Signal<
     Readonly<Record<RteImageAlign, string>>
   > = computed(
@@ -623,7 +746,11 @@ export class RteEditor implements FormValueControl<string> {
         a.full === b.full,
     },
   );
-  /** Regra do `span[lang]` do esquema (G14). */
+  /**
+   * Regra do `span[lang]` do esquema (G14).
+   *
+   * @internal
+   */
   protected readonly langRule = computed(
     () => this.schema().elements['span']?.attributes['lang']?.rule ?? null,
   );
@@ -647,7 +774,9 @@ export class RteEditor implements FormValueControl<string> {
   /** Envios em curso, na ordem do gesto (E18). */
   readonly uploads = this.uploading.uploads;
   readonly pendingUploads = this.uploading.pendingUploads;
+  /** @internal */
   protected readonly announcements = this.uploading.announcements;
+  /** @internal */
   protected readonly dialogUploads = this.uploading.dialogUploads;
   /** Imagens com `alt: null` (E18), fora do portão do delta de URLs. */
   readonly imagesMissingAlt = this.uploading.imagesMissingAlt;
@@ -707,7 +836,11 @@ export class RteEditor implements FormValueControl<string> {
   /** Rascunho à espera de decisão (S5); só a data, nunca o conteúdo. */
   readonly draftAvailable: Signal<RteDraftAvailable | null> =
     this.drafting.available;
-  /** Data do aviso embutido, ou `null` quando ele não aparece (S6). */
+  /**
+   * Data do aviso embutido, ou `null` quando ele não aparece (S6).
+   *
+   * @internal
+   */
   protected readonly draftPromptAt: Signal<number | null> = computed(() => {
     const available = this.drafting.available();
     return available &&
@@ -717,7 +850,11 @@ export class RteEditor implements FormValueControl<string> {
       ? available.savedAt
       : null;
   });
-  /** Texto da região `aria-live` do aviso: vazio sem aviso (S6). */
+  /**
+   * Texto da região `aria-live` do aviso: vazio sem aviso (S6).
+   *
+   * @internal
+   */
   protected readonly draftStatus: Signal<string> = computed(() => {
     const at = this.draftPromptAt();
     return at === null ? '' : this.resolvedLabels().draft.available(at);
@@ -1130,11 +1267,13 @@ export class RteEditor implements FormValueControl<string> {
     });
   }
 
+  /** @internal */
   protected onPromptRestore(): void {
     this.restoreDraft();
     this.focus();
   }
 
+  /** @internal */
   protected onPromptDiscard(): void {
     this.discardDraft();
     this.focus();
@@ -1152,14 +1291,22 @@ export class RteEditor implements FormValueControl<string> {
     return result;
   }
 
-  /** `focusin` vindo de fora do host (ou sem origem): `editorFocus` (D11). */
+  /**
+   * `focusin` vindo de fora do host (ou sem origem): `editorFocus` (D11).
+   *
+   * @internal
+   */
   protected onHostFocusIn(event: FocusEvent): void {
     if (this.hostFocused() || this.isInsideHost(event.relatedTarget)) return;
     this.hostFocused.set(true);
     this.editorFocus.emit();
   }
 
-  /** `focusout` para fora do host (ou sem destino): `editorBlur` e `touch` (D11). */
+  /**
+   * `focusout` para fora do host (ou sem destino): `editorBlur` e `touch` (D11).
+   *
+   * @internal
+   */
   protected onHostFocusOut(event: FocusEvent): void {
     this.closeSlashOnLeave(event);
     if (!this.hostFocused() || this.isInsideHost(event.relatedTarget)) return;
@@ -1237,6 +1384,8 @@ export class RteEditor implements FormValueControl<string> {
    * flutuante visível ou, sem ele, a barra; dentro de um `.rte-floating`, a
    * barra. O `Escape` do editável (M6) é tratado dentro do ProseMirror
    * (`createFloatingEscapeExtension`), depois dos atalhos do editor.
+   *
+   * @internal
    */
   protected onHostKeydown(event: KeyboardEvent): void {
     if (event.defaultPrevented) return;
@@ -1330,7 +1479,11 @@ export class RteEditor implements FormValueControl<string> {
     return this.ngZone.run(() => this.requestDialog(kind, null));
   }
 
-  /** Item `search` da barra (K7): `false` de `openSearch()` não faz nada. */
+  /**
+   * Item `search` da barra (K7): `false` de `openSearch()` não faz nada.
+   *
+   * @internal
+   */
   protected onToolbarSearch(): void {
     this.openSearch();
   }
@@ -1366,6 +1519,7 @@ export class RteEditor implements FormValueControl<string> {
     });
   }
 
+  /** @internal */
   protected onSearchClose(): void {
     this.endSearch(true);
   }
@@ -1426,7 +1580,11 @@ export class RteEditor implements FormValueControl<string> {
     if (restoreFocus) this.focus();
   }
 
-  /** Pedido da barra ou da API; sem origem dada, o foco no host ou o editável. */
+  /**
+   * Pedido da barra ou da API; sem origem dada, o foco no host ou o editável.
+   *
+   * @internal
+   */
   protected requestDialog(
     kind: RteDialogKind,
     origin: HTMLElement | null,

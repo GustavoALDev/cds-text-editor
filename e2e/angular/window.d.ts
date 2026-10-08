@@ -119,6 +119,7 @@ declare global {
       watchFloating(id: RteE2eId): void;
       floatingMutations(id: RteE2eId): { total: number; style: number };
       zoneTurns(): number;
+      liveEditors(): number;
       renderedHtml(id: RteE2eRenderId): string;
       renderError(id: RteE2eRenderId): { code: string; limit: number } | null;
       setRenderInput(html: string, mode?: 'sanitize' | 'trusted'): void;

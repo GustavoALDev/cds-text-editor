@@ -120,3 +120,103 @@ test('requires governance files in the real repo (root package.json)', () => {
   assert.ok(errors.some((e) => e.startsWith('SECURITY.md:')));
   assert.ok(errors.some((e) => e.startsWith('docs/open-core.md:')));
 });
+
+const RENDER_PKG = {
+  'packages/render/package.json': JSON.stringify({ name: '@cds/rte-render' }),
+  'packages/render/src/index.ts':
+    "export { fb as ɵfb } from './fb';\nexport { ok } from './ok';\n",
+};
+
+test('rejects an ɵ export whose declaration lacks @internal', () => {
+  const root = fixture({
+    ...RENDER_PKG,
+    'packages/render/src/fb.ts':
+      '/** Base. */\nexport function fb(): void {}\n',
+  });
+  const errors = checkRepoRules(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /ɵfb.*@internal/);
+});
+
+test('accepts an ɵ export marked @internal (alias and direct)', () => {
+  const root = fixture({
+    ...RENDER_PKG,
+    'packages/render/src/index.ts':
+      "export { fb as ɵfb } from './fb';\n/** @internal */\nexport const ɵdirect = 1;\n",
+    'packages/render/src/fb.ts':
+      '/**\n * Base.\n * @internal\n */\nexport function fb(): void {}\n',
+  });
+  assert.deepEqual(checkRepoRules(root), []);
+});
+
+test('ignores ɵ in spec files', () => {
+  const root = fixture({
+    ...RENDER_PKG,
+    'packages/render/src/index.ts': "export { ok } from './ok';\n",
+    'packages/render/src/x.spec.ts': 'export const ɵ_nope = 1;\n',
+  });
+  assert.deepEqual(checkRepoRules(root), []);
+});
+
+const CORE_PKG = {
+  'packages/core/package.json': JSON.stringify({
+    name: '@cds/rte-core',
+    exports: {
+      '.': { types: './dist/index.d.ts', default: './dist/index.js' },
+      './html': {
+        types: './dist/html/index.d.ts',
+        default: './dist/html/index.js',
+      },
+      './styles/content.css': './styles/content.css',
+    },
+  }),
+};
+
+test('rejects a public entry (exports with types) missing from the README', () => {
+  const root = fixture({
+    ...CORE_PKG,
+    'packages/core/README.md': 'Use `@cds/rte-core`.\n',
+  });
+  const errors = checkRepoRules(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /@cds\/rte-core\/html.*não é citado/);
+});
+
+test('accepts when every public entry is cited (css export is not an entry)', () => {
+  const root = fixture({
+    ...CORE_PKG,
+    'packages/core/README.md': '`@cds/rte-core` e `@cds/rte-core/html`.\n',
+  });
+  assert.deepEqual(checkRepoRules(root), []);
+});
+
+test('a longer subpath does not satisfy a shorter one', () => {
+  const root = fixture({
+    ...CORE_PKG,
+    'packages/core/README.md':
+      '`@cds/rte-core` e `@cds/rte-core/html-extra`.\n',
+  });
+  assert.equal(checkRepoRules(root).length, 1);
+});
+
+test('rejects a secondary entry (ng-package.json) missing from the README', () => {
+  const files = {
+    'packages/angular/package.json': JSON.stringify({
+      name: '@cds/rte-angular',
+    }),
+    'packages/angular/upload/ng-package.json': '{}',
+  };
+  const errors = checkRepoRules(
+    fixture({ ...files, 'packages/angular/README.md': '@cds/rte-angular\n' }),
+  );
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /@cds\/rte-angular\/upload/);
+  const ok = checkRepoRules(
+    fixture({
+      ...files,
+      'packages/angular/README.md':
+        '@cds/rte-angular e @cds/rte-angular/upload\n',
+    }),
+  );
+  assert.deepEqual(ok, []);
+});

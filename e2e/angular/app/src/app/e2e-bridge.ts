@@ -143,6 +143,8 @@ export interface RteE2eApi {
   watchFloating(id: RteE2eId): void;
   /** Mutações (`total`) e as de `style` desde o `watchFloating(id)`. */
   floatingMutations(id: RteE2eId): { total: number; style: number };
+  /** Editores criados que o coletor ainda não recolheu (N46: `WeakRef`, sem retê-los). */
+  liveEditors(): number;
   /** Voltas de `NgZone.onMicrotaskEmpty` (no build zone, cada uma é um `tick`). */
   zoneTurns(): number;
   /** `applyRteTheme` num elemento qualquer (referência do N12). */
@@ -233,9 +235,22 @@ export class E2eBridge {
     return handle;
   }
 
+  /** Só `WeakRef`: a ponte nunca segura um `Editor` (N46). */
+  private readonly created: WeakRef<object>[] = [];
+
   /** Marca o `editorReady` do editor `id` (N8). */
   ready(id: RteE2eId): void {
     this.readyAt[id] = performance.now();
+  }
+
+  /** Conta o `editor` sem id (N46, página `lifecycle`). */
+  track(editor: object): void {
+    this.created.push(new WeakRef(editor));
+  }
+
+  /** Quantos dos editores contados ainda não foram coletados. */
+  liveEditors(): number {
+    return this.created.filter((ref) => ref.deref() !== undefined).length;
   }
 
   handle(id: RteE2eId): RteE2eHandle {
@@ -471,6 +486,7 @@ export function installE2eBridge(): void {
           return results;
         }),
       zoneTurns: () => turns,
+      liveEditors: () => bridge.liveEditors(),
       readyAt: bridge.readyAt,
       get toggledAt() {
         return bridge.toggledAt;

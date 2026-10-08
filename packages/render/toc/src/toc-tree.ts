@@ -1,6 +1,10 @@
 import type { RteTocEntry } from '@cds/rte-core/html';
 
-/** Nó do sumário: a entrada e as entradas aninhadas sob ela (H11). */
+/**
+ * Nó do sumário: a entrada e as entradas aninhadas sob ela (H11).
+ *
+ * @internal
+ */
 export interface RteTocNode {
   readonly entry: RteTocEntry;
   readonly children: readonly RteTocNode[];

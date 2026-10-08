@@ -10,6 +10,8 @@ import { RTE_RENDER_OPTIONS } from './provide';
  * `Location.onUrlChange` (desregistrado com o `DestroyRef` de quem chama);
  * como é uma *string*, mudar só o *hash* não muda o valor e nada é
  * re-inserido (Review Focus 2). Chamar em contexto de injeção.
+ *
+ * @internal
  */
 export function injectFragmentBase(): Signal<string | null> {
   if (inject(RTE_RENDER_OPTIONS).fragmentLinks === 'keep') {

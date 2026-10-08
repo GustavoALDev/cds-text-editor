@@ -56,6 +56,26 @@
         "command": "node tools/check-size.mjs packages/theme/dist/index.js",
         "cwd": "{workspaceRoot}"
       }
+    },
+    "api": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build", "^build"],
+      "inputs": [
+        "production",
+        "^production",
+        { "dependentTasksOutputFiles": "**/*.d.ts", "transitive": true },
+        "{projectRoot}/api/**/*",
+        "{workspaceRoot}/tools/api-report.mjs",
+        {
+          "env": "UPDATE_API"
+        }
+      ],
+      "outputs": ["{projectRoot}/api"],
+      "cache": true,
+      "options": {
+        "command": "node tools/api-report.mjs packages/theme",
+        "cwd": "{workspaceRoot}"
+      }
     }
   }
 }

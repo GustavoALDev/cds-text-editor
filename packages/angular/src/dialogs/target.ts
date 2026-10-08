@@ -16,10 +16,18 @@ import {
   type RteMediaDialogKind,
 } from './types';
 
-/** Modo de um diálogo: criar algo novo, aplicar à seleção ou editar o existente. */
+/**
+ * Modo de um diálogo: criar algo novo, aplicar à seleção ou editar o existente.
+ *
+ * @internal
+ */
 export type RteDialogMode = 'insert' | 'apply' | 'edit';
 
-/** Alvo de um diálogo aplicável: o modo e o intervalo do documento (§4). */
+/**
+ * Alvo de um diálogo aplicável: o modo e o intervalo do documento (§4).
+ *
+ * @internal
+ */
 export interface RteDialogTarget {
   readonly mode: RteDialogMode;
   readonly range: { readonly from: number; readonly to: number };

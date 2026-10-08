@@ -87,6 +87,16 @@ O mesmo código roda no servidor. A hidratação re-atribui o `innerHTML` do _ho
 - **Legendas de outra origem** em `video`/`track` não carregam (o esquema não tem `crossorigin`).
 - A tabela sem larguras de coluna não reproduz exatamente o `min-width` do editor.
 
+## API
+
+Os relatórios da superfície pública (gerados pelo `api-extractor` e conferidos pelo alvo `nx run render:api`; após uma mudança intencional, `UPDATE_API=1 npx nx run render:api`) ficam em `packages/render/api/`:
+
+- [`rte-render.api.md`](api/rte-render.api.md): `@cds/rte-render`
+- [`rte-render-i18n.api.md`](api/rte-render-i18n.api.md): `@cds/rte-render/i18n`
+- [`rte-render-toc.api.md`](api/rte-render-toc.api.md): `@cds/rte-render/toc`
+
+Exports com prefixo `ɵ` e tudo marcado `@internal` ficam fora dos relatórios e não são API pública.
+
 Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
 Repositório: cds-text-editor (monorepo). Licença MIT.

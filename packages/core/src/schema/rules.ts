@@ -6,7 +6,7 @@ import { isAllowedUrl } from './url';
 const ASCII_WS = /[ \t\n\r\f]+/;
 const ASCII_TRIM = /^[ \t\n\r\f]+|[ \t\n\r\f]+$/g;
 
-type TokensRule = Extract<RteAttrRule, { kind: 'tokens' }>;
+export type RteTokensRule = Extract<RteAttrRule, { kind: 'tokens' }>;
 
 /** Minúsculas só em ASCII (sem depender de locale). */
 function lowerAscii(s: string): string {
@@ -18,7 +18,7 @@ function lowerAscii(s: string): string {
  * sem repetição. `null` se nenhum token for aceito.
  */
 export function serializeTokens(
-  rule: TokensRule,
+  rule: RteTokensRule,
   value: string,
 ): string | null {
   if (value.length > rule.maxLength) return null;

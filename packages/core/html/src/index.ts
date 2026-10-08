@@ -6,3 +6,12 @@ export { validateHtml } from './validate-html';
 export type { RteHtmlViolation, ValidateHtmlOptions } from './validate-html';
 export { inspectRteHtml } from './inspect-rte-html';
 export type { RteHtmlInspection } from './inspect-rte-html';
+export type {
+  RteAttrRule,
+  RteAttrSpec,
+  RteElementSpec,
+  RteFeatureId,
+  RteHtmlSchema,
+  RtePaletteColor,
+  RteUrlRule,
+} from '../../src/schema/types';

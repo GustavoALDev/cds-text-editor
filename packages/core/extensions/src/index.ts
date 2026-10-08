@@ -30,3 +30,18 @@ export type {
   RteSlashLabels,
   RteSlashOptions,
 } from './slash-items';
+export type { RteSearchMatch } from './search-index';
+export type {
+  RteAttrRule,
+  RteAttrSpec,
+  RteElementSpec,
+  RteEmbedProvider,
+  RteFeatureId,
+  RteFeatures,
+  RteHtmlSchema,
+  RteHtmlSchemaOptions,
+  RtePaletteColor,
+  RteUrlRule,
+} from '../../src/schema/types';
+export type { RteLinkPolicy } from '../../src/links';
+export type { RteCodeLanguage } from '../../code-languages/src/index';

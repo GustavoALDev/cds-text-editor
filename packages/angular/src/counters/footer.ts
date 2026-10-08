@@ -7,8 +7,10 @@ export const WORDS_PER_MINUTE = 200;
 /** Fração do limite que marca o estado "perto" (K11). */
 const NEAR_FRACTION = 0.1;
 
+/** @internal */
 export type RteCounterLevel = 'normal' | 'near' | 'over';
 
+/** @internal */
 export interface RteFooterModel {
   readonly chars: { readonly text: string; readonly level: RteCounterLevel } | null;
   readonly words: string | null;

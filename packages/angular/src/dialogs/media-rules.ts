@@ -5,6 +5,8 @@ import type { RteAttrRule, RteHtmlSchema } from '@cds/rte-core';
  * pré-voo 3): os diálogos validam com a mesma regra que o editor e o
  * sanitizador aplicam. Fica no *chunk* principal e chega ao `RteDialogs` por
  * entrada.
+ *
+ * @internal
  */
 export interface RteMediaRules {
   readonly imageSrc: RteAttrRule;

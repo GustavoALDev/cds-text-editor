@@ -29,8 +29,10 @@ import { RteEditor } from '@cds/rte-angular';
  * elemento ao controle nem chama `registerOnValidatorChange`. Sem esse
  * registro, a diretiva se acrescenta ao controle do `NgControl` do próprio
  * elemento (e se retira na destruição) e o revalida ela mesma.
+ *
+ * @internal Base compartilhada; exportada como valor só para o .d.ts bater com o JS.
  */
-abstract class RteCountValidator implements Validator {
+export abstract class RteCountValidator implements Validator {
   private readonly injector = inject(Injector);
   private onChange: (() => void) | undefined;
   private control: AbstractControl | null = null;

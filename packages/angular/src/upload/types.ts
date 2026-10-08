@@ -103,7 +103,11 @@ export interface RteUploadStatus {
   readonly progress: number | null;
 }
 
-/** Textos do diálogo guardados e aplicados na chegada (E9, E14). */
+/**
+ * Textos do diálogo guardados e aplicados na chegada (E9, E14).
+ *
+ * @internal
+ */
 export interface RteUploadText {
   alt?: string;
   caption: string;
