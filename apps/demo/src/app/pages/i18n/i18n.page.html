@@ -1,0 +1,16 @@
+<h1>Idiomas</h1>
+<p class="page-note">
+  <strong>O que isto mostra:</strong> os pacotes de rótulos <code>RTE_LABELS_PT_BR</code>,
+  <code>RTE_LABELS_EN</code> e <code>RTE_LABELS_ES</code> (<code>@cds/rte-angular/i18n</code>) ligados a
+  um signal pela entrada <code>[labels]</code>: a troca atualiza barra, nome acessível e placeholder
+  <em>sem recriar</em> o editor. Veja a <a [href]="readmeUrl">documentação de rótulos e idioma</a>.
+</p>
+<label class="lang">
+  Idioma
+  <select data-testid="lang" [value]="lang()" (change)="setLang($event)">
+    @for (l of langs; track l.id) {
+    <option [value]="l.id" [selected]="l.id === lang()">{{ l.label }}</option>
+    }
+  </select>
+</label>
+<rte-editor [(value)]="empty" [labels]="labels()" toolbar="article" />

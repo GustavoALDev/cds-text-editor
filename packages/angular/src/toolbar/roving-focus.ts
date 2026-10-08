@@ -38,6 +38,34 @@ function canFocus(item: RteRovingItem): boolean {
   return !item.disabled();
 }
 
+// RteRovingItem vem antes: contentChildren(RteRovingItem) vira um predicate
+// avaliado ao declarar a classe (sem o linker, TDZ).
+/**
+ * Item do foco itinerante: `tabindex` `0` no ativo quando o grupo tem parada
+ * de `Tab` (`tabStop`), `-1` nos outros (e em todos sem parada). Recebe
+ * o `[disabled]` do elemento como entrada (signal) e o repassa ao atributo
+ * nativo, para o grupo reagir quando o item é habilitado ou desabilitado.
+ */
+@Directive({
+  selector: '[rteRovingItem]',
+  host: {
+    '[attr.tabindex]': 'tabIndex()',
+    '[attr.disabled]': 'disabled() ? "" : null',
+  },
+})
+export class RteRovingItem {
+  readonly disabled = input(false, { transform: booleanAttribute });
+  /** @internal */
+  readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly group = inject(RteRovingFocus);
+  protected readonly tabIndex = computed(() =>
+    this.group.tabStop() &&
+    this.group.items()[this.group.activeIndex()] === this
+      ? 0
+      : -1,
+  );
+}
+
 /**
  * Foco itinerante do APG *toolbar* (U3): um só item com `tabindex="0"` — o
  * último focado ou, sem ele (no início, depois que saiu do conjunto ou ficou
@@ -173,30 +201,4 @@ function step(
     if (item && canFocus(item)) return i;
   }
   return -1;
-}
-
-/**
- * Item do foco itinerante: `tabindex` `0` no ativo quando o grupo tem parada
- * de `Tab` (`tabStop`), `-1` nos outros (e em todos sem parada). Recebe
- * o `[disabled]` do elemento como entrada (signal) e o repassa ao atributo
- * nativo, para o grupo reagir quando o item é habilitado ou desabilitado.
- */
-@Directive({
-  selector: '[rteRovingItem]',
-  host: {
-    '[attr.tabindex]': 'tabIndex()',
-    '[attr.disabled]': 'disabled() ? "" : null',
-  },
-})
-export class RteRovingItem {
-  readonly disabled = input(false, { transform: booleanAttribute });
-  /** @internal */
-  readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
-  private readonly group = inject(RteRovingFocus);
-  protected readonly tabIndex = computed(() =>
-    this.group.tabStop() &&
-    this.group.items()[this.group.activeIndex()] === this
-      ? 0
-      : -1,
-  );
 }

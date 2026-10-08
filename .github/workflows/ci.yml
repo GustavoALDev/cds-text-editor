@@ -63,3 +63,62 @@ jobs:
             playwright-report/
             e2e/test-results/
           if-no-files-found: ignore
+
+  # Demo (spec 07b, W14): consome os tarballs dos pacotes como um app externo (fora do repositório),
+  # roda os unitários e o build do demo, confere os snippets do tema e executa o E2E J1-J7 nos 3
+  # navegadores. Paralelo ao `verify`; sempre roda (sem `affected`).
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RTE_DEMO_PORT: 4318
+    steps:
+      - uses: actions/checkout@v4
+      # O contexto `runner` não existe no `env` do job: o diretório do consumidor (fora do repositório) vai por GITHUB_ENV.
+      - run: echo "RTE_CONSUMER_DIR=$RUNNER_TEMP/cds-rte-consumer/demo" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm i -g npm@11
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-demo-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            nx-demo-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            nx-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+      - run: npx nx run-many -t build -p core sanitizer theme angular render
+      # Guarda de TDZ: cada fesm do dist avalia em Node puro (sem o dist, falha em vez de pular).
+      - run: node --test tools/fesm-eval.test.mjs
+        env:
+          RTE_REQUIRE_DIST: '1'
+      # pack -> prepare -> install (prova de origem dos tarballs) -> ng test -> ng build -> tsc dos snippets.
+      - run: node tools/consumer.mjs pack prepare install test build check-snippets
+      - run: npx playwright install --with-deps
+      - run: npx playwright test -c apps/demo/e2e
+      - uses: actions/upload-artifact@v4
+        with:
+          name: demo-static
+          path: ${{ runner.temp }}/cds-rte-consumer/demo/dist/demo/browser
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: demo-playwright-report
+          path: |
+            playwright-report/
+            apps/demo/e2e/test-results/
+          if-no-files-found: ignore
+      - name: Árvore de dependências do consumidor
+        if: failure()
+        run: npm ls --all > "$RUNNER_TEMP/npm-ls.txt" 2>&1 || true
+        working-directory: ${{ runner.temp }}/cds-rte-consumer/demo
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: demo-npm-ls
+          path: ${{ runner.temp }}/npm-ls.txt
+          if-no-files-found: ignore

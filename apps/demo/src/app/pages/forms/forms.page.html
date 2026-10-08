@@ -1,0 +1,82 @@
+<h1>Formulários</h1>
+<p class="page-note">
+  <strong>O que isto mostra:</strong> o mesmo editor em Signal Forms (<code>[formField]</code>),
+  Reactive Forms (<code>[formControl]</code>), Template Forms (<code>[(ngModel)]</code>) e sem
+  formulário (<code>[(value)]</code>). Cada bloco mostra o valor, a validade e o erro traduzido por
+  <code>formatRteError</code>. O limite de {{ max }} caracteres mede o texto, não o HTML: cole um
+  texto maior para ver o erro. Veja a <a [href]="readmeUrl">documentação dos formulários</a>.
+</p>
+
+<p>
+  <button type="button" data-testid="fill-long" (click)="fillTooLong()">
+    Preencher com texto acima do limite (por código)
+  </button>
+</p>
+
+<section class="block" aria-labelledby="f-signal">
+  <h2 id="f-signal">Signal Forms</h2>
+  <rte-editor
+    [formField]="signalForm.body"
+    [labels]="labels"
+    ariaLabel="Texto (Signal Forms)"
+    ariaDescribedBy="e-signal"
+  />
+  <p data-testid="signal-state">Válido: {{ signalForm.body().valid() ? 'sim' : 'não' }}</p>
+  <p class="errors" id="e-signal" data-testid="signal-errors" aria-live="polite">
+    {{ signalErrors().join(' ') }}
+  </p>
+  <details>
+    <summary>Valor</summary>
+    <textarea readonly rows="3" cols="70" aria-label="Valor" data-testid="signal-value" [value]="model().body"></textarea>
+  </details>
+</section>
+
+<section class="block" aria-labelledby="f-reactive">
+  <h2 id="f-reactive">Reactive Forms</h2>
+  <rte-editor
+    [formControl]="control"
+    [maxLength]="max"
+    [labels]="labels"
+    ariaLabel="Texto (Reactive Forms)"
+    ariaDescribedBy="e-reactive"
+  />
+  <p data-testid="reactive-state">Válido: {{ control.valid ? 'sim' : 'não' }}</p>
+  <p class="errors" id="e-reactive" data-testid="reactive-errors" aria-live="polite">
+    {{ reactiveErrors() }}
+  </p>
+  <details>
+    <summary>Valor</summary>
+    <textarea readonly rows="3" cols="70" aria-label="Valor" data-testid="reactive-value" [value]="control.value"></textarea>
+  </details>
+</section>
+
+<section class="block" aria-labelledby="f-template">
+  <h2 id="f-template">Template Forms</h2>
+  <rte-editor
+    [(ngModel)]="templateValue"
+    #tplModel="ngModel"
+    name="body"
+    [rteMaxChars]="max"
+    [maxLength]="max"
+    [labels]="labels"
+    ariaLabel="Texto (Template Forms)"
+    ariaDescribedBy="e-template"
+  />
+  <p data-testid="template-state">Válido: {{ tplModel.valid ? 'sim' : 'não' }}</p>
+  <p class="errors" id="e-template" data-testid="template-errors" aria-live="polite">
+    {{ templateErrors(tplModel.errors) }}
+  </p>
+  <details>
+    <summary>Valor</summary>
+    <textarea readonly rows="3" cols="70" aria-label="Valor" data-testid="template-value" [value]="templateValue()"></textarea>
+  </details>
+</section>
+
+<section class="block" aria-labelledby="f-value">
+  <h2 id="f-value">Sem formulário: <code>[(value)]</code></h2>
+  <rte-editor [(value)]="plainValue" [labels]="labels" ariaLabel="Texto (value)" />
+  <details>
+    <summary>Valor</summary>
+    <textarea readonly rows="3" cols="70" aria-label="Valor" data-testid="plain-value" [value]="plainValue()"></textarea>
+  </details>
+</section>

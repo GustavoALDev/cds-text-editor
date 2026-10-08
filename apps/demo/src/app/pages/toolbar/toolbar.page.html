@@ -1,0 +1,40 @@
+<h1>Barra de ferramentas</h1>
+<p class="page-note">
+  <strong>O que isto mostra:</strong> os presets <code>minimal</code>, <code>article</code> e
+  <code>full</code> e as <em>features</em> que escondem itens da barra. As opções de criação são
+  lidas uma vez, por isso mudar a configuração <em>recria</em> o editor (o conteúdo é mantido pelo
+  valor). Veja a <a [href]="readmeUrl">documentação da barra</a>.
+</p>
+<form class="controls" aria-label="Configuração da barra">
+  <label>
+    Preset
+    <select data-testid="preset" [value]="preset()" (change)="setPreset($event)">
+      @for (p of presets; track p) {
+      <option [value]="p" [selected]="p === preset()">{{ p }}</option>
+      }
+    </select>
+  </label>
+  <fieldset>
+    <legend>Features</legend>
+    @for (f of featureList; track f.id) {
+    <label>
+      <input
+        type="checkbox"
+        [checked]="features()[f.id]"
+        [attr.data-feature]="f.id"
+        (change)="toggle(f.id, $event)"
+      />
+      {{ f.label }}
+    </label>
+    }
+  </fieldset>
+</form>
+@for (setup of setups(); track setup.key) {
+<rte-editor
+  [(value)]="html"
+  [toolbar]="setup.toolbar"
+  [options]="setup.options"
+  [labels]="labels"
+  ariaLabel="Texto do exemplo da barra"
+/>
+}

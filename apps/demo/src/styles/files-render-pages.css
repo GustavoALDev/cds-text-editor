@@ -1,0 +1,55 @@
+/* Estilos das páginas /files e /render (global: `styleUrl` gera <style> inline, barrado pela CSP). */
+.page-note {
+  max-width: 70ch;
+}
+
+.files-warning {
+  max-width: 70ch;
+  padding: 8px 12px;
+  border: 2px solid currentcolor;
+  border-radius: 6px;
+}
+
+.files-switches {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 16px;
+  max-width: 70ch;
+}
+
+.files-actions {
+  margin: 12px 0 0;
+}
+
+.files-status {
+  min-height: 1.5em;
+}
+
+.page-output pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.page-note {
+  max-width: 70ch;
+}
+
+.render-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+.render-view {
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, currentcolor 20%, transparent);
+  border-radius: 6px;
+}
+
+.render-raw {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: ui-monospace, monospace;
+  margin-bottom: 12px;
+}

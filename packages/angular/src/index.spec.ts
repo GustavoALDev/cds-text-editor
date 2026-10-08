@@ -114,6 +114,12 @@ describe('@cds/rte-angular', () => {
     expect(Object.keys(validators).sort()).toEqual([
       'RteCountValidator',
       'RteImagesHaveAltValidator',
+      'RteMaxCharsValidator',
+      'RteMaxWordsValidator',
+      'RteNoEmptyHeadingsValidator',
+      'RteRequiredValidator',
+      'RteSafeLinksValidator',
+      'RteTextValidator',
       'RteUploadsFinishedValidator',
       'RteValidators',
       'formatRteError',

@@ -1,0 +1,23 @@
+<h1>Editor</h1>
+<p class="page-note">
+  <strong>O que isto mostra:</strong> o <code>rte-editor</code> com a barra <code>full</code>, menus
+  flutuantes, diálogos de mídia, menu <kbd>/</kbd>, busca e substituição, contadores, limite de
+  {{ maxChars }} caracteres e rascunho local (<code>draftKey</code>): recarregue a página para ver a
+  oferta de restaurar. Veja a
+  <a [href]="readmeUrl">documentação do componente</a>.
+</p>
+<rte-editor
+  [(value)]="html"
+  toolbar="full"
+  [labels]="labels"
+  ariaLabel="Texto do exemplo"
+  placeholder="Escreva aqui…"
+  [maxLength]="maxChars"
+  [showCharCount]="true"
+  [showWordCount]="true"
+  draftKey="demo:editor"
+/>
+<details>
+  <summary>HTML canônico do valor</summary>
+  <textarea readonly rows="6" cols="70" aria-label="HTML canônico do valor" data-testid="editor-html" [value]="html()"></textarea>
+</details>

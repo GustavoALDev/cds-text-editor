@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Verificação do CSS copiado</title>
+    <!-- Página estática, sem Angular: só o theme.css do pacote e o CSS copiado do playground.
+         O E2E (J7) atende copied.css com o texto do <pre> e compara os tokens computados de
+         #probe com os da pré-visualização. -->
+    <link rel="stylesheet" href="theme.css" />
+    <link rel="stylesheet" href="copied.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Verificação do CSS copiado</h1>
+      <p>
+        Esta página usa apenas o <code>theme.css</code> e o CSS copiado do playground do tema. Os
+        tokens de <code>#probe</code> devem ser iguais aos da pré-visualização.
+      </p>
+      <div class="rte-root" id="probe">Amostra do tema</div>
+    </main>
+  </body>
+</html>
