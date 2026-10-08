@@ -80,6 +80,38 @@ export function compareVersions(a, b) {
   return 0;
 }
 
+/** Maior versão de uma lista (ou a própria, se for uma só): o `npm view` não garante a ordem. */
+export function highestVersion(list) {
+  const all = Array.isArray(list) ? list : [list];
+  if (!all.length) throw new Error('npm view devolveu uma lista sem versões');
+  return all.reduce((best, v) => (compareVersions(v, best) > 0 ? v : best));
+}
+
+/** Interpreta a saída de `npm ls --json`; saída vazia (npm morreu antes de imprimir) é erro claro. */
+export function parseLs(stdout, stderr = '') {
+  if (!stdout?.trim()) {
+    throw new Error(
+      `a saída do npm ls veio vazia (a instalação da fase B pode ter falhado): ${String(stderr).trim().slice(0, 500) || 'sem mensagem de erro'}`,
+    );
+  }
+  try {
+    return JSON.parse(stdout);
+  } catch {
+    throw new Error('a saída do npm ls não é JSON válido');
+  }
+}
+
+/**
+ * Documentação pura: todo arquivo alterado é `docs/**` ou `*.md`. Nesse caso a perna do PR não
+ * paga ~40 min (o site de docs tem o job `docs`; `apps/docs/content` não é lido pela matriz).
+ */
+export function isDocsOnly(files) {
+  return (
+    files.length > 0 &&
+    files.every((f) => f.startsWith('docs/') || f.endsWith('.md'))
+  );
+}
+
 /**
  * Piso dos peers publicados (`packages/*` não privados): o maior `X.Y.Z` entre os `@angular/*`
  * e entre os `@tiptap/*`. Aceita `>=X.Y.Z <N`, `^X.Y.Z` e `~X.Y.Z`.
@@ -263,6 +295,13 @@ export function resolveLegs({ floors, view, compatJson, set }) {
       discarded.push({ name, reason: 'next igual ao último' });
       continue;
     }
+    if (isNext && compareVersions(angular.version, latestAngular) < 0) {
+      discarded.push({
+        name,
+        reason: 'next anterior ao último estável',
+      });
+      continue;
+    }
     const key = keyOf(candidate);
     const same = seen.get(key);
     if (same && name !== legName('latest', 'latest')) {
@@ -373,7 +412,7 @@ function npmView(npm) {
       throw new Error(`npm view ${pkg}@${spec} falhou: ${result.stderr}`);
     }
     const parsed = JSON.parse(result.stdout);
-    return Array.isArray(parsed) ? parsed.at(-1) : parsed;
+    return isTag ? parsed : highestVersion(parsed);
   };
 }
 
@@ -466,8 +505,8 @@ export async function main(argv, env = process.env, deps = {}) {
     }
     const ls = deps.ls
       ? deps.ls(names)
-      : JSON.parse(
-          spawnSync(
+      : (() => {
+          const out = spawnSync(
             npm[0],
             [...npm.slice(1), 'ls', '--json', '--depth=0', ...names],
             {
@@ -476,12 +515,24 @@ export async function main(argv, env = process.env, deps = {}) {
               shell: process.platform === 'win32',
               maxBuffer: 64 * 1024 * 1024,
             },
-          ).stdout,
-        );
+          );
+          return parseLs(out.stdout, out.stderr);
+        })();
     proveInstalled(leg, ls);
     console.log(
       `${leg.name}: instalado e provado por npm ls (${names.map((n) => `${n}@${ls.dependencies[n].version}`).join(', ')})`,
     );
+    return;
+  }
+  if (command === 'docs-only') {
+    // Arquivos alterados (um por linha) em --files <arquivo> ou na entrada padrão.
+    const file = optionValue(argv, '--files');
+    const text = file ? fs.readFileSync(file, 'utf8') : (deps.stdin ?? '');
+    const files = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    process.stdout.write(`${isDocsOnly(files)}\n`);
     return;
   }
   if (command === 'versions') {
@@ -492,7 +543,7 @@ export async function main(argv, env = process.env, deps = {}) {
     return;
   }
   throw new Error(
-    'uso: node tools/compat.mjs <legs --set pr|full | install --leg <nome> | versions --leg <nome> --out <arquivo>>',
+    'uso: node tools/compat.mjs <legs --set pr|full | docs-only --files <arquivo> | install --leg <nome> | versions --leg <nome> --out <arquivo>>',
   );
 }
 

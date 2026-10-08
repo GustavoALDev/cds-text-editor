@@ -4,7 +4,10 @@ import {
   ANGULAR_PHASE_B,
   classify,
   families,
+  highestVersion,
   installCommands,
+  isDocsOnly,
+  parseLs,
   proveInstalled,
   readFloors,
   resolveLegs,
@@ -476,4 +479,51 @@ test('versionsFile devolve o conteúdo do --versions', () => {
     tiptap: { version: '3.35.0' },
     legacyPeerDeps: false,
   });
+});
+
+test('resolveLegs: next menor que o último estável é descartado', () => {
+  const older = viewOf({
+    '@angular/core@22': '22.4.0',
+    '@angular/cli@22': '22.4.2',
+    '@angular/core@next': '22.3.0-next.1',
+    '@angular/cli@next': '22.3.0-next.1',
+    '@tiptap/core@3': '3.35.0',
+  });
+  const out = resolveLegs({
+    floors: FLOORS,
+    view: older,
+    compatJson: NONE,
+    set: 'full',
+  });
+  assert.ok(!out.legs.some((l) => l.name === 'compat (next×latest)'));
+  const d = out.discarded.find((x) => x.name === 'compat (next×latest)');
+  assert.match(d.reason, /next.*anterior.*estável/);
+});
+
+test('highestVersion escolhe o maior por compareVersions, não o último da lista', () => {
+  assert.equal(highestVersion(['22.10.0', '22.9.0', '22.2.1']), '22.10.0');
+  assert.equal(highestVersion('22.4.0'), '22.4.0');
+  assert.throws(() => highestVersion([]), /sem versões/);
+});
+
+test('parseLs: saída vazia do npm ls vira erro claro em pt-BR', () => {
+  assert.throws(() => parseLs('', 'ERR! boom'), /npm ls.*vazia.*boom/s);
+  assert.throws(() => parseLs('  \n', ''), /npm ls.*vazia/s);
+  assert.deepEqual(parseLs('{"dependencies":{}}', ''), { dependencies: {} });
+  assert.throws(() => parseLs('nao json', ''), /npm ls.*JSON/s);
+});
+
+test('isDocsOnly: só documentação pura dispensa a matriz', () => {
+  assert.equal(
+    isDocsOnly(['docs/specs/x.md', 'README.md', 'packages/core/CHANGELOG.md']),
+    true,
+  );
+  assert.equal(isDocsOnly(['docs/decisions/0019.md']), true);
+  assert.equal(
+    isDocsOnly(['docs/specs/x.md', 'packages/core/src/a.ts']),
+    false,
+  );
+  assert.equal(isDocsOnly(['.github/workflows/compat.yml']), false);
+  assert.equal(isDocsOnly(['tools/compat.json']), false);
+  assert.equal(isDocsOnly([]), false);
 });
