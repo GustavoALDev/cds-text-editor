@@ -114,9 +114,12 @@ function browserSupports(property: string, value: string): boolean {
   }
 }
 
+/** Texto que escaparia da declaração, do bloco ou do comentário no CSS copiável. */
+const UNSAFE_COLOR_TEXT = /\/\*|\*\/|[<{};\\]/;
+
 /**
  * Cor válida = o leitor da lib a entende ou o navegador a aceita como `color` (W7). Texto vazio
- * nunca é válido.
+ * ou com marcas de comentário CSS, `<`, `{`, `}`, `;` ou `\` nunca é válido.
  */
 export function isValidColor(
   text: string,
@@ -124,6 +127,8 @@ export function isValidColor(
 ): boolean {
   const value = text.trim();
   if (value === '') return false;
+  // O texto vira CSS copiável: nada que feche a declaração, o bloco ou o comentário.
+  if (UNSAFE_COLOR_TEXT.test(value)) return false;
   return parseColor(value) !== null || supports('color', value);
 }
 

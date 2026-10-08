@@ -5,8 +5,14 @@ import {
   type BrowserContext,
   type Page,
 } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 import { createRteTheme } from '../../../packages/theme/src/index';
 import { ORIGIN, watch } from './helpers';
+
+const CHECK_PAGE = readFileSync(
+  new URL('./fixtures/theme-check.html', import.meta.url),
+  'utf8',
+);
 
 // J7 (spec 07b, W12/W13): playground do tema. Preset muda os tokens computados da prévia; o
 // relatório mostra 72 verificações; o CSS copiado, aplicado numa página estática só com o
@@ -130,6 +136,14 @@ async function reproduces(
   const check = await context.newPage();
   await check.route('**/copied.css', (route) =>
     route.fulfill({ status: 200, contentType: 'text/css', body: css }),
+  );
+  // A página fica em e2e/fixtures (fora do artefato publicado): o E2E a serve por `route`.
+  await check.route('**/theme-check.html', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/html; charset=utf-8',
+      body: CHECK_PAGE,
+    }),
   );
   await check.goto('/theme-check.html');
   await expect(check.locator('#probe')).toBeVisible();

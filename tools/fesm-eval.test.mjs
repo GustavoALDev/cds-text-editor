@@ -20,8 +20,13 @@ const fesms = PACOTES.flatMap((pkg) => {
     .map((f) => ({ pkg, file: f, path: resolve(dir, f) }));
 });
 
+// `RTE_REQUIRE_DIST=1` (o job `demo` do CI, depois do build) transforma a ausência do dist em
+// falha; sem ele o teste é pulado (o `test:tools` do job `verify` roda antes de qualquer build).
 test('há bundles fesm no dist para avaliar (rode o build antes)', (t) => {
-  if (fesms.length === 0) t.skip('dist/packages/{angular,render}/fesm2022 não existe');
+  if (fesms.length > 0) return;
+  const message = 'dist/packages/{angular,render}/fesm2022 não existe';
+  if (process.env.RTE_REQUIRE_DIST) assert.fail(`${message}: rode o build antes`);
+  t.skip(message);
 });
 
 await import('@angular/compiler');

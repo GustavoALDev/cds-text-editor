@@ -80,6 +80,24 @@ describe('buildCss', () => {
     expect(css).toContain('--rte-radius: 4px;');
   });
 
+  it('texto de cor que escaparia da declaração, do bloco ou do comentário fica fora', () => {
+    const accepts = () => true;
+    for (const text of [
+      'red; } body { display: none',
+      'red /* x',
+      'red */ } .a {',
+      'red}',
+      'red{',
+      '</style><script>',
+      'red\\3b x',
+    ]) {
+      const css = buildCss({ ...DEFAULT_STATE, primary: text }, accepts);
+      expect(css, text).toContain('/* primary inválida: vale o padrão */');
+      expect(css, text).not.toContain('display');
+      expect(css, text).not.toContain('--rte-primary');
+    }
+  });
+
   it('presets usam as cores do pacote', () => {
     const css = buildCss(applyPreset(DEFAULT_STATE, 'forest'));
     expect(css).toContain(

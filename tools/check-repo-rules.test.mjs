@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { checkRepoRules } from './check-repo-rules.mjs';
 
 function fixture(files) {
@@ -414,6 +414,60 @@ test('demo: style= em template inline é recusado', () => {
     ...CLEAN_DEMO,
     'apps/demo/src/app/inline.ts':
       '@Component({ selector: \'a\', template: `<p class="a">a</p>` })\nexport class A {}\n',
+  });
+  assert.deepEqual(demoErrors(ok), []);
+});
+
+test('demo: import absoluto ou file: fora de apps/demo é recusado', () => {
+  for (const spec of ['/etc/passwd', 'file:///etc/passwd', 'file:relativo']) {
+    const root = fixture({
+      ...CLEAN_DEMO,
+      'apps/demo/src/app/abs.ts': `import { a } from '${spec}';\n`,
+    });
+    const errors = demoErrors(root);
+    assert.equal(errors.length, 1, spec);
+    assert.match(errors[0], /abs\.ts/);
+  }
+});
+
+test('demo: tsconfig com extends absoluto fora de apps/demo é recusado', () => {
+  const outside = resolve(tmpdir(), 'fora', 'tsconfig.json');
+  const root = fixture({
+    ...CLEAN_DEMO,
+    'apps/demo/tsconfig.app.json': JSON.stringify({ extends: outside }),
+  });
+  const errors = demoErrors(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /tsconfig\.app\.json.*extends/);
+});
+
+test('demo: style no host de componente ou diretiva é recusado', () => {
+  for (const host of [
+    "{ style: 'color: red' }",
+    "{ '[style.color]': 'c()' }",
+    "{ '[style]': 's()', class: 'a' }",
+    "{ '[ngStyle]': 's()' }",
+    "{ '[attr.style]': 's()' }",
+    "{ 'style': 'x' }",
+  ]) {
+    const root = fixture({
+      ...CLEAN_DEMO,
+      'apps/demo/src/app/h.ts': `@Directive({ selector: 'x', host: ${host} })\nexport class H {}\n`,
+    });
+    const errors = demoErrors(root);
+    assert.equal(errors.length, 1, host);
+    assert.match(errors[0], /h\.ts.*host/);
+  }
+  const hostBinding = fixture({
+    ...CLEAN_DEMO,
+    'apps/demo/src/app/hb.ts':
+      "class H { @HostBinding('style.color') c = 'red'; }\n",
+  });
+  assert.equal(demoErrors(hostBinding).length, 1);
+  const ok = fixture({
+    ...CLEAN_DEMO,
+    'apps/demo/src/app/ok.ts':
+      "@Directive({ selector: 'x', host: { class: 'a', '[class.b]': 'b()', '(click)': 'go()' } })\nexport class H {}\n",
   });
   assert.deepEqual(demoErrors(ok), []);
 });

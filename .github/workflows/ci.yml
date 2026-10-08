@@ -90,6 +90,10 @@ jobs:
             nx-demo-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
             nx-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
       - run: npx nx run-many -t build -p core sanitizer theme angular render
+      # Guarda de TDZ: cada fesm do dist avalia em Node puro (sem o dist, falha em vez de pular).
+      - run: node --test tools/fesm-eval.test.mjs
+        env:
+          RTE_REQUIRE_DIST: '1'
       # pack -> prepare -> install (prova de origem dos tarballs) -> ng test -> ng build -> tsc dos snippets.
       - run: node tools/consumer.mjs pack prepare install test build check-snippets
       - run: npx playwright install --with-deps

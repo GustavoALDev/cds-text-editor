@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createRequire } from 'node:module';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const NO_ANGULAR = ['core', 'sanitizer', 'theme'];
 const DEP_FIELDS = [
@@ -197,6 +197,10 @@ function walk(dir, accept) {
 const STYLE_ATTR =
   /(?:\s|^)(?:style\s*=|\[style[\].]|\[ngStyle\]|\[attr\.style\])/;
 
+// Chaves de `host: {}` que aplicam estilo inline (o CSP `style-src 'self'` as bloqueia).
+const HOST_STYLE =
+  /(?:^|[,{\s])(?:(['"`])\[?(?:style(?:\.[\w.-]+)?|ngStyle|attr\.style)\]?\1|style)\s*:/;
+
 // Especificadores de import/export/import()/require de um arquivo TypeScript.
 function importSpecifiers(source) {
   const re =
@@ -233,7 +237,7 @@ function checkDemo(rootDir) {
     for (const target of [config.extends].flat().filter(Boolean)) {
       if (
         typeof target === 'string' &&
-        target.startsWith('.') &&
+        (target.startsWith('.') || isAbsolute(target)) &&
         !insideDir(demo, resolve(demo, target))
       ) {
         errors.push(
@@ -274,9 +278,19 @@ function checkDemo(rootDir) {
     for (const file of sources) {
       const source = readFileSync(file, 'utf8');
       for (const spec of importSpecifiers(source)) {
-        const isRelative = spec.startsWith('.');
-        const bad = isRelative
-          ? !insideDir(demo, resolve(dirname(file), spec)) ||
+        const isPath =
+          spec.startsWith('.') || isAbsolute(spec) || spec.startsWith('file:');
+        let target;
+        try {
+          target = spec.startsWith('file:')
+            ? fileURLToPath(spec)
+            : resolve(dirname(file), spec);
+        } catch {
+          target = null; // file: malformado
+        }
+        const bad = isPath
+          ? target === null ||
+            !insideDir(demo, target) ||
             /(^|\/)(packages|dist)\//.test(spec)
           : /^(packages|dist)\//.test(spec);
         if (bad) {
@@ -291,6 +305,18 @@ function checkDemo(rootDir) {
       ) {
         errors.push(
           `${rel(file)}: componente com styleUrl/styleUrls/styles (gera <style> inline barrado pela CSP; o CSS vai em src/styles/ e é importado por src/styles.css; spec 07b, W4)`,
+        );
+      }
+      for (const m of source.matchAll(/\bhost\s*:\s*\{([^}]*)\}/g)) {
+        if (HOST_STYLE.test(m[1])) {
+          errors.push(
+            `${rel(file)}: host com style, [style…], [ngStyle] ou [attr.style] (CSP estrita; spec 07b, W4)`,
+          );
+        }
+      }
+      if (/@HostBinding\(\s*['"`](?:style|attr\.style)\b/.test(source)) {
+        errors.push(
+          `${rel(file)}: @HostBinding de style (CSP estrita; spec 07b, W4)`,
         );
       }
       for (const m of source.matchAll(
