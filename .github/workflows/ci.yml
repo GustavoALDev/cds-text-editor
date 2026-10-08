@@ -99,6 +99,7 @@ jobs:
             dist/reports/size/
             e2e/test-results/report.json
             e2e/test-results/perf/
+            e2e/test-results/browsers/
           retention-days: 14
           if-no-files-found: ignore
       - uses: actions/upload-artifact@v4

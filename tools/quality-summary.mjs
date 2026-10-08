@@ -72,6 +72,14 @@ export function checkFloors(coverage, floors) {
   return errors;
 }
 
+/** Versões dos motores: `<dir>/<projeto>.json` (`{ project, name, version }`) do repórter do E2E. */
+export function loadBrowsers(dir) {
+  return jsonFiles(dir)
+    .map((f) => readJson(join(dir, f)))
+    .filter((r) => r && typeof r.project === 'string' && r.version)
+    .sort((a, b) => a.project.localeCompare(b.project));
+}
+
 /** Arquivos `n45-<motor>.json` gravados pelo teste de desempenho. */
 export function loadPerf(dir) {
   return jsonFiles(dir)
@@ -166,6 +174,14 @@ function flakySection(report) {
   );
 }
 
+function browsersSection(browsers) {
+  if (!browsers?.length) return NO_DATA;
+  return table(
+    ['projeto', 'motor', 'versão'],
+    browsers.map((b) => [b.project, b.name ?? b.project, b.version]),
+  );
+}
+
 function perfSection(perf) {
   if (!perf?.length) return NO_DATA;
   const m = (e, key, name) => e[key]?.metrics?.[name];
@@ -205,6 +221,7 @@ export function buildSummary({
   playwrightReport,
   perf,
   versions,
+  browsers,
 } = {}) {
   const parts = [
     '## Qualidade',
@@ -212,6 +229,7 @@ export function buildSummary({
     `### Cobertura por pacote\n\n${coverageSection(coverage)}`,
     `### Testes instáveis (E2E)\n\n${flakySection(playwrightReport)}`,
     `### N45 por motor\n\n${perfSection(perf)}`,
+    `### Navegadores\n\n${browsersSection(browsers)}`,
   ];
   if (versions && Object.keys(versions).length) {
     parts.push(
@@ -255,15 +273,22 @@ function main() {
     option(argv, '--playwright', 'e2e/test-results/report.json'),
   );
   const versionsFile = option(argv, '--versions');
-  const coverage = loadCoverage(option(argv, '--coverage', 'coverage/packages'));
+  const coverage = loadCoverage(
+    option(argv, '--coverage', 'coverage/packages'),
+  );
   const md = buildSummary({
     sizes: loadSizes(option(argv, '--sizes', 'dist/reports/size')),
     coverage,
     playwrightReport,
     perf: loadPerf(option(argv, '--perf', 'e2e/test-results/perf')),
+    browsers: loadBrowsers(
+      option(argv, '--browsers', 'e2e/test-results/browsers'),
+    ),
     versions: versionsFile ? readJson(versionsFile) : undefined,
   });
-  const floors = readJson(option(argv, '--floors', 'tools/coverage-floor.json'));
+  const floors = readJson(
+    option(argv, '--floors', 'tools/coverage-floor.json'),
+  );
   const floorErrors = floors ? checkFloors(coverage, floors) : [];
   const floorList = floorErrors.length
     ? floorErrors.map((e) => `- FALHA: ${e}`).join('\n')

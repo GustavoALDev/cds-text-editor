@@ -8,7 +8,12 @@ export default defineConfig({
   // No CI o repórter `json` alimenta `tools/quality-summary.mjs` (spec 08a, X11): um teste que
   // passou só na repetição aparece como `flaky`.
   reporter: process.env['CI']
-    ? [['list'], ['json', { outputFile: 'test-results/report.json' }]]
+    ? [
+        ['list'],
+        ['json', { outputFile: 'test-results/report.json' }],
+        // versões dos motores para o resumo de qualidade (spec 08b)
+        ['./helpers/versions-reporter.ts'],
+      ]
     : 'list',
   // App de teste Angular (spec 05a, D22): builds zoneless e zone pré-renderizados
   // (em cache do Nx), servidos com CSP estrita por `e2e/angular/serve.mjs`.

@@ -9,6 +9,7 @@ import {
   buildVisualSummary,
   checkFloors,
   flakyWarnings,
+  loadBrowsers,
   loadCoverage,
   loadPerf,
   loadSizes,
@@ -74,7 +75,7 @@ test('buildSummary: relatório ausente vira "sem dados" sem quebrar, cada um iso
     assert.match(md, /### N45/);
   }
   const none = buildSummary({});
-  assert.equal(none.match(/sem dados/g).length, 4);
+  assert.equal(none.match(/sem dados/g).length, 5);
 });
 
 test('buildSummary: sem flakes diz que nenhum teste foi instável', () => {
@@ -93,6 +94,25 @@ test('buildSummary: versões resolvidas listadas quando passadas', () => {
   assert.match(md, /### Versões resolvidas/);
   assert.match(md, /\| @angular\/core \| 22\.3\.0 \|/);
   assert.doesNotMatch(buildSummary(load()), /Versões resolvidas/);
+});
+
+test('navegadores: a seção lista motor e versão; sem arquivos, "_sem dados_" e sem erro', () => {
+  const browsers = loadBrowsers(join(FX, 'browsers'));
+  assert.deepEqual(
+    browsers.map((b) => [b.project, b.version]),
+    [
+      ['chromium', '153.0.8010.12'],
+      ['firefox', '155.0'],
+      ['webkit', '26.6'],
+    ],
+  );
+  const md = buildSummary({ ...load(), browsers });
+  assert.match(md, /### Navegadores/);
+  assert.match(md, /\| chromium \| chromium \| 153\.0\.8010\.12 \|/);
+  assert.match(md, /\| webkit \| webkit \| 26\.6 \|/);
+  assert.deepEqual(loadBrowsers(join(FX, 'nao-existe')), []);
+  const empty = buildSummary({ ...load(), browsers: [] });
+  assert.match(empty, /### Navegadores\n\n_sem dados_/);
 });
 
 test('flakyWarnings: ::warning por teste flaky, sem falhar', () => {
