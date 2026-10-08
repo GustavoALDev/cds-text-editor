@@ -76,12 +76,20 @@ jobs:
       # CI=1: repórter `json` em e2e/test-results/report.json (testes instáveis) e retentativas.
       # FC_RUNS=100: as propriedades do tema (e2e/theme/property.spec.ts) custam ~1,5 s por execução e
       # por motor; o padrão local é 200 e quem quiser mais roda com FC_RUNS=1000.
-      - run: npx playwright test -c e2e
+      # O N45 sai desta execução (paralela, ruidosa) e roda isolado no passo seguinte.
+      - run: npx playwright test -c e2e --grep-invert "N45"
         env:
           CI: '1'
           FC_RUNS: '100'
-      # Portão de desempenho (spec 08b, O12): N45 x baseline do CI Linux (regra dos 10%); informativo
-      # sem baseline ou com motor/CPU diferentes. Roda antes do resumo; o código de saída reprova o job.
+      # N45 nas mesmas condições da baseline (perf-baseline.yml): 1 worker, sem retentativa. Pasta de
+      # saída à parte para não apagar o report.json e as versões da execução geral.
+      - name: Desempenho (N45 isolado)
+        run: npx playwright test -c e2e e2e/angular/editor-perf-budget.spec.ts --workers=1 --retries=0 --reporter=list --output=e2e/test-results-n45
+        env:
+          CI: '1'
+      # Portão de desempenho (spec 08b, O12): N45 x baseline do CI Linux. Regressão (Δ > max(10%, 3·CV)
+      # e >= 2 ms nas duas voltas) é AVISO; RTE_PERF_GATE_ENFORCE=1 a torna bloqueante. Informativo sem
+      # baseline ou com motor/CPU diferentes. Roda antes do resumo.
       - name: Desempenho (perf-gate)
         if: always()
         run: node tools/perf-gate.mjs

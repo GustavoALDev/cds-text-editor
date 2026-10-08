@@ -57,7 +57,13 @@ export default defineConfig({
   projects: [
     {
       name: 'visual-chromium',
-      use: { ...devices['Desktop Chrome'], deviceScaleFactor: 1 },
+      use: {
+        ...devices['Desktop Chrome'],
+        deviceScaleFactor: 1,
+        // Skia escolhe rasterizadores por CPU (AVX2/AVX-512): sem as otimizações em tempo de execução
+        // o PNG não depende do modelo da máquina que rodou (ADR 0021).
+        launchOptions: { args: ['--disable-skia-runtime-opts'] },
+      },
     },
     {
       name: 'visual-firefox',

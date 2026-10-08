@@ -135,11 +135,16 @@ describe('várias abas (S7)', () => {
     expect(button).not.toBeNull();
     button?.focus();
     expect(document.activeElement).toBe(button);
+    const focus = vi.spyOn(s.editor.view.dom as HTMLElement, 'focus');
     localStorage.removeItem(KEY);
     fire(null);
     await settle(s.fixture);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(s.cmp.draftAvailable()).toBeNull();
+    expect(
+      (s.fixture.nativeElement as HTMLElement).querySelector('section.rte-draft'),
+    ).toBeNull();
+    expect(focus).toHaveBeenCalledTimes(1);
     expect(s.editor.view.dom.contains(document.activeElement)).toBe(true);
   });
 
@@ -152,9 +157,14 @@ describe('várias abas (S7)', () => {
     const other = document.createElement('input');
     document.body.appendChild(other);
     other.focus();
+    const focus = vi.spyOn(s.editor.view.dom as HTMLElement, 'focus');
     localStorage.removeItem(KEY);
     fire(null);
     await settle(s.fixture);
+    expect(
+      (s.fixture.nativeElement as HTMLElement).querySelector('section.rte-draft'),
+    ).toBeNull();
+    expect(focus).not.toHaveBeenCalled();
     expect(document.activeElement).toBe(other);
     other.remove();
   });

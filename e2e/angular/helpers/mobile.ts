@@ -131,7 +131,7 @@ export async function fitsWidth(
  */
 export async function mobileViolations(page: Page) {
   const found = await severeViolations(page);
-  const known = /tableWrapper|slash-list/;
+  const known = /(\.tableWrapper|-slash-list)$/;
   return found.filter(
     (v) =>
       !(

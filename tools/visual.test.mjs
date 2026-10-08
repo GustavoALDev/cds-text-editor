@@ -1,6 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dockerArgs, main, playwrightVersion } from './visual.mjs';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import {
+  dockerArgs,
+  main,
+  playwrightVersion,
+  pruneOrphans,
+} from './visual.mjs';
 
 test('playwrightVersion lê a versão exata do package.json real', () => {
   assert.match(playwrightVersion(), /^\d+\.\d+\.\d+$/);
@@ -61,4 +69,33 @@ test('com Docker: executa o docker run e devolve o status', () => {
 test('dockerArgs escapa aspas simples', () => {
   const args = dockerArgs({ cwd: '/r', version: '1.0.0', extra: ["a'b"] });
   assert.ok(args.at(-1).includes(String.raw`'a'\''b'`));
+});
+
+test('pruneOrphans apaga só as capturas que nenhum teste usou e as pastas vazias', () => {
+  const root = mkdtempSync(join(tmpdir(), 'prune-'));
+  const shots = join(root, 'shots');
+  mkdirSync(join(shots, 'p1', 'a.spec.ts'), { recursive: true });
+  mkdirSync(join(shots, 'p1', 'velho.spec.ts'), { recursive: true });
+  const keep = join(shots, 'p1', 'a.spec.ts', 'usada.png');
+  const orphan = join(shots, 'p1', 'a.spec.ts', 'orfa.png');
+  const orphanDir = join(shots, 'p1', 'velho.spec.ts', 'x.png');
+  for (const f of [keep, orphan, orphanDir]) writeFileSync(f, 'png');
+  const used = join(root, 'used.txt');
+  writeFileSync(used, `${keep}\n`);
+  const removed = pruneOrphans(used, [shots]);
+  assert.deepEqual(removed.sort(), [orphan, orphanDir].sort());
+  assert.ok(existsSync(keep));
+  assert.ok(!existsSync(orphan));
+  assert.ok(!existsSync(join(shots, 'p1', 'velho.spec.ts')));
+  assert.ok(existsSync(shots));
+});
+
+test('pruneOrphans não apaga nada sem registro de uso (rodada que não rodou)', () => {
+  const root = mkdtempSync(join(tmpdir(), 'prune-'));
+  const f = join(root, 'a.png');
+  writeFileSync(f, 'png');
+  assert.deepEqual(pruneOrphans(join(root, 'nao-existe.txt'), [root]), []);
+  writeFileSync(join(root, 'used.txt'), '');
+  assert.deepEqual(pruneOrphans(join(root, 'used.txt'), [root]), []);
+  assert.ok(existsSync(f));
 });

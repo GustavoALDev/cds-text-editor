@@ -39,19 +39,29 @@ jobs:
       NX_DAEMON: 'false'
       TARGET_BRANCH: ${{ inputs.branch || github.ref_name }}
       REASON: ${{ inputs.reason || 'bootstrap da 08b' }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
       # Guarda: o branch e o motivo chegam por variável de ambiente, nunca interpolados no script.
+      # Normaliza `refs/heads/x` e recusa também o branch padrão do repositório.
       - name: Recusar main e branches protegidos
         run: |
-          case "$TARGET_BRANCH" in
+          BRANCH="${TARGET_BRANCH#refs/heads/}"
+          case "$BRANCH" in
             main|master|HEAD|'')
-              echo "::error::Recusado: este workflow não atualiza a baseline em '$TARGET_BRANCH'. Use um branch de trabalho e abra um PR."
+              echo "::error::Recusado: este workflow não atualiza a baseline em '$BRANCH'. Use um branch de trabalho e abra um PR."
               exit 1
               ;;
           esac
+          if [ "$BRANCH" = "$DEFAULT_BRANCH" ]; then
+            echo "::error::Recusado: '$BRANCH' é o branch padrão do repositório. Use um branch de trabalho e abra um PR."
+            exit 1
+          fi
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+      # Sem persistir o token no .git/config: o npm ci e os testes rodam sem credencial de escrita.
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || github.ref_name }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
@@ -92,14 +102,26 @@ jobs:
           PW_VERSION=$(npx playwright --version | awk '{print $2}')
           node tools/perf-gate.mjs baseline perf-runs --playwright "$PW_VERSION"
           cat e2e/perf/baseline.linux.json >> "$GITHUB_STEP_SUMMARY"
+      # O token só existe neste passo (cabeçalho do git, nunca gravado no .git/config). O push tenta até
+      # 3 vezes, refazendo o rebase no branch.
       - name: Commit da baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f e2e/perf/baseline.linux.json
           if git diff --cached --quiet; then
             echo "A baseline não mudou."
-          else
-            git commit -m "test(perf): atualiza baseline do N45 ($REASON)"
-            git push origin "HEAD:refs/heads/$TARGET_BRANCH"
+            exit 0
           fi
+          git commit -m "test(perf): atualiza baseline do N45 ($REASON)"
+          AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          for attempt in 1 2 3; do
+            git -c "http.extraheader=$AUTH" pull --rebase origin "$BRANCH" || exit 1
+            if git -c "http.extraheader=$AUTH" push origin "HEAD:refs/heads/$BRANCH"; then
+              exit 0
+            fi
+            echo "Push recusado (tentativa $attempt de 3)."
+          done
+          exit 1

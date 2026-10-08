@@ -43,19 +43,35 @@ jobs:
       NX_DAEMON: 'false'
       TARGET_BRANCH: ${{ inputs.branch || github.ref_name }}
       REASON: ${{ inputs.reason || 'bootstrap da 08b' }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
       # Guarda: o branch e o motivo chegam por variável de ambiente, nunca interpolados no script.
+      # Normaliza `refs/heads/x` e recusa também o branch padrão do repositório.
       - name: Recusar main e branches protegidos
         run: |
-          case "$TARGET_BRANCH" in
+          BRANCH="${TARGET_BRANCH#refs/heads/}"
+          case "$BRANCH" in
             main|master|HEAD|'')
-              echo "::error::Recusado: este workflow não atualiza capturas em '$TARGET_BRANCH'. Use um branch de trabalho e abra um PR."
+              echo "::error::Recusado: este workflow não atualiza capturas em '$BRANCH'. Use um branch de trabalho e abra um PR."
               exit 1
               ;;
           esac
+          if [ "$BRANCH" = "$DEFAULT_BRANCH" ]; then
+            echo "::error::Recusado: '$BRANCH' é o branch padrão do repositório. Use um branch de trabalho e abra um PR."
+            exit 1
+          fi
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+      # Sem persistir o token no .git/config: o npm ci e os testes rodam sem credencial de escrita.
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || github.ref_name }}
+          persist-credentials: false
+      # O mesmo CPU do job `visual` do ci.yml? O Skia pode escolher caminhos AVX-512 por CPU; registrar
+      # o modelo e as flags ajuda a explicar um diff de pixels entre execuções.
+      - name: Registrar o CPU
+        run: |
+          grep -m1 'model name' /proc/cpuinfo || true
+          echo "avx512: $(grep -o -w 'avx512[a-z_0-9]*' /proc/cpuinfo | sort -u | xargs)"
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
@@ -67,12 +83,19 @@ jobs:
       - run: echo "RTE_CONSUMER_DIR=$RUNNER_TEMP/cds-rte-consumer/demo" >> "$GITHUB_ENV"
       - run: npx nx run-many -t build -p core sanitizer theme angular render
       - run: node tools/consumer.mjs pack prepare install build
-      # Apagar antes remove capturas órfãs; `all` regrava tudo (PNG determinístico: imagem igual não gera diff).
+      # `changed` só regrava o que mudou além da tolerância (e cria o que falta): rodar duas vezes no mesmo
+      # código não gera commit, e um PNG que só difere por ruído do rasterizador não é regravado.
+      # `expectShot` anota em RTE_VISUAL_USED as baselines que os testes usaram.
       - name: Regenerar as capturas
+        env:
+          RTE_VISUAL_USED: ${{ runner.temp }}/visual-used.txt
         run: |
-          rm -rf e2e/visual/__screenshots__ apps/demo/e2e/visual/__screenshots__
-          npx playwright test -c e2e/visual --update-snapshots=all
-          RTE_DEMO_DIR="$RTE_CONSUMER_DIR/dist/demo/browser" npx playwright test -c apps/demo/e2e/visual/playwright.config.ts --update-snapshots=all
+          : > "$RTE_VISUAL_USED"
+          npx playwright test -c e2e/visual --update-snapshots=changed
+          RTE_DEMO_DIR="$RTE_CONSUMER_DIR/dist/demo/browser" npx playwright test -c apps/demo/e2e/visual/playwright.config.ts --update-snapshots=changed
+      # Capturas ÓRFÃS (sem teste correspondente) saem à parte, só depois de uma rodada inteira que passou.
+      - name: Remover capturas órfãs
+        run: node tools/visual.mjs prune "$RUNNER_TEMP/visual-used.txt" e2e/visual/__screenshots__ apps/demo/e2e/visual/__screenshots__
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -82,15 +105,27 @@ jobs:
             apps/demo/e2e/visual/__screenshots__/
           retention-days: 14
           if-no-files-found: ignore
+      # O token só existe neste passo (cabeçalho do git, nunca gravado no .git/config). O push tenta até
+      # 3 vezes, refazendo o rebase no branch (outro commit pode ter entrado durante a rodada).
       - name: Commit das capturas
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f e2e/visual/__screenshots__ apps/demo/e2e/visual/__screenshots__
+          git add -A -f e2e/visual/__screenshots__ apps/demo/e2e/visual/__screenshots__
           if git diff --cached --quiet; then
             echo "Nenhuma captura mudou."
-          else
-            git commit -m "test(visual): atualiza capturas ($REASON)"
-            git push origin "HEAD:refs/heads/$TARGET_BRANCH"
+            exit 0
           fi
+          git commit -m "test(visual): atualiza capturas ($REASON)"
+          AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          for attempt in 1 2 3; do
+            git -c "http.extraheader=$AUTH" pull --rebase origin "$BRANCH" || exit 1
+            if git -c "http.extraheader=$AUTH" push origin "HEAD:refs/heads/$BRANCH"; then
+              exit 0
+            fi
+            echo "Push recusado (tentativa $attempt de 3)."
+          done
+          exit 1

@@ -33,10 +33,33 @@ const current = (metrics, over = {}) => ({
 });
 
 test('+11% e >= 2 ms nas duas voltas reprova, com métrica, motor, base e atual', () => {
-  const r = compare(baseline(), current({ estavel: { A: 22.5, B: 23 } }));
+  const r = compare(baseline(), current({ estavel: { A: 22.5, B: 23 } }), {
+    enforce: true,
+  });
   assert.equal(r.failures.length, 1);
   assert.match(r.failures[0], /chromium \/ estavel/);
   assert.match(r.failures[0], /base 20\.0 ms, atual 22\.5 \/ 23\.0 ms/);
+});
+
+test('por padrão a regressão é só aviso (não reprova)', () => {
+  const r = compare(baseline(), current({ estavel: { A: 22.5, B: 23 } }));
+  assert.deepEqual(r.failures, []);
+  assert.match(r.warnings.join(' | '), /chromium \/ estavel: regressão/);
+});
+
+test('o limite é max(10%, 3·CV): CV maior (2,9%) não passa de 10%, mas o fator vale', () => {
+  const b = baseline();
+  b.metrics.chromium.estavel.cv = 2.9;
+  // limite = 20 * max(0,10, 0,087) = 2 ms; +2,5 ms nas duas voltas passa o limite
+  const r = compare(b, current({ estavel: { A: 22.5, B: 22.5 } }), {
+    enforce: true,
+  });
+  assert.equal(r.failures.length, 1);
+  assert.deepEqual(
+    compare(b, current({ estavel: { A: 21.9, B: 21.9 } }), { enforce: true })
+      .failures,
+    [],
+  );
 });
 
 test('só numa volta não reprova', () => {
@@ -154,7 +177,7 @@ test('CLI sem baseline: informativo, código 0', () => {
   assert.match(r.stdout, /Baseline de desempenho ausente/);
 });
 
-test('CLI com regressão nas duas voltas: código 1', () => {
+test('CLI com regressão nas duas voltas: aviso (0) e, com RTE_PERF_GATE_ENFORCE=1, código 1', () => {
   const root = mkdtempSync(join(tmpdir(), 'perf-cli-'));
   runFile(join(root, 'p'), 'n45-chromium.json', 50);
   const base = join(root, 'b.json');
@@ -166,11 +189,22 @@ test('CLI com regressão nas duas voltas: código 1', () => {
       metrics: { chromium: { 'criação mediana': { median: 20, cv: 1 } } },
     }),
   );
-  const r = spawnSync(
-    process.execPath,
-    ['tools/perf-gate.mjs', '--baseline', base, '--perf', join(root, 'p')],
-    { encoding: 'utf8' },
-  );
+  const args = [
+    'tools/perf-gate.mjs',
+    '--baseline',
+    base,
+    '--perf',
+    join(root, 'p'),
+  ];
+  const env = { ...process.env };
+  delete env.RTE_PERF_GATE_ENFORCE;
+  const soft = spawnSync(process.execPath, args, { encoding: 'utf8', env });
+  assert.equal(soft.status, 0);
+  assert.match(soft.stdout, /::warning::.*regressão/);
+  const r = spawnSync(process.execPath, args, {
+    encoding: 'utf8',
+    env: { ...env, RTE_PERF_GATE_ENFORCE: '1' },
+  });
   assert.equal(r.status, 1);
   assert.match(r.stdout, /regressão/);
 });

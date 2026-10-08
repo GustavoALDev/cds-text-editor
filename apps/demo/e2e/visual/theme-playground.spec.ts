@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { expectShot } from '../../../../e2e/visual/helpers/shot';
 
-// O5: playground do tema do demo em 2 estados (padrão e `ocean` escuro). Captura o contêiner do
-// playground (prévia + controles) com o demo servido pelo `serve.mjs` (CSP estrita, sem rede).
+// O5: playground do tema do demo em 2 estados (padrão e `ocean` escuro). Captura só a prévia do editor
+// (a página inteira ficava em ~287/274 KB, perto do teto de 300 KB por arquivo) com o demo servido pelo
+// `serve.mjs` (CSP estrita, sem rede).
 
 test.beforeEach(async ({ page }) => {
   await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, (route) => route.abort());
@@ -13,7 +14,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 const playground = (page: import('@playwright/test').Page) =>
-  page.locator('demo-theme-playground');
+  page.locator('[data-testid="preview-editor"]');
 
 test('playground do tema: padrão', async ({ page }) => {
   await expectShot(playground(page), 'theme-playground-default');

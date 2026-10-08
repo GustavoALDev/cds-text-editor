@@ -1,4 +1,5 @@
-import { expect, type Locator } from '@playwright/test';
+import { appendFileSync } from 'node:fs';
+import { expect, test, type Locator } from '@playwright/test';
 
 // Captura por elemento (spec 08b, O2). `RTE_VISUAL_DRYRUN=1` (só local, nunca em workflow:
 // conferido por tools/visual-image.test.mjs) confere estado e estabilidade sem capturar.
@@ -69,6 +70,12 @@ export async function expectShot(
   if (opts.ready) await expect.poll(opts.ready).toBe(true);
   await settle(locator);
   if (DRYRUN) return;
+  // `RTE_VISUAL_USED=<arquivo>`: anota o caminho da baseline usada, para `tools/visual.mjs prune`
+  // apagar as órfãs (workflow visual-update.yml).
+  const used = process.env['RTE_VISUAL_USED'];
+  if (used) {
+    appendFileSync(used, `${test.info().snapshotPath(`${name}.png`)}\n`);
+  }
   await expect(locator).toHaveScreenshot(`${name}.png`, {
     animations: 'disabled',
     caret: 'hide',

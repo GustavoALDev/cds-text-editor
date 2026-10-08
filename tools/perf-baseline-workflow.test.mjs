@@ -16,7 +16,7 @@ test('workflow_dispatch com as entradas branch e reason', () => {
 });
 
 test('a guarda recusa main e os protegidos', () => {
-  assert.match(wf, /case "\$TARGET_BRANCH" in\n\s+main\|/);
+  assert.match(wf, /case "\$BRANCH" in\n\s+main\|/);
   assert.match(wf, /exit 1/);
 });
 

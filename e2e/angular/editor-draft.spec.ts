@@ -164,6 +164,12 @@ for (const zone of [false, true]) {
           type: 'pagehide-manual',
           description: 'reload não disparou pagehide a tempo',
         });
+        // no Chromium do CI o reload dispara o pagehide de verdade: o fallback manual aqui
+        // esconderia uma regressão do descarregamento (ADR 0021)
+        expect(
+          !process.env['CI'] || testInfo.project.name !== 'chromium',
+          'o reload não disparou pagehide no Chromium do CI (fallback manual usado)',
+        ).toBe(true);
         await editableOf(page, 'draft').click();
         await page.keyboard.type('saiu rápido');
         await page.evaluate(() =>

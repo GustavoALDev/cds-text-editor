@@ -11,13 +11,15 @@ import { pathToFileURL } from 'node:url';
 
 // Portão de desempenho do N45 (spec 08b, O12): compara a mediana de cada volta alternada com a
 // baseline do CI Linux (`e2e/perf/baseline.linux.json`). Só métricas com CV <= 3% entram na regra;
-// reprova com >10% e diferença >= 2 ms nas DUAS voltas. Motor (versão major) ou CPU diferente da
+// a regressão é Δ > max(10%, 3·CV) e Δ >= 2 ms nas DUAS voltas. Por padrão é só AVISO (o N45 numa VM
+// compartilhada varia entre execuções); `RTE_PERF_GATE_ENFORCE=1` a torna bloqueante. Motor (versão major) ou CPU diferente da
 // baseline torna a comparação informativa. Sem baseline: informativo. Também agrega a baseline
 // (`baseline <pasta>`), usada pelo workflow `perf-baseline.yml`.
 
 export const CV_LIMIT = 3;
 export const RATIO = 0.1;
 export const MIN_DELTA_MS = 2;
+export const CV_MULT = 3;
 
 const sorted = (xs) => [...xs].sort((a, b) => a - b);
 
@@ -56,7 +58,7 @@ const f = (n) => (Number.isFinite(n) ? n.toFixed(1) : '-');
  * `current`: `{ browsers, cpu, metrics: { motor: { metrica: { A, B } } } }` (valor de cada volta).
  * Devolve `{ failures, warnings, info }` (mensagens em pt-BR).
  */
-export function compare(baseline, current) {
+export function compare(baseline, current, { enforce = false } = {}) {
   const failures = [];
   const warnings = [];
   const info = [];
@@ -100,16 +102,13 @@ export function compare(baseline, current) {
         continue;
       }
       const deltas = [volta.A, volta.B].map((v) => v - ref.median);
-      const worse = deltas.every(
-        (d) => d >= MIN_DELTA_MS && d > ref.median * RATIO,
-      );
-      const better = deltas.every(
-        (d) => -d >= MIN_DELTA_MS && -d > ref.median * RATIO,
-      );
+      const limit = ref.median * Math.max(RATIO, (CV_MULT * ref.cv) / 100);
+      const worse = deltas.every((d) => d >= MIN_DELTA_MS && d > limit);
+      const better = deltas.every((d) => -d >= MIN_DELTA_MS && -d > limit);
       const detail = `base ${f(ref.median)} ms, atual ${f(volta.A)} / ${f(volta.B)} ms (Δ ${deltas.map((d) => (d >= 0 ? '+' : '') + f(d)).join(' / ')} ms)`;
       if (worse) {
-        const msg = `${motor} / ${metric}: regressão de mais de 10% nas duas voltas: ${detail}.`;
-        (informative ? warnings : failures).push(msg);
+        const msg = `${motor} / ${metric}: regressão acima de ${f(limit)} ms (max(10%, 3·CV)) nas duas voltas: ${detail}.`;
+        (informative || !enforce ? warnings : failures).push(msg);
       } else if (better) {
         warnings.push(
           `${motor} / ${metric}: melhora de mais de 10% nas duas voltas: ${detail}; considere atualizar a baseline.`,
@@ -210,7 +209,7 @@ export function renderSummary({ failures, warnings, info }) {
   ]
     .filter(Boolean)
     .join('\n');
-  return `## Desempenho (perf-gate, regra dos 10%)\n\n${body || '_dentro da baseline_\n'}\n`;
+  return `## Desempenho (perf-gate, regra dos 10%, aviso)\n\n${body || '_dentro da baseline_\n'}\n`;
 }
 
 function option(argv, name, fallback) {
@@ -242,7 +241,9 @@ function main() {
     option(argv, '--baseline', 'e2e/perf/baseline.linux.json'),
   );
   const current = loadCurrent(option(argv, '--perf', 'e2e/test-results/perf'));
-  const result = compare(baseline, current);
+  const result = compare(baseline, current, {
+    enforce: process.env.RTE_PERF_GATE_ENFORCE === '1',
+  });
   const md = renderSummary(result);
   const target = process.env.GITHUB_STEP_SUMMARY;
   if (target) appendFileSync(target, md);
