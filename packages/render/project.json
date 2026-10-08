@@ -4,11 +4,15 @@
   "sourceRoot": "packages/render/src",
   "prefix": "rte",
   "projectType": "library",
-  "tags": ["scope:render"],
+  "tags": [
+    "scope:render"
+  ],
   "targets": {
     "build": {
       "executor": "@nx/angular:package",
-      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "outputs": [
+        "{workspaceRoot}/dist/{projectRoot}"
+      ],
       "defaultConfiguration": "production",
       "options": {
         "project": "packages/render/ng-package.json",
@@ -20,7 +24,10 @@
         },
         "development": {}
       },
-      "dependsOn": ["copy-license", "^build"]
+      "dependsOn": [
+        "copy-license",
+        "^build"
+      ]
     },
     "unit-test-build": {
       "executor": "@nx/angular:application",
@@ -33,7 +40,9 @@
           "polyfills": []
         },
         "zone": {
-          "polyfills": ["zone.js"]
+          "polyfills": [
+            "zone.js"
+          ]
         }
       }
     },
@@ -57,8 +66,12 @@
     },
     "copy-license": {
       "executor": "nx:run-commands",
-      "inputs": ["{workspaceRoot}/LICENSE"],
-      "outputs": ["{projectRoot}/LICENSE"],
+      "inputs": [
+        "{workspaceRoot}/LICENSE"
+      ],
+      "outputs": [
+        "{projectRoot}/LICENSE"
+      ],
       "cache": true,
       "options": {
         "command": "cp ../../LICENSE .",
@@ -67,7 +80,9 @@
     },
     "verify-package": {
       "executor": "nx:run-commands",
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "inputs": [
         "production",
         "^production",
@@ -81,7 +96,10 @@
     },
     "size": {
       "executor": "nx:run-commands",
-      "dependsOn": ["build", "^build"],
+      "dependsOn": [
+        "build",
+        "^build"
+      ],
       "inputs": [
         "production",
         "^production",
@@ -94,11 +112,16 @@
         "command": "node tools/check-size.mjs --config packages/render/size-budget.json --report dist/reports/size/render.json",
         "cwd": "{workspaceRoot}"
       },
-      "outputs": ["{workspaceRoot}/dist/reports/size/render.json"]
+      "outputs": [
+        "{workspaceRoot}/dist/reports/size/render.json"
+      ]
     },
     "api": {
       "executor": "nx:run-commands",
-      "dependsOn": ["build", "^build"],
+      "dependsOn": [
+        "build",
+        "^build"
+      ],
       "inputs": [
         "production",
         "^production",
@@ -112,7 +135,9 @@
           "env": "UPDATE_API"
         }
       ],
-      "outputs": ["{projectRoot}/api"],
+      "outputs": [
+        "{projectRoot}/api"
+      ],
       "cache": true,
       "options": {
         "command": "node tools/api-report.mjs dist/packages/render",
@@ -121,7 +146,9 @@
     },
     "coverage": {
       "executor": "@nx/angular:unit-test",
-      "outputs": ["{workspaceRoot}/coverage/packages/render"],
+      "outputs": [
+        "{workspaceRoot}/coverage/packages/render"
+      ],
       "cache": true,
       "options": {
         "watch": false,
@@ -129,8 +156,28 @@
         "buildTarget": "render:unit-test-build:zoneless",
         "providersFile": "packages/render/src/testing-support/providers.zoneless.ts",
         "coverage": true,
-        "coverageReporters": ["json-summary", "lcov", "html"],
-        "exclude": ["**/fuzz.spec.ts"]
+        "coverageReporters": [
+          "json-summary",
+          "lcov",
+          "html"
+        ],
+        "exclude": [
+          "**/fuzz.spec.ts"
+        ]
+      }
+    },
+    "test-timed": {
+      "executor": "@nx/angular:unit-test",
+      "cache": true,
+      "parallelism": false,
+      "options": {
+        "watch": false,
+        "runnerConfig": "packages/render/vitest-base.config.mts",
+        "buildTarget": "render:unit-test-build:zoneless",
+        "providersFile": "packages/render/src/testing-support/providers.zoneless.ts",
+        "include": [
+          "**/fuzz.spec.ts"
+        ]
       }
     }
   }
