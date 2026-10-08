@@ -32,7 +32,7 @@ app.post('/posts', (req, res) => {
 
 ### Limites e `RteSanitizeError`
 
-O sanitizador nunca trunca: acima do limite ele lança `RteSanitizeError`. `maxInputLength` (padrão 1 000 000 unidades UTF-16) e `maxDepth` (padrão 256, aceita de 1 a 512) são opções. A saída só é estável sob o parser do Chromium se a profundidade do ponto de inserção mais `maxDepth` ficar ≤ 512 (os ancestrais contam, inclusive no SSR); o padrão deixa folga ([modelo de ameaças](../../docs/security.md)). Opção inválida lança `RangeError` e entrada que não é `string`, `TypeError`.
+O sanitizador nunca trunca: acima do limite ele lança `RteSanitizeError`. O limite vale para a **entrada**; a saída pode ser maior (`&` vira `&amp;`, NBSP vira `&nbsp;`) e re-sanitizar uma saída grande pode lançar. **No servidor, recuse a saída acima do tamanho que você guarda** (`sanitize(html).length <= limite`). `maxInputLength` (padrão 1 000 000 unidades UTF-16) e `maxDepth` (padrão 256, aceita de 1 a 512) são opções. A saída só é estável sob o parser do Chromium se a profundidade do ponto de inserção mais `maxDepth` ficar ≤ 512 (os ancestrais contam, inclusive no SSR); o padrão deixa folga ([modelo de ameaças](../../docs/security.md)). Opção inválida lança `RangeError` e entrada que não é `string`, `TypeError`.
 
 ```ts
 import { RteSanitizeError } from '@cds/rte-sanitizer';

@@ -2,7 +2,7 @@
 import { escapeHtmlAttribute } from '@cds/rte-core';
 import { createSanitizer } from '@cds/rte-sanitizer';
 import fc from 'fast-check';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   RTE_TABLE_SCROLL_CLASS,
   RTE_TABLE_SIZED_CLASS,
@@ -335,9 +335,9 @@ describe('prepareRteHtml (R4): propriedade', () => {
 });
 
 describe('prepareRteHtml (R14): custo relativo ao sanitizador', () => {
-  function bestOf3(run: () => unknown): number {
+  function bestOf9(run: () => unknown): number {
     let best = Infinity;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 9; i++) {
       const start = performance.now();
       run();
       best = Math.min(best, performance.now() - start);
@@ -351,8 +351,8 @@ describe('prepareRteHtml (R14): custo relativo ao sanitizador', () => {
     expect(doc.length).toBeGreaterThanOrEqual(400_000);
     const sanitize = createSanitizer();
     const out = sanitize(doc);
-    const sanitizeMs = bestOf3(() => sanitize(doc));
-    const prepareMs = bestOf3(() =>
+    const sanitizeMs = bestOf9(() => sanitize(doc));
+    const prepareMs = bestOf9(() =>
       prepareRteHtml(out, { fragmentBase: '/p' }),
     );
     console.info(
@@ -364,5 +364,86 @@ describe('prepareRteHtml (R14): custo relativo ao sanitizador', () => {
       `(${doc.length} caracteres; razão ${(prepareMs / sanitizeMs).toFixed(3)})`,
     );
     expect(prepareMs / sanitizeMs).toBeLessThanOrEqual(0.1);
+  });
+});
+
+describe('prepareRteHtml: tabelas com caption (R9 A1)', () => {
+  const base = { fragmentBase: null };
+  const median = (xs: number[]): number =>
+    [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
+  const time = (html: string): number => {
+    const runs: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      const start = performance.now();
+      prepareRteHtml(html, base);
+      runs.push(performance.now() - start);
+    }
+    return median(runs);
+  };
+
+  it('procura cada </caption> uma vez só, mesmo sem nenhum fechamento (prova sem relógio)', () => {
+    // O custo quadrático antigo vinha de uma busca por `</caption>` por tabela, cada uma
+    // varrendo até o fim do documento. O cache faz a busca atravessar cada trecho uma vez.
+    const spy = vi.spyOn(String.prototype, 'indexOf');
+    try {
+      for (const html of [
+        '<table><caption>'.repeat(5_000),
+        '<table><caption>x</caption></table>'.repeat(5_000),
+        '<table><caption>'.repeat(2_500) +
+          '</caption>' +
+          '<table><caption>'.repeat(2_500),
+      ]) {
+        spy.mockClear();
+        prepareRteHtml(html, base);
+        const searches = spy.mock.calls.filter(
+          ([needle]) => needle === '</caption>',
+        ).length;
+        // Sem cache seriam ~5 000 buscas; com ele, no máximo uma por `</caption>` + uma final.
+        expect(searches).toBeLessThanOrEqual(5_001);
+      }
+      spy.mockClear();
+      prepareRteHtml('<table><caption>'.repeat(5_000), base);
+      expect(
+        spy.mock.calls.filter(([needle]) => needle === '</caption>').length,
+      ).toBe(1);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('custo linear com milhares de tabelas com caption e sem colgroup', () => {
+    // Respaldo por relógio, folgado para runners ruidosos: o quadrático dá ~4 na razão e
+    // leva dezenas de segundos em 20 mil tabelas sem fechamento.
+    const unit = '<table><caption>';
+    const small = unit.repeat(10_000);
+    const big = unit.repeat(20_000);
+    prepareRteHtml(small, base); // aquece
+    prepareRteHtml(big, base);
+    let best = Infinity;
+    for (let i = 0; i < 3 && best > 3.2; i++) {
+      best = Math.min(best, time(big) / Math.max(time(small), 1));
+    }
+    expect(best).toBeLessThanOrEqual(3.2);
+    expect(time(big)).toBeLessThan(2_000);
+  });
+
+  it('só a tabela com colgroup próprio recebe a classe, não a seguinte', () => {
+    const html =
+      '<table><caption>x</caption><tbody><tr><td></td></tr></tbody></table>' +
+      '<table><colgroup><col style="width:10px"></colgroup><tbody><tr><td></td></tr></tbody></table>';
+    const out = prepareRteHtml(html, base);
+    const first = out.indexOf('<table');
+    const second = out.indexOf('<table', first + 1);
+    expect(out.slice(first, first + 20)).toBe('<table><caption>x</c');
+    expect(out.slice(second, second + 30)).toContain(RTE_TABLE_SIZED_CLASS);
+    expect(out.split(RTE_TABLE_SIZED_CLASS)).toHaveLength(2);
+  });
+
+  it('caption seguida de colgroup com largura recebe a classe', () => {
+    const out = prepareRteHtml(
+      '<table><caption>x</caption><colgroup><col style="width:10px"></colgroup></table>',
+      base,
+    );
+    expect(out).toContain(`<table class="${RTE_TABLE_SIZED_CLASS}">`);
   });
 });

@@ -1,7 +1,7 @@
 // Contrato byte a byte com o editor (spec 04, R2 e R4): a saída do editor é
 // ponto fixo do sanitizador e o esquema reduzido é respeitado. O corpus é
 // gerado pelo teste do core (`editor-corpus.json`) e lido aqui como JSON (R12).
-import { getHtmlSchema, type RteFeatureId } from '@cds/rte-core';
+import { getHtmlSchema, normalizeHref, type RteFeatureId } from '@cds/rte-core';
 import { validateHtml } from '@cds/rte-core/html';
 import { describe, expect, it } from 'vitest';
 import { createSanitizer, sanitizeRichText } from './index';
@@ -71,6 +71,44 @@ describe('R2: recursos desligados', () => {
     }
     expect(validateHtml(out, schema)).toEqual([]);
     expect(createSanitizer(opts)(out)).toBe(out);
+  });
+});
+
+describe('R9 B7: protocols e allowRelative chegam ao sanitizador', () => {
+  const html =
+    '<p><a href="https://a.com/x">h</a><a href="http://a.com/y">t</a>' +
+    '<a href="mailto:a@b.com">m</a><a href="tel:+5511999999999">f</a>' +
+    '<a href="/rel">r</a><a href="#frag">g</a></p>';
+  const hrefs = (out: string): string[] =>
+    [...out.matchAll(/href="([^"]*)"/g)].map((m) => m[1]!);
+
+  it('protocols restringe os esquemas, como no editor', () => {
+    const opts: RteSanitizeOptions = { linkPolicy: { protocols: ['https'] } };
+    const out = createSanitizer(opts)(html);
+    expect(hrefs(out)).toEqual(['https://a.com/x', '/rel', '#frag']);
+    expect(validateHtml(out, getHtmlSchema(opts))).toEqual([]);
+    // o editor (normalizeHref) recusa o mesmo
+    for (const url of ['http://a.com/y', 'mailto:a@b.com', 'tel:+5511999999999'])
+      expect(normalizeHref(url, opts.linkPolicy)).toBeNull();
+  });
+
+  it('allowRelative: false recusa relativos e fragmentos, como no editor', () => {
+    const opts: RteSanitizeOptions = { linkPolicy: { allowRelative: false } };
+    const out = createSanitizer(opts)(html);
+    expect(hrefs(out)).toEqual([
+      'https://a.com/x',
+      'http://a.com/y',
+      'mailto:a@b.com',
+      'tel:+5511999999999',
+    ]);
+    expect(normalizeHref('/rel', opts.linkPolicy)).toBeNull();
+    expect(normalizeHref('#frag', opts.linkPolicy)).toBeNull();
+  });
+
+  it('protocols fora da lista segura é recusado no esquema', () => {
+    expect(() =>
+      getHtmlSchema({ linkPolicy: { protocols: ['javascript'] } }),
+    ).toThrow(TypeError);
   });
 });
 

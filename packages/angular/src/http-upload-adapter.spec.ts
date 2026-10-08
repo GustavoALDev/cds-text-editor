@@ -91,6 +91,22 @@ describe('httpUploadAdapter', () => {
     expect(at(0).headers['X-K']).toBe('v');
   });
 
+  it('headers não sobrescreve Content-Type (o boundary do multipart é do navegador)', async () => {
+    const a = httpUploadAdapter({
+      endpoint: '/up',
+      headers: {
+        'Content-Type': 'application/json',
+        'content-type': 'text/plain',
+        'X-K': 'v',
+      },
+    });
+    void a.uploadImage(png(), ctx()).catch(ignore);
+    await tick();
+    const names = Object.keys(at(0).headers).map((n) => n.toLowerCase());
+    expect(names).not.toContain('content-type');
+    expect(at(0).headers['X-K']).toBe('v');
+  });
+
   it('withCredentials e timeout', async () => {
     const a = httpUploadAdapter({ endpoint: '/up' });
     void a.uploadImage(png(), ctx()).catch(ignore);

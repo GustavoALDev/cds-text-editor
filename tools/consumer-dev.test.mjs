@@ -211,7 +211,11 @@ test('serve.mjs --with-server: demo-config server, CSRF, upload real e mídia, p
       /default-src 'self'/,
     );
 
-    const csrf = await fetch(`${base}/csrf`);
+    // O token CSRF é ligado à sessão: /csrf exige o bearer (sem ele, 401).
+    assert.equal((await fetch(`${base}/csrf`)).status, 401);
+    const csrf = await fetch(`${base}/csrf`, {
+      headers: { Authorization: `Bearer ${example.authToken}` },
+    });
     const { token } = await csrf.json();
     const cookie = csrf.headers.get('set-cookie').split(';')[0];
     assert.ok(token);

@@ -128,6 +128,29 @@ describe('S8: maxInputLength', () => {
   });
 });
 
+describe('S8: a saída pode passar de maxInputLength (R9 B1)', () => {
+  it('"&" cru vira "&amp;": s(s(x)) lança input-too-long com o mesmo limite', () => {
+    const s = createSanitizer({ maxInputLength: 100 });
+    const input = '&'.repeat(80);
+    const out = s(input);
+    expect(out).toBe('&amp;'.repeat(80));
+    expect(out.length).toBeGreaterThan(100);
+    expectLimitError(
+      thrown(() => s(out)),
+      'input-too-long',
+      100,
+    );
+  });
+
+  it('o servidor recusa a saída acima do limite que ele mesmo guarda', () => {
+    const limit = 100;
+    const s = createSanitizer({ maxInputLength: limit });
+    const fits = (html: string): boolean => s(html).length <= limit;
+    expect(fits('&'.repeat(80))).toBe(false);
+    expect(fits('a'.repeat(80))).toBe(true);
+  });
+});
+
 describe('S8: opções e entrada inválidas', () => {
   const invalid: unknown[] = [0, -1, 1.5, NaN, Infinity, '10'];
 

@@ -10,9 +10,10 @@ export const RTE_TABLE_SCROLL_CLASS = 'rte-table-scroll';
 export const RTE_TABLE_SIZED_CLASS = 'rte-table--sized';
 
 const TABLE_OPEN = /<table(?=[\s>])/g;
-/** Início canônico de uma tabela com `colgroup` próprio (depois de um `caption` opcional). */
-const TABLE_HEAD =
-  /<table>(?:<caption>[\s\S]*?<\/caption>)?<colgroup>((?:<col\b[^>]*>)*)<\/colgroup>/y;
+/** Os `col` de um `colgroup` canônico que começa em `lastIndex` (depois de um `caption` opcional). */
+const COLGROUP = /<colgroup>((?:<col\b[^>]*>)*)<\/colgroup>/y;
+const TABLE_CAPTION = '<table><caption>';
+const CAPTION_CLOSE = '</caption>';
 /** `width:` como nome de declaração (não o fim de `min-width:`). */
 const COL_WIDTH = /<col\b[^>]*\sstyle="(?:[^"]*[;\s])?width:/;
 const TABLE_CLOSE = /<\/table>/g;
@@ -38,10 +39,30 @@ export function prepareRteHtml(
   html: string,
   options: { fragmentBase: string | null },
 ): string {
+  // Cache do próximo `</caption>`: a busca nunca atravessa o mesmo trecho duas vezes
+  // (custo linear mesmo com milhares de `caption` sem fechamento; R9 A1).
+  let closeAt = -2;
+  const nextClose = (from: number): number => {
+    if (closeAt === -1 || closeAt >= from) return closeAt;
+    closeAt = html.indexOf(CAPTION_CLOSE, from);
+    return closeAt;
+  };
+  /** Os `col` do `colgroup` que abre a tabela em `offset`, sem sair do `caption` dela. */
+  const colsOf = (offset: number): string | undefined => {
+    let at = offset + '<table>'.length;
+    if (html.startsWith(TABLE_CAPTION, offset)) {
+      const close = nextClose(offset + TABLE_CAPTION.length);
+      if (close === -1) return undefined;
+      at = close + CAPTION_CLOSE.length;
+    } else if (!html.startsWith('<table>', offset)) {
+      return undefined;
+    }
+    COLGROUP.lastIndex = at;
+    return COLGROUP.exec(html)?.[1];
+  };
   let out = html
     .replace(TABLE_OPEN, (_tag, offset: number) => {
-      TABLE_HEAD.lastIndex = offset;
-      const cols = TABLE_HEAD.exec(html)?.[1];
+      const cols = colsOf(offset);
       const sized = cols !== undefined && COL_WIDTH.test(cols);
       return `<div class="${RTE_TABLE_SCROLL_CLASS}"><table${
         sized ? ` class="${RTE_TABLE_SIZED_CLASS}"` : ''
