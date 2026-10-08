@@ -167,11 +167,13 @@ describe('RteEditor: ciclo de vida (D2, R2)', () => {
     expect(Object.getOwnPropertySymbols(host)).not.toContain(HOOK);
   });
 
-  // Vazamento do editor: 100 ciclos com a barra mínima; da barra e dos
-  // menus: 20 ciclos com a 'full' (criar a barra inteira no jsdom é o custo
-  // dominante, e 100 ciclos com ela passavam de 30 s com a suíte em paralelo).
+  // Vazamento do editor: 30 ciclos com a barra mínima; da barra e dos menus:
+  // 20 ciclos com a 'full' (Z10 da 05d2: as invariantes são por contagem, então
+  // 30 bastam para acusar vazamento por ciclo e cabem no timeout padrão de 30 s
+  // mesmo com a cobertura (v8); os 100 ciclos ficam no navegador real, N7/N46 em
+  // e2e/angular/editor-lifecycle.spec.ts).
   it.each([
-    ['minimal', 100],
+    ['minimal', 30],
     ['full', 20],
   ] as const)(
     "alternar o editor (barra '%s') %d× não deixa editores nem menus para trás",
@@ -202,8 +204,6 @@ describe('RteEditor: ciclo de vida (D2, R2)', () => {
       const last = median(durations.slice(-10));
       expect(last).toBeLessThanOrEqual(first * 3);
     },
-    // com a cobertura (v8) os 100 ciclos passam de 30 s
-    120_000,
   );
 
   it('criar e destruir antes de estabilizar não cria editor', async () => {

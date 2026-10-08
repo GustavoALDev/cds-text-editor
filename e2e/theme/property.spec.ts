@@ -16,7 +16,7 @@ import {
   rgbFn,
 } from '../../packages/theme/src/testing/arbitraries';
 import { deltaE } from './helpers/delta-e';
-import { LIMITS, groupOf, withinQuantStep, type Group } from './helpers/limits';
+import { LIMITS, groupOf, quantExcused, type Group } from './helpers/limits';
 import {
   loadThemePage,
   readSupport,
@@ -83,9 +83,9 @@ test.describe(`propriedades do tema (FC_SEED=${SEED}, FC_RUNS=${RUNS})`, () => {
           if (!g) continue;
           const planB = e!.planB[token]!;
           const label = `${token} ${g} native=${nat} planB=${planB}`;
-          // Passa no ΔE do grupo OU a no máximo 1 unidade de 8 bits por canal (empate de
-          // arredondamento do canvas perto do preto, onde 1 unidade vale ΔE ~0,012).
-          if (withinQuantStep(nat, planB)) continue;
+          // Passa no ΔE do grupo, ou, só onde 1 unidade de 8 bits já excede o limite do grupo
+          // (cores escuras, ΔE ~0,012 por unidade), a no máximo 1 unidade por canal.
+          if (quantExcused(nat, planB, LIMITS[g])) continue;
           expect(deltaE(nat, planB), label).toBeLessThanOrEqual(LIMITS[g]);
         }
       }),

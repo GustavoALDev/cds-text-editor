@@ -4,6 +4,9 @@
  * aleatórias, 3 motores).
  */
 
+import type { Rgb8 } from '../../../packages/theme/src/color/convert';
+import { deltaE } from './delta-e';
+
 export type Group = 'linear' | 'text' | 'neutral' | 'border';
 
 /**
@@ -50,4 +53,32 @@ export function withinQuantStep(
   steps = 1,
 ): boolean {
   return a.every((v, i) => Math.abs(v - b[i]!) <= steps);
+}
+
+/** Maior ΔE que uma unidade de 8 bits em um canal produz a partir de `color` (para cima ou para baixo). */
+export function oneStepDeltaE(color: Rgb8): number {
+  let worst = 0;
+  for (let ch = 0; ch < 3; ch++) {
+    for (const d of [-1, 1]) {
+      const v = color[ch]! + d;
+      if (v < 0 || v > 255) continue;
+      const moved: [number, number, number] = [color[0], color[1], color[2]];
+      moved[ch] = v;
+      worst = Math.max(worst, deltaE(color, moved));
+    }
+  }
+  return worst;
+}
+
+/**
+ * A diferença de uma unidade de 8 bits só é desculpa onde uma unidade, naquela cor, já excede o
+ * limite do grupo (cores escuras). Em tons médios o ΔE estrito vale.
+ */
+export function quantExcused(
+  nat: Rgb8,
+  planB: Rgb8,
+  limit: number,
+  steps = 1,
+): boolean {
+  return withinQuantStep(nat, planB, steps) && oneStepDeltaE(nat) > limit;
 }
