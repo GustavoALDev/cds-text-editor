@@ -33,7 +33,7 @@ export function uploadConfig(getToken: () => Promise<string>) {
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRichText({ upload: uploadConfig(async () => 'token-do-usuario') }),
+    provideRichText({ upload: uploadConfig(async () => 'outro-segredo') }),
   ],
 };
 // #endregion

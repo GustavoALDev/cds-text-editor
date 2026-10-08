@@ -34,7 +34,7 @@ Duas coisas valem a pena saber:
 
 ## Proxy do `ng serve`
 
-O servidor de exemplo escuta em `http://localhost:3000` e não responde a CORS. Em desenvolvimento, deixe o `ng serve` encaminhar `/api` para ele, assim o navegador só fala com a origem do app. Crie o `proxy.conf.json` na raiz do projeto:
+O servidor de exemplo escuta em `http://localhost:3000` e não responde a CORS. Em desenvolvimento, deixe o `ng serve` encaminhar `/api` para ele, assim o navegador só fala com a origem do app. Crie o `proxy.conf.json` na raiz do projeto (ao lado do `angular.json`):
 
 <!-- no-compile: configuração do ng serve do integrador, conferida na rodada 0 e no teste de 15 minutos -->
 
@@ -52,7 +52,7 @@ O servidor de exemplo escuta em `http://localhost:3000` e não responde a CORS. 
 }
 ```
 
-Inicie o servidor com `ADMIN_TOKEN` e `AUTH_TOKEN`, **os dois obrigatórios para subir**: sem `AUTH_TOKEN` o servidor se recusa a iniciar (só em desenvolvimento, `ALLOW_ANON=1` dispensa a autenticação, com aviso no log). Por exemplo, `ADMIN_TOKEN=troque-me AUTH_TOKEN=outro-segredo node examples/server-node/server.mjs`, e o app com `ng serve --proxy-config proxy.conf.json`. O token do `AUTH_TOKEN` é o que o seu `getToken` devolve, enviado como `Authorization: Bearer`. Atrás de https, ligue `COOKIE_SECURE=1` (cookie `__Host-csrf` com `Secure`) e fixe `CSRF_SECRET`; o `ADMIN_TOKEN` só abre as rotas de limpeza.
+Inicie o servidor com `ADMIN_TOKEN` e `AUTH_TOKEN`, **os dois obrigatórios para subir**: sem `AUTH_TOKEN` o servidor se recusa a iniciar (só em desenvolvimento, `ALLOW_ANON=1` dispensa a autenticação, com aviso no log). Por exemplo, `ADMIN_TOKEN=troque-me AUTH_TOKEN=outro-segredo node examples/server-node/server.mjs`, e o app com `ng serve --proxy-config proxy.conf.json`. Para não repetir a opção, ponha `"proxyConfig": "proxy.conf.json"` em `options` do alvo `serve` no `angular.json`. Rode o servidor de exemplo de uma pasta onde ele possa gravar: os arquivos vão para `MEDIA_DIR`, que por padrão é `./media` no diretório atual. Quem não tem o repositório encontra o servidor em `examples/server-node` do kit de testes. O `getToken` do exemplo deve devolver o mesmo valor do `AUTH_TOKEN` (aqui, `outro-segredo`), enviado como `Authorization: Bearer`. Atrás de https, ligue `COOKIE_SECURE=1` (cookie `__Host-csrf` com `Secure`) e fixe `CSRF_SECRET`; o `ADMIN_TOKEN` só abre as rotas de limpeza.
 
 **CSRF:** o `/csrf` também exige o bearer, emite um cookie `SameSite=Strict` e devolve o token ligado à sessão. Cada chamada ao `/csrf` troca o cookie e o adaptador envia até dois arquivos ao mesmo tempo, então busque o token **uma vez** e reaproveite (o exemplo acima faz isso). Como o `ng serve` fala só com a sua origem, o cookie e o proxy funcionam sem CORS. As URLs devolvidas começam em `/media/`; são relativas, então o texto as aceita enquanto `allowRelativeMedia` for `true` (o padrão), e a entrada `/media` do _proxy_ as leva ao servidor. Em produção, sirva a mídia de um host próprio e liste-o em `mediaHosts`.
 
