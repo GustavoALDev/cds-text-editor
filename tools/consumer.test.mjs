@@ -14,6 +14,7 @@ import * as fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
+  CONSUMER_MARK,
   PACKAGES,
   buildManifest,
   commandsFor,
@@ -246,6 +247,7 @@ test('prepareConsumer copia o demo sem node_modules/dist/.angular e reescreve o 
   mkdirSync(join(consumer, 'node_modules', '@cds', 'rte-core'), {
     recursive: true,
   });
+  writeFileSync(join(consumer, CONSUMER_MARK), '');
   mkdirSync(join(consumer, 'node_modules', 'rxjs'), { recursive: true });
   writeFileSync(join(consumer, 'node_modules', '.package-lock.json'), '{}');
   writeFileSync(join(consumer, 'velho.txt'), 'velho');
@@ -282,11 +284,77 @@ test('prepareConsumer recusa diretório dentro do repositório', () => {
   );
 });
 
+function demoRepo() {
+  const root = tmp('repo-');
+  const demo = join(root, 'apps', 'demo');
+  mkdirSync(demo, { recursive: true });
+  writeFileSync(join(demo, 'package.json'), '{}');
+  mkdirSync(join(root, 'dist', 'tarballs'), { recursive: true });
+  writeFileSync(
+    join(root, 'dist', 'tarballs', 'manifest.json'),
+    JSON.stringify(MANIFEST),
+  );
+  return root;
+}
+
+test('prepareConsumer recusa diretório não vazio sem a marca e não apaga nada', () => {
+  const root = demoRepo();
+  const consumer = join(tmp('out-'), 'c');
+  mkdirSync(consumer);
+  writeFileSync(join(consumer, 'meu-trabalho.txt'), 'importante');
+  assert.throws(
+    () => prepareConsumer({ repoRoot: root, consumerDir: consumer, fs }),
+    /não está vazio e não tem a marca/,
+  );
+  assert.equal(
+    readFileSync(join(consumer, 'meu-trabalho.txt'), 'utf8'),
+    'importante',
+  );
+  assert.ok(!existsSync(join(consumer, CONSUMER_MARK)));
+});
+
+test('prepareConsumer grava a marca em diretório novo ou vazio e a mantém na segunda rodada', () => {
+  const root = demoRepo();
+  const out = tmp('out-');
+  for (const consumer of [join(out, 'novo'), tmp('vazio-')]) {
+    prepareConsumer({ repoRoot: root, consumerDir: consumer, fs });
+    assert.ok(existsSync(join(consumer, CONSUMER_MARK)));
+    writeFileSync(join(consumer, 'resto.txt'), 'x');
+    prepareConsumer({ repoRoot: root, consumerDir: consumer, fs });
+    assert.ok(existsSync(join(consumer, CONSUMER_MARK)));
+    assert.ok(!existsSync(join(consumer, 'resto.txt')));
+  }
+});
+
+test('o consumidor sob um link que aponta para dentro do repositório é recusado (realpath)', () => {
+  const root = demoRepo();
+  const out = tmp('out-');
+  const link = join(out, 'link');
+  symlinkSync(root, link, 'junction');
+  const viaLink = join(link, 'novo');
+  assert.throws(
+    () => resolveConsumerDir({ RTE_CONSUMER_DIR: viaLink }, root),
+    /dentro do repositório/,
+  );
+  assert.throws(
+    () => prepareConsumer({ repoRoot: root, consumerDir: viaLink, fs }),
+    /dentro do repositório/,
+  );
+  // link que aponta para um ancestral do repositório: o consumidor o contém
+  const up = join(out, 'up');
+  symlinkSync(resolve(root, '..'), up, 'junction');
+  assert.throws(
+    () => resolveConsumerDir({ RTE_CONSUMER_DIR: up }, root),
+    /contém o repositório/,
+  );
+});
+
 // ---- prova de origem ----
 
 /** Consumidor falso: node_modules/@cds/<pkg> real + lockfile oculto do npm. */
-function fakeInstall({ integrity = {}, versions = {} } = {}) {
-  const consumer = tmp('consumer-');
+function fakeInstall({ integrity = {}, versions = {}, dir } = {}) {
+  const consumer = dir ?? tmp('consumer-');
+  mkdirSync(consumer, { recursive: true });
   const lock = { packages: {} };
   for (const p of MANIFEST.packages) {
     const dir = join(consumer, 'node_modules', p.name);
@@ -313,6 +381,17 @@ test('verifyOrigin aceita diretórios reais com o sha do manifest', () => {
     verifyOrigin(consumer, MANIFEST, fs, { repoRoot: tmp('repo-') }),
     [],
   );
+});
+
+test('verifyOrigin recusa node_modules num ancestral do consumidor', () => {
+  const parent = tmp('ancestral-');
+  mkdirSync(join(parent, 'node_modules'));
+  const consumer = fakeInstall({ dir: join(parent, 'c') });
+  const errors = verifyOrigin(consumer, MANIFEST, fs, {
+    repoRoot: tmp('repo-'),
+  });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /node_modules em .*ancestral/);
 });
 
 test('verifyOrigin recusa symlink', () => {

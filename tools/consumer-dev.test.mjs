@@ -1,24 +1,25 @@
 // Testes de `dev`/`serve` do consumer.mjs e de `serve.mjs --with-server` (spec 07b, W6).
 // Nenhum teste roda npm nem ng; o servidor sobe em porta efêmera.
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import * as fs from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { EventEmitter } from 'node:events';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
-  DEV_AUTH_TOKEN,
   DEV_SERVER_PORT,
   exampleServerEnv,
   ngServeArgs,
   retargetProxy,
+  runDev,
   serveArgs,
 } from './consumer.mjs';
 import {
   createDemoServer,
   createExampleApi,
-  DEV_AUTH_TOKEN as SERVE_TOKEN,
   isApiPath,
 } from '../apps/demo/serve.mjs';
 
@@ -37,6 +38,10 @@ test('ngServeArgs: ng serve com --proxy-config (e porta, se houver)', () => {
     '--port',
     '4322',
   ]);
+  assert.deepEqual(
+    ngServeArgs({ consumerDir: '/c', host: '127.0.0.1' }).slice(-2),
+    ['--host', '127.0.0.1'],
+  );
   assert.deepEqual(
     ngServeArgs({ consumerDir: '/c', proxyConfig: 'p.json' }).slice(1),
     ['serve', '--proxy-config', 'p.json'],
@@ -68,7 +73,15 @@ test('proxy.conf.json encaminha /upload, /csrf e /media/ para localhost:3000', (
     assert.equal(entry.target, `http://localhost:${DEV_SERVER_PORT}`);
   }
   const moved = retargetProxy(proxy, 4323);
-  assert.equal(moved['/upload'].target, 'http://localhost:4323');
+  assert.equal(moved['/upload'].target, 'http://127.0.0.1:4323');
+  assert.equal(
+    retargetProxy(proxy, 4323, '0.0.0.0')['/csrf'].target,
+    'http://127.0.0.1:4323',
+  );
+  assert.equal(
+    retargetProxy(proxy, 4323, '::1')['/csrf'].target,
+    'http://[::1]:4323',
+  );
   assert.equal(
     proxy['/upload'].target,
     'http://localhost:3000',
@@ -77,23 +90,92 @@ test('proxy.conf.json encaminha /upload, /csrf e /media/ para localhost:3000', (
 });
 
 test('exampleServerEnv: pasta temporária, porta e tokens de desenvolvimento', () => {
-  const env = exampleServerEnv({ mediaDir: '/m', port: 3000, adminToken: 'a' });
+  const env = exampleServerEnv({
+    mediaDir: '/m',
+    port: 3000,
+    authToken: 't',
+    adminToken: 'a',
+  });
   assert.deepEqual(env, {
     PORT: '3000',
+    HOST: '127.0.0.1',
     MEDIA_DIR: '/m',
-    AUTH_TOKEN: DEV_AUTH_TOKEN,
+    AUTH_TOKEN: 't',
     ADMIN_TOKEN: 'a',
   });
 });
 
-test('o token de desenvolvimento é o mesmo no consumer, no serve.mjs e na página', () => {
-  const config = readFileSync(
-    join(ROOT, 'apps', 'demo', 'src', 'app', 'upload', 'demo-config.ts'),
-    'utf8',
+test('nenhum token fixo no bundle do demo, no serve.mjs nem no consumer.mjs', () => {
+  for (const file of [
+    ['apps', 'demo', 'src', 'app', 'upload', 'demo-config.ts'],
+    ['apps', 'demo', 'src', 'app', 'pages', 'files', 'files.page.ts'],
+    ['apps', 'demo', 'serve.mjs'],
+    ['tools', 'consumer.mjs'],
+  ]) {
+    const text = readFileSync(join(ROOT, ...file), 'utf8');
+    assert.doesNotMatch(text, /demo-dev-token|DEV_AUTH_TOKEN/, file.join('/'));
+  }
+});
+
+test('dev: token por execução no demo-config.json, host em servidor e ng serve, config restaurada', async () => {
+  const consumer = await mkdtemp(join(tmpdir(), 'cds-rte-dev-'));
+  const ngDir = join(consumer, 'node_modules', '@angular', 'cli', 'bin');
+  mkdirSync(ngDir, { recursive: true });
+  writeFileSync(join(ngDir, 'ng.js'), '');
+  writeFileSync(
+    join(consumer, 'proxy.conf.json'),
+    JSON.stringify({ '/upload': { target: 'http://localhost:3000' } }),
   );
-  const page = /DEV_AUTH_TOKEN = '([^']+)'/.exec(config)?.[1];
-  assert.equal(page, DEV_AUTH_TOKEN);
-  assert.equal(SERVE_TOKEN, DEV_AUTH_TOKEN);
+  mkdirSync(join(consumer, 'public'));
+  const original = '{"upload":"simulated"}\n';
+  writeFileSync(join(consumer, 'public', 'demo-config.json'), original);
+  const runs = [];
+  let during;
+  const spawn = (cmd, args, options) => {
+    const child = new EventEmitter();
+    child.kill = () => {};
+    runs.push({ args, options });
+    if (runs.length === 2) {
+      during = JSON.parse(
+        readFileSync(join(consumer, 'public', 'demo-config.json'), 'utf8'),
+      );
+      setImmediate(() => child.emit('exit'));
+    }
+    return child;
+  };
+  await runDev({
+    repoRoot: ROOT,
+    consumerDir: consumer,
+    env: { HOST: '::1' },
+    fs,
+    spawn,
+  });
+  const [server, ngServe] = runs;
+  assert.equal(server.options.env.HOST, '::1');
+  assert.equal(server.options.env.AUTH_TOKEN, during.authToken);
+  assert.match(during.authToken, /^[0-9a-f]{32}$/);
+  assert.equal(during.upload, 'server');
+  assert.deepEqual(ngServe.args.slice(-2), ['--host', '::1']);
+  assert.equal(
+    readFileSync(join(consumer, 'public', 'demo-config.json'), 'utf8'),
+    original,
+    'demo-config.json original restaurado',
+  );
+  assert.equal(existsSync(join(consumer, 'proxy.dev.json')), false);
+
+  // segunda execução: outro token
+  const firstToken = during.authToken;
+  runs.length = 0;
+  await runDev({
+    repoRoot: ROOT,
+    consumerDir: consumer,
+    env: {},
+    fs,
+    spawn,
+  });
+  assert.notEqual(runs[0].options.env.AUTH_TOKEN, firstToken);
+  assert.equal(runs[0].options.env.HOST, '127.0.0.1');
+  await rm(consumer, { recursive: true, force: true });
 });
 
 test('isApiPath: só /upload, /csrf e /media/*', () => {
@@ -112,11 +194,18 @@ async function listen(server) {
 test('serve.mjs --with-server: demo-config server, CSRF, upload real e mídia, pasta removida', async () => {
   const browser = await mkdtemp(join(tmpdir(), 'cds-rte-browser-'));
   const example = await createExampleApi();
-  const server = createDemoServer(browser, { api: example.handler });
+  const server = createDemoServer(browser, {
+    api: example.handler,
+    authToken: example.authToken,
+  });
   const base = await listen(server);
   try {
     const config = await fetch(`${base}/demo-config.json`);
-    assert.deepEqual(await config.json(), { upload: 'server' });
+    assert.deepEqual(await config.json(), {
+      upload: 'server',
+      authToken: example.authToken,
+    });
+    assert.match(example.authToken, /^[0-9a-f]{32}$/);
     assert.match(
       config.headers.get('content-security-policy'),
       /default-src 'self'/,
@@ -143,7 +232,7 @@ test('serve.mjs --with-server: demo-config server, CSRF, upload real e mídia, p
       method: 'POST',
       body: form,
       headers: {
-        Authorization: `Bearer ${DEV_AUTH_TOKEN}`,
+        Authorization: `Bearer ${example.authToken}`,
         'X-CSRF-Token': token,
         Cookie: cookie,
       },

@@ -269,11 +269,15 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   if (!adminToken)
     throw new Error('Defina ADMIN_TOKEN (e AUTH_TOKEN para o upload).');
   const port = Number(process.env.PORT ?? 3000);
+  // Escuta só no loopback; `HOST=0.0.0.0` (por exemplo, num contêiner) expõe na rede.
+  const host = process.env.HOST ?? '127.0.0.1';
   createServer(
     createApp({
       mediaDir: process.env.MEDIA_DIR ?? './media',
       adminToken,
       authToken: process.env.AUTH_TOKEN,
     }),
-  ).listen(port, () => console.log(`server-node em http://localhost:${port}`));
+  ).listen(port, host, () =>
+    console.log(`server-node em http://${host}:${port}`),
+  );
 }

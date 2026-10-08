@@ -11,6 +11,7 @@
 // provar que a `<meta>` basta (W4).
 // Variáveis: RTE_DEMO_PORT (padrão 4318), RTE_CONSUMER_DIR.
 import { createReadStream, statSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -20,12 +21,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 /** A CSP do demo; idêntica à `<meta>` do `src/index.html` (conferida por `tools/demo-csp.test.mjs`). */
 export const CSP =
   "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; connect-src 'self'";
-
-/**
- * Token *bearer* de desenvolvimento (mesmo valor de `DEV_AUTH_TOKEN` em
- * `src/app/upload/demo-config.ts`, conferido por `tools/consumer-dev.test.mjs`). Não é segredo.
- */
-export const DEV_AUTH_TOKEN = 'demo-dev-token';
 
 /** Rotas encaminhadas ao servidor de exemplo no modo `--with-server`. */
 export const API_PATHS = ['/upload', '/csrf'];
@@ -92,20 +87,23 @@ export function isApiPath(pathname) {
 
 /**
  * Monta o `createApp` do `examples/server-node` com uma pasta temporária (removida por
- * `cleanup`) e tokens de desenvolvimento. Devolve o `handler` (req, res) para `createDemoServer`.
+ * `cleanup`) e um token *bearer* gerado a cada execução (`authToken`, entregue à página pelo
+ * `demo-config.json`; nunca fica no bundle). Devolve o `handler` (req, res) para `createDemoServer`.
  */
 export async function createExampleApi({ mediaDir } = {}) {
   const { createApp } = await import(pathToFileURL(SERVER_EXAMPLE).href);
   const owned = mediaDir === undefined;
   const dir =
     mediaDir ?? (await mkdtemp(join(tmpdir(), 'cds-rte-demo-media-')));
+  const authToken = randomBytes(16).toString('hex');
   const handler = createApp({
     mediaDir: dir,
-    authToken: DEV_AUTH_TOKEN,
-    adminToken: `admin-${Math.random().toString(36).slice(2)}`,
+    authToken,
+    adminToken: randomBytes(16).toString('hex'),
   });
   return {
     handler,
+    authToken,
     mediaDir: dir,
     cleanup: () =>
       owned ? rm(dir, { recursive: true, force: true }) : undefined,
@@ -114,9 +112,13 @@ export async function createExampleApi({ mediaDir } = {}) {
 
 /**
  * Cria o servidor (sem escutar). `dir` é a pasta `browser/` do build; `api` (opcional) é o
- * handler do servidor de exemplo: liga o modo `server` (rotas da API e `demo-config.json`).
+ * handler do servidor de exemplo: liga o modo `server` (rotas da API e `demo-config.json`, que
+ * leva o `authToken` da execução).
  */
-export function createDemoServer(dir, { api, cspHeader = true } = {}) {
+export function createDemoServer(
+  dir,
+  { api, authToken, cspHeader = true } = {},
+) {
   const base = resolve(dir);
   return createServer((req, res) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -140,7 +142,11 @@ export function createDemoServer(dir, { api, cspHeader = true } = {}) {
     }
     if (api && pathname === '/demo-config.json') {
       res.writeHead(200, { 'Content-Type': TYPES['.json'] });
-      res.end(req.method === 'HEAD' ? undefined : '{"upload":"server"}\n');
+      res.end(
+        req.method === 'HEAD'
+          ? undefined
+          : `${JSON.stringify({ upload: 'server', authToken })}\n`,
+      );
       return;
     }
     if (pathname === '/__health') {
@@ -181,6 +187,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     : null;
   const server = createDemoServer(dir, {
     api: example?.handler,
+    authToken: example?.authToken,
     cspHeader: !argv.includes('--no-csp-header'),
   });
   const stop = () => {

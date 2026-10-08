@@ -14,11 +14,7 @@ import {
 } from '@cds/rte-angular';
 import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
 import { httpUploadAdapter } from '@cds/rte-angular/upload';
-import {
-  DEV_AUTH_TOKEN,
-  loadDemoConfig,
-  type UploadMode,
-} from '../../upload/demo-config';
+import { loadDemoConfig, type UploadMode } from '../../upload/demo-config';
 import { createSimulatedAdapter } from '../../upload/simulated-adapter';
 
 const REASONS: Record<RteUploadErrorEvent['reason'], string> = {
@@ -55,6 +51,8 @@ export class FilesPage {
   protected readonly status = signal('');
   /** Vale o padrão no prerender; no navegador o `demo-config.json` troca o modo. */
   protected readonly mode = signal<UploadMode>('simulated');
+  /** Token do servidor local desta execução (vem do `demo-config.json`, não do bundle). */
+  private authToken = '';
   /** Trocar o modo recria o editor (a configuração de envio é lida por referência). */
   protected readonly modes = computed(() => [this.mode()]);
 
@@ -74,7 +72,7 @@ export class FilesPage {
         const response = await fetch('/csrf', { credentials: 'include' });
         const { token } = (await response.json()) as { token: string };
         return {
-          Authorization: `Bearer ${DEV_AUTH_TOKEN}`,
+          Authorization: `Bearer ${this.authToken}`,
           'X-CSRF-Token': token,
         };
       },
@@ -86,7 +84,10 @@ export class FilesPage {
 
   constructor() {
     afterNextRender(() => {
-      void loadDemoConfig().then((config) => this.mode.set(config.upload));
+      void loadDemoConfig().then((config) => {
+        this.authToken = config.authToken ?? '';
+        this.mode.set(config.upload);
+      });
     });
   }
 

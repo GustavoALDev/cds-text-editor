@@ -22,6 +22,15 @@ describe('demo-config', () => {
     expect(await loadDemoConfig(offline)).toEqual(DEFAULT_DEMO_CONFIG);
   });
 
+  it('o token da execução vem do JSON (só texto não vazio)', async () => {
+    expect(
+      await loadDemoConfig(respond('{"upload":"server","authToken":"abc"}')),
+    ).toEqual({ upload: 'server', authToken: 'abc' });
+    expect(parseDemoConfig({ upload: 'server', authToken: 7 })).toEqual({
+      upload: 'server',
+    });
+  });
+
   it('server quando o JSON diz', async () => {
     expect(await loadDemoConfig(respond('{"upload":"server"}'))).toEqual({
       upload: 'server',

@@ -6,11 +6,19 @@
 // Variáveis: RTE_CONSUMER_DIR (diretório do consumidor), RTE_NPM (npm a usar; padrão `npm`,
 // localmente `npx -y npm@11`), RUNNER_TEMP/TMPDIR (padrão do diretório do consumidor).
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { createRequire } from 'node:module';
 import * as nodeFs from 'node:fs';
 import { tmpdir } from 'node:os';
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+} from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const REPO_ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -48,6 +56,49 @@ const toSlash = (path) => path.replaceAll('\\', '/');
 function isInside(parent, child) {
   const rel = relative(resolve(parent), resolve(child));
   return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+}
+
+/** Marca gravada na criação do consumidor: só um diretório com ela pode ser apagado pelo `prepare`. */
+export const CONSUMER_MARK = '.cds-rte-consumer';
+
+/**
+ * `realpath` do caminho; se não existir, o do ancestral existente mais próximo seguido do resto
+ * (a pasta ainda não criada pode estar sob um link que aponta para dentro do repositório).
+ */
+export function realOrSelf(path, fs = nodeFs) {
+  const native = fs.realpathSync.native ?? fs.realpathSync;
+  let current = resolve(path);
+  const rest = [];
+  for (;;) {
+    try {
+      return join(native(current), ...[...rest].reverse());
+    } catch {
+      const parent = dirname(current);
+      if (parent === current) return resolve(path);
+      rest.push(basename(current));
+      current = parent;
+    }
+  }
+}
+
+/** Recusa consumidor dentro do repositório ou que o contenha, pelo texto e pelo `realpath`. */
+export function assertOutsideRepo(consumerDir, repoRoot, fs = nodeFs) {
+  const pairs = [
+    [repoRoot, consumerDir],
+    [realOrSelf(repoRoot, fs), realOrSelf(consumerDir, fs)],
+  ];
+  for (const [repo, dir] of pairs) {
+    if (isInside(repo, dir)) {
+      throw new Error(
+        `o diretório do consumidor (${consumerDir}) fica dentro do repositório: use um diretório fora dele (RTE_CONSUMER_DIR)`,
+      );
+    }
+    if (isInside(dir, repo)) {
+      throw new Error(
+        `o diretório do consumidor (${consumerDir}) contém o repositório: use um diretório fora dele (RTE_CONSUMER_DIR)`,
+      );
+    }
+  }
 }
 
 export function packDirOf(repoRoot, dir) {
@@ -100,7 +151,7 @@ export function buildManifest(entries) {
 }
 
 /** Diretório do consumidor: RTE_CONSUMER_DIR, senão RUNNER_TEMP (CI) ou TMPDIR. Fora do repositório. */
-export function resolveConsumerDir(env, repoRoot) {
+export function resolveConsumerDir(env, repoRoot, fs = nodeFs) {
   let dir;
   if (env.RTE_CONSUMER_DIR) {
     dir = resolve(env.RTE_CONSUMER_DIR);
@@ -111,16 +162,7 @@ export function resolveConsumerDir(env, repoRoot) {
         : (env.TMPDIR ?? env.RUNNER_TEMP ?? tmpdir());
     dir = join(resolve(base), 'cds-rte-consumer', 'demo');
   }
-  if (isInside(repoRoot, dir)) {
-    throw new Error(
-      `o diretório do consumidor (${dir}) fica dentro do repositório: use um diretório fora dele (RTE_CONSUMER_DIR)`,
-    );
-  }
-  if (isInside(dir, repoRoot)) {
-    throw new Error(
-      `o diretório do consumidor (${dir}) contém o repositório: use um diretório fora dele (RTE_CONSUMER_DIR)`,
-    );
-  }
+  assertOutsideRepo(dir, repoRoot, fs);
   return dir;
 }
 
@@ -182,13 +224,18 @@ export function runPack({ repoRoot, npm, exec, fs = nodeFs }) {
 /**
  * Copia `apps/demo` para o consumidor e reescreve o `package.json`. Limpa o consumidor antes,
  * mas preserva o `node_modules` de terceiros (só `@cds` e o lockfile oculto saem, para o
- * npm reinstalar os tarballs novos).
+ * npm reinstalar os tarballs novos). Só apaga um diretório com a marca `.cds-rte-consumer`
+ * (gravada na criação); um diretório não vazio sem a marca é recusado.
  */
 export function prepareConsumer({ repoRoot, consumerDir, fs = nodeFs }) {
-  if (isInside(repoRoot, consumerDir)) {
-    throw new Error(
-      `o diretório do consumidor (${consumerDir}) fica dentro do repositório`,
-    );
+  assertOutsideRepo(consumerDir, repoRoot, fs);
+  if (fs.existsSync(consumerDir)) {
+    const entries = fs.readdirSync(consumerDir);
+    if (entries.length && !entries.includes(CONSUMER_MARK)) {
+      throw new Error(
+        `${consumerDir} não está vazio e não tem a marca ${CONSUMER_MARK}: o "prepare" não apaga o que não criou (use um diretório novo ou vazio em RTE_CONSUMER_DIR)`,
+      );
+    }
   }
   const tarballDir = join(repoRoot, 'dist', 'tarballs');
   const manifestPath = join(tarballDir, 'manifest.json');
@@ -199,8 +246,12 @@ export function prepareConsumer({ repoRoot, consumerDir, fs = nodeFs }) {
   const demo = join(repoRoot, 'apps', 'demo');
 
   fs.mkdirSync(consumerDir, { recursive: true });
+  fs.writeFileSync(
+    join(consumerDir, CONSUMER_MARK),
+    'Criado por tools/consumer.mjs; pode ser apagado pelo "prepare".\n',
+  );
   for (const name of fs.readdirSync(consumerDir)) {
-    if (name !== 'node_modules') {
+    if (name !== 'node_modules' && name !== CONSUMER_MARK) {
       fs.rmSync(join(consumerDir, name), { recursive: true, force: true });
     }
   }
@@ -231,10 +282,10 @@ export function prepareConsumer({ repoRoot, consumerDir, fs = nodeFs }) {
  */
 export function verifyOrigin(consumerDir, manifest, fs, { repoRoot }) {
   const real = (path) => (fs.realpathSync.native ?? fs.realpathSync)(path);
-  if (isInside(repoRoot, consumerDir)) {
-    return [
-      `o diretório do consumidor (${consumerDir}) fica dentro do repositório: a prova de origem não vale`,
-    ];
+  try {
+    assertOutsideRepo(consumerDir, repoRoot, fs);
+  } catch (error) {
+    return [`${error.message}: a prova de origem não vale`];
   }
   const errors = [];
   const modules = join(consumerDir, 'node_modules');
@@ -249,6 +300,15 @@ export function verifyOrigin(consumerDir, manifest, fs, { repoRoot }) {
     repoReal = real(repoRoot);
   } catch {
     // repositório inexistente (fixture): compara pelo texto
+  }
+  // Um `node_modules` num ancestral deixaria o Node/esbuild resolver pacotes de fora do consumidor.
+  for (let dir = dirname(dirname(modulesReal)); ; dir = dirname(dir)) {
+    if (fs.existsSync(join(dir, 'node_modules'))) {
+      errors.push(
+        `há um node_modules em ${dir}, ancestral do consumidor: a resolução pode escapar do consumidor; use outro RTE_CONSUMER_DIR`,
+      );
+    }
+    if (dirname(dir) === dir) break;
   }
   let lock = null;
   try {
@@ -382,7 +442,7 @@ export async function main(argv, env = process.env, deps = {}) {
       throw new Error(`subcomando desconhecido: ${step}`);
   }
   const npm = parseNpmCommand(env.RTE_NPM);
-  const consumerDir = resolveConsumerDir(env, repoRoot);
+  const consumerDir = resolveConsumerDir(env, repoRoot, fs);
   const cliEnv = { NG_CLI_ANALYTICS: 'false' };
   for (const step of argv) {
     console.log(`\n[consumer] ${step} (${consumerDir})`);
@@ -420,9 +480,10 @@ export async function main(argv, env = process.env, deps = {}) {
 
 // ---- dev e serve (spec 07b, W6) -------------------------------------------------------------
 
-/** Porta e *token* do servidor de exemplo no `dev` (o *proxy* do demo aponta para 3000). */
+/** Porta do servidor de exemplo no `dev` (o *proxy* do demo aponta para 3000). */
 export const DEV_SERVER_PORT = 3000;
-export const DEV_AUTH_TOKEN = 'demo-dev-token';
+/** Endereço de escuta padrão do `dev` (só o loopback); `HOST` o troca. */
+export const DEV_HOST = '127.0.0.1';
 
 /** Argumentos de `node apps/demo/serve.mjs`: pasta `browser/` do consumidor e `--with-server`. */
 export function serveArgs({ repoRoot, consumerDir, withServer }) {
@@ -439,6 +500,7 @@ export function ngServeArgs({
   consumerDir,
   proxyConfig = 'proxy.conf.json',
   port,
+  host,
 }) {
   const ng = join(
     consumerDir,
@@ -454,24 +516,33 @@ export function ngServeArgs({
     '--proxy-config',
     proxyConfig,
     ...(port ? ['--port', String(port)] : []),
+    ...(host ? ['--host', host] : []),
   ];
 }
 
-/** Reaponta o destino do *proxy* (`localhost:3000`) para a porta do servidor de exemplo. */
-export function retargetProxy(config, serverPort) {
+/** Reaponta o destino do *proxy* (`localhost:3000`) para o servidor de exemplo (porta e endereço). */
+export function retargetProxy(config, serverPort, host = DEV_HOST) {
   const out = structuredClone(config);
+  const target = host === '0.0.0.0' || host === '::' ? DEV_HOST : host;
   for (const entry of Object.values(out)) {
-    entry.target = `http://localhost:${serverPort}`;
+    entry.target = `http://${target.includes(':') ? `[${target}]` : target}:${serverPort}`;
   }
   return out;
 }
 
-/** Variáveis do servidor de exemplo no `dev`: pasta temporária, tokens de desenvolvimento. */
-export function exampleServerEnv({ mediaDir, port, adminToken }) {
+/** Variáveis do servidor de exemplo no `dev`: pasta temporária, endereço e tokens da execução. */
+export function exampleServerEnv({
+  mediaDir,
+  port,
+  host = DEV_HOST,
+  authToken,
+  adminToken,
+}) {
   return {
     PORT: String(port),
+    HOST: host,
     MEDIA_DIR: mediaDir,
-    AUTH_TOKEN: DEV_AUTH_TOKEN,
+    AUTH_TOKEN: authToken,
     ADMIN_TOKEN: adminToken,
   };
 }
@@ -491,13 +562,17 @@ function runServe({ repoRoot, consumerDir, env, flags, exec }) {
 
 /**
  * `consumer.mjs dev`: `ng serve` do consumidor com *proxy* (`/upload`, `/csrf`, `/media/`) e o
- * servidor de exemplo ao lado; `demo-config.json` do consumidor passa a dizer `server`. Segue
- * até o `ng serve` terminar; derruba o servidor e apaga a pasta temporária ao fim.
+ * servidor de exemplo ao lado (ambos só em `HOST`, padrão 127.0.0.1); `demo-config.json` do
+ * consumidor passa a dizer `server` e a levar um *token* gerado nesta execução (não fica no
+ * bundle). Segue até o `ng serve` terminar; derruba o servidor, apaga a pasta temporária e
+ * restaura o `public/demo-config.json` original ao fim.
  */
 export async function runDev({ repoRoot, consumerDir, env, fs, spawn }) {
   const run = spawn ?? (await import('node:child_process')).spawn;
   const serverPort = Number(env.RTE_SERVER_PORT ?? DEV_SERVER_PORT);
   const port = env.RTE_DEMO_PORT ? Number(env.RTE_DEMO_PORT) : undefined;
+  const host = env.HOST || DEV_HOST;
+  const authToken = randomBytes(16).toString('hex');
   const ng = join(
     consumerDir,
     'node_modules',
@@ -512,15 +587,20 @@ export async function runDev({ repoRoot, consumerDir, env, fs, spawn }) {
   const proxy = retargetProxy(
     JSON.parse(fs.readFileSync(join(consumerDir, 'proxy.conf.json'), 'utf8')),
     serverPort,
+    host,
   );
   fs.writeFileSync(
     join(consumerDir, 'proxy.dev.json'),
     `${JSON.stringify(proxy, null, 2)}\n`,
   );
   fs.mkdirSync(join(consumerDir, 'public'), { recursive: true });
+  const configPath = join(consumerDir, 'public', 'demo-config.json');
+  const previousConfig = fs.existsSync(configPath)
+    ? fs.readFileSync(configPath, 'utf8')
+    : null;
   fs.writeFileSync(
-    join(consumerDir, 'public', 'demo-config.json'),
-    '{"upload":"server"}\n',
+    configPath,
+    `${JSON.stringify({ upload: 'server', authToken })}\n`,
   );
   const mediaDir = fs.mkdtempSync(join(tmpdir(), 'cds-rte-dev-media-'));
   const server = run(
@@ -532,7 +612,9 @@ export async function runDev({ repoRoot, consumerDir, env, fs, spawn }) {
         ...exampleServerEnv({
           mediaDir,
           port: serverPort,
-          adminToken: `admin-${Date.now()}`,
+          host,
+          authToken,
+          adminToken: randomBytes(16).toString('hex'),
         }),
       },
       stdio: 'inherit',
@@ -540,7 +622,7 @@ export async function runDev({ repoRoot, consumerDir, env, fs, spawn }) {
   );
   const ngServe = run(
     process.execPath,
-    ngServeArgs({ consumerDir, proxyConfig: 'proxy.dev.json', port }),
+    ngServeArgs({ consumerDir, proxyConfig: 'proxy.dev.json', port, host }),
     {
       cwd: consumerDir,
       env: { ...process.env, NG_CLI_ANALYTICS: 'false' },
@@ -558,6 +640,9 @@ export async function runDev({ repoRoot, consumerDir, env, fs, spawn }) {
   } finally {
     server.kill();
     fs.rmSync(mediaDir, { recursive: true, force: true });
+    fs.rmSync(join(consumerDir, 'proxy.dev.json'), { force: true });
+    if (previousConfig === null) fs.rmSync(configPath, { force: true });
+    else fs.writeFileSync(configPath, previousConfig);
   }
 }
 
