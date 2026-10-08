@@ -189,4 +189,36 @@ describe('playground do tema', () => {
     await click('copy-ts');
     expect(q<HTMLTextAreaElement>('copy-fallback').value).toBe(buildTs(DEFAULT_STATE));
   });
+
+  describe('?preset=', () => {
+    afterEach(() => history.replaceState(null, '', location.pathname));
+
+    it('id válido aplica as cores do preset depois da renderização, sem tocar na URL', async () => {
+      history.replaceState(null, '', '/theme?preset=ocean');
+      const replace = vi.spyOn(history, 'replaceState');
+      const push = vi.spyOn(history, 'pushState');
+      const { q } = await setup();
+      const { ocean } = RTE_THEME_PRESETS;
+      expect(q<HTMLInputElement>('color-primary').value).toBe(ocean.primary);
+      expect(q('preset-ocean').getAttribute('aria-pressed')).toBe('true');
+      expect(replace).not.toHaveBeenCalled();
+      expect(push).not.toHaveBeenCalled();
+      expect(location.search).toBe('?preset=ocean');
+      replace.mockRestore();
+      push.mockRestore();
+    });
+
+    it.each(['?preset=banana', '?preset=', '?preset=ocean&preset=forest'])(
+      '%j: ignorado em silêncio, padrão intacto',
+      async (search) => {
+        history.replaceState(null, '', '/theme' + search);
+        const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        const { q } = await setup();
+        expect(q<HTMLInputElement>('color-primary').value).toBe(RTE_THEME_PRESETS.angular.primary);
+        expect(q('preset-angular').getAttribute('aria-pressed')).toBe('true');
+        expect(error).not.toHaveBeenCalled();
+        error.mockRestore();
+      },
+    );
+  });
 });

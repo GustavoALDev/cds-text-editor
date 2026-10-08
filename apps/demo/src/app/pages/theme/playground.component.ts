@@ -48,6 +48,7 @@ import {
   ThemeScope,
 } from '../../theme-playground/scope.directives';
 import { buildTs } from '../../theme-playground/ts-snippet';
+import { readPresetParam } from './preset-param';
 
 type SnippetKind = 'css' | 'ts';
 
@@ -173,7 +174,16 @@ export class ThemePlayground {
     viewChild<ElementRef<HTMLTextAreaElement>>('fallbackArea');
 
   constructor() {
-    afterNextRender(() => this.nativeColors.set(supportsRelativeColors()));
+    afterNextRender(() => {
+      this.nativeColors.set(supportsRelativeColors());
+      // `?preset=<id>` (07d, L7): lido uma vez, só no navegador, de uma lista fechada; a URL não é
+      // reescrita e nada é persistido.
+      const preset = readPresetParam(
+        this.document.defaultView?.location.search ?? '',
+        PRESET_NAMES,
+      );
+      if (preset) this.choosePreset(preset);
+    });
     // "Site escuro": `color-scheme: dark` no <html> por CSSOM (só no navegador), revertido no fim.
     afterRenderEffect((onCleanup) => {
       if (!this.siteDark()) return;

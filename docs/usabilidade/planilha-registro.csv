@@ -1,0 +1,14 @@
+rodada,minuto,pagina,tropeco,gravidade,correcao_commit
+0,0,inicio-rapido,Sem passo para enviar imagem nem link para envio-e-midia (marco 2),atraso,passo 6 e link para envio-e-midia
+0,1,inicio-rapido,Comando de instalação sem rte-render e rte-sanitizer (usados no passo 5),atraso,comando acrescentado no passo 1
+0,0,inicio-rapido,Arquivos do passo 4 e 5 sem nome (form-example.html; display-example.ts),cosmético,nomes dos arquivos nos passos
+0,3,inicio-rapido,ng build de produção falha por orçamento (bundle inicial 1.14 MB > 1 MB),atraso,aviso sobre budgets no passo 2
+0,3,envio-e-midia,Proxy descrito sem o proxyConfig do angular.json e sem MEDIA_DIR/diretório de execução,cosmético,texto acrescentado
+0,3,envio-e-midia,Servidor de exemplo citado sem dizer onde está quando não se tem o repositório,cosmético,texto e LEIA-ME.txt do kit
+0,3,envio-e-midia,Token do exemplo (token-do-usuario) diferente do AUTH_TOKEN da página,cosmético,exemplo usa outro-segredo
+0,5,ambiente,Chromium do Playwright em outra revisão (executablePath),ambiente,-
+rodada,marco,tempo
+0,1 editor aceita texto,~5 min (desde o Início rápido; 1 min de ng new e 13 s de npm install à parte)
+0,2 PNG enviado aparece no editor,~6 min
+0,3 conteúdo com a imagem em [rteContent],~6 min
+0,total,~6 min (ensaio interno; não fecha o critério)

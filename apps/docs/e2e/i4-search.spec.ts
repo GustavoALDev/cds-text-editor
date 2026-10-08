@@ -35,9 +35,12 @@ test.describe('I4: busca', () => {
     const box = page.getByRole('combobox', { name: 'Buscar na documentação' });
     await box.focus();
     await box.fill('provideRich');
+    // Páginas do guia também citam o nome: escolhe a opção cujo título é exatamente o item da API.
     const option = page
       .getByRole('option')
-      .filter({ hasText: 'provideRichText' })
+      .filter({
+        has: page.locator('.search__title', { hasText: /^provideRichText\(\)/ }),
+      })
       .first();
     await expect(option).toBeVisible();
     await option.click();

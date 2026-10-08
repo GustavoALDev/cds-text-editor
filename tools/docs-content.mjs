@@ -1,6 +1,8 @@
 // Gera dist/docs-content/ a partir de apps/docs/content (spec 07c, X3).
 // Markdown + diretivas (example/live/generated/no-compile), checagem de HTML (X4) e páginas de API.
-// Uso: node tools/docs-content.mjs [--out <dir>] [--api <dir-do-api-documenter>] [--no-api]
+// Uso: node tools/docs-content.mjs [--out <dir>] [--api <dir-do-api-documenter>] [--no-api] [--no-readme]
+// README raiz (07d, L6): os marcadores `<!-- readme: ... -->` são conferidos contra os exemplos
+// compilados; divergência falha. `UPDATE_README=1 node tools/docs-content.mjs` reescreve.
 import {
   existsSync,
   mkdirSync,
@@ -15,7 +17,14 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { buildNav, moduleId } from './docs/nav.mjs';
 import { assertCoverage, groupApiPages, REPO_URL } from './docs/api-group.mjs';
 import { listModelEntries } from './docs/api-model.mjs';
-import { liveIdsOf, loadPublishedPackages } from './docs/directives.mjs';
+import {
+  extractRegion,
+  generateInstallCommand,
+  langOf,
+  liveIdsOf,
+  loadPublishedPackages,
+} from './docs/directives.mjs';
+import { checkReadme } from './docs/readme-markers.mjs';
 import { assertIndexSize, buildSearchIndex } from './docs/search-index.mjs';
 import { renderApiPage, renderGuidePage } from './docs/markdown.mjs';
 import { PACKAGES, packDirOf } from './consumer.mjs';
@@ -116,6 +125,8 @@ export function main({
   apiDir = null,
   packages,
   extras = writeExtras,
+  readme = true,
+  updateReadme = process.env.UPDATE_README === '1',
 } = {}) {
   const contentDir = join(repoRoot, 'apps', 'docs', 'content');
   const appRoot = join(repoRoot, 'apps', 'docs');
@@ -128,6 +139,40 @@ export function main({
   const needPackages = (text) => text.includes('<!-- generated:');
   const loadPackages = () =>
     (published ??= loadPublishedPackages(repoRoot, packDirOf));
+  if (readme) {
+    const readmeFile = join(repoRoot, 'README.md');
+    if (existsSync(readmeFile)) {
+      const text = readFileSync(readmeFile, 'utf8');
+      const resolveMarker = (kind, arg) => {
+        if (kind === 'generated') {
+          if (arg !== 'install-command')
+            throw new Error(
+              `generated: "${arg}" desconhecido no README (install-command)`,
+            );
+          return { code: generateInstallCommand(loadPackages()), lang: 'bash' };
+        }
+        const [path, region] = arg.split('#');
+        const file = resolve(appRoot, path);
+        if (file !== appRoot && !file.startsWith(appRoot + sep))
+          throw new Error(`o exemplo "${path}" sai de apps/docs`);
+        if (!existsSync(file))
+          throw new Error(`exemplo "${path}" não existe (apps/docs/${path})`);
+        return {
+          code: extractRegion(
+            readFileSync(file, 'utf8'),
+            region || undefined,
+            path,
+          ),
+          lang: langOf(path),
+        };
+      };
+      const r = checkReadme(text, resolveMarker, 'README.md');
+      if (!r.ok) {
+        if (!updateReadme) throw new Error(r.diff);
+        writeFileSync(readmeFile, r.filled);
+      }
+    }
+  }
   const registryFile = join(appRoot, 'examples', 'registry.ts');
   const liveIds = existsSync(registryFile)
     ? liveIdsOf(readFileSync(registryFile, 'utf8'))
@@ -225,6 +270,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   try {
     const r = main({
       ...(arg('--out') ? { out: resolve(arg('--out')) } : {}),
+      readme: !process.argv.includes('--no-readme'),
       apiDir: process.argv.includes('--no-api')
         ? null
         : resolve(arg('--api') ?? join(REPO, 'dist', 'api-markdown')),

@@ -37,7 +37,9 @@
               "@cds/rte-core/styles/content.css",
               "@cds/rte-angular/styles/editor.css",
               "@cds/rte-render/styles/render.css",
-              "src/styles/docs.css"
+              "src/styles/docs.css",
+              "src/styles/exemplos.css",
+              "src/styles/exemplos-tema.css"
             ],
             "optimization": {
               "scripts": true,

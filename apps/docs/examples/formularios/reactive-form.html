@@ -1,0 +1,14 @@
+<!-- #region template -->
+<rte-editor
+  [formControl]="control"
+  [maxLength]="max"
+  ariaLabel="Texto (Reactive Forms)"
+/>
+<p aria-live="polite" data-testid="reactive-erro">{{ error() }}</p>
+<!-- #endregion -->
+<p>
+  <button type="button" (click)="fillTooLong()">
+    Preencher acima do limite
+  </button>
+  <button type="button" (click)="clear()">Esvaziar</button>
+</p>

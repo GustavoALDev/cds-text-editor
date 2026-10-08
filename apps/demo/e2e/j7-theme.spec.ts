@@ -211,3 +211,52 @@ test('J7: cópia do CSS e do TypeScript (área de transferência só no Chromium
   }
   await context.close();
 });
+
+// ?preset= (07d, L7): lista fechada de ids, lido só no navegador; a URL não muda e o HTML
+// pré-renderizado não depende da query.
+test('J7: ?preset=ocean abre o playground com os tokens do ocean, sem reescrever a URL', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ colorScheme: 'light', baseURL: ORIGIN });
+  const page = await context.newPage();
+  const problems = await watch(page);
+  await page.goto('/theme?preset=ocean');
+  await expect(page.locator(`${PREVIEW} .ProseMirror`)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('preset-ocean')).toHaveAttribute('aria-pressed', 'true');
+  await settle(page);
+  const viaQuery = await tokensOf(page, PREVIEW);
+  const other = await context.newPage();
+  await other.goto('/theme');
+  await expect(other.locator(`${PREVIEW} .ProseMirror`)).toBeVisible({ timeout: 30_000 });
+  await other.getByTestId('preset-ocean').click();
+  await settle(other);
+  expect(viaQuery).toEqual(await tokensOf(other, PREVIEW));
+  expect(page.url()).toBe(`${ORIGIN}/theme?preset=ocean`);
+  expect(problems.messages).toEqual([]);
+  await context.close();
+});
+
+test('J7: ?preset=banana mantém o padrão, sem erro de console', async ({ browser }) => {
+  const context = await browser.newContext({ colorScheme: 'light', baseURL: ORIGIN });
+  const page = await context.newPage();
+  const problems = await watch(page);
+  await page.goto('/theme?preset=banana');
+  await expect(page.locator(`${PREVIEW} .ProseMirror`)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('preset-angular')).toHaveAttribute('aria-pressed', 'true');
+  const plain = await context.newPage();
+  await plain.goto('/theme');
+  await expect(plain.locator(`${PREVIEW} .ProseMirror`)).toBeVisible({ timeout: 30_000 });
+  await settle(page);
+  await settle(plain);
+  expect(await tokensOf(page, PREVIEW)).toEqual(await tokensOf(plain, PREVIEW));
+  expect(page.url()).toBe(`${ORIGIN}/theme?preset=banana`);
+  expect(problems.messages).toEqual([]);
+  await context.close();
+});
+
+test('J7: o HTML pré-renderizado de /theme é idêntico com e sem a query', async ({ request }) => {
+  const plain = await (await request.get(`${ORIGIN}/theme`)).text();
+  const withQuery = await (await request.get(`${ORIGIN}/theme?preset=ocean`)).text();
+  expect(withQuery).toBe(plain);
+  expect(plain).toContain('preset-ocean');
+});

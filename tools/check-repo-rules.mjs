@@ -270,6 +270,23 @@ function checkApp(rootDir, app) {
     }
   }
 
+  // CSS de exemplo do guia (07d, L4): classe envolvente, nunca o chrome do site.
+  const stylesDir = join(demo, 'src', 'styles');
+  if (app === 'docs' && existsSync(stylesDir)) {
+    for (const file of walk(stylesDir, (n) => /^exemplos.*\.css$/.test(n))) {
+      const css = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+      for (const m of css.matchAll(/([^{}]+)\{/g)) {
+        const bad = /(^|[\s,>+~(])(:root|html|body)(?![\w-])/.exec(m[1]);
+        if (bad) {
+          errors.push(
+            `${rel(file)}: o seletor "${m[1].trim()}" mira ${bad[2]}; CSS de exemplo usa uma classe envolvente (.meu-tema), para não mudar o chrome do site (spec 07d, L4)`,
+          );
+          break;
+        }
+      }
+    }
+  }
+
   for (const name of readdirSync(demo)) {
     if (name === 'package-lock.json') {
       errors.push(
@@ -402,6 +419,25 @@ function checkApp(rootDir, app) {
   return errors;
 }
 
+/** README raiz (spec 07d, L6): o aviso "não afiliado" aparece antes do primeiro `##` e depois do último. */
+export function checkRootReadmeNotice(text) {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const heads = lines.flatMap((l, i) => (/^## /.test(l) ? [i] : []));
+  const notice = /não\s+(é\s+)?afiliad/i;
+  const errors = [];
+  const first = heads.length ? heads[0] : lines.length;
+  if (!lines.slice(0, first).some((l) => notice.test(l)))
+    errors.push(
+      'README.md: falta o aviso "não afiliado à Tiptap nem ao ProseMirror" antes do primeiro "##" (spec 07d, L6)',
+    );
+  const last = heads.length ? heads[heads.length - 1] : -1;
+  if (!lines.slice(last + 1).some((l) => notice.test(l)))
+    errors.push(
+      'README.md: falta o aviso "não afiliado à Tiptap nem ao ProseMirror" depois do último "##" (spec 07d, L6)',
+    );
+  return errors;
+}
+
 // Spec 08a (X5): todo teto e todo `skip` de tools/compat.json exigem `reason` e `adr`.
 // Sem o arquivo (fixtures parciais), a regra não faz nada.
 function checkCompat(rootDir) {
@@ -429,6 +465,9 @@ export function checkRepoRules(rootDir) {
       }
     }
   }
+  const rootReadme = join(rootDir, 'README.md');
+  if (existsSync(join(rootDir, 'package.json')) && existsSync(rootReadme))
+    errors.push(...checkRootReadmeNotice(readFileSync(rootReadme, 'utf8')));
   const packagesDir = join(rootDir, 'packages');
   if (!existsSync(packagesDir)) return errors;
 

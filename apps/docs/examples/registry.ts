@@ -12,4 +12,11 @@ export const EXAMPLES: Readonly<Record<string, () => Promise<Type<unknown>>>> =
       import('./inicio-rapido/form-example').then((m) => m.FormExample),
     configuracao: () =>
       import('./configuracao/route-live').then((m) => m.RouteLive),
+    'barra-e-recursos': () =>
+      import('./barra-e-recursos/live').then((m) => m.BarraLive),
+    formularios: () =>
+      import('./formularios/live').then((m) => m.FormulariosLive),
+    idiomas: () => import('./idiomas/live').then((m) => m.IdiomasLive),
+    tema: () => import('./tema/live').then((m) => m.TemaLive),
+    exibicao: () => import('./exibicao/live').then((m) => m.DisplayLive),
   };

@@ -1,0 +1,11 @@
+/* #region tema */
+.meu-tema {
+  --rte-primary: #0b57d0;
+}
+/* #endregion */
+
+/* #region nivel-2 */
+.meu-tema .rte-root {
+  --rte-radius: 2px; /* texto // #region x */
+}
+/* #endregion */

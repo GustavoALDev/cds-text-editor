@@ -47,9 +47,9 @@ Guia: início rápido (5 min), instalação, configuração, **tema (escada 0 a 
 
 ## 5. Critérios de aceite
 
-- [ ] **Teste de 15 minutos:** alguém que não participou do projeto, só com a documentação, instala os pacotes num app Angular 22 limpo e obtém editor + upload + exibição. Tempo e tropeços registrados; docs corrigidas.
-- [ ] Playground gera CSS/TS que, colados num app limpo, reproduzem o tema mostrado.
-- [ ] Testes de API do `server-node` verdes contra o upload e a limpeza de órfãs.
+- [ ] **Teste de 15 minutos (ABERTO: rodada externa pendente, `TODO-AUTOR`; rodada 0 interna feita em `docs/usabilidade/teste-15-minutos.md`, ADR 0020; dono: o dono do projeto):** alguém que não participou do projeto, só com a documentação, instala os pacotes num app Angular 22 limpo e obtém editor + upload + exibição. Tempo e tropeços registrados; docs corrigidas.
+- [x] Playground gera CSS/TS que, colados num app limpo, reproduzem o tema mostrado (07b/07d: J7 e W13 no Chromium local, incluindo `?preset=`; os 3 motores no job `demo` do CI do PR; ADR 0017 e 0020).
+- [x] Testes de API do `server-node` verdes contra o upload e a limpeza de órfãs (07a e revisão R9: `npm run test:examples`, 16 de 16).
 - [x] Exemplos da documentação compilam no CI; links verificados (07c: exemplos compilados em modo estrito pelo `ng build` do consumidor e `check-links` sobre o site e os READMEs; falta a rodada do CI do PR; as demais páginas são da 07d; ADR 0018).
 - [x] Demo consumindo os tarballs (não path alias) funciona (07b: `consumer.mjs` com prova de origem, 53 E2E no Chromium; ADR 0017).
 
