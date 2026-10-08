@@ -1,5 +1,5 @@
 // #region errado
-import { Component } from '@angular/core';
+import { Component, type Provider } from '@angular/core';
 import { RteEditor, provideRichText } from '@cds/rte-angular';
 
 @Component({
@@ -12,4 +12,8 @@ import { RteEditor, provideRichText } from '@cds/rte-angular';
   ],
 })
 export class WrongEditor {}
+
+// O mesmo erro, isolado: EnvironmentProviders não é um Provider.
+// @ts-expect-error EnvironmentProviders não é atribuível a Provider
+export const provider: Provider = provideRichText();
 // #endregion

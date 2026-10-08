@@ -29,7 +29,10 @@ Cada `rte-editor` aceita entradas próprias, entre elas `placeholder`, `toolbar`
 
 ## Qual valor vence
 
-Quando a mesma opção aparece em mais de um lugar, vale a primeira definida, nesta ordem: entrada do componente, _provider_ da rota, _provider_ da raiz, padrão.
+Valem duas regras, nesta ordem:
+
+1. **Qual provider.** Um `provideRichText` na rota cria uma configuração nova que **substitui** a da raiz por inteiro: nada é mesclado entre os dois. O que a rota não repete (o contador da raiz, por exemplo) volta ao padrão.
+2. **Dentro do provider em vigor,** a entrada do componente vence o _provider_, e o _provider_ vence o padrão. `labels`, `theme` e `options` (o campo `editor` do _provider_) são a exceção: mesclam campo a campo, e a entrada troca só o que informa.
 
 <!-- example: examples/configuracao/precedencia.example.ts#precedencia -->
 
