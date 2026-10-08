@@ -63,6 +63,9 @@ export class DocHtml {
   }
 }
 
+/** Primeiros segmentos das rotas do site (`app.routes.ts`). */
+const ROUTER_ROOTS = new Set(['guia', 'api', '404']);
+
 /**
  * Caminho do *router* (sem a base) para um `href` interno, ou `null` se o link sai do site ou
  * da base. O `href` é relativo à base (X7): resolve contra o `baseURI`.
@@ -84,5 +87,7 @@ export function internalUrl(href: string, baseUri: string): string | null {
     return null;
   }
   const rest = target.pathname.slice(prefix.length);
+  // Só o que o router do site resolve; o resto (o demo, por exemplo) é do navegador.
+  if (rest !== '' && !ROUTER_ROOTS.has(rest.split('/')[0])) return null;
   return `/${rest}${target.search}${target.hash}`;
 }

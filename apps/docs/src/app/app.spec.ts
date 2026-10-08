@@ -22,6 +22,15 @@ describe('esqueleto do site', () => {
     expect(internalUrl('mailto:a@b.c', root)).toBeNull();
   });
 
+  it('internalUrl deixa o navegador seguir links para o demo, dentro da base', () => {
+    const root = 'http://x.test/cds-text-editor/';
+    expect(internalUrl('demo/theme?preset=x', root)).toBeNull();
+    expect(internalUrl('demo/', root)).toBeNull();
+    expect(internalUrl('guia/x#y', root)).toBe('/guia/x#y');
+    expect(internalUrl('404', root)).toBe('/404');
+    expect(internalUrl('guiax/y', root)).toBeNull();
+  });
+
   it('a base sem prefixo também funciona', () => {
     expect(internalUrl('guia/x#y', 'http://x.test/')).toBe('/guia/x#y');
   });
