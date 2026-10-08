@@ -61,9 +61,10 @@
       ],
       "cache": true,
       "options": {
-        "command": "node tools/check-size.mjs --config packages/core/size-budget.json",
+        "command": "node tools/check-size.mjs --config packages/core/size-budget.json --report dist/reports/size/core.json",
         "cwd": "{workspaceRoot}"
-      }
+      },
+      "outputs": ["{workspaceRoot}/dist/reports/size/core.json"]
     },
     "api": {
       "executor": "nx:run-commands",
@@ -71,7 +72,10 @@
       "inputs": [
         "production",
         "^production",
-        { "dependentTasksOutputFiles": "**/*.d.ts", "transitive": true },
+        {
+          "dependentTasksOutputFiles": "**/*.d.ts",
+          "transitive": true
+        },
         "{projectRoot}/api/**/*",
         "{workspaceRoot}/tools/api-report.mjs",
         {
@@ -83,6 +87,21 @@
       "options": {
         "command": "node tools/api-report.mjs packages/core",
         "cwd": "{workspaceRoot}"
+      }
+    },
+    "coverage": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/docs/html-schema.md",
+        "{workspaceRoot}/fixtures/content/**/*"
+      ],
+      "outputs": ["{workspaceRoot}/coverage/packages/core"],
+      "cache": true,
+      "options": {
+        "command": "vitest run --coverage --coverage.reporter=json-summary --coverage.reporter=lcov --coverage.reporter=html",
+        "cwd": "packages/core"
       }
     }
   }

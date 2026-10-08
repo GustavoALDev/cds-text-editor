@@ -1,18 +1,21 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 import {
   SCENARIOS,
+  buildReport,
   bundleScenario,
   checkFiles,
   checkSizes,
+  extractReport,
   forbiddenHits,
   measureMinGzip,
   measureConfig,
   measureScenario,
+  packageName,
   resolveEntry,
 } from './check-size.mjs';
 
@@ -487,5 +490,108 @@ test('checkFiles: cada padrão casa exatamente um arquivo; .mjs fora da lista é
       'arquivos: "lib-c-*.mjs" casou 0 arquivos (); precisa casar exatamente um',
       'arquivos: .mjs inesperado em ' + dir + ': lib-shared-2.mjs',
     ],
+  );
+});
+
+test('extractReport: tira --report de qualquer posição; sem a opção não muda nada', () => {
+  assert.deepEqual(
+    extractReport(['--config', 'a.json', '--report', 'r.json']),
+    { report: 'r.json', rest: ['--config', 'a.json'] },
+  );
+  assert.deepEqual(extractReport(['--report', 'r.json', 'dist/index.js']), {
+    report: 'r.json',
+    rest: ['dist/index.js'],
+  });
+  assert.deepEqual(extractReport(['dist/index.js']), {
+    report: undefined,
+    rest: ['dist/index.js'],
+  });
+  assert.throws(() => extractReport(['--report']), /--report exige/);
+});
+
+test('packageName: packages/<p> e dist/packages/<p>', () => {
+  assert.equal(packageName('packages/core/size-budget.json'), 'core');
+  assert.equal(packageName('packages/theme/dist/index.js'), 'theme');
+  assert.equal(packageName('dist/packages/angular/fesm2022/x.mjs'), 'angular');
+});
+
+test('buildReport: medida, orçamento e folga = orçamento - medida', () => {
+  const r = buildReport(
+    'core',
+    { whole: { min: 9, gzip: 900 }, extra: { min: 1, gzip: 5 } },
+    { whole: 1000 },
+  );
+  assert.deepEqual(r, {
+    package: 'core',
+    scenarios: [
+      { name: 'whole', measured: 900, budget: 1000, margin: 100 },
+      { name: 'extra', measured: 5, budget: null, margin: null },
+    ],
+  });
+});
+
+test('--report: grava o JSON no modo --config, mesmo com estouro; sem a opção nada é escrito', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'check-size-rep-'));
+  const entry = join(dir, 'lib.js');
+  writeFileSync(entry, 'export const a = "abc"; export const b = "def";\n');
+  const cfg = join(dir, 'cfg.json');
+  const run = (extra) =>
+    spawnSync('node', ['tools/check-size.mjs', '--config', cfg, ...extra], {
+      encoding: 'utf8',
+    });
+  writeFileSync(
+    cfg,
+    JSON.stringify({
+      scenarios: {
+        whole: { entry, exports: ['*'] },
+        a: { entry, exports: ['a'] },
+      },
+      budgets: { whole: 500, a: 500 },
+    }),
+  );
+  const out = join(dir, 'sub', 'rep.json');
+  const r1 = run(['--report', out]);
+  assert.equal(r1.status, 0, r1.stderr);
+  assert.match(r1.stdout, /dentro do orçamento/);
+  const rep = JSON.parse(readFileSync(out, 'utf8'));
+  assert.deepEqual(
+    rep.scenarios.map((s) => s.name),
+    ['whole', 'a'],
+  );
+  for (const s of rep.scenarios) {
+    assert.equal(s.budget, 500);
+    assert.equal(s.margin, 500 - s.measured);
+    assert.ok(s.measured > 0);
+  }
+  writeFileSync(
+    cfg,
+    JSON.stringify({
+      scenarios: { a: { entry, exports: ['a'] } },
+      budgets: { a: 1 },
+    }),
+  );
+  const out2 = join(dir, 'rep2.json');
+  assert.equal(run(['--report', out2]).status, 1);
+  assert.ok(JSON.parse(readFileSync(out2, 'utf8')).scenarios[0].margin < 0);
+  const none = join(dir, 'none.json');
+  assert.equal(run([]).status, 1);
+  assert.equal(existsSync(none), false);
+  assert.equal(run(['--report']).status, 2);
+});
+
+test('--report no modo de argumentos (dist do tema)', { skip }, () => {
+  const out = join(
+    mkdtempSync(join(tmpdir(), 'check-size-arg-')),
+    'theme.json',
+  );
+  const r = spawnSync('node', ['tools/check-size.mjs', dist, '--report', out], {
+    encoding: 'utf8',
+  });
+  assert.equal(r.status, 0, r.stderr);
+  const rep = JSON.parse(readFileSync(out, 'utf8'));
+  assert.equal(rep.package, 'theme');
+  assert.deepEqual(
+    rep.scenarios.map((s) => s.name).sort(),
+    Object.keys(SCENARIOS).sort(),
   );
 });

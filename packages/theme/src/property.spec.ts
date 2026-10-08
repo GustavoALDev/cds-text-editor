@@ -6,6 +6,16 @@ import { linearToOklab, toOklch } from './color/oklab';
 import { parseColor } from './color/parse';
 import { createRteTheme } from './create-theme';
 import { onLevel, WHITE_Y } from './derive';
+import {
+  anySeed as seed,
+  garbage,
+  hexColor,
+  hslFn,
+  mode,
+  neutral,
+  razorThreshold,
+  rgbFn,
+} from './testing/arbitraries';
 
 /**
  * Testes de propriedade (fast-check). Semente fixa para reprodutibilidade em CI; para ampliar a
@@ -16,136 +26,6 @@ const SEED = Number(process.env['FC_SEED'] ?? 20261002);
 const RUNS = Number(process.env['FC_RUNS'] ?? 5000);
 vi.setConfig({ testTimeout: 120_000 }); // FC_RUNS alto em execuções locais
 const opts = { numRuns: RUNS, seed: SEED, verbose: 1 } as const;
-
-// ---------------------------------------------------------------------------------------------
-// Geradores de sementes
-// ---------------------------------------------------------------------------------------------
-
-const channel = fc.integer({ min: 0, max: 255 });
-const hex2 = (v: number): string => v.toString(16).padStart(2, '0');
-
-const hexColor = fc
-  .tuple(channel, channel, channel)
-  .map(([r, g, b]) => `#${hex2(r)}${hex2(g)}${hex2(b)}`);
-const upperHex = hexColor.map((s) => s.toUpperCase());
-const gray = channel.map((v) => `#${hex2(v)}${hex2(v)}${hex2(v)}`);
-const rgbFn = fc
-  .tuple(channel, channel, channel)
-  .map(([r, g, b]) => `rgb(${r}, ${g}, ${b})`);
-const hslFn = fc
-  .tuple(
-    fc.integer({ min: 0, max: 360 }),
-    fc.integer({ min: 0, max: 100 }),
-    fc.integer({ min: 0, max: 100 }),
-  )
-  .map(([h, s, l]) => `hsl(${h} ${s}% ${l}%)`);
-const oklchFn = (l: fc.Arbitrary<number>): fc.Arbitrary<string> =>
-  fc
-    .tuple(
-      l,
-      fc.double({ min: 0, max: 0.4, noNaN: true }),
-      fc.double({ min: 0, max: 360, noNaN: true }),
-    )
-    .map(([L, C, h]) => `oklch(${L} ${C} ${h})`);
-const oklchAny = oklchFn(fc.double({ min: 0, max: 1, noNaN: true }));
-const oklchExtremeL = oklchFn(
-  fc.oneof(
-    fc.double({ min: 0, max: 0.02, noNaN: true }),
-    fc.double({ min: 0.98, max: 1, noNaN: true }),
-  ),
-);
-
-/**
- * Cores de 8 bits com luminância WCAG (srgb-linear) perto do limiar do on-*: um único passe
- * sobre as 2^24 cores (~0.3 s) em vez de `fc.pre`. `near` = |Y - WHITE_Y| < 0.002; `razor` = < 2e-6
- * (as poucas cores a ~1e-7 do limiar, onde nasceram dois defeitos reais).
- */
-const lin8 = Array.from(
-  { length: 256 },
-  (_, v) => toLinear([v / 255, 0, 0])[0],
-);
-const near: string[] = [];
-const razor: string[] = [];
-for (let r = 0; r < 256; r++) {
-  for (let g = 0; g < 256; g++) {
-    for (let b = 0; b < 256; b++) {
-      const d = Math.abs(
-        0.2126 * (lin8[r] as number) +
-          0.7152 * (lin8[g] as number) +
-          0.0722 * (lin8[b] as number) -
-          WHITE_Y,
-      );
-      if (d < 0.002) {
-        const c = `#${hex2(r)}${hex2(g)}${hex2(b)}`;
-        near.push(c);
-        if (d < 2e-6) razor.push(c);
-      }
-    }
-  }
-}
-// (`constantFrom(...array)` estoura a pilha com centenas de milhares de itens: indexa por inteiro.)
-const pick = (pool: string[]): fc.Arbitrary<string> =>
-  fc.integer({ min: 0, max: pool.length - 1 }).map((i) => pool[i] as string);
-const nearThreshold = pick(near);
-const razorThreshold = pick(razor);
-
-const seed = fc.oneof(
-  { weight: 3, arbitrary: hexColor },
-  { weight: 1, arbitrary: upperHex },
-  { weight: 1, arbitrary: rgbFn },
-  { weight: 1, arbitrary: hslFn },
-  { weight: 3, arbitrary: oklchAny },
-  { weight: 2, arbitrary: oklchExtremeL },
-  { weight: 1, arbitrary: gray },
-  { weight: 3, arbitrary: nearThreshold },
-  { weight: 1, arbitrary: razorThreshold },
-);
-
-const garbage = fc.oneof(
-  fc.string({ unit: 'binary', maxLength: 400 }),
-  fc.string({ unit: 'grapheme', maxLength: 400 }),
-  fc.string({ unit: 'binary', minLength: 300, maxLength: 400 }),
-  fc.constantFrom(
-    '',
-    ' ',
-    '#',
-    '#12',
-    '#12345',
-    'rgb(',
-    'rgb()',
-    'rgb(1,2',
-    'rgba(0 0 0 / 0)',
-    'hsl(1e999 1 1)',
-    'oklch(1e308 1e308 1e308)',
-    'oklch(NaN 0 0)',
-    'rgb(Infinity 0 0)',
-    'rgb(-1e309, 5, 5)',
-    'red',
-    'transparent',
-    'ＲＧＢ(1 2 3)',
-    'rgb(' + '9'.repeat(390) + ' 0 0)',
-  ),
-  fc
-    .tuple(
-      fc.constantFrom('rgb', 'rgba', 'hsl', 'hsla', 'oklch'),
-      fc.double(),
-      fc.double(),
-      fc.double(),
-    )
-    .map(([fn, a, b, c]) => `${fn}(${a} ${b} ${c})`),
-  fc
-    .tuple(
-      fc.constantFrom('rgb(', 'hsl(', 'oklch(', '#'),
-      fc.string({ maxLength: 40 }),
-    )
-    .map(([p, s]) => p + s),
-);
-
-const mode = fc.constantFrom('light', 'dark') as fc.Arbitrary<'light' | 'dark'>;
-const neutral = fc.constantFrom('tinted', 'gray') as fc.Arbitrary<
-  'tinted' | 'gray'
->;
-
 const hexOk = /^#[0-9a-f]{6}$/;
 const FIELDS = ['primary', 'secondary', 'tertiary'] as const;
 

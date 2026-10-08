@@ -4,6 +4,8 @@
 // `test:tools` (nenhum teste roda npm). Uso:
 //   node tools/consumer.mjs [--app demo|docs] pack prepare install test build [check-snippets]
 // `--app docs` (spec 07c, X1) consome o site de documentação (`apps/docs`); o padrão é `demo`.
+//   --versions <arquivo.json>  (prepare/install, spec 08a) reescreve, só na cópia, as versões de
+//   @angular/* e @tiptap/* para as de uma perna da matriz (`tools/compat.mjs versions`).
 // Variáveis: RTE_CONSUMER_DIR (diretório do consumidor), RTE_NPM (npm a usar; padrão `npm`,
 // localmente `npx -y npm@11`), RUNNER_TEMP/TMPDIR (padrão do diretório do consumidor).
 import { spawnSync } from 'node:child_process';
@@ -21,6 +23,7 @@ import {
   sep,
 } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { classify } from './compat.mjs';
 
 const REPO_ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -228,6 +231,42 @@ export function runPack({ repoRoot, npm, exec, fs = nodeFs }) {
 }
 
 /**
+ * Versões de uma perna da matriz (spec 08a): `@angular/*` do *framework* na `angular.version`,
+ * ferramentas (`cli`, `build`, `ssr`, `@angular-devkit/*`, `@schematics/angular`) na
+ * `angular.toolingVersion` e `@tiptap/*` na `tiptap.version`. Não muta a entrada.
+ */
+export function applyVersions(pkg, versions) {
+  const out = structuredClone(pkg);
+  const target = {
+    framework: versions.angular.version,
+    tooling: versions.angular.toolingVersion,
+    tiptap: versions.tiptap.version,
+  };
+  for (const field of DEP_FIELDS) {
+    for (const name of Object.keys(out[field] ?? {})) {
+      const family = classify(name);
+      if (family) out[field][name] = target[family];
+    }
+  }
+  return out;
+}
+
+/** Lê o arquivo de `--versions` e confere o formato mínimo. */
+export function readVersions(path, fs = nodeFs) {
+  const versions = JSON.parse(fs.readFileSync(path, 'utf8'));
+  if (
+    !versions.angular?.version ||
+    !versions.angular?.toolingVersion ||
+    !versions.tiptap?.version
+  ) {
+    throw new Error(
+      `${path}: --versions precisa de angular.version, angular.toolingVersion e tiptap.version`,
+    );
+  }
+  return versions;
+}
+
+/**
  * Copia `apps/demo` para o consumidor e reescreve o `package.json`. Limpa o consumidor antes,
  * mas preserva o `node_modules` de terceiros (só `@cds` e o lockfile oculto saem, para o
  * npm reinstalar os tarballs novos). Só apaga um diretório com a marca `.cds-rte-consumer`
@@ -237,6 +276,7 @@ export function prepareConsumer({
   repoRoot,
   consumerDir,
   fs = nodeFs,
+  versions,
   app = 'demo',
 }) {
   if (!APPS.includes(app)) throw new Error(`app desconhecido: ${app}`);
@@ -292,7 +332,8 @@ export function prepareConsumer({
       recursive: true,
     });
   }
-  const pkg = JSON.parse(fs.readFileSync(join(demo, 'package.json'), 'utf8'));
+  let pkg = JSON.parse(fs.readFileSync(join(demo, 'package.json'), 'utf8'));
+  if (versions) pkg = applyVersions(pkg, versions);
   fs.writeFileSync(
     join(consumerDir, 'package.json'),
     `${JSON.stringify(rewriteDependencies(pkg, manifest, tarballDir), null, 2)}\n`,
@@ -306,7 +347,12 @@ export function prepareConsumer({
  * versão do manifest e o sha512 que o npm registrou no lockfile oculto. Devolve as mensagens de
  * erro (vazio = ok).
  */
-export function verifyOrigin(consumerDir, manifest, fs, { repoRoot }) {
+export function verifyOrigin(
+  consumerDir,
+  manifest,
+  fs,
+  { repoRoot, versions },
+) {
   const real = (path) => (fs.realpathSync.native ?? fs.realpathSync)(path);
   try {
     assertOutsideRepo(consumerDir, repoRoot, fs);
@@ -392,6 +438,27 @@ export function verifyOrigin(consumerDir, manifest, fs, { repoRoot }) {
       errors.push(
         `${entry.name}: sha512 instalado (${installed ?? 'ausente'}) difere do manifest (${entry.integrity})`,
       );
+    }
+  }
+  if (versions) {
+    const expected = {
+      '@angular/core': versions.angular.version,
+      '@tiptap/core': versions.tiptap.version,
+    };
+    for (const [name, want] of Object.entries(expected)) {
+      let found;
+      try {
+        found = JSON.parse(
+          fs.readFileSync(join(modules, name, 'package.json'), 'utf8'),
+        ).version;
+      } catch {
+        found = undefined;
+      }
+      if (found !== want) {
+        errors.push(
+          `${name}: versão instalada ${found ?? '(ausente)'} difere da da perna (${want}, --versions)`,
+        );
+      }
     }
   }
   return errors;
@@ -498,8 +565,20 @@ export async function main(argv, env = process.env, deps = {}) {
     }
     argv = argv.filter((_, i) => i !== appFlag && i !== appFlag + 1);
   }
+  // `--versions <arquivo>` leva um valor; as demais opções são só marcas.
+  const versionsAt = argv.indexOf('--versions');
+  if (versionsAt >= 0 && !argv[versionsAt + 1]?.trim()) {
+    throw new Error('--versions precisa do caminho de um arquivo JSON');
+  }
+  const versionsPath = versionsAt >= 0 ? argv[versionsAt + 1] : undefined;
+  if (versionsAt >= 0) {
+    argv = argv.filter((_, i) => i !== versionsAt && i !== versionsAt + 1);
+  }
   const flags = argv.filter((arg) => arg.startsWith('--'));
   argv = argv.filter((arg) => !arg.startsWith('--'));
+  const versions = versionsPath
+    ? readVersions(versionsPath, deps.fs ?? nodeFs)
+    : undefined;
   const exec = deps.exec ?? defaultExec;
   const repoRoot = deps.repoRoot ?? REPO_ROOT;
   const fs = deps.fs ?? nodeFs;
@@ -534,15 +613,28 @@ export async function main(argv, env = process.env, deps = {}) {
         console.log(`  ${p.name}@${p.version} ${p.file} ${p.integrity}`);
       }
     } else if (step === 'prepare') {
-      prepareConsumer({ repoRoot, consumerDir, fs, app });
+      prepareConsumer({ repoRoot, consumerDir, fs, versions, app });
     } else if (step === 'install') {
-      exec(npm[0], [...npm.slice(1), 'install', '--no-audit', '--no-fund'], {
-        cwd: consumerDir,
-      });
+      const legacy =
+        flags.includes('--legacy-peer-deps') || versions?.legacyPeerDeps;
+      exec(
+        npm[0],
+        [
+          ...npm.slice(1),
+          'install',
+          '--no-audit',
+          '--no-fund',
+          ...(legacy ? ['--legacy-peer-deps'] : []),
+        ],
+        { cwd: consumerDir },
+      );
       const manifest = JSON.parse(
         fs.readFileSync(join(consumerDir, 'manifest.json'), 'utf8'),
       );
-      const errors = verifyOrigin(consumerDir, manifest, fs, { repoRoot });
+      const errors = verifyOrigin(consumerDir, manifest, fs, {
+        repoRoot,
+        versions,
+      });
       if (errors.length) {
         throw new Error(`prova de origem reprovada:\n- ${errors.join('\n- ')}`);
       }

@@ -9,7 +9,7 @@ Provar com números que o `rte-editor` completo (barra `full`, menus, mídia, bu
 
 ## 2. Fora de escopo
 
-Recurso novo de qualquer tipo (Q7). Publicação, versão 1.0 e congelamento formal para *release* (spec 09: o relatório daqui é a base que ela congela). Rollup de `.d.ts` e modelo de documentação (`.api.json`) do `api-extractor` (a spec 07 decide se gera documentação de API). Leitores de tela reais, teclado virtual, matriz Angular 22.0 × último e regressão visual (spec 08). Hidratação incremental (spec 08). Otimizações de desempenho além das que um orçamento reprovado exigir.
+Recurso novo de qualquer tipo (Q7). Publicação, versão 1.0 e congelamento formal para *release* (spec 09: o relatório daqui é a base que ela congela). Rollup de `.d.ts` e modelo de documentação (`.api.json`) do `api-extractor` (a spec 07 decide se gera documentação de API). Leitores de tela reais, teclado virtual, matriz Angular 22.2.1 (piso real dos peers) × último e regressão visual (spec 08). Hidratação incremental (spec 08). Otimizações de desempenho além das que um orçamento reprovado exigir.
 
 ## 3. Decisões
 
@@ -89,7 +89,7 @@ Em `e2e/angular/`:
 - **Toda parte futura que mude API pública** atualiza o relatório no mesmo commit (Z7) e, se mudar o custo por tecla ou de criação, roda o N45 com `RTE_PERF_ENFORCE=1`.
 - **Spec 06/render:** os relatórios do `@cds/rte-render` passam a valer; os `ɵ` ficam formalmente internos.
 - **Spec 07:** pode gerar documentação de API a partir do `api-extractor` (ligar `docModel`), sem mudar os relatórios.
-- **Spec 08:** reaproveita o N45 na matriz Angular 22.0 × último e nos dispositivos lentos.
+- **Spec 08:** reaproveita o N45 na matriz Angular 22.2.1 × último e nos dispositivos lentos.
 - **Spec 09:** "API pública congelada" = relatórios sem diferença no *commit* de *release*.
 
 ## 9. Riscos

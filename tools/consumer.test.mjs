@@ -15,10 +15,11 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
   CONSUMER_MARK,
+  applyVersions,
+  flattenPrerender,
   PACKAGES,
   buildManifest,
   commandsFor,
-  flattenPrerender,
   packDirOf,
   parseNpmCommand,
   prepareConsumer,
@@ -499,6 +500,180 @@ test('commandsFor: ng build/test no cwd do consumidor, sem npx', () => {
 test('subcomando desconhecido falha', async () => {
   const { main } = await import('./consumer.mjs');
   await assert.rejects(() => main(['nada'], {}), /desconhecido/);
+});
+
+// ---- --versions (spec 08a, X3) ----
+
+const VERSIONS = {
+  name: 'compat (latest×latest)',
+  angular: { version: '22.4.0', toolingVersion: '22.4.2' },
+  tiptap: { version: '3.35.0' },
+  legacyPeerDeps: false,
+};
+
+test('applyVersions reescreve framework, ferramentas e Tiptap; o resto fica', () => {
+  const pkg = {
+    dependencies: {
+      '@angular/core': '22.2.1',
+      '@angular/router': '22.2.1',
+      '@tiptap/core': '3.31.4',
+      '@tiptap/pm': '3.31.4',
+      '@cds/rte-core': 'file:/x.tgz',
+      rxjs: '7.8.2',
+    },
+    devDependencies: {
+      '@angular/cli': '22.2.1',
+      '@angular/build': '22.2.1',
+      '@angular/compiler-cli': '22.2.1',
+      '@angular-devkit/core': '22.2.1',
+      vitest: '4.1.11',
+    },
+  };
+  const out = applyVersions(pkg, VERSIONS);
+  assert.equal(out.dependencies['@angular/core'], '22.4.0');
+  assert.equal(out.dependencies['@angular/router'], '22.4.0');
+  assert.equal(out.devDependencies['@angular/compiler-cli'], '22.4.0');
+  assert.equal(out.devDependencies['@angular/cli'], '22.4.2');
+  assert.equal(out.devDependencies['@angular/build'], '22.4.2');
+  assert.equal(out.devDependencies['@angular-devkit/core'], '22.4.2');
+  assert.equal(out.dependencies['@tiptap/core'], '3.35.0');
+  assert.equal(out.dependencies['@tiptap/pm'], '3.35.0');
+  assert.equal(out.dependencies['@cds/rte-core'], 'file:/x.tgz');
+  assert.equal(out.dependencies.rxjs, '7.8.2');
+  assert.equal(out.devDependencies.vitest, '4.1.11');
+  assert.equal(
+    pkg.dependencies['@angular/core'],
+    '22.2.1',
+    'não muta a entrada',
+  );
+});
+
+test('prepareConsumer com versions reescreve só a cópia, nunca o apps/demo do repositório', () => {
+  const root = tmp('repo-');
+  const out = tmp('out-');
+  const demo = join(root, 'apps', 'demo');
+  mkdirSync(demo, { recursive: true });
+  const original = JSON.stringify({
+    dependencies: {
+      '@angular/core': '22.2.1',
+      '@tiptap/core': '3.31.4',
+      '@cds/rte-core': '0.0.0',
+    },
+  });
+  writeFileSync(join(demo, 'package.json'), original);
+  mkdirSync(join(root, 'dist', 'tarballs'), { recursive: true });
+  writeFileSync(
+    join(root, 'dist', 'tarballs', 'manifest.json'),
+    JSON.stringify(MANIFEST),
+  );
+  const consumer = join(out, 'c');
+  prepareConsumer({
+    repoRoot: root,
+    consumerDir: consumer,
+    fs,
+    versions: VERSIONS,
+  });
+  const pkg = JSON.parse(readFileSync(join(consumer, 'package.json'), 'utf8'));
+  assert.equal(pkg.dependencies['@angular/core'], '22.4.0');
+  assert.equal(pkg.dependencies['@tiptap/core'], '3.35.0');
+  assert.match(pkg.dependencies['@cds/rte-core'], /^file:/);
+  assert.equal(readFileSync(join(demo, 'package.json'), 'utf8'), original);
+});
+
+function withInstalled(consumer, { core = '22.4.0', tiptap = '3.35.0' } = {}) {
+  for (const [name, version] of [
+    ['@angular/core', core],
+    ['@tiptap/core', tiptap],
+  ]) {
+    const dir = join(consumer, 'node_modules', name);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name, version }));
+  }
+  return consumer;
+}
+
+test('verifyOrigin com versions confere @angular/core e @tiptap/core instalados', () => {
+  const ok = withInstalled(fakeInstall());
+  assert.deepEqual(
+    verifyOrigin(ok, MANIFEST, fs, {
+      repoRoot: tmp('repo-'),
+      versions: VERSIONS,
+    }),
+    [],
+  );
+  const wrong = withInstalled(fakeInstall(), { core: '22.2.1' });
+  const errors = verifyOrigin(wrong, MANIFEST, fs, {
+    repoRoot: tmp('repo-'),
+    versions: VERSIONS,
+  });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], new RegExp('@angular/core.*22[.]2[.]1.*22[.]4[.]0'));
+  const missing = fakeInstall();
+  const gone = verifyOrigin(missing, MANIFEST, fs, {
+    repoRoot: tmp('repo-'),
+    versions: VERSIONS,
+  });
+  assert.equal(gone.length, 2);
+  assert.match(gone[1], new RegExp('@tiptap/core'));
+});
+
+test('main com --versions repassa --legacy-peer-deps ao npm install quando a perna é next', async () => {
+  const { main } = await import('./consumer.mjs');
+  const root = tmp('repo-');
+  const out = tmp('out-');
+  const consumer = join(out, 'c');
+  mkdirSync(join(root, 'apps', 'demo'), { recursive: true });
+  writeFileSync(
+    join(root, 'apps', 'demo', 'package.json'),
+    JSON.stringify({ dependencies: { '@cds/rte-core': '0.0.0' } }),
+  );
+  mkdirSync(join(root, 'dist', 'tarballs'), { recursive: true });
+  writeFileSync(
+    join(root, 'dist', 'tarballs', 'manifest.json'),
+    JSON.stringify(MANIFEST),
+  );
+  const next = {
+    ...VERSIONS,
+    angular: { version: '23.0.0-next.1', toolingVersion: '23.0.0-next.2' },
+    legacyPeerDeps: true,
+  };
+  const versionsPath = join(out, 'versions.json');
+  writeFileSync(versionsPath, JSON.stringify(next));
+  const installs = [];
+  const exec = (cmd, args) => {
+    installs.push({ cmd, args });
+    fakeInstall({ dir: consumer });
+    withInstalled(consumer, { core: '23.0.0-next.1' });
+  };
+  await main(
+    ['prepare', 'install', '--versions', versionsPath],
+    { RTE_CONSUMER_DIR: consumer, RTE_NPM: 'npm' },
+    { exec, repoRoot: root, fs },
+  );
+  assert.equal(installs.length, 1);
+  assert.ok(installs[0].args.includes('--legacy-peer-deps'));
+  const pkg = JSON.parse(readFileSync(join(consumer, 'package.json'), 'utf8'));
+  assert.equal(pkg.dependencies['@cds/rte-core'].startsWith('file:'), true);
+
+  // sem legacyPeerDeps e sem a opção: o install continua o da 07b
+  writeFileSync(
+    versionsPath,
+    JSON.stringify({ ...next, legacyPeerDeps: false }),
+  );
+  installs.length = 0;
+  await main(
+    ['prepare', 'install', '--versions', versionsPath],
+    { RTE_CONSUMER_DIR: consumer, RTE_NPM: 'npm' },
+    { exec, repoRoot: root, fs },
+  );
+  assert.ok(!installs[0].args.includes('--legacy-peer-deps'));
+  installs.length = 0;
+  await main(
+    ['prepare', 'install'],
+    { RTE_CONSUMER_DIR: consumer, RTE_NPM: 'npm' },
+    { exec, repoRoot: root, fs },
+  );
+  assert.deepEqual(installs[0].args, ['install', '--no-audit', '--no-fund']);
 });
 
 // ---- --app (spec 07c, X1) ----

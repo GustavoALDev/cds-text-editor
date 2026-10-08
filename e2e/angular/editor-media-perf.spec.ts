@@ -26,6 +26,9 @@ const IMAGES = 200;
 const SERIALIZE_SHARE = 0.5;
 /** Teto de alarme do B-A da tecla inteira (informativo; não é a guarda da R14). */
 const WHOLE_KEY_ALARM = 5;
+// ADR 0016/0019: tetos bloqueiam com `RTE_PERF_ENFORCE=1`; sem a variável (CI)
+// vale a guarda frouxa de 2x. Os números seguem sempre logados/anotados.
+const GUARD = process.env['RTE_PERF_ENFORCE'] === '1' ? 1 : 2;
 
 /** Mediana e p95 (método do posto mais próximo), em ms. */
 function summarize(times: readonly number[]): { median: number; p95: number } {
@@ -266,15 +269,15 @@ test('N32 (R14): custo por tecla com 200 imagens no documento de 20 mil palavras
   expect(
     deltaTracker,
     'B-A do rastreador (ouvintes − serialização)',
-  ).toBeLessThanOrEqual(1);
+  ).toBeLessThanOrEqual(1 * GUARD);
   expect(
     at('B rastreador').median,
     'rastreador com 200 imagens (mediana por tecla)',
-  ).toBeLessThanOrEqual(1);
+  ).toBeLessThanOrEqual(1 * GUARD);
   // Informativo, teto de alarme: a tecla inteira com 200 imagens não pode
   // disparar (medido 2-2,3 ms em N8 nos 3 motores).
   expect(
     deltaN8,
     'B-A da tecla inteira, N8 (informativo, teto de alarme)',
-  ).toBeLessThanOrEqual(WHOLE_KEY_ALARM);
+  ).toBeLessThanOrEqual(WHOLE_KEY_ALARM * GUARD);
 });

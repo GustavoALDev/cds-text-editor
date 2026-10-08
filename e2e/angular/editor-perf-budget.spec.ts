@@ -1,3 +1,5 @@
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { editableOf, editorHost, gotoApp, waitForEditor } from './helpers/app';
 import { perfDocument, PERF_TARGET_PARAGRAPH } from './helpers/perf-doc';
@@ -50,10 +52,38 @@ function check(name: string, value: number, budget: number, on = true): void {
   }
 }
 
-function report(type: string, text: string, browserName: string): void {
+/** Números do N45 gravados em `e2e/test-results/perf/n45-<motor>.json` (spec 08a, X11). */
+const PERF_DIR = join(__dirname, '..', 'test-results', 'perf');
+
+interface PerfFile {
+  browser: string;
+  entries: Record<string, { text: string; metrics: Record<string, number> }>;
+}
+
+function perfFile(browserName: string): string {
+  return join(PERF_DIR, `n45-${browserName}.json`);
+}
+
+function report(
+  type: string,
+  text: string,
+  browserName: string,
+  entry?: { key: string; metrics: Record<string, number> },
+): void {
   const description = `${browserName}: ${text}`;
   test.info().annotations.push({ type, description });
   console.log(`${type} ${description}`);
+  if (!entry) return;
+  mkdirSync(PERF_DIR, { recursive: true });
+  const file = perfFile(browserName);
+  let data: PerfFile = { browser: browserName, entries: {} };
+  try {
+    data = JSON.parse(readFileSync(file, 'utf8')) as PerfFile;
+  } catch {
+    // primeiro registro do motor nesta execução
+  }
+  data.entries[entry.key] = { text, metrics: entry.metrics };
+  writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
 /** Cria o editor com o documento no `@if`; devolve a criação (toggle -> editorReady) em ms. */
@@ -211,7 +241,27 @@ test('N45: custo por tecla nos dois regimes, criação completa e linha de base 
         '; ',
       )}; criação completa ${fmt(creation)} (${creations.length} amostras) (2 contextos x ${KEYS} teclas por caso; regime quente = teclas ${WARM_KEYS + 1}-${WARM_KEYS + KEYS}; ENFORCE=${ENFORCE})`,
     browserName,
+    {
+      key: 'completo',
+      metrics: {
+        ...Object.fromEntries(
+          Object.entries(results).flatMap(([k, r]) => [
+            [`${k} mediana`, r.median],
+            [`${k} p95`, r.p95],
+          ]),
+        ),
+        'criação mediana': creation.median,
+        'criação p95': creation.p95,
+      },
+    },
   );
+  // o JSON traz o regime frio e o quente (spec 08a, X11)
+  const written = JSON.parse(
+    readFileSync(perfFile(browserName), 'utf8'),
+  ) as PerfFile;
+  const keys = Object.keys(written.entries['completo']?.metrics ?? {});
+  expect(keys.some((k) => k.includes('frio'))).toBe(true);
+  expect(keys.some((k) => k.includes('quente'))).toBe(true);
   check(
     'tecla frio (+render)',
     results['completo frio +render']?.p95 ?? Number.NaN,
@@ -246,6 +296,7 @@ test('N45: busca capada (1000+) por tecla', async ({
     'N45',
     `busca capada (consulta com 20 mil ocorrências): ${fmt(r)}`,
     browserName,
+    { key: 'busca', metrics: { mediana: r.median, p95: r.p95 } },
   );
   check('busca capada', r.p95, BUDGET.cappedP95);
 });
@@ -296,6 +347,10 @@ test('N45: criação de editor vazio com barra minimal', async ({
     'N45',
     `criação vazia (minimal, 20 criações): ${fmt(r)}; max ${Math.max(...times).toFixed(1)} ms`,
     browserName,
+    {
+      key: 'vazio',
+      metrics: { mediana: r.median, p95: r.p95, max: Math.max(...times) },
+    },
   );
   check('criação vazia', r.median, BUDGET.createEmpty);
 });
@@ -340,6 +395,7 @@ test('N45: INP da digitação com teclado real (só o Chromium bloqueia)', async
     'N45',
     `INP ${inp} ms (${durations.length} interações >= 16 ms observadas de ${KEYS} teclas; 0 = abaixo de 16 ms ou sem interactionId)`,
     browserName,
+    { key: 'inp', metrics: { inp } },
   );
   check('INP', inp, BUDGET.inp, browserName === 'chromium');
 });
@@ -406,6 +462,7 @@ test('N45: gravação do rascunho por gravação', async ({
     'N45',
     `gravação do rascunho: ${times.map((t) => t.toFixed(2)).join(', ')} ms (3 gravações)`,
     browserName,
+    { key: 'rascunho', metrics: { max: Math.max(...times) } },
   );
   check('gravação do rascunho', Math.max(...times), BUDGET.draftWrite);
 });

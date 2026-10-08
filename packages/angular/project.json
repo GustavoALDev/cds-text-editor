@@ -76,9 +76,10 @@
       ],
       "cache": true,
       "options": {
-        "command": "node tools/check-size.mjs --config packages/angular/size-budget.json",
+        "command": "node tools/check-size.mjs --config packages/angular/size-budget.json --report dist/reports/size/angular.json",
         "cwd": "{workspaceRoot}"
-      }
+      },
+      "outputs": ["{workspaceRoot}/dist/reports/size/angular.json"]
     },
     "verify-package": {
       "executor": "nx:run-commands",
@@ -100,7 +101,10 @@
       "inputs": [
         "production",
         "^production",
-        { "dependentTasksOutputFiles": "**/*.d.ts", "transitive": true },
+        {
+          "dependentTasksOutputFiles": "**/*.d.ts",
+          "transitive": true
+        },
         "{projectRoot}/api/**/*",
         "{workspaceRoot}/tools/api-report.mjs",
         {
@@ -112,6 +116,19 @@
       "options": {
         "command": "node tools/api-report.mjs dist/packages/angular",
         "cwd": "{workspaceRoot}"
+      }
+    },
+    "coverage": {
+      "executor": "@nx/angular:unit-test",
+      "outputs": ["{workspaceRoot}/coverage/packages/angular"],
+      "cache": true,
+      "options": {
+        "watch": false,
+        "runnerConfig": "packages/angular/vitest-base.config.mts",
+        "buildTarget": "angular:unit-test-build:zoneless",
+        "providersFile": "packages/angular/src/testing-support/providers.zoneless.ts",
+        "coverage": true,
+        "coverageReporters": ["json-summary", "lcov", "html"]
       }
     }
   }

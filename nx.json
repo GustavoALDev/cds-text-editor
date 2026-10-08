@@ -55,6 +55,12 @@
     },
     "test-zone": {
       "parallelism": false
+    },
+    "coverage": {
+      "parallelism": false
+    },
+    "test-timed": {
+      "parallelism": false
     }
   }
 }

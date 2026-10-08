@@ -1,4 +1,5 @@
 import { availableParallelism } from 'node:os';
+import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 // Configuração base lida pelo builder `unit-test` (runnerConfig). Amplia os
@@ -13,5 +14,12 @@ export default defineConfig({
     testTimeout: 30_000,
     hookTimeout: 30_000,
     maxWorkers: Math.max(1, Math.min(4, availableParallelism() - 1)),
+    // Alvo `coverage` (spec 08a, X10): o builder grava em coverage/<projeto> por padrão.
+    coverage: {
+      reportsDirectory: resolve(
+        import.meta.dirname,
+        '../../coverage/packages/angular',
+      ),
+    },
   },
 });

@@ -1,0 +1,17 @@
+[
+  "e2e/angular/editor-csp.spec.ts",
+  "e2e/angular/editor-dialogs-link.spec.ts",
+  "e2e/angular/editor-draft-save.spec.ts",
+  "e2e/angular/editor-floating.spec.ts",
+  "e2e/angular/editor-forms.spec.ts",
+  "e2e/angular/editor-media-image.spec.ts",
+  "e2e/angular/editor-search.spec.ts",
+  "e2e/angular/editor-slash.spec.ts",
+  "e2e/angular/editor-ssr.spec.ts",
+  "e2e/angular/editor-toolbar-commands.spec.ts",
+  "e2e/angular/editor-upload-states.spec.ts",
+  "e2e/angular/render-equivalence.spec.ts",
+  "e2e/core/editor-contract.spec.ts",
+  "e2e/core/editor-keyboard.spec.ts",
+  "e2e/core/editor-paste.spec.ts"
+]
