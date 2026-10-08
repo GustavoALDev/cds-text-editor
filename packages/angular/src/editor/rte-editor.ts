@@ -637,7 +637,9 @@ export class RteEditor implements FormValueControl<string> {
   protected readonly searchStep = signal(0);
   private readonly searchFailed = signal(false);
   /** @internal */
-  protected readonly searchLabels = computed(() => this.resolvedLabels().search);
+  protected readonly searchLabels = computed(
+    () => this.resolvedLabels().search,
+  );
 
   /**
    * Diálogos (G2–G7): o pedido e o G5 ficam aqui; a interface, no chunk.
@@ -825,8 +827,13 @@ export class RteEditor implements FormValueControl<string> {
           : html;
       },
       apply: (html) => this.applyRestored(html),
-      setAvailable: (value) =>
-        this.ngZone.run(() => this.drafting.publish(value)),
+      setAvailable: (value) => {
+        // O aviso some por evento externo (storage, descarte): o foco que
+        // estava nele vai ao editável em vez de cair no body (ADR 0014).
+        const inPrompt = value === null && this.focusInPrompt();
+        this.ngZone.run(() => this.drafting.publish(value));
+        if (inPrompt) this.focus();
+      },
       available: () => untracked(this.drafting.available),
       emitError: (e) => this.ngZone.run(() => this.draftError.emit(e)),
     },
@@ -876,7 +883,8 @@ export class RteEditor implements FormValueControl<string> {
           applySlashAria(ariaEditor.view.dom, {});
         }
         ariaEditor = editor;
-        if (editor && !editor.isDestroyed) applySlashAria(editor.view.dom, aria);
+        if (editor && !editor.isDestroyed)
+          applySlashAria(editor.view.dom, aria);
       });
     });
     this.dirtyState.onSaved = () => this.drafting.cleared();
@@ -1281,14 +1289,19 @@ export class RteEditor implements FormValueControl<string> {
 
   /** O foco que estava no aviso vai ao editável (S6, WCAG 2.4.3). */
   private keepPromptFocus(run: () => boolean): boolean {
-    const active = this.host.ownerDocument.activeElement;
-    const inPrompt =
-      active !== null &&
-      this.host.contains(active) &&
-      active.closest('.rte-draft') !== null;
+    const inPrompt = this.focusInPrompt();
     const result = run();
     if (inPrompt) this.focus();
     return result;
+  }
+
+  private focusInPrompt(): boolean {
+    const active = this.host.ownerDocument.activeElement;
+    return (
+      active !== null &&
+      this.host.contains(active) &&
+      active.closest('.rte-draft') !== null
+    );
   }
 
   /**
@@ -1398,7 +1411,8 @@ export class RteEditor implements FormValueControl<string> {
     // diálogo modal, é do navegador.
     const frozen = inEditable && untracked(this.instance)?.isEditable === false;
     if ((!inEditable || frozen) && this.isSearchKey(event)) {
-      if (!target.closest('dialog') && this.openSearch()) event.preventDefault();
+      if (!target.closest('dialog') && this.openSearch())
+        event.preventDefault();
       return;
     }
     if (
