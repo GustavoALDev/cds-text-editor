@@ -1,10 +1,13 @@
 // Checagem do HTML gerado para o site (spec 07c, X4): o único componente que confia em HTML
 // (`doc-html.ts`) só recebe saída que passou por aqui. Falha o build; nunca "limpa" em silêncio.
-const FORBIDDEN_TAGS = /<\s*\/?\s*(script|style|iframe|object|embed)\b/i;
-const TAG =
-  /<([a-zA-Z][\w:-]*)((?:\s+[^\s"'<>/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*)\s*\/?>/g;
+const FORBIDDEN_TAGS =
+  /<\s*\/?\s*(script|style|iframe|object|embed|meta|link|base|form|frame|frameset|applet)\b/i;
+// Único comentário aceito: o marcador de exemplo vivo (`directives.mjs`); qualquer outro `<!` falha.
+const LIVE_MARKER = /<!--@@live:[\w.-]+@@-->/g;
+// Tolerante como o navegador: `<img/src=x>`, `"x"onerror=` colado e `/` como separador valem.
+const TAG = /<\/?([a-zA-Z][^\s/>]*)((?:"[^"]*"|'[^']*'|[^>"'])*)>/g;
 const ATTR =
-  /([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+  /([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`/]+)))?/g;
 const URL_ATTRS = new Set([
   'href',
   'src',
@@ -39,13 +42,15 @@ const snippet = (s) => (s.length > 80 ? `${s.slice(0, 77)}...` : s);
  */
 export function checkHtml(html, { external = true } = {}) {
   const errors = [];
+  if (html.split(LIVE_MARKER).join('').includes('<!'))
+    errors.push('comentário ou declaração HTML (<!...) não permitido');
   const forbidden = FORBIDDEN_TAGS.exec(html);
   if (forbidden) {
     errors.push(
       `tag proibida <${forbidden[1].toLowerCase()}> em "${snippet(html.slice(forbidden.index, forbidden.index + 60))}"`,
     );
   }
-  for (const tag of html.matchAll(TAG)) {
+  for (const tag of html.split(LIVE_MARKER).join('').matchAll(TAG)) {
     const name = tag[1].toLowerCase();
     const attrs = new Map();
     for (const a of tag[2].matchAll(ATTR)) {

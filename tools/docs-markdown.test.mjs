@@ -132,3 +132,62 @@ test('markdown (api): tabelas HTML do api-documenter passam; heading com id expl
   }).html;
   assert.match(guideHtml, /&lt;table&gt;/);
 });
+
+test('markdown: comentário HTML não fura a lista fechada (X4)', () => {
+  const ataques = [
+    '<!--><img/src=x/onerror=alert(1)>-->',
+    '<!---><img/src=x/onerror=alert(1)>',
+    '<!-- a --!><img/src=x/onerror=alert(1)>',
+    'a <!--><img/src=x/onerror=alert(1)> b',
+    '<!-- x --><meta/http-equiv=refresh content="0;url=https://x.test">',
+  ];
+  for (const a of ataques) {
+    let html;
+    try {
+      html = guide(`${a}\n`)
+        .segments.map((s) => s.html ?? '')
+        .join('');
+    } catch (e) {
+      assert.match(e.message, /HTML não permitido/, a);
+      continue;
+    }
+    assert.ok(!/<!--/.test(html), `comentário vazou: ${html}`);
+    assert.ok(!/<(img|meta)/i.test(html), `tag vazou: ${html}`);
+  }
+});
+
+test('markdown: comentário comum é descartado e o marcador de exemplo vivo sobrevive', () => {
+  const r = guide('antes\n\n<!-- nota -->\n\n<!-- live: demo -->\n\ndepois\n');
+  assert.deepEqual(
+    r.segments.map((s) => (s.live ? { live: s.live } : 'html')),
+    ['html', { live: 'demo' }, 'html'],
+  );
+  assert.ok(!r.segments.some((s) => s.html?.includes('nota')));
+});
+
+test('markdown: bloco cercado sem diretiva falha em qualquer aninhamento', () => {
+  const casos = [
+    '- item\n\n    ```ts\n    x\n    ```\n',
+    '1. item\n\n   ```ts\n   x\n   ```\n',
+    '> ```ts\n> x\n> ```\n',
+  ];
+  for (const c of casos)
+    assert.throws(() => guide(c), /bloco de código sem diretiva/, c);
+  // forjar a marca na mão não funciona
+  assert.throws(
+    () => guide('- item\n\n    ```ts rte-ok\n    x\n    ```\n'),
+    /bloco de código sem diretiva/,
+  );
+  // com diretiva, no nível raiz, passa
+  assert.match(
+    guide('<!-- no-compile: x -->\n```ts\nx\n```\n').segments[0].html,
+    /<pre>/,
+  );
+});
+
+test('markdown: ids do layout do site são reservados', () => {
+  for (const id of ['conteudo', 'docs-search-input', 'docs-search-list']) {
+    assert.throws(() => guide(`## Conteúdo {#${id}}\n`), /reservad/, id);
+  }
+  assert.throws(() => guide('## Conteudo\n'), /reservad/); // slug "conteudo"
+});

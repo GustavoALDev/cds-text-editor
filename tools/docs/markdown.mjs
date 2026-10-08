@@ -10,7 +10,12 @@ import json from 'highlight.js/lib/languages/json';
 import typescript from 'highlight.js/lib/languages/typescript';
 import xml from 'highlight.js/lib/languages/xml';
 import { Marked } from 'marked';
-import { expandDirectives, LIVE_CLOSE, LIVE_OPEN } from './directives.mjs';
+import {
+  expandDirectives,
+  LIVE_CLOSE,
+  LIVE_OPEN,
+  OK_MARK,
+} from './directives.mjs';
 import { assertSafeHtml } from './safety.mjs';
 import { slug } from './slug.mjs';
 
@@ -66,10 +71,19 @@ export const escapeHtml = (s) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
-/** Mantém comentários e as tags da lista (sem atributos); escapa o resto. */
+/**
+ * Remove os comentários HTML como o navegador os lê (`<!-->`, `<!--->`, `--!>` e comentário sem
+ * fim incluídos), menos o marcador de exemplo vivo. Um comentário que o navegador fecha antes do
+ * que um regex ingênuo esconde marcação ativa depois dele.
+ */
+export function stripComments(text) {
+  return text.replace(/<!--(?!@@live:)(?:-?>|[\s\S]*?(?:--!?>|$))/g, '');
+}
+
+/** Mantém o marcador de exemplo vivo e as tags da lista (sem atributos); escapa o resto. */
 export function escapeRawHtml(text, allowed) {
-  return text.replace(
-    /<!--[\s\S]*?-->|<\/?([a-zA-Z][\w-]*)([^<>]*)>|</g,
+  return stripComments(text).replace(
+    /<!--@@live:[\w.-]+@@-->|<\/?([a-zA-Z][\w-]*)([^<>]*)>|</g,
     (m, name, attrs) => {
       if (m.startsWith('<!--')) return m;
       if (
@@ -98,6 +112,9 @@ const plain = (tokens) =>
   tokens
     .map((t) => (t.tokens ? plain(t.tokens) : (t.text ?? t.raw ?? '')))
     .join('');
+
+/** Ids que o layout do site já usa (`app.html`, `search-box`): um título não pode tomá-los. */
+const RESERVED_IDS = /^(conteudo|docs-search-.*)$/;
 
 const EXPLICIT_ID = /\s*\{#([A-Za-z][\w.:-]*)\}\s*$/;
 
@@ -150,6 +167,10 @@ export function convertMarkdown(markdown, { pageId, api = false }) {
         );
     }
     if (id) {
+      if (RESERVED_IDS.test(id))
+        throw new Error(
+          `página ${pageId}: o id "${id}" (título "${text}") é reservado pelo layout do site; use {#outro-id}`,
+        );
       if (taken.has(id))
         throw new Error(
           `página ${pageId}: âncora duplicada "${id}" pelos títulos "${taken.get(id)}" e "${text}"; renomeie um deles`,
@@ -176,11 +197,18 @@ export function convertMarkdown(markdown, { pageId, api = false }) {
           throw new Error(
             `${pageId}: bloco de código indentado; use um bloco cercado com diretiva`,
           );
-        return `${highlight(t.text, (t.lang ?? '').split(/\s+/)[0])}\n`;
+        const words = (t.lang ?? '').split(/\s+/).filter(Boolean);
+        if (!api && !words.includes(OK_MARK))
+          throw new Error(
+            `${pageId}: bloco de código sem diretiva (em lista ou citação também): use <!-- example: ... -->, <!-- generated: ... --> ou <!-- no-compile: motivo --> antes dele, no nível raiz da página`,
+          );
+        const lang = words[0] === OK_MARK ? '' : (words[0] ?? '');
+        return `${highlight(t.text, lang)}\n`;
       },
       html(t) {
-        assertSafeHtml(t.text, pageId, { external: false });
-        return escapeRawHtml(t.text, allowed);
+        const text = stripComments(t.text);
+        assertSafeHtml(text, pageId, { external: false });
+        return escapeRawHtml(text, allowed);
       },
       link(t) {
         const href = rewriteHref(t.href, pageId);

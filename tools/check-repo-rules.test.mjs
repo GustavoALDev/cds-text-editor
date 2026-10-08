@@ -578,3 +578,18 @@ test('docs: bloco cercado do conteúdo exige diretiva na linha anterior', () => 
     [],
   );
 });
+
+test('docs: bloco cercado em lista (recuo >= 4) ou citação é recusado', () => {
+  const F = '```';
+  const casos = {
+    lista: `- item\n\n    ${F}ts\n    x\n    ${F}\n`,
+    citacao: `> ${F}ts\n> x\n> ${F}\n`,
+  };
+  for (const [nome, md] of Object.entries(casos)) {
+    const errors = docsErrors(
+      fixture({ ...CLEAN_DOCS, 'apps/docs/content/guia/a.md': md }),
+    );
+    assert.equal(errors.length, 1, nome);
+    assert.match(errors[0], /aninhado em lista ou citação/, nome);
+  }
+});

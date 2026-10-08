@@ -213,17 +213,35 @@ function importSpecifiers(source) {
 const CONTENT_DIRECTIVE =
   /^\s*<!--\s*(?:example|generated|no-compile)\s*:\s*\S.*-->\s*$/;
 const CONTENT_FENCE = /^( {0,3})(`{3,}|~{3,})/;
+// Cerca em lista (recuo >= 4, ou na própria linha do marcador) ou citação: o conversor também
+// as recusa (marca das diretivas), aqui a mensagem aponta a linha.
+const CONTENT_NESTED_FENCE =
+  /^(?: {4,}|\t|[ \t]*(?:>|[-*+]\s|\d+[.)]\s))[ \t>]*(?:[-*+]\s+|\d+[.)]\s+)?(`{3,}|~{3,})/;
 
 export function checkContentFences(text, where) {
   const errors = [];
   const lines = text.replace(/\r\n/g, '\n').split('\n');
   let fence = null;
   let previous = '';
+  let nested = null;
   lines.forEach((line, i) => {
     const m = CONTENT_FENCE.exec(line);
     if (fence) {
       if (m && m[2][0] === fence[0] && m[2].length >= fence.length)
         fence = null;
+      return;
+    }
+    const n = m ? null : CONTENT_NESTED_FENCE.exec(line);
+    if (nested) {
+      if (n && n[1][0] === nested[0] && n[1].length >= nested.length)
+        nested = null;
+      return;
+    }
+    if (n) {
+      errors.push(
+        `${where}:${i + 1}: bloco de código aninhado em lista ou citação não é suportado; leve-o para o nível raiz da página com uma diretiva (spec 07c, X6)`,
+      );
+      nested = n[1];
       return;
     }
     if (m) {

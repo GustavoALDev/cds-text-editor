@@ -5,11 +5,18 @@
 //   <!-- generated: styles-order [render] --> ordem do CSS (exports dos package.json publicados)
 //   <!-- no-compile: motivo -->              bloco cercado escrito à mão, com motivo
 // Todo bloco cercado sem uma destas diretivas falha o build (e o `check:rules`).
+import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 
 export const LIVE_OPEN = '<!--@@live:';
 export const LIVE_CLOSE = '@@-->';
+
+// Marca (na info string) dos blocos cercados que uma diretiva autorizou. O conversor falha em
+// qualquer bloco sem ela, em qualquer aninhamento (lista, citação): a regra vale para o que o
+// `marked` realmente enxerga, não para o que as linhas parecem. Aleatória por execução: o
+// conteúdo não consegue forjá-la.
+export const OK_MARK = `rte-ok-${randomUUID()}`;
 
 const DIRECTIVE =
   /^\s*<!--\s*(example|live|generated|no-compile)\s*:\s*(.*?)\s*-->\s*$/;
@@ -131,7 +138,7 @@ function fenced(code, lang) {
     ...[...code.matchAll(/`{3,}/g)].map((m) => m[0].length + 1),
   );
   const bar = '`'.repeat(ticks);
-  return `${bar}${lang}\n${code}\n${bar}`;
+  return `${bar}${lang} ${OK_MARK}\n${code}\n${bar}`;
 }
 
 /**
@@ -184,7 +191,7 @@ export function expandDirectives(body, ctx) {
         );
       pending = null;
       inFence = { char: fence[2][0], len: fence[2].length };
-      out.push(line);
+      out.push(`${line} ${OK_MARK}`);
       return;
     }
     const d = DIRECTIVE.exec(line);

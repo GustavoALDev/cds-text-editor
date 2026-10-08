@@ -4,12 +4,17 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
-  expandDirectives,
+  expandDirectives as expandMarked,
+  OK_MARK,
   extractRegion,
   generateInstallCommand,
   generateStylesOrder,
   liveIdsOf,
 } from './docs/directives.mjs';
+
+// Os blocos autorizados saem com a marca (info string); os testes comparam sem ela.
+const expandDirectives = (body, c) =>
+  expandMarked(body, c).split(` ${OK_MARK}`).join('');
 
 const FIX = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'docs');
 const readFixture = (name) => readFileSync(join(FIX, name), 'utf8');
@@ -208,4 +213,19 @@ test('generated: styles-order segue os exports e exige o export', () => {
     () => expandDirectives('<!-- generated: outra -->', ctx()),
     /"outra" desconhecido/,
   );
+});
+
+test('blocos autorizados por diretiva saem marcados', () => {
+  const marked = expandMarked(
+    [
+      '<!-- no-compile: x -->',
+      '```ts',
+      'x',
+      '```',
+      '',
+      '<!-- example: exemplo.ts#interno -->',
+    ].join('\n'),
+    ctx(),
+  );
+  assert.equal(marked.split(OK_MARK).length - 1, 2);
 });
