@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import {
   buildSummary,
+  buildVisualSummary,
   flakyWarnings,
   loadCoverage,
   loadPerf,
@@ -148,4 +149,32 @@ test('CLI: sem nenhum artefato e sem GITHUB_STEP_SUMMARY escreve no stdout e sai
   );
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /sem dados/);
+});
+
+test('buildVisualSummary: seção só do visual, com flake e sem dados', () => {
+  assert.match(
+    buildVisualSummary(json('report.json')),
+    /### Visual: testes instáveis[^]*editor-a/,
+  );
+  assert.match(buildVisualSummary(undefined), /sem dados/);
+});
+
+test('CLI --visual: só a seção do visual e avisos com o caminho e2e/visual', () => {
+  const out = join(mkdtempSync(join(tmpdir(), 'qsum-')), 'summary.md');
+  const r = spawnSync(
+    'node',
+    ['tools/quality-summary.mjs', '--visual', join(FX, 'report.json')],
+    {
+      encoding: 'utf8',
+      env: { ...process.env, GITHUB_STEP_SUMMARY: out },
+    },
+  );
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(
+    r.stdout.includes('::warning file=e2e/visual/angular/editor-a.spec.ts'),
+    r.stdout,
+  );
+  const md = readFileSync(out, 'utf8');
+  assert.match(md, /Visual: testes instáveis/);
+  assert.doesNotMatch(md, /### Tamanho/);
 });

@@ -74,10 +74,10 @@ function flakyTests(report) {
 }
 
 /** Avisos `::warning` do GitHub Actions, um por teste instável. */
-export function flakyWarnings(report) {
+export function flakyWarnings(report, dir = 'e2e') {
   return flakyTests(report).map(
     (t) =>
-      `::warning file=e2e/${t.file}${t.line ? `,line=${t.line}` : ''}::Teste instável (passou só na repetição): ${t.title} [${t.project}]`,
+      `::warning file=${dir}/${t.file}${t.line ? `,line=${t.line}` : ''}::Teste instável (passou só na repetição): ${t.title} [${t.project}]`,
   );
 }
 
@@ -194,6 +194,16 @@ export function buildSummary({
   return `${parts.join('\n\n')}\n`;
 }
 
+/** Resumo só do visual (spec 08b, O2): capturas que passaram apenas na repetição. */
+export function buildVisualSummary(visualReport) {
+  return `## Visual
+
+### Visual: testes instáveis
+
+${flakySection(visualReport)}
+`;
+}
+
 function option(argv, name, fallback) {
   const i = argv.indexOf(name);
   return i >= 0 && argv[i + 1] ? argv[i + 1] : fallback;
@@ -201,6 +211,16 @@ function option(argv, name, fallback) {
 
 function main() {
   const argv = process.argv.slice(2);
+  const visualFile = option(argv, '--visual');
+  if (visualFile) {
+    const visualReport = readJson(visualFile);
+    const md = buildVisualSummary(visualReport);
+    const target = process.env.GITHUB_STEP_SUMMARY;
+    if (target) appendFileSync(target, md);
+    else process.stdout.write(md);
+    for (const w of flakyWarnings(visualReport, 'e2e/visual')) console.log(w);
+    return;
+  }
   const playwrightReport = readJson(
     option(argv, '--playwright', 'e2e/test-results/report.json'),
   );
