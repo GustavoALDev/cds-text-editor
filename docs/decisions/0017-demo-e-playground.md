@@ -34,7 +34,7 @@ W1–W15 valem como escritas na spec (fonte única), com os desvios abaixo. Resu
 ### (c) Pendências (com dono)
 
 - **Firefox e WebKit do _job_ `demo`:** rodada do CI do PR.
-- **`?preset=` no demo e o guia:** spec 07d.
+- **`?preset=` no demo e o guia:** resolvida na spec 07d (ADR 0020).
 - **Site de docs:** 07c (ADR 0018) reaproveita `consumer.mjs`, a CSP por `<meta>` e o artefato estático.
 
 ## Consequências

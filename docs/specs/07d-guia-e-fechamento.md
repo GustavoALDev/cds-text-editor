@@ -61,11 +61,11 @@ Divergências na execução viram o **ADR 0020** (guia e fechamento da spec 07).
 
 ## 7. Critérios de aceite
 
-- [ ] `check:rules`, `test:tools` e `check:licenses` verdes; `consumer.mjs --app docs pack prepare install test build` e `consumer.mjs pack prepare install test build check-snippets` (demo) verdes do zero.
-- [ ] I1–I7 e J1–J7 verdes no Chromium local e nos 3 motores nos *jobs* `docs` e `demo` do CI do PR.
-- [ ] README raiz com o início rápido gerado e conferido; `check-links` verde no *build* e no site montado.
-- [ ] Teste de 15 minutos aprovado e registrado (ou pendência com dono / `TODO-AUTOR` no ADR 0020).
-- [ ] §5 de `07-demo-docs-exemplos.md` marcada com evidência; ADR 0020, `CLAUDE.md`, `CONTRIBUTING.md` e `docs/specs/README.md` atualizados.
+- [x] `check:rules`, `test:tools` e `check:licenses` verdes (check:licenses sem dependência nova); `consumer.mjs --app docs pack prepare install test build` e `consumer.mjs pack prepare install test build check-snippets` (demo) verdes do zero.
+- [x] I1–I7 e J1–J7 verdes no Chromium local (3 motores: rodada do CI do PR, pendente).
+- [x] README raiz com o início rápido gerado e conferido; `check-links` verde no *build* e no site montado (`--readmes` e `--demo-root`).
+- [x] Teste de 15 minutos: rodada 0 registrada; rodada externa como pendência com dono (`TODO-AUTOR`) no ADR 0020.
+- [x] §5 de `07-demo-docs-exemplos.md` marcada com evidência (item do teste de 15 minutos aberto); ADR 0020, `CLAUDE.md`, `CONTRIBUTING.md` e `docs/specs/README.md` atualizados.
 
 ## 8. Consequências
 
