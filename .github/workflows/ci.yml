@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   verify:
@@ -98,6 +98,21 @@ jobs:
           RTE_REQUIRE_DIST: '1'
       # pack -> prepare -> install (prova de origem dos tarballs) -> ng test -> ng build -> tsc dos snippets.
       - run: node tools/consumer.mjs pack prepare install test build check-snippets
+      # Só no main: segundo build do demo, com a base da publicação (spec 07c, X10). O HTML
+      # pré-renderizado sai em browser/cds-text-editor/demo/; flattenPrerender o sobe para a raiz.
+      - name: Build do demo para o Pages (base /cds-text-editor/demo/)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: ${{ runner.temp }}/cds-rte-consumer/demo
+        run: |
+          node node_modules/@angular/cli/bin/ng.js build --base-href /cds-text-editor/demo/ --output-path dist/demo-pages
+          node --input-type=module -e "const { flattenPrerender } = await import(process.env.GITHUB_WORKSPACE + '/tools/consumer.mjs'); console.log(flattenPrerender('dist/demo-pages/browser'));"
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          name: demo-pages
+          path: ${{ runner.temp }}/cds-rte-consumer/demo/dist/demo-pages/browser
+          retention-days: 14
+          if-no-files-found: error
       - run: npx playwright install --with-deps
       - run: npx playwright test -c apps/demo/e2e
       - uses: actions/upload-artifact@v4
@@ -124,3 +139,134 @@ jobs:
           name: demo-npm-ls
           path: ${{ runner.temp }}/npm-ls.txt
           if-no-files-found: ignore
+
+  # Site de documentação (spec 07c, X12): gera o modelo de API e o conteúdo, constrói o site como
+  # consumidor dos tarballs (fora do repositório), confere os links internos e roda o E2E I1-I6
+  # nos 3 navegadores sob o prefixo /cds-text-editor/. Paralelo ao `verify` e ao `demo`; sempre
+  # roda. Sem orçamentos de desempenho aqui (runners do CI ~2x mais lentos; ADR 0016).
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RTE_DOCS_PORT: 4320
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "RTE_CONSUMER_DIR=$RUNNER_TEMP/cds-rte-consumer/docs" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm i -g npm@11
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-docs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            nx-docs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            nx-demo-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            nx-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+      - run: npx nx run-many -t build -p core sanitizer theme angular render
+      # Modelo de API (api-extractor com docModel; os relatórios api/*.api.md não mudam) e Markdown.
+      - name: Modelo de API
+        run: |
+          export RTE_API_MODEL=dist/api-model
+          node tools/api-report.mjs packages/core
+          node tools/api-report.mjs packages/sanitizer
+          node tools/api-report.mjs packages/theme
+          node tools/api-report.mjs dist/packages/angular
+          node tools/api-report.mjs dist/packages/render
+      - run: npx api-documenter markdown -i dist/api-model -o dist/api-markdown
+      - run: node tools/docs-content.mjs
+      # pack -> prepare -> install (prova de origem dos tarballs) -> ng test (exemplos) -> ng build (estrito).
+      - run: node tools/consumer.mjs --app docs pack prepare install test build
+      - name: Links internos (site e READMEs) e lista dos externos
+        run: node tools/check-links.mjs "$RTE_CONSUMER_DIR/dist/docs/browser" --base /cds-text-editor/ --readmes --externos links-externos.txt
+      - run: npx playwright install --with-deps
+      - run: npx playwright test -c apps/docs/e2e
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs-static
+          path: ${{ runner.temp }}/cds-rte-consumer/docs/dist/docs/browser
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: links-externos.txt
+          path: links-externos.txt
+          retention-days: 14
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: docs-playwright-report
+          path: |
+            playwright-report/
+            apps/docs/test-results/
+          if-no-files-found: ignore
+      - name: Árvore de dependências do consumidor
+        if: failure()
+        run: npm ls --all > "$RUNNER_TEMP/npm-ls.txt" 2>&1 || true
+        working-directory: ${{ runner.temp }}/cds-rte-consumer/docs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: docs-npm-ls
+          path: ${{ runner.temp }}/npm-ls.txt
+          if-no-files-found: ignore
+
+  # Publicação no GitHub Pages (spec 07c, X10): só em push para o main, depois dos três jobs, e só
+  # com a variável RTE_PAGES = 'true' (o main não fica vermelho antes de o dono ligar o Pages).
+  # TODO-AUTOR: ativar Pages com origem "GitHub Actions" (Settings > Pages) e criar a variável de
+  # repositório RTE_PAGES = true; repositório privado exige plano pago (sem isso o site fica só
+  # como os artefatos docs-static e demo-pages). Domínio próprio: CNAME e RTE_SITE_BASE=/ (TODO-AUTOR).
+  pages:
+    needs: [verify, demo, docs]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.RTE_PAGES == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    env:
+      RTE_DOCS_PORT: 4320
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm i -g npm@11
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: docs-static
+          path: site
+      - uses: actions/download-artifact@v4
+        with:
+          name: demo-pages
+          path: site/demo
+      - run: touch site/.nojekyll
+      # Links internos do site montado, inclusive docs <-> demo.
+      - run: node tools/check-links.mjs site --base /cds-text-editor/ --demo-root site/demo
+      # O demo montado existe (os links docs <-> demo já foram conferidos acima).
+      - run: test -s site/demo/index.html
+      # Fumaça I1 (Chromium) sobre o site montado, servido sob o prefixo: uma página do guia e uma
+      # de API (a suíte inteira já rodou no job docs; aqui só se confere a montagem sob o prefixo).
+      - run: npx playwright install --with-deps chromium
+      - run: |
+          npx playwright test -c apps/docs/e2e --project=chromium i1-smoke -g '(guia/inicio-rapido|api/core): sem'
+        env:
+          RTE_DOCS_DIR: ${{ github.workspace }}/site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
