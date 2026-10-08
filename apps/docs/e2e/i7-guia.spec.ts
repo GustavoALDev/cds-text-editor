@@ -30,5 +30,43 @@ test.describe('I7 idiomas', () => {
 });
 
 test.describe('I7 exibicao', () => {
-  test.fixme('rte-toc lista os ids rt- do conteúdo e a âncora rola até o título', () => undefined);
+  test('rte-toc lista os ids rt- do conteúdo e a âncora rola até o título', async ({
+    page,
+  }) => {
+    const problems = await watch(page);
+    const pageUrl = url(ORIGIN, 'guia/exibicao');
+    await page.goto(pageUrl);
+    await ready(page);
+    const live = page.getByTestId('exibicao');
+    await expect(live.locator('.ProseMirror')).toBeVisible({ timeout: 30_000 });
+
+    const links = live.locator('nav.rte-toc a.rte-toc__link');
+    await expect(links).toHaveText(['Primeiros passos', 'Configuração', 'Barra']);
+    // Os títulos da exibição carregam os mesmos ids rt-<slug>.
+    const article = live.getByTestId('artigo');
+    await expect(article.locator('h2#rt-primeiros-passos')).toBeVisible();
+    await expect(article.locator('h3#rt-barra')).toBeVisible();
+    // O href resolve contra o endereço do documento, sob o prefixo de publicação (<base href>).
+    expect(await links.nth(2).evaluate((a) => (a as HTMLAnchorElement).href)).toBe(
+      `${pageUrl}#rt-barra`,
+    );
+
+    // Clicar na entrada rola até o título.
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    await links.nth(2).click();
+    await expect(page).toHaveURL(`${pageUrl}#rt-barra`);
+    await expect(article.locator('#rt-barra')).toBeInViewport();
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+    // Editar o título muda o id, e o sumário acompanha.
+    const heading = live.locator('.ProseMirror h2', { hasText: 'Configuração' });
+    await heading.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' extra');
+    await expect(links.nth(1)).toHaveText('Configuração extra');
+    await expect(links.nth(1)).toHaveAttribute('href', /#rt-configuracao-extra$/);
+    await expect(article.locator('h2#rt-configuracao-extra')).toBeVisible();
+    await expect(article.locator('#rt-configuracao')).toHaveCount(0);
+    expect(problems.messages).toEqual([]);
+  });
 });

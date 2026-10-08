@@ -1,0 +1,12 @@
+<div data-testid="exibicao">
+  <p>Edite os títulos: o id do sumário acompanha o texto.</p>
+  <rte-editor
+    ariaLabel="Texto da exibição"
+    [(value)]="html"
+    [options]="options"
+  />
+  <p class="doc-live__title"><strong>Sumário</strong></p>
+  <rte-toc [html]="c.renderedHtml()" [levels]="[2, 3]" />
+  <p class="doc-live__title"><strong>Exibição</strong></p>
+  <article [rteContent]="html()" #c="rteContent" data-testid="artigo"></article>
+</div>

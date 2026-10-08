@@ -12,4 +12,5 @@ export const EXAMPLES: Readonly<Record<string, () => Promise<Type<unknown>>>> =
       import('./inicio-rapido/form-example').then((m) => m.FormExample),
     configuracao: () =>
       import('./configuracao/route-live').then((m) => m.RouteLive),
+    exibicao: () => import('./exibicao/live').then((m) => m.DisplayLive),
   };
