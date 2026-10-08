@@ -335,9 +335,9 @@ describe('prepareRteHtml (R4): propriedade', () => {
 });
 
 describe('prepareRteHtml (R14): custo relativo ao sanitizador', () => {
-  function bestOf3(run: () => unknown): number {
+  function bestOf9(run: () => unknown): number {
     let best = Infinity;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 9; i++) {
       const start = performance.now();
       run();
       best = Math.min(best, performance.now() - start);
@@ -351,8 +351,8 @@ describe('prepareRteHtml (R14): custo relativo ao sanitizador', () => {
     expect(doc.length).toBeGreaterThanOrEqual(400_000);
     const sanitize = createSanitizer();
     const out = sanitize(doc);
-    const sanitizeMs = bestOf3(() => sanitize(doc));
-    const prepareMs = bestOf3(() =>
+    const sanitizeMs = bestOf9(() => sanitize(doc));
+    const prepareMs = bestOf9(() =>
       prepareRteHtml(out, { fragmentBase: '/p' }),
     );
     console.info(
