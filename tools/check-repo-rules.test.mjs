@@ -3,7 +3,18 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { checkRepoRules } from './check-repo-rules.mjs';
+import { checkRepoRules, checkRootReadmeNotice } from './check-repo-rules.mjs';
+
+test('README raiz: aviso "não afiliado" antes do primeiro ## e depois do último', () => {
+  const ok = '# T\n\nNão afiliado à Tiptap.\n\n## A\n\ntexto\n\n> não afiliado\n';
+  assert.deepEqual(checkRootReadmeNotice(ok), []);
+  assert.equal(checkRootReadmeNotice('# T\n\n## A\n\n> não afiliado\n').length, 1);
+  assert.equal(
+    checkRootReadmeNotice('# T\n\nnão afiliado\n\n## A\n\ntexto\n').length,
+    1,
+  );
+  assert.equal(checkRootReadmeNotice('# T\n\n## A\n').length, 2);
+});
 
 function fixture(files) {
   const root = mkdtempSync(join(tmpdir(), 'rules-'));

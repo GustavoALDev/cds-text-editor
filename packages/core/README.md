@@ -1,5 +1,7 @@
 # @cds/rte-core
 
+Guia: [Exibição](../../apps/docs/content/guia/exibicao.md) · [Embeds](../../apps/docs/content/guia/embeds.md)
+
 Núcleo do editor: extensões Tiptap, utilitários e esquema do HTML.
 
 **Status: em construção.** Ainda sem versão publicada.

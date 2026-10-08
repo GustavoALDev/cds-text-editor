@@ -1,5 +1,7 @@
 # @cds/rte-theme
 
+Guia: [Tema](../../apps/docs/content/guia/tema.md)
+
 Tema de 3 cores para o editor de texto rico `cds-text-editor`: você informa até três cores (`primary`, `secondary`, `tertiary`) e todo o resto (hover, ativo, fundo suave, borda, texto legível, foco, neutros, claro e escuro) é **derivado em CSS**, com contraste acessível por construção. Sem build de tema e sem Sass.
 
 O pacote **não depende de Angular** (nem exige Angular 22+): é CSS puro mais helpers de JavaScript opcionais. A integração com Angular (`provideRichText`, `<rte-editor [theme]>`) pertence à spec 05, que consumirá este pacote; ela ainda não existe.

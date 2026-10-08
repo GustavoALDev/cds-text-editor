@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
+import { dirname, join, resolve as resolvePath } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { extractRegion, langOf } from './docs/directives.mjs';
 import { checkReadme, fillReadme } from './docs/readme-markers.mjs';
 
 const resolve = (kind, arg) =>
@@ -111,4 +115,36 @@ test('fillReadme: erro do resolvedor (região ou arquivo ausente) cita a linha',
     () => fillReadme('x\n<!-- readme: example a.ts#r -->\n<!-- /readme -->', falha),
     /README\.md:2: região "r" não encontrada/,
   );
+});
+
+test('README raiz real: exemplos em dia com as regiões do Início rápido e os 4 marcadores do guia', () => {
+  const root = resolvePath(dirname(fileURLToPath(import.meta.url)), '..');
+  const text = readFileSync(join(root, 'README.md'), 'utf8');
+  const examples = [];
+  const resolveReal = (kind, arg) => {
+    if (kind === 'generated') {
+      // O comando de instalação depende do dist dos pacotes; aqui só se exige que exista.
+      const m = /<!-- readme: generated install-command -->\r?\n```bash\r?\n([\s\S]*?)\r?\n```/.exec(text);
+      assert.ok(m, 'README.md: comando de instalação gerado ausente');
+      return { code: m[1], lang: 'bash' };
+    }
+    const [path, region] = arg.split('#');
+    examples.push(arg);
+    return {
+      code: extractRegion(
+        readFileSync(join(root, 'apps', 'docs', path), 'utf8'),
+        region,
+        path,
+      ),
+      lang: langOf(path),
+    };
+  };
+  const r = checkReadme(text, resolveReal, 'README.md');
+  assert.equal(r.ok, true, r.diff ?? '');
+  assert.deepEqual(examples, [
+    'examples/inicio-rapido/app.config.ts#config',
+    'examples/inicio-rapido/form-example.ts#component',
+    'examples/inicio-rapido/form-example.html#template',
+    'examples/inicio-rapido/display-example.ts#display',
+  ]);
 });

@@ -418,6 +418,25 @@ function checkApp(rootDir, app) {
   return errors;
 }
 
+/** README raiz (spec 07d, L6): o aviso "não afiliado" aparece antes do primeiro `##` e depois do último. */
+export function checkRootReadmeNotice(text) {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const heads = lines.flatMap((l, i) => (/^## /.test(l) ? [i] : []));
+  const notice = /não\s+(é\s+)?afiliad/i;
+  const errors = [];
+  const first = heads.length ? heads[0] : lines.length;
+  if (!lines.slice(0, first).some((l) => notice.test(l)))
+    errors.push(
+      'README.md: falta o aviso "não afiliado à Tiptap nem ao ProseMirror" antes do primeiro "##" (spec 07d, L6)',
+    );
+  const last = heads.length ? heads[heads.length - 1] : -1;
+  if (!lines.slice(last + 1).some((l) => notice.test(l)))
+    errors.push(
+      'README.md: falta o aviso "não afiliado à Tiptap nem ao ProseMirror" depois do último "##" (spec 07d, L6)',
+    );
+  return errors;
+}
+
 export function checkRepoRules(rootDir) {
   const errors = [];
   errors.push(...checkApp(rootDir, 'demo'), ...checkApp(rootDir, 'docs'));
@@ -431,6 +450,9 @@ export function checkRepoRules(rootDir) {
       }
     }
   }
+  const rootReadme = join(rootDir, 'README.md');
+  if (existsSync(join(rootDir, 'package.json')) && existsSync(rootReadme))
+    errors.push(...checkRootReadmeNotice(readFileSync(rootReadme, 'utf8')));
   const packagesDir = join(rootDir, 'packages');
   if (!existsSync(packagesDir)) return errors;
 
