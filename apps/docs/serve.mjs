@@ -12,7 +12,7 @@ import { pathToFileURL } from 'node:url';
 
 /** A CSP do site; idêntica à do demo e à `<meta>` do `src/index.html` (`tools/docs-csp.test.mjs`). */
 export const CSP =
-  "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; connect-src 'self'";
+  "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'";
 
 export const DEFAULT_BASE = '/cds-text-editor/';
 
