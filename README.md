@@ -14,7 +14,7 @@ Os pacotes ainda não foram publicados e o nome `@cds/*` é provisório (`TODO-A
 
 <!-- readme: generated install-command -->
 ```bash
-npm install @cds/rte-angular @cds/rte-core @cds/rte-theme \
+npm install @cds/rte-angular \
   @tiptap/core@^3.31.4 \
   @tiptap/extension-blockquote@^3.31.4 \
   @tiptap/extension-bold@^3.31.4 \
