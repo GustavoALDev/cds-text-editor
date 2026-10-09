@@ -1,7 +1,7 @@
 // Confere o plano de versões do Changesets sem publicar nada (spec 09c, AP13):
 // os 5 pacotes num único grupo `fixed` e nenhuma versão planejada >= 1.0.0
 // (a 1.0 exige RTE_ALLOW_1_0=1 no PR dela).
-import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -59,27 +59,37 @@ function workspacePackages(root) {
     .sort();
 }
 
+function readStatusFromChangesets(root) {
+  const dir = mkdtempSync(join(tmpdir(), 'release-plan-'));
+  try {
+    const statusFile = join(dir, 'status.json');
+    // No Windows o npx roda via shell: o caminho (pode ter espaços) vai entre aspas.
+    const win = process.platform === 'win32';
+    const output = win ? `--output="${statusFile}"` : `--output=${statusFile}`;
+    const r = spawnSync('npx', ['changeset', 'status', output], {
+      cwd: root,
+      stdio: 'inherit',
+      shell: win,
+    });
+    if (r.status !== 0) return null;
+    return JSON.parse(readFileSync(statusFile, 'utf8'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 function main() {
   const root = process.cwd();
   const args = process.argv.slice(2);
   const i = args.indexOf('--status');
-  let statusFile = i >= 0 ? args[i + 1] : undefined;
-  if (!statusFile) {
-    statusFile = join(
-      mkdtempSync(join(tmpdir(), 'release-plan-')),
-      'status.json',
-    );
-    const r = spawnSync(
-      'npx',
-      ['changeset', 'status', `--output=${statusFile}`],
-      { cwd: root, stdio: 'inherit', shell: process.platform === 'win32' },
-    );
-    if (r.status !== 0) {
-      console.error('release-plan: o comando changeset status falhou');
-      process.exit(1);
-    }
+  const statusFile = i >= 0 ? args[i + 1] : undefined;
+  const status = statusFile
+    ? JSON.parse(readFileSync(resolve(root, statusFile), 'utf8'))
+    : readStatusFromChangesets(root);
+  if (!status) {
+    console.error('release-plan: o comando changeset status falhou');
+    process.exit(1);
   }
-  const status = JSON.parse(readFileSync(resolve(root, statusFile), 'utf8'));
   const config = JSON.parse(
     readFileSync(join(root, '.changeset/config.json'), 'utf8'),
   );

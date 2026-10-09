@@ -51,6 +51,9 @@ jobs:
           main-branch-name: main
       # Verificações do repositório: rodam sempre, independem do `affected`.
       - run: npm run check:rules
+      # `changeset status` usa a base "main"; o checkout de PR é detached e não tem main local.
+      - name: Cria o main local
+        run: git show-ref --verify --quiet refs/heads/main || git branch main origin/main
       - run: npm run release-plan
       # Guarda de API (spec 09c, AP9): relatório de API/CSS/esquema que muda exige changeset do tipo certo.
       # Só em PR (precisa da base); `fetch-depth: 0` acima traz o histórico para o `git diff base...HEAD`.

@@ -112,12 +112,14 @@ test('CLI com --status sai 0 e 1', () => {
   assert.equal(r1.status, 1);
 });
 
-test('changesets reais: exatamente 5, um por pacote, minor, com seção Segurança e sem nome antigo', async () => {
+test('changesets *-estado-final: exatamente 5, um por pacote, minor, com seção Segurança e sem nome antigo', async () => {
   const root = resolve(import.meta.dirname, '..');
   const dir = join(root, '.changeset');
   const files = readdirSync(dir).filter(
-    (f) => f.endsWith('.md') && f !== 'README.md',
+    (f) => f.endsWith('-estado-final.md'),
   );
+  // Depois do PR de versão (ou com changesets novos) os arquivos somem/convivem: só confere se existirem.
+  if (files.length === 0) return;
   assert.equal(files.length, 5, files.join(', '));
   const { OLD_TO_NEW, REMOVED_NAMES } = await import('./check-repo-rules.mjs');
   const old = [...Object.keys(OLD_TO_NEW), ...REMOVED_NAMES];

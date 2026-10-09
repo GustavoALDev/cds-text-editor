@@ -33,3 +33,12 @@ test('o script api-diff existe no package.json', () => {
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
   assert.equal(pkg.scripts['api-diff'], 'node tools/api-diff.mjs');
 });
+
+test('release-plan cria o main local antes de rodar (checkout de PR é detached)', () => {
+  const iBranch = verify.indexOf('git branch main origin/main');
+  const iPlan = verify.indexOf('run: npm run release-plan');
+  assert.ok(iBranch > 0, 'passo que cria o main local ausente');
+  assert.ok(iBranch < iPlan, 'o main local deve vir antes do release-plan');
+  assert.match(verify, /git show-ref --verify --quiet refs\/heads\/main/);
+  assert.ok(!verify.includes('--since=origin/main'));
+});
