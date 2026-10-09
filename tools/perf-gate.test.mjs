@@ -162,6 +162,9 @@ test('aggregate e loadCurrent leem as amostras por volta', () => {
 test('CLI sem baseline: informativo, código 0', () => {
   const root = mkdtempSync(join(tmpdir(), 'perf-cli-'));
   runFile(join(root, 'p'), 'n45-chromium.json', 50);
+  // No CI o resumo vai para o GITHUB_STEP_SUMMARY; sem ele, sai no stdout.
+  const env = { ...process.env };
+  delete env.GITHUB_STEP_SUMMARY;
   const r = spawnSync(
     process.execPath,
     [
@@ -171,7 +174,7 @@ test('CLI sem baseline: informativo, código 0', () => {
       '--perf',
       join(root, 'p'),
     ],
-    { encoding: 'utf8' },
+    { encoding: 'utf8', env },
   );
   assert.equal(r.status, 0);
   assert.match(r.stdout, /Baseline de desempenho ausente/);

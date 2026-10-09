@@ -433,6 +433,12 @@ test('installCommands: pula a família no mínimo e usa o npm informado', () => 
   assert.deepEqual(cmds[0].args.slice(0, 3), ['-y', 'npm@11', 'install']);
   assert.ok(cmds[0].args.includes('@tiptap/core@3.35.0'));
   assert.ok(!cmds[0].args.some((a) => a.startsWith('@angular')));
+  assert.ok(!cmds[0].args.includes('--legacy-peer-deps'));
+});
+
+test('installCommands: reinstalar o Angular usa --legacy-peer-deps (ERESOLVE do npm com os peers do workspace)', () => {
+  const [{ args }] = installCommands(leg(), families(ROOT));
+  assert.ok(args.includes('--legacy-peer-deps'));
 });
 
 test('installCommands: sem fase B não há instalação; legacyPeerDeps acrescenta a flag', () => {
