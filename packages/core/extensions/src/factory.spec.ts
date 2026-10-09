@@ -6,7 +6,7 @@ import Heading from '@tiptap/extension-heading';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
 import { afterEach, describe, expect, it } from 'vitest';
-import { DEFAULT_EMBED_PROVIDERS } from '../../src/embeds/providers';
+import { RTE_EMBED_PROVIDERS } from '../../src/embeds/providers';
 import { RTE_CONTENT_LABELS } from './labels';
 import { createEditorExtensions } from './factory';
 import { getRteHtml } from './serialize';
@@ -210,7 +210,7 @@ describe('createEditorExtensions: erros', () => {
   });
 
   it('provedor com host inválido lança TypeError', () => {
-    const base = DEFAULT_EMBED_PROVIDERS[0];
+    const base = RTE_EMBED_PROVIDERS[0];
     if (!base) throw new Error('sem provedor padrão');
     const bad = { ...base, hosts: ['localhost'] };
     expect(() => createEditorExtensions({ embedProviders: [bad] })).toThrow(

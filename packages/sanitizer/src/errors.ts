@@ -3,8 +3,13 @@ export type RteSanitizeErrorCode = 'input-too-long' | 'max-depth';
 
 /** Erro tipado dos limites de S8 (nunca há truncamento). */
 export class RteSanitizeError extends Error {
+  /**
+   * Sempre `'RteSanitizeError'`; permite reconhecer o erro sem `instanceof`.
+   */
   override readonly name = 'RteSanitizeError';
+  /** Qual limite foi excedido. */
   readonly code: RteSanitizeErrorCode;
+  /** Valor configurado do limite excedido. */
   readonly limit: number;
 
   constructor(code: RteSanitizeErrorCode, limit: number) {

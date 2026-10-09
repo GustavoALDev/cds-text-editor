@@ -1,18 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
-import { THEME_VERSION } from './index';
 
 describe('@cds/rte-theme', () => {
-  it('exports its version', () => {
-    expect(THEME_VERSION).toBe('0.0.0');
-  });
-
   it('exports exactly the public value API', async () => {
     const mod = await import('./index');
     expect(Object.keys(mod).sort()).toEqual([
-      'ANGULAR_DEFAULTS',
       'RTE_THEME_PRESETS',
-      'THEME_VERSION',
       'applyRteTheme',
       'checkRteTheme',
       'createRteTheme',

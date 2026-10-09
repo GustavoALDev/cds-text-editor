@@ -12,11 +12,8 @@ export function createSanitizer(options?: RteSanitizeOptions | null): (html: str
 // @public
 export class RteSanitizeError extends Error {
     constructor(code: RteSanitizeErrorCode, limit: number);
-    // (undocumented)
     readonly code: RteSanitizeErrorCode;
-    // (undocumented)
     readonly limit: number;
-    // (undocumented)
     readonly name = "RteSanitizeError";
 }
 
@@ -29,12 +26,7 @@ export interface RteSanitizeOptions extends RteHtmlSchemaOptions {
     maxInputLength?: number;
 }
 
-// @public (undocumented)
-export const SANITIZER_VERSION = "0.0.0";
-
 // @public
 export function sanitizeRichText(html: string, options?: RteSanitizeOptions | null): string;
-
-// (No @packageDocumentation comment for this package)
 
 ```

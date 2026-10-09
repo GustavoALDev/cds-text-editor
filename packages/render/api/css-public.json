@@ -1,0 +1,12 @@
+{
+  "classes": ["rte-content", "rte-root"],
+  "variables": ["--rte-scroll-margin"],
+  "layers": [
+    "rte.base",
+    "rte.components",
+    "rte.content",
+    "rte.reset",
+    "rte.theme"
+  ],
+  "properties": []
+}

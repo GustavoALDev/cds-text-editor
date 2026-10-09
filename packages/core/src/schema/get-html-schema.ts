@@ -1,4 +1,4 @@
-import { DEFAULT_EMBED_PROVIDERS } from '../embeds/providers';
+import { RTE_EMBED_PROVIDERS } from '../embeds/providers';
 import { validateEmbedProvider } from '../embeds/validate-provider';
 import {
   type FeatureContext,
@@ -17,7 +17,7 @@ import {
   normalizeLinkProtocols,
   normalizeRelTokens,
 } from './hosts';
-import { DEFAULT_ID_PREFIX, assertIdPrefix } from './id-prefix';
+import { RTE_DEFAULT_ID_PREFIX, assertIdPrefix } from './id-prefix';
 import { RTE_HIGHLIGHT_COLORS, RTE_TEXT_COLORS } from './palette';
 import type {
   RteElementSpec,
@@ -27,7 +27,7 @@ import type {
   RteHtmlSchemaOptions,
 } from './types';
 
-export { DEFAULT_ID_PREFIX };
+export { RTE_DEFAULT_ID_PREFIX };
 
 type Elements = Record<string, RteElementSpec>;
 
@@ -208,9 +208,9 @@ const BUILDERS: [RteFeatureId, Builder][] = [
 
 /** Contexto de recursos a partir das opções (validando-as). */
 function buildContext(options: RteHtmlSchemaOptions): FeatureContext {
-  const idPrefix = options.idPrefix ?? DEFAULT_ID_PREFIX;
+  const idPrefix = options.idPrefix ?? RTE_DEFAULT_ID_PREFIX;
   assertIdPrefix(idPrefix);
-  const providers = options.embedProviders ?? DEFAULT_EMBED_PROVIDERS;
+  const providers = options.embedProviders ?? RTE_EMBED_PROVIDERS;
   const providerHosts = checkProviders(providers);
 
   return {
@@ -259,7 +259,7 @@ export function getFeatureElements(
 export function getHtmlSchema(
   options: RteHtmlSchemaOptions = {},
 ): RteHtmlSchema {
-  const idPrefix = options.idPrefix ?? DEFAULT_ID_PREFIX;
+  const idPrefix = options.idPrefix ?? RTE_DEFAULT_ID_PREFIX;
   const ctx = buildContext(options);
 
   const enabled = options.features ?? {};

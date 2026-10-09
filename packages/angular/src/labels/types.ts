@@ -4,11 +4,15 @@ import type {
 } from '@cds/rte-core/extensions';
 import type { RteUploadErrorReason } from '../upload/types';
 
+/** Textos do editor em si. */
 export interface RteEditorLabels {
   /** Nome acessível do editável sem `ariaLabel` nem `ariaLabelledBy`. */
   ariaLabel: string;
 }
 
+/**
+ * Mensagens de erro dos validadores, por `kind`; os limites e contagens são funções.
+ */
 export interface RteErrorLabels {
   rteRequired: string;
   rteMaxChars(error: { max: number; actual: number }): string;
@@ -19,6 +23,7 @@ export interface RteErrorLabels {
   rteEmptyHeadings(count: number): string;
 }
 
+/** Textos da barra de ferramentas e dos nomes de blocos e cores. */
 export interface RteToolbarLabels {
   toolbar: string;
   undo: string;
@@ -88,6 +93,9 @@ export interface RteToolbarLabels {
   colorNames: Readonly<Record<string, string>>;
 }
 
+/**
+ * Textos dos diálogos (link, imagem, vídeo, mídia incorporada, linguagem), incluindo mensagens de validação e nomes das linguagens.
+ */
 export interface RteDialogLabels {
   apply: string;
   cancel: string;
@@ -177,6 +185,7 @@ export interface RteDialogLabels {
   errorFileSize(maxMegabytes: number): string;
 }
 
+/** Textos da bandeja e dos anúncios de envio. */
 export interface RteUploadLabels {
   /** Nome acessível da bandeja de envios. */
   region: string;
@@ -190,6 +199,7 @@ export interface RteUploadLabels {
   announceError(name: string, reason: RteUploadErrorReason): string;
 }
 
+/** Textos do aviso de restauração de rascunho. */
 export interface RteDraftLabels {
   /** Nome acessível do aviso de restauração. */
   region: string;
@@ -199,6 +209,9 @@ export interface RteDraftLabels {
   discard: string;
 }
 
+/**
+ * Textos dos menus flutuantes (texto, link, tabela, imagem, vídeo e mídia incorporada).
+ */
 export interface RteFloatingMenuLabels {
   /** Nome acessível do menu de texto. */
   textMenu: string;
@@ -223,6 +236,7 @@ export interface RteFloatingMenuLabels {
   removeEmbed: string;
 }
 
+/** Textos da barra de busca e substituição. */
 export interface RteSearchLabels {
   /** Nome acessível da região `role="search"`. */
   region: string;
@@ -244,6 +258,7 @@ export interface RteSearchLabels {
   replaced(count: number): string;
 }
 
+/** Textos da lista do menu `/`. */
 export interface RteSlashMenuLabels {
   /** Nome acessível da lista do menu `/`. */
   listbox: string;
@@ -251,6 +266,7 @@ export interface RteSlashMenuLabels {
   empty: string;
 }
 
+/** Textos do rodapé com os contadores de caracteres e palavras. */
 export interface RteCounterLabels {
   chars(count: number, limit: number | null): string;
   words(count: number, minutes: number): string;
@@ -259,6 +275,9 @@ export interface RteCounterLabels {
   over(n: number): string;
 }
 
+/**
+ * Todos os rótulos do componente, já completos; `RTE_LABELS_EN` é a referência.
+ */
 export interface RteLabels {
   readonly content: RteContentLabels;
   readonly slash: RteSlashLabels;
@@ -274,24 +293,41 @@ export interface RteLabels {
   readonly counters: RteCounterLabels;
 }
 
+/**
+ * Rótulos parciais por seção; o que faltar vem do provider e, por fim, do inglês.
+ */
 export interface RteLabelsInput {
+  /**
+   * Rótulos do conteúdo (títulos das caixas e nome do checkbox das tarefas).
+   */
   content?: Partial<Omit<RteContentLabels, 'calloutTitles'>> & {
     calloutTitles?: Partial<RteContentLabels['calloutTitles']>;
   };
+  /** Títulos e palavras-chave dos itens do menu `/`. */
   slash?: Partial<RteSlashLabels>;
+  /** Textos do editor. */
   editor?: Partial<RteEditorLabels>;
+  /** Mensagens de erro dos validadores. */
   errors?: Partial<RteErrorLabels>;
+  /** Textos da barra de ferramentas. */
   toolbar?: Partial<Omit<RteToolbarLabels, 'colorNames'>> & {
     colorNames?: Readonly<Record<string, string>>;
   };
+  /** Textos dos diálogos. */
   dialogs?: Partial<Omit<RteDialogLabels, 'languageNames'>> & {
     languageNames?: Readonly<Record<string, string>>;
   };
+  /** Textos dos menus flutuantes. */
   floating?: Partial<RteFloatingMenuLabels>;
+  /** Textos dos envios. */
   upload?: Partial<RteUploadLabels>;
+  /** Textos do aviso de rascunho. */
   draft?: Partial<RteDraftLabels>;
+  /** Textos da barra de busca. */
   search?: Partial<RteSearchLabels>;
+  /** Textos da lista do menu `/`. */
   slashMenu?: Partial<RteSlashMenuLabels>;
+  /** Textos dos contadores. */
   counters?: Partial<RteCounterLabels>;
 }
 

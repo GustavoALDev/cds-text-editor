@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_EMBED_PROVIDERS,
-  SPOTIFY_PROVIDER,
-  VIMEO_PROVIDER,
-  YOUTUBE_PROVIDER,
+  RTE_EMBED_PROVIDERS,
+  RTE_SPOTIFY_PROVIDER,
+  RTE_VIMEO_PROVIDER,
+  RTE_YOUTUBE_PROVIDER,
   assertEmbedProvider,
   toEmbed,
 } from './index';
@@ -190,14 +190,14 @@ describe('revalidação e provedores do consumidor', () => {
 });
 
 describe('assertEmbedProvider (endurecido)', () => {
-  const base = YOUTUBE_PROVIDER;
+  const base = RTE_YOUTUBE_PROVIDER;
   it('aceita os padrões', () => {
-    for (const p of DEFAULT_EMBED_PROVIDERS)
+    for (const p of RTE_EMBED_PROVIDERS)
       expect(() => assertEmbedProvider(p)).not.toThrow();
-    expect(DEFAULT_EMBED_PROVIDERS).toEqual([
-      YOUTUBE_PROVIDER,
-      VIMEO_PROVIDER,
-      SPOTIFY_PROVIDER,
+    expect(RTE_EMBED_PROVIDERS).toEqual([
+      RTE_YOUTUBE_PROVIDER,
+      RTE_VIMEO_PROVIDER,
+      RTE_SPOTIFY_PROVIDER,
     ]);
   });
   it('recusa intranet e listas vazias', () => {
@@ -278,13 +278,15 @@ describe('assertEmbedProvider (endurecido)', () => {
     expect(toEmbed('https://x.com/', [evil])).toBeNull();
   });
   it('provedores padrão são imutáveis', () => {
-    for (const p of [...DEFAULT_EMBED_PROVIDERS]) {
+    for (const p of [...RTE_EMBED_PROVIDERS]) {
       expect(Object.isFrozen(p)).toBe(true);
       expect(Object.isFrozen(p.hosts)).toBe(true);
       expect(Object.isFrozen(p.srcPatterns)).toBe(true);
     }
-    expect(Object.isFrozen(DEFAULT_EMBED_PROVIDERS)).toBe(true);
-    expect(() => YOUTUBE_PROVIDER.hosts.push('evil.com')).toThrow(TypeError);
+    expect(Object.isFrozen(RTE_EMBED_PROVIDERS)).toBe(true);
+    expect(() =>
+      (RTE_YOUTUBE_PROVIDER.hosts as string[]).push('evil.com'),
+    ).toThrow(TypeError);
   });
 });
 

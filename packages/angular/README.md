@@ -10,10 +10,10 @@ Nome do pacote provisório (escopo `@cds` ainda não confirmado). Este projeto *
 
 ## Instalação
 
-Exige Angular `>=22.2.1 <23` (a 22.2.1 é a versão verificada para o caminho nativo de Reactive/Template Forms). Todos os peers são obrigatórios; o npm 7+ os instala sozinho, mas o comando completo é:
+Exige Angular `>=22.2.1 <23` (a 22.2.1 é a versão verificada para o caminho nativo de Reactive/Template Forms). Os peers (Angular, Tiptap, `lowlight` e `highlight.js`) são obrigatórios; o npm 7+ os instala sozinho, mas o comando completo é. `@cds/rte-core` e `@cds/rte-theme` não são peers: vêm como dependências do componente, na mesma versão.
 
 ```bash
-npm i @cds/rte-angular @cds/rte-core @cds/rte-theme \
+npm i @cds/rte-angular \
   @tiptap/core@^3.31.4 @tiptap/extension-blockquote@^3.31.4 @tiptap/extension-bold@^3.31.4 \
   @tiptap/extension-code@^3.31.4 @tiptap/extension-code-block@^3.31.4 @tiptap/extension-document@^3.31.4 \
   @tiptap/extension-hard-break@^3.31.4 @tiptap/extension-heading@^3.31.4 \
@@ -120,6 +120,8 @@ O caminho de controle nativo do `FormValueControl` não lê `NG_VALIDATORS`; por
 | `RteMaxWordsValidator`        | `rte-editor[rteMaxWords]="n"`                   | `{ rteMaxWords: { max, actual } }`   |
 | `RteSafeLinksValidator`       | `rte-editor[rteSafeLinks]` (ou `="{ policy }"`) | `{ rteUnsafeLinks: { count, ... } }` |
 | `RteNoEmptyHeadingsValidator` | `rte-editor[rteNoEmptyHeadings]`                | `{ rteEmptyHeadings: { count } }`    |
+
+Essas diretivas **não são feitas para herança**: as classes-base (`RteTextValidator`, `RteCountValidator`) são `@internal` e ficam fora do contrato de semver (ver [docs/support.md](../../docs/support.md)).
 
 O seletor é `rteRequired` (e não `required`) para não colidir com o `required` nativo do Angular, que continua valendo e mede a string HTML. `[rteRequired]="false"` e `[rteNoEmptyHeadings]="false"` desligam. Como no caminho funcional, o limite não chega ao editor (use `[maxLength]` para barrar a digitação).
 
@@ -272,7 +274,7 @@ provideRichText({
 
 ## Rascunho e salvamento
 
-**Rascunho (`draftKey`).** Opt-in: `<rte-editor draftKey="doc-42" />` (1 a 200 caracteres; use usuário **e** documento na chave, ex.: `user-7:doc-42`). Grava no `localStorage` (`rte-draft:<chave>`) 1 s depois da última alteração e ao ocultar a página; nunca grava `readonly`/`disabled`. Ao carregar, se há rascunho diferente do valor, aparece um aviso acessível (`section.rte-draft`) com data e botões "Restaurar"/"Descartar"; **nunca restaura sozinho**. Sinais e métodos: `draftAvailable` (`{ savedAt }` ou `null`), `restoreDraft()`, `discardDraft()` e a saída `draftError` (`'write'` | `'unavailable'`). `provideRichText({ draft: { storage, maxAgeMs, prompt } })`: `storage` próprio (`DraftStorage` do core), validade (7 dias) e `prompt: false` para construir a sua interface. O código é um _chunk_ (`rte-draft`) carregado só com `draftKey`. **Privacidade:** o rascunho fica no navegador em texto claro e **sem escopo por usuário** (quem usa o mesmo navegador e a mesma chave o lê): ponha o **id do usuário na `draftKey`** (`user-7:doc-42`); no logout chame `clearLocalDrafts()` (de `@cds/rte-angular`; aceita um prefixo e devolve quantos apagou).
+**Rascunho (`draftKey`).** Opt-in: `<rte-editor draftKey="doc-42" />` (1 a 200 caracteres; use usuário **e** documento na chave, ex.: `user-7:doc-42`). Grava no `localStorage` (`rte-draft:<chave>`) 1 s depois da última alteração e ao ocultar a página; nunca grava `readonly`/`disabled`. Ao carregar, se há rascunho diferente do valor, aparece um aviso acessível (`section.rte-draft`) com data e botões "Restaurar"/"Descartar"; **nunca restaura sozinho**. Sinais e métodos: `draftAvailable` (`{ savedAt }` ou `null`), `restoreDraft()`, `discardDraft()` e a saída `draftError` (`'write'` | `'unavailable'`). `provideRichText({ draft: { storage, maxAgeMs, prompt } })`: `storage` próprio (`RteDraftStorage` do core), validade (7 dias) e `prompt: false` para construir a sua interface. O código é um _chunk_ (`rte-draft`) carregado só com `draftKey`. **Privacidade:** o rascunho fica no navegador em texto claro e **sem escopo por usuário** (quem usa o mesmo navegador e a mesma chave o lê): ponha o **id do usuário na `draftKey`** (`user-7:doc-42`); no logout chame `clearLocalDrafts()` (de `@cds/rte-angular`; aceita um prefixo e devolve quantos apagou).
 
 **`isDirty` e `markSaved(savedHtml?)`.** `isDirty()` é `true` quando o valor difere da base salva (a de criação ou da última carga externa). Depois de salvar no servidor chame `editor.markSaved(htmlSalvo)`: a base passa a ser esse HTML (sem argumento, o valor atual) e o rascunho é apagado.
 

@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { FORCED_COLORS_TOKENS } from './apply-theme';
-import { ANGULAR_DEFAULTS } from './defaults';
+import { RTE_THEME_PRESETS } from './presets';
 import { createRteTheme, NEUTRAL_SPEC } from './create-theme';
 import {
   MIX_PCT,
@@ -100,7 +100,9 @@ describe('theme.css', () => {
       const body = properties.get(`--rte-${role}`) ?? '';
       expect(body).toContain("syntax: '<color>'");
       expect(body).toContain('inherits: true');
-      expect(body).toContain(`initial-value: ${ANGULAR_DEFAULTS[role]}`);
+      expect(body).toContain(
+        `initial-value: ${RTE_THEME_PRESETS.angular[role]}`,
+      );
     }
     const tint = properties.get('--rte-neutral-tint') ?? '';
     expect(tint).toContain("syntax: '<number>'");

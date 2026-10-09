@@ -6,6 +6,9 @@ import { isAllowedUrl } from './url';
 const ASCII_WS = /[ \t\n\r\f]+/;
 const ASCII_TRIM = /^[ \t\n\r\f]+|[ \t\n\r\f]+$/g;
 
+/**
+ * Regra de atributo composto por tokens (como `rel`), na ordem canônica dos valores aceitos.
+ */
 export type RteTokensRule = Extract<RteAttrRule, { kind: 'tokens' }>;
 
 /** Minúsculas só em ASCII (sem depender de locale). */
@@ -75,6 +78,7 @@ export function normalizeAttribute(
   }
 }
 
+/** Diz se o valor é aceito pela regra, já na forma canônica. */
 export function matchesRule(rule: RteAttrRule, value: string): boolean {
   return normalizeAttribute(rule, value) !== null;
 }

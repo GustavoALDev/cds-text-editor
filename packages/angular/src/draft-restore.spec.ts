@@ -142,7 +142,9 @@ describe('várias abas (S7)', () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(s.cmp.draftAvailable()).toBeNull();
     expect(
-      (s.fixture.nativeElement as HTMLElement).querySelector('section.rte-draft'),
+      (s.fixture.nativeElement as HTMLElement).querySelector(
+        'section.rte-draft',
+      ),
     ).toBeNull();
     expect(focus).toHaveBeenCalledTimes(1);
     expect(s.editor.view.dom.contains(document.activeElement)).toBe(true);
@@ -162,7 +164,9 @@ describe('várias abas (S7)', () => {
     fire(null);
     await settle(s.fixture);
     expect(
-      (s.fixture.nativeElement as HTMLElement).querySelector('section.rte-draft'),
+      (s.fixture.nativeElement as HTMLElement).querySelector(
+        'section.rte-draft',
+      ),
     ).toBeNull();
     expect(focus).not.toHaveBeenCalled();
     expect(document.activeElement).toBe(other);
@@ -175,7 +179,7 @@ describe('várias abas (S7)', () => {
     expect(s.cmp.draftAvailable()).toBeNull();
   });
 
-  it('DraftStorage próprio não ouve storage', async () => {
+  it('RteDraftStorage próprio não ouve storage', async () => {
     const s = await setupDraft({});
     localStorage.setItem(KEY, envelope('<p>y</p>'));
     fire(envelope('<p>y</p>'));

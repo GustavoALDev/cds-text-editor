@@ -5,15 +5,26 @@ import { isAllowedUrl } from './schema/url';
 
 /** Política de links (seção 7 da spec 03a). */
 export interface RteLinkPolicy {
-  protocols: string[];
+  /** Protocolos aceitos, sem os dois-pontos. */
+  protocols: readonly string[];
+  /** Aceita endereços relativos e âncoras do próprio site. */
   allowRelative: boolean;
-  defaultRel: string[];
-  forceRel: string[];
-  blockedDomains: string[];
+  /** Tokens de `rel` aplicados aos links por padrão. */
+  defaultRel: readonly string[];
+  /** Tokens de `rel` sempre aplicados. */
+  forceRel: readonly string[];
+  /** Domínios cujos links são recusados. */
+  blockedDomains: readonly string[];
+  /**
+   * `preserve` mantém o `_blank` escolhido pelo autor, `blank` abre links externos em nova aba, `never` nunca emite `target`.
+   */
   target: 'preserve' | 'blank' | 'never';
 }
 
-export const DEFAULT_LINK_POLICY: Readonly<RteLinkPolicy> = Object.freeze({
+/**
+ * Política de links padrão: `https`, `http`, `mailto` e `tel`; relativos aceitos; `target` preservado.
+ */
+export const RTE_DEFAULT_LINK_POLICY: Readonly<RteLinkPolicy> = Object.freeze({
   protocols: Object.freeze(['https', 'http', 'mailto', 'tel']) as string[],
   allowRelative: true,
   defaultRel: Object.freeze([]) as unknown as string[],
@@ -27,7 +38,7 @@ const EMAIL = /^[^\s@/:]+@[^\s@/:]+\.[^\s@/:]+$/;
 const BARE_DOMAIN = /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#].*)?$/i;
 
 function resolvePolicy(policy: Partial<RteLinkPolicy>): RteLinkPolicy {
-  return { ...DEFAULT_LINK_POLICY, ...policy };
+  return { ...RTE_DEFAULT_LINK_POLICY, ...policy };
 }
 
 const SAFE_PROTOCOLS = ['https', 'http', 'mailto', 'tel'];

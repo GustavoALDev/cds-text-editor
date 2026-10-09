@@ -1,6 +1,6 @@
 import { NgZone } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { createMemoryDraftStorage, type DraftStorage } from '@cds/rte-core';
+import { createMemoryDraftStorage, type RteDraftStorage } from '@cds/rte-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installDialogShim } from './testing-support/dialog';
 import {
@@ -39,9 +39,9 @@ function type(s: DraftSetup, text: string): void {
 
 /** Armazenamento que registra as gravações e se estavam dentro da zona. */
 function spyStorage(): {
-  storage: DraftStorage;
+  storage: RteDraftStorage;
   sets: boolean[];
-  inner: DraftStorage;
+  inner: RteDraftStorage;
 } {
   const inner = createMemoryDraftStorage();
   const sets: boolean[] = [];
@@ -210,7 +210,7 @@ describe('gravação (S4)', () => {
   it('save falso emite draftError write uma vez até um sucesso', async () => {
     let fail = true;
     const inner = createMemoryDraftStorage();
-    const storage: DraftStorage = {
+    const storage: RteDraftStorage = {
       get: (k) => inner.get(k),
       set: (k, v) => {
         if (fail) throw new Error('cota');

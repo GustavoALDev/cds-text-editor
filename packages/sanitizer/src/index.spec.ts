@@ -12,17 +12,12 @@ describe('@cds/rte-sanitizer', () => {
   it('exporta só a API pública', () => {
     expect(Object.keys(mod).sort()).toEqual([
       'RteSanitizeError',
-      'SANITIZER_VERSION',
       'createSanitizer',
       'sanitizeRichText',
     ]);
     for (const name of ['htmlToText', 'countWords', 'readingTime']) {
       expect(mod).not.toHaveProperty(name);
     }
-  });
-
-  it('exporta a versão', () => {
-    expect(mod.SANITIZER_VERSION).toBe('0.0.0');
   });
 });
 

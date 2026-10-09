@@ -1,3 +1,4 @@
+/** Identificador de um item da barra de ferramentas. */
 export type RteToolbarItemId =
   | 'undo'
   | 'redo'
@@ -34,8 +35,15 @@ export type RteToolbarItemId =
   | 'clearFormatting'
   | 'search';
 
+/** Barra pronta: `minimal`, `article` (padrão) ou `full`. */
 export type RteToolbarPreset = 'minimal' | 'article' | 'full';
+/**
+ * Grupos de itens da barra, em ordem; cada grupo é uma lista de `RteToolbarItemId`.
+ */
 export type RteToolbarGroups = readonly (readonly RteToolbarItemId[])[];
+/**
+ * Barra de ferramentas: um preset, grupos de itens definidos pelo autor ou `false` para ocultá-la.
+ */
 export type RteToolbarConfig = RteToolbarPreset | RteToolbarGroups | false;
 
 export type RteToolbarItemKind = 'button' | 'toggle' | 'menu' | 'dialog';

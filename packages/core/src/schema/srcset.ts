@@ -1,5 +1,8 @@
-export interface SrcsetCandidate {
+/** Candidato de um `srcset`: endereço e descritor opcional. */
+export interface RteSrcsetCandidate {
+  /** Endereço da imagem. */
   url: string;
+  /** Descritor de largura (`640w`) ou de densidade (`2x`). */
   descriptor?: string;
 }
 
@@ -11,12 +14,12 @@ const DESCRIPTOR =
  * nem vírgulas e descritor `Nw` ou `Nx`. Com mais de um candidato, todos
  * precisam de descritor. Devolve `null` se algo estiver fora do formato.
  */
-export function parseSrcset(value: string): SrcsetCandidate[] | null {
-  const out: SrcsetCandidate[] = [];
+export function parseSrcset(value: string): RteSrcsetCandidate[] | null {
+  const out: RteSrcsetCandidate[] = [];
   for (const raw of value.split(',')) {
     const [url, descriptor, extra] = raw.trim().split(/\s+/);
     if (!url || extra !== undefined) return null;
-    const candidate: SrcsetCandidate = { url };
+    const candidate: RteSrcsetCandidate = { url };
     if (descriptor !== undefined) {
       if (!DESCRIPTOR.test(descriptor)) return null;
       candidate.descriptor = descriptor;
@@ -28,7 +31,12 @@ export function parseSrcset(value: string): SrcsetCandidate[] | null {
   return out;
 }
 
-export function formatSrcset(candidates: SrcsetCandidate[]): string {
+/**
+ * Monta o texto de um `srcset` a partir dos candidatos (inverso de `parseSrcset`).
+ */
+export function formatSrcset(
+  candidates: readonly RteSrcsetCandidate[],
+): string {
   return candidates
     .map((c) =>
       c.descriptor === undefined ? c.url : `${c.url} ${c.descriptor}`,

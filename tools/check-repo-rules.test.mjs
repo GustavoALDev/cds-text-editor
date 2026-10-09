@@ -3,12 +3,23 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { checkRepoRules, checkRootReadmeNotice, checkRoteiro } from './check-repo-rules.mjs';
+import {
+  checkCssReports,
+  checkOldNames,
+  checkProntidao,
+  checkRepoRules,
+  checkRootReadmeNotice,
+  checkRoteiro,
+} from './check-repo-rules.mjs';
 
 test('README raiz: aviso "não afiliado" antes do primeiro ## e depois do último', () => {
-  const ok = '# T\n\nNão afiliado à Tiptap.\n\n## A\n\ntexto\n\n> não afiliado\n';
+  const ok =
+    '# T\n\nNão afiliado à Tiptap.\n\n## A\n\ntexto\n\n> não afiliado\n';
   assert.deepEqual(checkRootReadmeNotice(ok), []);
-  assert.equal(checkRootReadmeNotice('# T\n\n## A\n\n> não afiliado\n').length, 1);
+  assert.equal(
+    checkRootReadmeNotice('# T\n\n## A\n\n> não afiliado\n').length,
+    1,
+  );
   assert.equal(
     checkRootReadmeNotice('# T\n\nnão afiliado\n\n## A\n\ntexto\n').length,
     1,
@@ -715,7 +726,13 @@ test('docs: CSS de exemplo (src/styles/exemplos*.css) não mira :root, html nem 
       '/* :root só no comentário */\n.meu-tema { --rte-primary: #123456; }\n.meu-tema .rte-root, .outro .body { color: red; }\n',
   });
   assert.deepEqual(docsErrors(ok), []);
-  for (const seletor of [':root', 'html', 'body', 'html.escuro', '.a, body > p']) {
+  for (const seletor of [
+    ':root',
+    'html',
+    'body',
+    'html.escuro',
+    '.a, body > p',
+  ]) {
     const bad = fixture({
       ...CLEAN_DOCS,
       'apps/docs/src/styles/exemplos-tema.css': `${seletor} { color: red; }\n`,
@@ -733,4 +750,296 @@ test('docs: CSS de exemplo (src/styles/exemplos*.css) não mira :root, html nem 
     'apps/docs/src/styles/docs.css': ':root { color-scheme: light dark; }\n',
   });
   assert.deepEqual(docsErrors(chrome), []);
+});
+
+// --- 09c T1: dependências internas exatas (AP12) ---
+
+const pkgJson = (name, extra = {}, version = '0.0.0') =>
+  JSON.stringify({ name, version, ...extra });
+const corePkg = pkgJson('@cds/rte-core');
+
+function depsFixture(angularExtra, extraFiles = {}) {
+  return fixture({
+    'packages/core/package.json': corePkg,
+    'packages/angular/package.json': pkgJson('@cds/rte-angular', angularExtra),
+    'packages/angular/ng-package.json': JSON.stringify({
+      allowedNonPeerDependencies: ['@cds/rte-core'],
+    }),
+    'packages/angular/src/index.ts': "import { x } from '@cds/rte-core';\n",
+    ...extraFiles,
+  });
+}
+
+test('deps internas: cenário correto passa', () => {
+  const root = depsFixture({ dependencies: { '@cds/rte-core': '0.0.0' } });
+  assert.deepEqual(checkRepoRules(root), []);
+});
+
+test('deps internas: faixa ^0.0.0 reprova', () => {
+  const root = depsFixture({ dependencies: { '@cds/rte-core': '^0.0.0' } });
+  const errors = checkRepoRules(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /@cds\/rte-core.*exata/);
+});
+
+test('deps internas: versão diferente da do pacote referido reprova', () => {
+  const root = depsFixture({ dependencies: { '@cds/rte-core': '0.0.1' } });
+  const errors = checkRepoRules(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /0.0.0.*0.0.1/);
+});
+
+test('deps internas: peerDependencies com @cds/rte-core reprova', () => {
+  const root = depsFixture({
+    dependencies: { '@cds/rte-core': '0.0.0' },
+    peerDependencies: { '@cds/rte-core': '0.0.0' },
+  });
+  const errors = checkRepoRules(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /peer/);
+});
+
+test('deps internas: peerDependenciesMeta com @cds/rte-* reprova', () => {
+  const root = depsFixture({
+    dependencies: { '@cds/rte-core': '0.0.0' },
+    peerDependenciesMeta: { '@cds/rte-core': { optional: true } },
+  });
+  assert.equal(checkRepoRules(root).length, 1);
+});
+
+test('deps internas: import de @cds/rte-core em src sem dependencies reprova', () => {
+  const root = depsFixture({});
+  const errors = checkRepoRules(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /packages\/angular\/src\/index\.ts.*@cds\/rte-core/);
+});
+
+test('deps internas: import só em *.spec.ts não exige dependência', () => {
+  const root = depsFixture(
+    {},
+    {
+      'packages/angular/src/index.ts': 'export const a = 1;\n',
+      'packages/angular/src/a.spec.ts':
+        "import { x } from '@cds/rte-core/html';\n",
+    },
+  );
+  assert.deepEqual(checkRepoRules(root), []);
+});
+
+test('deps internas: ng-package.json sem allowedNonPeerDependencies reprova', () => {
+  const root = depsFixture(
+    { dependencies: { '@cds/rte-core': '0.0.0' } },
+    { 'packages/angular/ng-package.json': JSON.stringify({ dest: 'x' }) },
+  );
+  const errors = checkRepoRules(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /allowedNonPeerDependencies/);
+});
+
+// --- Nomes antigos da API pública (spec 09c, AP3) ---
+
+const withRoot = (files) =>
+  fixture({ 'package.json': JSON.stringify({ name: 'x' }), ...files });
+const oldNameErrors = (files) => checkOldNames(withRoot(files));
+
+test('nomes antigos: .ts com DEFAULT_LINK_POLICY reprova, citando arquivo, antigo e novo', () => {
+  const errors = oldNameErrors({
+    'packages/core/src/a.ts': 'export const x = DEFAULT_LINK_POLICY;\n',
+  });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /packages\/core\/src\/a\.ts:1/);
+  assert.match(errors[0], /DEFAULT_LINK_POLICY/);
+  assert.match(errors[0], /RTE_DEFAULT_LINK_POLICY/);
+});
+
+test('nomes antigos: .md do site e bloco de código de README reprovam', () => {
+  const md =
+    'texto\n\n```ts\nimport { DraftStore } from "@cds/rte-core";\n```\n';
+  const errors = oldNameErrors({
+    'apps/docs/content/guia/x.md': md,
+    'packages/core/README.md': md,
+  });
+  assert.equal(errors.length, 2);
+  assert.ok(
+    errors.every((e) => /DraftStore/.test(e) && /RteDraftStore/.test(e)),
+  );
+});
+
+test('nomes antigos: nomes novos e falsos positivos passam', () => {
+  assert.deepEqual(
+    oldNameErrors({
+      'a.ts': [
+        'RTE_DEFAULT_LINK_POLICY',
+        'RteDraftStoreFoo',
+        'clearLocalDrafts',
+        'RteDraftStore',
+        'RteRgb',
+        'Rgb8',
+        'MyDraftStore',
+        'DraftStores',
+        'RTE_YOUTUBE_PROVIDER',
+        'YOUTUBE_PROVIDERS_X',
+      ].join('\n'),
+    }),
+    [],
+  );
+});
+
+test('nomes antigos: "Rgb" como palavra solta reprova, mas dentro de RteRgb não', () => {
+  assert.equal(oldNameErrors({ 'a.ts': 'type A = Rgb | null;\n' }).length, 1);
+  assert.equal(
+    oldNameErrors({ 'a.ts': 'type A = RteRgb | null;\n' }).length,
+    0,
+  );
+});
+
+test('nomes antigos: ADRs, specs e planos ficam de fora', () => {
+  const text = 'DEFAULT_LINK_POLICY e CORE_VERSION\n';
+  assert.deepEqual(
+    oldNameErrors({
+      'docs/decisions/x.md': text,
+      'docs/specs/x.md': text,
+      'docs/superpowers/plans/x.md': text,
+    }),
+    [],
+  );
+});
+
+test('nomes antigos: nome removido (CORE_VERSION) reprova, sem substituto', () => {
+  const errors = oldNameErrors({
+    'a.ts': 'export const CORE_VERSION = "0";\n',
+  });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /CORE_VERSION/);
+  assert.match(errors[0], /removido/);
+});
+
+test('nomes antigos: arquivo com CRLF é lido por linha e binário é ignorado', () => {
+  const root = withRoot({
+    'a.ts': 'ok\r\nDEFAULT_ID_PREFIX\r\n',
+  });
+  writeFileSync(join(root, 'b.bin'), Buffer.from([0, 68, 114, 97, 102]));
+  writeFileSync(
+    join(root, 'c.bin'),
+    Buffer.concat([Buffer.from([0]), Buffer.from('DraftStore')]),
+  );
+  const errors = checkOldNames(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /a\.ts:2/);
+});
+
+test('nomes antigos: checkRepoRules só varre quando há package.json na raiz', () => {
+  const sem = fixture({ 'a.ts': 'DraftStore\n' });
+  assert.deepEqual(checkRepoRules(sem), []);
+  const com = withRoot({ 'a.ts': 'DraftStore\n' });
+  assert.ok(checkRepoRules(com).some((e) => /DraftStore/.test(e)));
+});
+
+// --- Relatórios do CSS publicado (spec 09c, AP7) ---
+
+test('CSS publicado: sem relatório nem css-public.json reprova', () => {
+  const root = withRoot({ 'packages/core/styles/content.css': '.rte-root{}' });
+  const errors = checkCssReports(root);
+  assert.equal(errors.length, 2);
+  assert.ok(errors.some((e) => /content\.css-api\.md/.test(e)));
+  assert.ok(errors.some((e) => /css-public\.json/.test(e)));
+});
+
+test('CSS publicado: src/*.css do tema também conta; com os dois arquivos passa', () => {
+  const files = {
+    'packages/theme/src/theme.css': '.rte-root{}',
+  };
+  assert.equal(checkCssReports(withRoot(files)).length, 2);
+  assert.deepEqual(
+    checkCssReports(
+      withRoot({
+        ...files,
+        'packages/theme/api/theme.css-api.md': '# x\n',
+        'packages/theme/api/css-public.json': '{}',
+      }),
+    ),
+    [],
+  );
+});
+
+test('CSS publicado: pacote sem CSS (sanitizer) não exige nada', () => {
+  assert.deepEqual(
+    checkCssReports(withRoot({ 'packages/sanitizer/src/index.ts': '' })),
+    [],
+  );
+});
+
+// --- Lista de prontidão para a 1.0 (spec 09c, AP14) ---
+
+const PRONTIDAO = 'docs/release/prontidao-1.0.md';
+const tabelaProntidao = (linhas) =>
+  [
+    '# Prontidão',
+    '',
+    '| Item | Dono | Evidência | Estado |',
+    '| --- | --- | --- | --- |',
+    ...linhas,
+    '',
+  ].join('\n');
+const prontidaoErrors = (linhas) =>
+  checkProntidao(fixture({ [PRONTIDAO]: tabelaProntidao(linhas) }));
+
+test('prontidão: tabela válida passa', () => {
+  assert.deepEqual(
+    prontidaoErrors([
+      '| AP1 | agente | commit abc123 | feito |',
+      '| Prazo de 14 dias | agente | congelamento em 2026-10-09 | aberto |',
+      '| Publicar | dono | | aberto — TODO-AUTOR |',
+    ]),
+    [],
+  );
+});
+
+test('prontidão: dono ausente ou inválido reprova', () => {
+  const errors = prontidaoErrors([
+    '| A | | x | feito |',
+    '| B | robô | x | feito |',
+  ]);
+  assert.equal(errors.length, 2);
+  assert.match(errors[0], /dono/i);
+});
+
+test('prontidão: estado inválido reprova', () => {
+  const errors = prontidaoErrors(['| A | agente | x | pendente |']);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /estado/i);
+});
+
+test('prontidão: linha feita sem evidência reprova', () => {
+  const errors = prontidaoErrors(['| A | agente | | feito |']);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /evidência/i);
+});
+
+test('prontidão: linha do dono aberta sem TODO-AUTOR reprova', () => {
+  const errors = prontidaoErrors(['| A | dono | | aberto |']);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /TODO-AUTOR/);
+});
+
+test('prontidão: tabela sem linhas ou sem cabeçalho reprova', () => {
+  assert.equal(prontidaoErrors([]).length, 1);
+  assert.equal(
+    checkProntidao(fixture({ [PRONTIDAO]: '# Sem tabela\n' })).length,
+    1,
+  );
+});
+
+test('prontidão: arquivo ausente reprova e o repositório real passa', () => {
+  const errors = checkProntidao(fixture({ 'a.txt': 'x' }));
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /prontidao-1\.0\.md/);
+  assert.deepEqual(checkProntidao(resolve('.')), []);
+});
+
+test('prontidão: checkRepoRules só exige o arquivo com package.json na raiz', () => {
+  assert.ok(
+    !checkRepoRules(fixture({ 'a.txt': 'x' })).some((e) => /prontidao/.test(e)),
+  );
+  assert.ok(checkRepoRules(withRoot({})).some((e) => /prontidao-1\.0/.test(e)));
 });

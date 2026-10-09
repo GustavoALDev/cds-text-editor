@@ -7,7 +7,7 @@ import {
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { form } from '@angular/forms/signals';
 import { getHtmlSchema, type RteEmbedProvider } from '@cds/rte-core';
-import { DEFAULT_EMBED_PROVIDERS, VIMEO_PROVIDER } from '@cds/rte-core/embeds';
+import { RTE_EMBED_PROVIDERS, RTE_VIMEO_PROVIDER } from '@cds/rte-core/embeds';
 import { getRteHtml } from '@cds/rte-core/extensions';
 import { validateHtml } from '@cds/rte-core/html';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
@@ -276,7 +276,7 @@ describe('inserir embed (R5, V5)', () => {
   });
 
   it('provedor do consumidor: na dica e aceito', async () => {
-    const providers = [...DEFAULT_EMBED_PROVIDERS, ACME];
+    const providers = [...RTE_EMBED_PROVIDERS, ACME];
     const o = await openEmbed(
       await setup('<p></p>', { embedProviders: providers }),
     );
@@ -312,7 +312,7 @@ describe('recusas (R5)', () => {
 
   it('YouTube com só Vimeo ativo → errorEmbedUrl; dica só com Vimeo', async () => {
     const o = await openEmbed(
-      await setup('<p></p>', { embedProviders: [VIMEO_PROVIDER] }),
+      await setup('<p></p>', { embedProviders: [RTE_VIMEO_PROVIDER] }),
     );
     expect(hint(o)).toBe('Accepted: Vimeo.');
     const input = field(o, URL_LABEL);

@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { validateCompat } from './compat.mjs';
@@ -19,6 +20,7 @@ const GOVERNANCE_FILES = [
   'docs/support.md',
   'docs/open-core.md',
   'docs/security.md',
+  'docs/release/prontidao-1.0.md',
   '.github/workflows/release.yml',
   '.github/PULL_REQUEST_TEMPLATE.md',
   '.github/ISSUE_TEMPLATE/bug_report.yml',
@@ -549,14 +551,306 @@ export function checkRoteiro(rootDir) {
   return errors;
 }
 
+// Dependências internas (spec 09c, AP12): `@cds/rte-*` importado vai em `dependencies`
+// com a versão exata do pacote referido; nenhum peer interno; ng-package.json lista as
+// internas em `allowedNonPeerDependencies`.
+const INTERNAL_SCOPE = '@cds/rte-';
+const INTERNAL_IMPORT = /^(@cds\/rte-[a-z]+)(?:\/|$)/;
+
+export function checkInternalDeps(rootDir) {
+  const errors = [];
+  const packagesDir = join(rootDir, 'packages');
+  if (!existsSync(packagesDir)) return errors;
+  const manifests = new Map();
+  for (const dir of readdirSync(packagesDir)) {
+    const path = join(packagesDir, dir, 'package.json');
+    if (!existsSync(path)) continue;
+    const manifest = JSON.parse(readFileSync(path, 'utf8'));
+    manifests.set(dir, manifest);
+  }
+  const versions = new Map(
+    [...manifests.values()].map((m) => [m.name, m.version]),
+  );
+  for (const [dir, manifest] of manifests) {
+    const where = `packages/${dir}/package.json`;
+    for (const field of ['peerDependencies', 'peerDependenciesMeta']) {
+      for (const dep of Object.keys(manifest[field] ?? {})) {
+        if (dep.startsWith(INTERNAL_SCOPE)) {
+          errors.push(
+            `${where}: ${dep} em ${field} (proibido: dependência interna vai em dependencies, com versão exata)`,
+          );
+        }
+      }
+    }
+    const internal = Object.entries(manifest.dependencies ?? {}).filter(([d]) =>
+      d.startsWith(INTERNAL_SCOPE),
+    );
+    for (const [dep, range] of internal) {
+      const expected = versions.get(dep);
+      if (expected === undefined) continue;
+      if (range !== expected) {
+        errors.push(
+          `${where}: dependência ${dep} deve ser a versão exata ${expected} (está "${range}")`,
+        );
+      }
+    }
+    const declared = new Set(Object.keys(manifest.dependencies ?? {}));
+    const pkgDir = join(packagesDir, dir);
+    const reported = new Set();
+    for (const file of walk(
+      pkgDir,
+      (n) => /\.ts$/.test(n) && !/\.(spec|d)\.ts$/.test(n),
+    )) {
+      if (file.split(sep).includes('testing-support')) continue;
+      for (const spec of importSpecifiers(readFileSync(file, 'utf8'))) {
+        const m = INTERNAL_IMPORT.exec(spec);
+        if (!m || m[1] === manifest.name || declared.has(m[1])) continue;
+        const key = `${file}|${m[1]}`;
+        if (reported.has(key)) continue;
+        reported.add(key);
+        errors.push(
+          `${relative(rootDir, file).split(sep).join('/')}: importa ${m[1]}, que falta em dependencies de ${where}`,
+        );
+      }
+    }
+    const ngPath = join(pkgDir, 'ng-package.json');
+    if (internal.length && existsSync(ngPath)) {
+      const ng = JSON.parse(readFileSync(ngPath, 'utf8'));
+      const allowed = new Set(ng.allowedNonPeerDependencies ?? []);
+      for (const [dep] of internal) {
+        if (!allowed.has(dep)) {
+          errors.push(
+            `packages/${dir}/ng-package.json: allowedNonPeerDependencies deve listar ${dep}`,
+          );
+        }
+      }
+    }
+  }
+  return errors;
+}
+
+// Nomes públicos antigos (spec 09c, AP3): renomeados ou removidos; nada foi publicado, então não há alias.
+export const OLD_TO_NEW = {
+  DEFAULT_ID_PREFIX: 'RTE_DEFAULT_ID_PREFIX',
+  DEFAULT_LINK_POLICY: 'RTE_DEFAULT_LINK_POLICY',
+  DraftStorage: 'RteDraftStorage',
+  DraftStore: 'RteDraftStore',
+  DraftStoreOptions: 'RteDraftStoreOptions',
+  SrcsetCandidate: 'RteSrcsetCandidate',
+  DEFAULT_EMBED_PROVIDERS: 'RTE_EMBED_PROVIDERS',
+  YOUTUBE_PROVIDER: 'RTE_YOUTUBE_PROVIDER',
+  VIMEO_PROVIDER: 'RTE_VIMEO_PROVIDER',
+  SPOTIFY_PROVIDER: 'RTE_SPOTIFY_PROVIDER',
+  SerializeRteHtmlOptions: 'RteSerializeHtmlOptions',
+  ExtractTocOptions: 'RteExtractTocOptions',
+  HtmlToTextOptions: 'RteHtmlToTextOptions',
+  ValidateHtmlOptions: 'RteValidateHtmlOptions',
+  ApplyRteThemeOptions: 'RteApplyThemeOptions',
+  CheckThemeOptions: 'RteCheckThemeOptions',
+  CreateRteThemeOptions: 'RteCreateThemeOptions',
+  SuggestRteColorOptions: 'RteSuggestColorOptions',
+  ColorParser: 'RteColorParser',
+  Rgb: 'RteRgb',
+};
+// Removidos sem substituto (também proibidos).
+export const REMOVED_NAMES = [
+  'ANGULAR_DEFAULTS',
+  'CORE_VERSION',
+  'SANITIZER_VERSION',
+  'THEME_VERSION',
+  'RENDER_VERSION',
+];
+const OLD_NAME_SKIP_PREFIXES = [
+  'docs/decisions/',
+  'docs/specs/',
+  'docs/superpowers/',
+];
+const OLD_NAME_SKIP_FILES = new Set([
+  'tools/check-repo-rules.mjs',
+  'tools/check-repo-rules.test.mjs',
+  'package-lock.json',
+  'THIRD-PARTY-NOTICES.md',
+]);
+const OLD_NAME_SKIP_DIRS = new Set([
+  'node_modules',
+  'dist',
+  '.angular',
+  '.git',
+  '.nx',
+  'coverage',
+  'test-results',
+  'playwright-report',
+]);
+const OLD_NAME_MAX_BYTES = 2 * 1024 * 1024;
+const oldNameRegex = (name) =>
+  new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`, 'g');
+
+function trackedFiles(rootDir) {
+  const git = spawnSync('git', ['ls-files', '-z'], {
+    cwd: rootDir,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (git.status === 0 && git.stdout) {
+    return git.stdout
+      .split('\0')
+      .filter(Boolean)
+      .filter((p) => existsSync(join(rootDir, p)));
+  }
+  const out = [];
+  const visit = (dir) => {
+    for (const name of readdirSync(dir)) {
+      if (OLD_NAME_SKIP_DIRS.has(name)) continue;
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) visit(full);
+      else out.push(relative(rootDir, full).split(sep).join('/'));
+    }
+  };
+  visit(rootDir);
+  return out;
+}
+
+/** Nomes antigos da API pública (09c, AP3) em qualquer texto rastreado, exceto ADRs, specs e planos. */
+export function checkOldNames(rootDir) {
+  const errors = [];
+  const entries = [
+    ...Object.entries(OLD_TO_NEW).map(([old, novo]) => [old, novo]),
+    ...REMOVED_NAMES.map((old) => [old, null]),
+  ].map(([old, novo]) => [old, novo, oldNameRegex(old)]);
+  for (const path of trackedFiles(rootDir)) {
+    if (
+      OLD_NAME_SKIP_FILES.has(path) ||
+      OLD_NAME_SKIP_PREFIXES.some((p) => path.startsWith(p))
+    ) {
+      continue;
+    }
+    const full = join(rootDir, path);
+    if (statSync(full).size > OLD_NAME_MAX_BYTES) continue;
+    const buf = readFileSync(full);
+    if (buf.includes(0)) continue; // binário
+    const lines = buf.toString('utf8').split(/\r?\n/);
+    for (const [old, novo, re] of entries) {
+      for (let i = 0; i < lines.length; i++) {
+        re.lastIndex = 0;
+        if (re.test(lines[i])) {
+          errors.push(
+            `${path}:${i + 1}: nome antigo da API "${old}" ${
+              novo ? `(use "${novo}")` : '(removido, sem substituto)'
+            }`,
+          );
+        }
+      }
+    }
+  }
+  return errors;
+}
+
+// CSS publicado (spec 09c, AP7): todo `styles/*.css` (e o `src/*.css` do tema) tem relatório
+// `api/<arquivo>.css-api.md` e a lista `api/css-public.json`.
+export function checkCssReports(rootDir) {
+  const errors = [];
+  const packagesDir = join(rootDir, 'packages');
+  if (!existsSync(packagesDir)) return errors;
+  for (const pkg of readdirSync(packagesDir)) {
+    const pkgDir = join(packagesDir, pkg);
+    if (!statSync(pkgDir).isDirectory()) continue;
+    const cssFiles = ['styles', 'src'].flatMap((sub) =>
+      existsSync(join(pkgDir, sub))
+        ? readdirSync(join(pkgDir, sub)).filter((f) => f.endsWith('.css'))
+        : [],
+    );
+    if (cssFiles.length === 0) continue;
+    if (!existsSync(join(pkgDir, 'api', 'css-public.json'))) {
+      errors.push(
+        `packages/${pkg}/api/css-public.json: lista pública do CSS ausente (spec 09c, AP7)`,
+      );
+    }
+    for (const css of cssFiles) {
+      const report = `${css.replace(/\.css$/, '')}.css-api.md`;
+      if (!existsSync(join(pkgDir, 'api', report))) {
+        errors.push(
+          `packages/${pkg}/api/${report}: relatório do CSS publicado ${css} ausente (rode UPDATE_API=1 node tools/css-api.mjs packages/${pkg})`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
+// Lista de prontidão para a 1.0 (spec 09c, AP14): tabela `| Item | Dono | Evidência | Estado |`.
+const PRONTIDAO = 'docs/release/prontidao-1.0.md';
+export function checkProntidao(rootDir) {
+  const path = join(rootDir, PRONTIDAO);
+  if (!existsSync(path)) {
+    return [
+      `${PRONTIDAO}: lista de prontidão para a 1.0 obrigatória ausente (spec 09c, AP14)`,
+    ];
+  }
+  const lines = readFileSync(path, 'utf8').replace(/\r\n/g, '\n').split('\n');
+  const cells = (line) =>
+    line
+      .trim()
+      .replace(/^\|/, '')
+      .replace(/\|$/, '')
+      .split('|')
+      .map((c) => c.trim());
+  const header = lines.findIndex((l) =>
+    /^\|\s*Item\s*\|\s*Dono\s*\|\s*Evidência\s*\|\s*Estado\s*\|\s*$/.test(l),
+  );
+  if (header < 0) {
+    return [
+      `${PRONTIDAO}: tabela "| Item | Dono | Evidência | Estado |" ausente (spec 09c, AP14)`,
+    ];
+  }
+  const errors = [];
+  let rows = 0;
+  for (let i = header + 2; i < lines.length; i++) {
+    if (!lines[i].trim().startsWith('|')) break;
+    rows++;
+    const [item = '', dono = '', evidencia = '', estado = ''] = cells(lines[i]);
+    const where = `${PRONTIDAO}:${i + 1}`;
+    if (dono !== 'agente' && dono !== 'dono') {
+      errors.push(
+        `${where}: dono deve ser "agente" ou "dono" (item "${item}")`,
+      );
+    }
+    const estadoBase = estado.split(/[\s—-]/)[0];
+    if (estadoBase !== 'feito' && estadoBase !== 'aberto') {
+      errors.push(
+        `${where}: estado deve ser "feito" ou "aberto" (item "${item}")`,
+      );
+    }
+    if (estadoBase === 'feito' && evidencia === '') {
+      errors.push(`${where}: item feito sem evidência (item "${item}")`);
+    }
+    if (
+      dono === 'dono' &&
+      estadoBase === 'aberto' &&
+      !lines[i].includes('TODO-AUTOR')
+    ) {
+      errors.push(
+        `${where}: item do dono em aberto sem TODO-AUTOR (item "${item}")`,
+      );
+    }
+  }
+  if (rows === 0) {
+    errors.push(
+      `${PRONTIDAO}: a tabela não tem nenhuma linha (spec 09c, AP14)`,
+    );
+  }
+  return errors;
+}
+
 export function checkRepoRules(rootDir) {
   const errors = [];
+  errors.push(...checkCssReports(rootDir));
   errors.push(...checkApp(rootDir, 'demo'), ...checkApp(rootDir, 'docs'));
   errors.push(...checkCompat(rootDir));
   errors.push(...checkScreenshots(rootDir));
   // Só no repositório real (com package.json na raiz); fixtures parciais de teste ficam de fora.
   if (existsSync(join(rootDir, 'package.json'))) {
     errors.push(...checkRoteiro(rootDir));
+    errors.push(...checkProntidao(rootDir));
     for (const file of GOVERNANCE_FILES) {
       if (!existsSync(join(rootDir, file))) {
         errors.push(
@@ -565,6 +859,9 @@ export function checkRepoRules(rootDir) {
       }
     }
   }
+  errors.push(...checkInternalDeps(rootDir));
+  if (existsSync(join(rootDir, 'package.json')))
+    errors.push(...checkOldNames(rootDir));
   const rootReadme = join(rootDir, 'README.md');
   if (existsSync(join(rootDir, 'package.json')) && existsSync(rootReadme))
     errors.push(...checkRootReadmeNotice(readFileSync(rootReadme, 'utf8')));

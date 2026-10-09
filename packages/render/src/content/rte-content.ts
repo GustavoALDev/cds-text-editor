@@ -142,6 +142,9 @@ export class RteContent implements OnInit {
     );
   }
 
+  /**
+   * Valida as entradas já lidas e falha cedo se o modo `sanitize` estiver sem o sanitizador.
+   */
   ngOnInit(): void {
     // Falha cedo, já com as entradas lidas (H4, pré-voo 4); o `computed`
     // também lança se o modo virar `sanitize` depois.

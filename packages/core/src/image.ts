@@ -1,15 +1,26 @@
 export { parseSrcset, formatSrcset } from './schema/srcset';
-export type { SrcsetCandidate } from './schema/srcset';
+export type { RteSrcsetCandidate } from './schema/srcset';
 
+/**
+ * Canto arrastado ao redimensionar: noroeste, nordeste, sudoeste ou sudeste.
+ */
 export type RteResizeCorner = 'nw' | 'ne' | 'sw' | 'se';
 
+/** Entrada de `computeResize`. */
 export interface RteResizeInput {
+  /** Largura atual, em pixels. */
   width: number;
+  /** Altura atual, em pixels. */
   height: number;
+  /** Deslocamento horizontal do ponteiro, em pixels. */
   dx: number;
+  /** Deslocamento vertical do ponteiro, em pixels. */
   dy: number;
+  /** Canto que está sendo arrastado. */
   corner: RteResizeCorner;
+  /** Largura mínima (padrão 48). */
   minWidth?: number;
+  /** Largura máxima (padrão 10000). */
   maxWidth?: number;
 }
 

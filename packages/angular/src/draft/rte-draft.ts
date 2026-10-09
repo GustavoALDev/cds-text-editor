@@ -1,8 +1,8 @@
 import {
   createDraftStore,
   createLocalDraftStorage,
-  type DraftStorage,
-  type DraftStore,
+  type RteDraftStorage,
+  type RteDraftStore,
 } from '@cds/rte-core';
 import {
   DRAFT_KEY_PREFIX,
@@ -41,10 +41,10 @@ function localStorageWorks(view: Window | null): boolean {
 export function createDraftRuntime(host: RteDraftHost): RteDraftRuntime {
   const view = host.view;
   const doc = view?.document ?? null;
-  const custom: DraftStorage | undefined = host.config?.storage;
-  const storage: DraftStorage = custom ?? createLocalDraftStorage();
+  const custom: RteDraftStorage | undefined = host.config?.storage;
+  const storage: RteDraftStorage = custom ?? createLocalDraftStorage();
   const native = custom === undefined && localStorageWorks(view);
-  let store: DraftStore | null = null;
+  let store: RteDraftStore | null = null;
   let storageKey: string | null = null;
   let timer: number | null = null;
   let writeFailed = false;

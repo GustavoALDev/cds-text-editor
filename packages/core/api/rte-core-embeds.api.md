@@ -7,38 +7,35 @@
 // @public
 export function assertEmbedProvider(p: RteEmbedProvider): void;
 
-// @public (undocumented)
-export const DEFAULT_EMBED_PROVIDERS: readonly RteEmbedProvider[];
+// @public
+export const RTE_EMBED_PROVIDERS: readonly RteEmbedProvider[];
 
-// @public (undocumented)
+// @public
+export const RTE_SPOTIFY_PROVIDER: RteEmbedProvider;
+
+// @public
+export const RTE_VIMEO_PROVIDER: RteEmbedProvider;
+
+// @public
+export const RTE_YOUTUBE_PROVIDER: RteEmbedProvider;
+
+// @public
 export interface RteEmbed {
-    // (undocumented)
     aspectRatio?: string;
-    // (undocumented)
     height: number;
-    // (undocumented)
     provider: string;
-    // (undocumented)
     src: string;
-    // (undocumented)
     title: string;
-    // (undocumented)
     width: number;
 }
 
-// @public (undocumented)
+// @public
 export interface RteEmbedProvider {
-    // (undocumented)
-    hosts: string[];
-    // (undocumented)
+    hosts: readonly string[];
     id: string;
-    // (undocumented)
     match(url: string): boolean;
-    // (undocumented)
     name: string;
-    // (undocumented)
-    srcPatterns: string[];
-    // (undocumented)
+    srcPatterns: readonly string[];
     toEmbed(url: string): {
         src: string;
         height?: number;
@@ -46,18 +43,7 @@ export interface RteEmbedProvider {
     } | null;
 }
 
-// @public (undocumented)
-export const SPOTIFY_PROVIDER: RteEmbedProvider;
-
 // @public
 export function toEmbed(url: string, providers?: readonly RteEmbedProvider[]): RteEmbed | null;
-
-// @public (undocumented)
-export const VIMEO_PROVIDER: RteEmbedProvider;
-
-// @public (undocumented)
-export const YOUTUBE_PROVIDER: RteEmbedProvider;
-
-// (No @packageDocumentation comment for this package)
 
 ```

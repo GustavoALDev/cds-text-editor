@@ -1,0 +1,36 @@
+{
+  "classes": [
+    "rt-callout",
+    "rt-callout--danger",
+    "rt-callout--info",
+    "rt-callout--success",
+    "rt-callout--warning",
+    "rt-callout__title",
+    "rt-credit",
+    "rt-embed",
+    "rt-embed--spotify",
+    "rt-embed--vimeo",
+    "rt-embed--youtube",
+    "rt-figure",
+    "rt-figure--center",
+    "rt-figure--full",
+    "rt-figure--left",
+    "rt-figure--right",
+    "rt-figure--video",
+    "rt-pullquote",
+    "rt-read-also",
+    "rt-read-also__title",
+    "rt-task",
+    "rt-tasks",
+    "rte-content"
+  ],
+  "variables": ["--rte-content-color", "--rte-content-highlight"],
+  "layers": [
+    "rte.base",
+    "rte.components",
+    "rte.content",
+    "rte.reset",
+    "rte.theme"
+  ],
+  "properties": []
+}

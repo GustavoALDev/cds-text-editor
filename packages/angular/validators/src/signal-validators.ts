@@ -16,6 +16,9 @@ import {
 } from './content';
 import { measureRteText, resolveMax } from './measure';
 
+/**
+ * Caminho de um campo de texto num esquema de Signal Forms, aceito pelas funções `rte*` de `/validators`.
+ */
 export type RtePath<K extends PathKind> = SchemaPath<
   string,
   SchemaPathRules.Supported,

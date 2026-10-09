@@ -27,7 +27,7 @@ Os pacotes ainda não foram publicados, e o nome `@cds/*` é provisório.
 | `@cds/rte-core`      | O esquema do HTML, as extensões do Tiptap e as funções de texto, sempre junto do componente. |
 | `@cds/rte-theme`     | O tema (`theme.css` e `createTheme`), sempre junto do componente e da exibição.              |
 | `@cds/rte-render`    | Exibir o HTML do editor sem carregar o editor, com sumário.                                  |
-| `@cds/rte-sanitizer` | Sanitizar o HTML na exibição ou no servidor; é peer opcional do `@cds/rte-render`.           |
+| `@cds/rte-sanitizer` | Sanitizar o HTML na exibição ou no servidor; instalado à parte para o modo `sanitize`, na mesma versão do `@cds/rte-render`. |
 
 Para só exibir texto, instale `@cds/rte-render`, `@cds/rte-core`, `@cds/rte-theme` e `@cds/rte-sanitizer` (`npm install @cds/rte-render @cds/rte-core @cds/rte-theme @cds/rte-sanitizer`). O tema entra mesmo sem editor: o `content.css` e o `render.css` usam os tokens `--rte-*` sem valor de reserva.
 

@@ -1,8 +1,8 @@
 import type { Editor } from '@tiptap/core';
 import { DOMSerializer } from '@tiptap/pm/model';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import { createHeadingIds } from '../../src/headings';
-import { DEFAULT_ID_PREFIX } from '../../src/schema/id-prefix';
+import { createHeadingIds, type RteHeadingLevel } from '../../src/headings';
+import { RTE_DEFAULT_ID_PREFIX } from '../../src/schema/id-prefix';
 import { resolveContentLabels } from './labels';
 import { withRenderDocument } from './render-document';
 import {
@@ -17,17 +17,23 @@ import type {
   RteContentLabelsSource,
 } from './types';
 
-export interface SerializeRteHtmlOptions {
+/** Opções de `serializeRteHtml`. */
+export interface RteSerializeHtmlOptions {
   /** Prefixo dos ids de título (padrão `'rt-'`). */
   idPrefix?: string;
   /** Rótulos dos títulos vazios de caixa (padrão `en`). */
   labels?: RteContentLabelsSource;
 }
 
+/** Título do documento do editor, com a posição para navegar até ele. */
 export interface RteHeading {
+  /** Posição do título no documento do editor. */
   pos: number;
-  level: 2 | 3 | 4;
+  /** Nível do título (2 a 4). */
+  level: RteHeadingLevel;
+  /** Texto do título. */
   text: string;
+  /** Id do título, no formato do esquema. */
   id: string;
 }
 
@@ -41,11 +47,11 @@ const CALLOUT_VARIANT = 'rt-callout--';
  */
 export function serializeRteHtml(
   doc: ProseMirrorNode,
-  options: SerializeRteHtmlOptions = {},
+  options: RteSerializeHtmlOptions = {},
 ): string {
   // lança RangeError para prefixo inválido antes de renderizar
   const nextId = createHeadingIds({
-    prefix: options.idPrefix ?? DEFAULT_ID_PREFIX,
+    prefix: options.idPrefix ?? RTE_DEFAULT_ID_PREFIX,
   });
   const labels = resolveContentLabels(options.labels);
   const document = createStringDocument();
@@ -85,7 +91,7 @@ export function getRteHeadings(
   options: { idPrefix?: string } = {},
 ): RteHeading[] {
   const nextId = createHeadingIds({
-    prefix: options.idPrefix ?? DEFAULT_ID_PREFIX,
+    prefix: options.idPrefix ?? RTE_DEFAULT_ID_PREFIX,
   });
   const headings: RteHeading[] = [];
   doc.descendants((node, pos) => {
@@ -103,7 +109,7 @@ export function getRteHeadings(
 }
 
 /** Nível do título limitado a 2–4 (JSON pode trazer qualquer valor). */
-export function clampLevel(level: unknown): 2 | 3 | 4 {
+export function clampLevel(level: unknown): RteHeadingLevel {
   const n = Math.trunc(Number(level));
   if (!(n > 2)) return 2;
   return n >= 4 ? 4 : (n as 3);

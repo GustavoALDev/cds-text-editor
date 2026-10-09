@@ -15,6 +15,4 @@ export const RTE_LABELS_ES: RteLabels;
 // @public
 export const RTE_LABELS_PT_BR: RteLabels;
 
-// (No @packageDocumentation comment for this package)
-
 ```

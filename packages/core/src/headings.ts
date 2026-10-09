@@ -1,4 +1,7 @@
-import { DEFAULT_ID_PREFIX, assertIdPrefix } from './schema/id-prefix';
+import { RTE_DEFAULT_ID_PREFIX, assertIdPrefix } from './schema/id-prefix';
+
+/** Nível de título do esquema (`h2`–`h4`). */
+export type RteHeadingLevel = 2 | 3 | 4;
 
 /** Comprimento máximo do atributo `id` no esquema. */
 const ID_MAX_LENGTH = 80;
@@ -25,7 +28,7 @@ export function slugify(text: string, maxLength = 60): string {
 export function createHeadingIds(
   options: { prefix?: string; fallback?: string } = {},
 ): (text: string) => string {
-  const prefix = options.prefix ?? DEFAULT_ID_PREFIX;
+  const prefix = options.prefix ?? RTE_DEFAULT_ID_PREFIX;
   const fallback = options.fallback ?? 'section';
   assertIdPrefix(prefix);
   if (fallback === '' || slugify(fallback) !== fallback) {

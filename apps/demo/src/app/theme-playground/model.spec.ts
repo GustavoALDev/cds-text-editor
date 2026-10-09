@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { ANGULAR_DEFAULTS, RTE_THEME_PRESETS } from '@cds/rte-theme';
+import { RTE_THEME_PRESETS } from '@cds/rte-theme';
 import { describe, expect, it } from 'vitest';
 import {
   activePreset,
@@ -38,11 +38,11 @@ function initialValue(name: string): string {
 }
 
 describe('padrões', () => {
-  it('cores = ANGULAR_DEFAULTS, modo auto, neutros tingidos', () => {
+  it('cores = RTE_THEME_PRESETS.angular, modo auto, neutros tingidos', () => {
     expect(DEFAULT_STATE).toMatchObject({
-      primary: ANGULAR_DEFAULTS.primary,
-      secondary: ANGULAR_DEFAULTS.secondary,
-      tertiary: ANGULAR_DEFAULTS.tertiary,
+      primary: RTE_THEME_PRESETS.angular.primary,
+      secondary: RTE_THEME_PRESETS.angular.secondary,
+      tertiary: RTE_THEME_PRESETS.angular.tertiary,
       mode: 'auto',
       neutral: 'tinted',
     });
@@ -126,9 +126,9 @@ describe('cor', () => {
   it('cor inválida: o texto vai como digitado e a lib decide (cai no padrão)', () => {
     const theme = toRteTheme({ ...DEFAULT_STATE, secondary: 'banana' });
     expect(theme).toEqual({
-      primary: ANGULAR_DEFAULTS.primary,
+      primary: RTE_THEME_PRESETS.angular.primary,
       secondary: 'banana',
-      tertiary: ANGULAR_DEFAULTS.tertiary,
+      tertiary: RTE_THEME_PRESETS.angular.tertiary,
       mode: 'auto',
       neutral: 'tinted',
     });

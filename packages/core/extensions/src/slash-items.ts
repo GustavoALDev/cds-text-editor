@@ -21,11 +21,13 @@ export type RteSlashItemId =
   | 'video'
   | 'embed';
 
+/** Item do menu `/`. */
 export interface RteSlashItem {
   /** `^[a-z][a-zA-Z0-9-]{0,39}$`, único (`TypeError`). */
   readonly id: string;
   /** Embutidos: de `RTE_SLASH_LABELS`. */
   readonly title?: string | (() => string);
+  /** Palavras extras que também encontram o item. */
   readonly keywords?: readonly string[];
   /** Embutidos: `'text' | 'lists' | 'blocks' | 'news' | 'media'`. */
   readonly group?: string;
@@ -36,12 +38,17 @@ export interface RteSlashItem {
   ) => ChainedCommands;
 }
 
+/** Título e palavras-chave de cada item embutido do menu `/`. */
 export type RteSlashLabels = Record<
   RteSlashItemId,
   { title: string; keywords: readonly string[] }
 >;
 
+/** Opções do menu `/`. */
 export interface RteSlashOptions {
+  /**
+   * Itens do menu: lista que substitui os embutidos ou função que recebe os embutidos e devolve a lista final.
+   */
   items?:
     | readonly RteSlashItem[]
     | ((defaults: readonly RteSlashItem[]) => readonly RteSlashItem[]);

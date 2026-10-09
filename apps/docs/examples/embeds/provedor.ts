@@ -2,7 +2,7 @@
 import type { ApplicationConfig } from '@angular/core';
 import { provideRichText } from '@cds/rte-angular';
 import {
-  DEFAULT_EMBED_PROVIDERS,
+  RTE_EMBED_PROVIDERS,
   type RteEmbedProvider,
 } from '@cds/rte-core/embeds';
 
@@ -25,7 +25,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideRichText({
       // A lista SUBSTITUI a padrão: repita os provedores que quer manter.
-      editor: { embedProviders: [...DEFAULT_EMBED_PROVIDERS, MEU_PLAYER] },
+      editor: { embedProviders: [...RTE_EMBED_PROVIDERS, MEU_PLAYER] },
       pasteEmbeds: true,
     }),
   ],

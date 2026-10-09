@@ -1,3 +1,9 @@
+/**
+ * Editor de texto rico para Angular: o componente `RteEditor`, `provideRichText`, rótulos, barra de ferramentas e tipos do envio de arquivos.
+ *
+ * @packageDocumentation
+ */
+
 export { provideRichText, RTE_LABELS } from './config';
 export type {
   RteConfig,

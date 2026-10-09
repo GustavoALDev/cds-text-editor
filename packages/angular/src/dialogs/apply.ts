@@ -1,5 +1,5 @@
 import {
-  DEFAULT_LINK_POLICY,
+  RTE_DEFAULT_LINK_POLICY,
   normalizeHref,
   type RteLinkPolicy,
 } from '@cds/rte-core';
@@ -12,11 +12,11 @@ import type { Transaction } from '@tiptap/pm/state';
 import { findTable } from '@tiptap/pm/tables';
 import type { RteDialogRequest } from './controller';
 
-/** Política mesclada (`DEFAULT_LINK_POLICY` < a do editor): "nova aba" só com `preserve`. */
+/** Política mesclada (`RTE_DEFAULT_LINK_POLICY` < a do editor): "nova aba" só com `preserve`. */
 export function linkTargetPreserved(
   policy: Partial<RteLinkPolicy> | undefined,
 ): boolean {
-  return { ...DEFAULT_LINK_POLICY, ...policy }.target === 'preserve';
+  return { ...RTE_DEFAULT_LINK_POLICY, ...policy }.target === 'preserve';
 }
 
 /**

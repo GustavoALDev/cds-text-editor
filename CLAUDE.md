@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Monorepo `cds-text-editor`: editor de texto rico para Angular 22+ sobre Tiptap 3 (Nx 23 + npm workspaces). Pacotes em `packages/`: `core`, `sanitizer`, `theme` (build com tsup) e `angular`, `render` (build com ng-packagr). Decisões em `docs/decisions/` (ADR 0001).
+Monorepo `cds-text-editor`: editor de texto rico para Angular 22+ sobre Tiptap 3 (Nx 23 + npm workspaces). Pacotes em `packages/`: `core`, `sanitizer`, `theme` (build com tsup) e `angular`, `render` (build com ng-packagr). Decisões em `docs/decisions/` (ADR 0001; a API estável e a prontidão para a 1.0 estão no ADR 0023). Os 5 pacotes andam numa linha de versão só (grupo `fixed` do Changesets, `0.1.0` planejado), com dependências internas exatas.
 
 ## Regra principal
 
@@ -15,8 +15,10 @@ spec → plano (`writing-plans`) → implementação → verificação. As specs
 ```bash
 npm ci                                                  # instalar (use o lockfile); exige npm >= 11 (engine-strict)
 npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size,api   # lint, build, testes, npm pack + publint + attw e relatório de API
-npm run check:rules                                     # regras do repositório (tools/check-repo-rules.mjs; inclui: todo entry público citado no README do pacote e todo export `ɵ` com `@internal`)
-npx nx run <pacote>:api                                 # relatório do api-extractor (tools/api-report.mjs) sobre os .d.ts do dist, comparado a packages/*/api/<entry>.api.md; UPDATE_API=1 regrava (mudança de API pública atualiza o relatório no mesmo commit)
+npm run check:rules                                     # regras do repositório (tools/check-repo-rules.mjs; inclui: todo entry público citado no README do pacote e todo export `ɵ` com `@internal`; nenhum nome antigo da API (lista da AP3, só arquivos rastreados); dependência interna exata e sem peer interno; todo CSS publicado com `*.css-api.md` e `css-public.json`; tabela de `docs/release/prontidao-1.0.md` válida)
+npx nx run <pacote>:api                                 # relatório do api-extractor (tools/api-report.mjs) sobre os .d.ts do dist, comparado a packages/*/api/<entry>.api.md; UPDATE_API=1 regrava (mudança de API pública atualiza o relatório no mesmo commit); o alvo cobre TS (`*.api.md`) e CSS (`tools/css-api.mjs` → `packages/*/api/*.css-api.md`, com `css-public.json` marcando o que é público; `UPDATE_API=1` regrava os dois)
+npm run release-plan                                    # tools/release-plan.mjs: roda `changeset status` e exige o grupo `fixed` completo e nenhuma versão >= 1.0.0 sem RTE_ALLOW_1_0=1 (hoje os 5 em 0.1.0)
+npm run api-diff -- --base origin/main                         # tools/api-diff.mjs: relatórios TS/CSS e esquema do HTML mudados exigem changeset do pacote com o tipo mínimo (0.x: minor para remoção/alteração; 1.x: major); no CI só em pull_request; só enxerga changesets commitados
 npm run check:licenses                                  # gate de licenças
 npm run check:pack                                      # verify-package em todos os pacotes
 npm run check:size                                      # orçamento de tamanho por cenário (nx run theme:size, tools/check-size.mjs; no angular o rollup divide o entry `.` num reexportador mais um chunk compartilhado: `editor`/`whole` usam `externalChunks: "dynamic"` (só os `import()` ficam fora; `true` deixaria o chunk compartilhado fora e o entry mediria ~0) e os chunks do `@defer` usam `externalChunks: true` com `entry` com `*`)
@@ -116,5 +118,8 @@ Ambiente: `/tmp` pode ser um tmpfs pequeno; use `export TMPDIR=$HOME/.cache/tmp`
 - Typecheck: o `build` checa o código; os testes de `core`, `sanitizer` e `theme` são checados pelo target `typecheck` (`tsc -p tsconfig.spec.json --noEmit`) e os de `e2e/` por `npm run typecheck:e2e`.
 - TypeScript 6: sem `baseUrl`; `paths` usam o prefixo `./`; os configs do tsup têm `dts.compilerOptions.ignoreDeprecations: '6.0'`.
 - Idiomas: documentação em pt-BR; código e nomes públicos em inglês; mensagens das ferramentas (`tools/`, regras de lint) em pt-BR.
+- Nomes públicos: tipos, interfaces, classes, tokens e constantes exportados começam por `Rte`/`RTE_` (funções puras ficam sem prefixo; `provideRichText` foi mantida por decisão do dono); o `check:rules` reprova os nomes antigos (`OLD_TO_NEW` em `tools/check-repo-rules.mjs`, ADR 0023). Não há constantes `*_VERSION` (a versão se lê do `package.json`).
+- Versões e dependências: grupo `fixed` com os 5 pacotes; `@cds/rte-*` importado vai em `dependencies` com versão exata (`angular` → `core`, `theme`; `sanitizer` → `core`; `render` → `core`; o `sanitizer` só aparece nos testes do `render`), sem peer interno; `ng-package.json` lista as internas em `allowedNonPeerDependencies`. Nunca rodar `changeset version`/`publish` nem mudar `version` fora do PR de versão da 09b. Política de suporte e depreciação em `docs/support.md`; changesets são 1 por pacote (estado final), registrados com o tipo exigido pelo `api-diff`.
+- Prontidão para a 1.0: `docs/release/prontidao-1.0.md` (tabela conferida pelo `check:rules`; itens do dono em `TODO-AUTOR`; o critério de 14 dias sem mudança de quebra é linha do agente, ainda aberta).
 - Nomes de pacote `@cds/rte-*` são provisórios. Marcadores `TODO-AUTOR` indicam dados que só o autor conhece (`grep -rn TODO-AUTOR`).
 - Sem segredos no repositório.

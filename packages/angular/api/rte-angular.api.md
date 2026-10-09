@@ -9,7 +9,6 @@ import * as _cds_rte_angular from '@cds/rte-angular';
 import * as _cds_rte_core from '@cds/rte-core';
 import * as _cds_rte_core_extensions from '@cds/rte-core/extensions';
 import { clearLocalDrafts } from '@cds/rte-core';
-import { DraftStorage } from '@cds/rte-core';
 import { Editor } from '@tiptap/core';
 import { EnvironmentProviders } from '@angular/core';
 import { FormValueControl } from '@angular/forms/signals';
@@ -19,6 +18,7 @@ import { RteAttrRule } from '@cds/rte-core';
 import { RteCharLimitState } from '@cds/rte-core/extensions';
 import { RteCodeLanguage } from '@cds/rte-core/code-languages';
 import { RteContentLabels } from '@cds/rte-core/extensions';
+import { RteDraftStorage } from '@cds/rte-core';
 import { RteEditorOptions } from '@cds/rte-core/extensions';
 import { RteHtmlSchema } from '@cds/rte-core';
 import { RteImageAlign } from '@cds/rte-core/extensions';
@@ -46,13 +46,12 @@ export const RTE_LABELS_EN: RteLabels;
 // @public
 export const RTE_TOOLBAR_PRESETS: Readonly<Record<RteToolbarPreset, RteToolbarGroups>>;
 
-// @public (undocumented)
+// @public
 export interface RteConfig {
     counters?: RteCountersConfig;
     draft?: RteDraftConfig;
     editor?: RteEditorConfig;
     floatingMenus?: RteFloatingMenusConfig;
-    // (undocumented)
     labels?: RteLabelsSource;
     pasteEmbeds?: boolean;
     theme?: RteTheme;
@@ -61,7 +60,7 @@ export interface RteConfig {
     warnOnUnsaved?: boolean;
 }
 
-// @public (undocumented)
+// @public
 export interface RteCounterLabels {
     // (undocumented)
     chars(count: number, limit: number | null): string;
@@ -77,16 +76,14 @@ export interface RteCounterLabels {
 
 // @public
 export interface RteCountersConfig {
-    // (undocumented)
     chars?: boolean;
-    // (undocumented)
     words?: boolean;
 }
 
 // @public
 export type RteDialogKind = 'link' | 'lang' | 'quoteAuthor' | 'table' | 'image' | 'video' | 'embed';
 
-// @public (undocumented)
+// @public
 export interface RteDialogLabels {
     // (undocumented)
     apply: string;
@@ -252,7 +249,6 @@ export interface RteDialogLabels {
 
 // @public
 export interface RteDraftAvailable {
-    // (undocumented)
     readonly savedAt: number;
 }
 
@@ -260,16 +256,15 @@ export interface RteDraftAvailable {
 export interface RteDraftConfig {
     readonly maxAgeMs?: number;
     readonly prompt?: boolean;
-    readonly storage?: DraftStorage;
+    readonly storage?: RteDraftStorage;
 }
 
 // @public
 export interface RteDraftErrorEvent {
-    // (undocumented)
     readonly reason: 'write' | 'unavailable';
 }
 
-// @public (undocumented)
+// @public
 export interface RteDraftLabels {
     available(savedAt: number): string;
     // (undocumented)
@@ -282,81 +277,57 @@ export interface RteDraftLabels {
 // @public
 export class RteEditor implements FormValueControl<string> {
     constructor();
-    // (undocumented)
     readonly ariaDescribedBy: _angular_core.InputSignal<string | undefined>;
-    // (undocumented)
     readonly ariaLabel: _angular_core.InputSignal<string | undefined>;
-    // (undocumented)
     readonly ariaLabelledBy: _angular_core.InputSignal<string | undefined>;
     cancelAllUploads(): void;
     cancelUpload(id: string): boolean;
     closeSearch(): void;
-    // (undocumented)
     readonly disabled: _angular_core.InputSignalWithTransform<boolean, unknown>;
     discardDraft(): void;
     readonly draftAvailable: Signal<RteDraftAvailable | null>;
     readonly draftError: _angular_core.OutputEmitterRef<RteDraftErrorEvent>;
     readonly draftKey: _angular_core.InputSignal<string | null | undefined>;
-    // (undocumented)
     readonly editor: Signal<Editor | null>;
-    // (undocumented)
     readonly editorBlur: _angular_core.OutputEmitterRef<void>;
-    // (undocumented)
     readonly editorFocus: _angular_core.OutputEmitterRef<void>;
-    // (undocumented)
     readonly editorReady: _angular_core.OutputEmitterRef<Editor>;
     readonly floatingMenus: _angular_core.InputSignal<RteFloatingMenusConfig | undefined>;
     focus(options?: FocusOptions): void;
     focusFloatingMenu(): boolean;
     focusToolbar(): void;
-    // (undocumented)
     readonly hidden: _angular_core.InputSignalWithTransform<boolean, unknown>;
     readonly imagesMissingAlt: Signal<number>;
-    // (undocumented)
     readonly invalid: _angular_core.InputSignalWithTransform<boolean, unknown>;
     readonly isDirty: Signal<boolean>;
-    // (undocumented)
     readonly isEmpty: Signal<boolean>;
-    // (undocumented)
     readonly isFocused: Signal<boolean>;
-    // (undocumented)
     readonly labels: _angular_core.InputSignal<RteLabelsSource | undefined>;
     markSaved(savedHtml?: string): boolean;
-    // (undocumented)
     readonly maxLength: _angular_core.InputSignal<number | undefined>;
     readonly mediaChange: _angular_core.OutputEmitterRef<RteMediaChange>;
     readonly mediaSession: Signal<RteMediaSession>;
     openDialog(kind: RteDialogKind): boolean;
     openSearch(query?: string): boolean;
-    // (undocumented)
     readonly options: _angular_core.InputSignal<RteEditorConfig | undefined>;
     readonly pasteEmbeds: _angular_core.InputSignal<boolean | undefined>;
-    // (undocumented)
     readonly pendingUploads: Signal<number>;
-    // (undocumented)
     readonly placeholder: _angular_core.InputSignal<string>;
-    // (undocumented)
     readonly readonly: _angular_core.InputSignalWithTransform<boolean, unknown>;
-    // (undocumented)
     readonly required: _angular_core.InputSignalWithTransform<boolean, unknown>;
     restoreDraft(): boolean;
-    // (undocumented)
     readonly searchOpen: Signal<boolean>;
     readonly showCharCount: _angular_core.InputSignal<boolean | undefined>;
     readonly showWordCount: _angular_core.InputSignal<boolean | undefined>;
-    // (undocumented)
     readonly textStats: Signal<RteCharLimitState | null>;
     readonly theme: _angular_core.InputSignal<RteTheme | undefined>;
     readonly toolbar: _angular_core.InputSignal<RteToolbarConfig | undefined>;
-    // (undocumented)
     readonly touch: _angular_core.OutputEmitterRef<void>;
-    // (undocumented)
     readonly touched: _angular_core.InputSignalWithTransform<boolean, unknown>;
     readonly upload: _angular_core.InputSignal<RteUploadConfig | null | undefined>;
     readonly uploadError: _angular_core.OutputEmitterRef<RteUploadErrorEvent>;
     uploadFiles(files: Iterable<File>): number;
     readonly uploads: Signal<readonly _cds_rte_angular.RteUploadStatus[]>;
-    // (undocumented)
     readonly value: _angular_core.ModelSignal<string>;
     readonly warnOnUnsaved: _angular_core.InputSignal<boolean | undefined>;
     // (undocumented)
@@ -370,12 +341,12 @@ export type RteEditorConfig = Omit<RteEditorOptions, 'placeholder' | 'charLimit'
     slash?: Omit<RteSlashOptions, 'labels'>;
 };
 
-// @public (undocumented)
+// @public
 export interface RteEditorLabels {
     ariaLabel: string;
 }
 
-// @public (undocumented)
+// @public
 export interface RteErrorLabels {
     // (undocumented)
     rteEmptyHeadings(count: number): string;
@@ -405,7 +376,7 @@ export interface RteErrorLabels {
 // @public
 export type RteFloatingMenuKind = 'text' | 'link' | 'table' | 'image' | 'video' | 'embed';
 
-// @public (undocumented)
+// @public
 export interface RteFloatingMenuLabels {
     // (undocumented)
     embedDetails: string;
@@ -448,7 +419,7 @@ export interface RteFloatingMenuLabels {
 // @public
 export type RteFloatingMenusConfig = boolean | Partial<Record<RteFloatingMenuKind, boolean>>;
 
-// @public (undocumented)
+// @public
 export interface RteLabels {
     // (undocumented)
     readonly content: RteContentLabels;
@@ -476,37 +447,25 @@ export interface RteLabels {
     readonly upload: RteUploadLabels;
 }
 
-// @public (undocumented)
+// @public
 export interface RteLabelsInput {
-    // (undocumented)
     content?: Partial<Omit<RteContentLabels, 'calloutTitles'>> & {
         calloutTitles?: Partial<RteContentLabels['calloutTitles']>;
     };
-    // (undocumented)
     counters?: Partial<RteCounterLabels>;
-    // (undocumented)
     dialogs?: Partial<Omit<RteDialogLabels, 'languageNames'>> & {
         languageNames?: Readonly<Record<string, string>>;
     };
-    // (undocumented)
     draft?: Partial<RteDraftLabels>;
-    // (undocumented)
     editor?: Partial<RteEditorLabels>;
-    // (undocumented)
     errors?: Partial<RteErrorLabels>;
-    // (undocumented)
     floating?: Partial<RteFloatingMenuLabels>;
-    // (undocumented)
     search?: Partial<RteSearchLabels>;
-    // (undocumented)
     slash?: Partial<RteSlashLabels>;
-    // (undocumented)
     slashMenu?: Partial<RteSlashMenuLabels>;
-    // (undocumented)
     toolbar?: Partial<Omit<RteToolbarLabels, 'colorNames'>> & {
         colorNames?: Readonly<Record<string, string>>;
     };
-    // (undocumented)
     upload?: Partial<RteUploadLabels>;
 }
 
@@ -515,21 +474,18 @@ export type RteLabelsSource = RteLabelsInput | (() => RteLabelsInput);
 
 // @public
 export interface RteMediaChange {
-    // (undocumented)
     readonly added: readonly string[];
-    // (undocumented)
     readonly removed: readonly string[];
 }
 
 // @public
 export interface RteMediaSession {
     readonly added: readonly string[];
-    // (undocumented)
     readonly current: readonly string[];
     readonly removed: readonly string[];
 }
 
-// @public (undocumented)
+// @public
 export interface RteSearchLabels {
     capped(index: number): string;
     // (undocumented)
@@ -560,7 +516,7 @@ export interface RteSearchLabels {
     wholeWord: string;
 }
 
-// @public (undocumented)
+// @public
 export interface RteSlashMenuLabels {
     // (undocumented)
     count(n: number): string;
@@ -569,16 +525,16 @@ export interface RteSlashMenuLabels {
     listbox: string;
 }
 
-// @public (undocumented)
+// @public
 export type RteToolbarConfig = RteToolbarPreset | RteToolbarGroups | false;
 
-// @public (undocumented)
+// @public
 export type RteToolbarGroups = readonly (readonly RteToolbarItemId[])[];
 
-// @public (undocumented)
+// @public
 export type RteToolbarItemId = 'undo' | 'redo' | 'blockType' | 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'superscript' | 'subscript' | 'link' | 'lang' | 'textColor' | 'highlight' | 'bulletList' | 'orderedList' | 'taskList' | 'indent' | 'outdent' | 'align' | 'blockquote' | 'codeBlock' | 'codeLanguage' | 'horizontalRule' | 'image' | 'video' | 'embed' | 'table' | 'callout' | 'pullquote' | 'quoteAuthor' | 'readAlso' | 'clearFormatting' | 'search';
 
-// @public (undocumented)
+// @public
 export interface RteToolbarLabels {
     // (undocumented)
     addColumnAfter: string;
@@ -708,26 +664,22 @@ export interface RteToolbarLabels {
     video: string;
 }
 
-// @public (undocumented)
+// @public
 export type RteToolbarPreset = 'minimal' | 'article' | 'full';
 
 // @public
 export interface RteUploadAdapter {
-    // (undocumented)
     onMediaRemoved?(urls: readonly string[]): void | Promise<void>;
     registerExternal?(url: string, ctx: RteUploadContext): Promise<RteUploadedImage>;
-    // (undocumented)
     uploadImage(file: File, ctx: RteUploadContext): Promise<RteUploadedImage>;
-    // (undocumented)
     uploadVideo?(file: File, ctx: RteUploadContext): Promise<RteUploadedVideo>;
 }
 
 // @public
 export type RteUploadAdapterReason = 'network' | 'server' | 'response';
 
-// @public (undocumented)
+// @public
 export interface RteUploadConfig {
-    // (undocumented)
     adapter: RteUploadAdapter;
     imageTypes?: readonly RteUploadImageMime[];
     maxFilesPerAction?: number;
@@ -742,33 +694,23 @@ export interface RteUploadConfig {
 // @public
 export interface RteUploadContext {
     onProgress(fraction: number | null): void;
-    // (undocumented)
     readonly signal: AbortSignal;
 }
 
-// @public (undocumented)
+// @public
 export interface RteUploadedImage {
-    // (undocumented)
     height?: number;
-    // (undocumented)
     sizes?: string;
-    // (undocumented)
     srcset?: string;
-    // (undocumented)
     url: string;
-    // (undocumented)
     width?: number;
 }
 
-// @public (undocumented)
+// @public
 export interface RteUploadedVideo {
-    // (undocumented)
     height?: number;
-    // (undocumented)
     poster?: string;
-    // (undocumented)
     url: string;
-    // (undocumented)
     width?: number;
 }
 
@@ -777,31 +719,25 @@ export class RteUploadError extends Error {
     constructor(reason: RteUploadAdapterReason, options?: {
         cause?: unknown;
     });
-    // (undocumented)
     readonly name = "RteUploadError";
-    // (undocumented)
     readonly reason: RteUploadAdapterReason;
 }
 
-// @public (undocumented)
+// @public
 export interface RteUploadErrorEvent {
-    // (undocumented)
     readonly cause?: unknown;
-    // (undocumented)
     readonly fileName: string;
-    // (undocumented)
     readonly reason: RteUploadErrorReason;
-    // (undocumented)
     readonly type: RteUploadType;
 }
 
-// @public (undocumented)
+// @public
 export type RteUploadErrorReason = 'type' | 'size' | 'count' | 'network' | 'server' | 'response' | 'unavailable';
 
-// @public (undocumented)
+// @public
 export type RteUploadImageMime = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' | 'image/avif';
 
-// @public (undocumented)
+// @public
 export interface RteUploadLabels {
     // (undocumented)
     announceCancelled(name: string): string;
@@ -819,26 +755,19 @@ export interface RteUploadLabels {
     region: string;
 }
 
-// @public (undocumented)
+// @public
 export interface RteUploadStatus {
-    // (undocumented)
     readonly fileName: string;
-    // (undocumented)
     readonly id: string;
-    // (undocumented)
     readonly progress: number | null;
-    // (undocumented)
     readonly state: 'queued' | 'uploading' | 'inserting';
-    // (undocumented)
     readonly type: RteUploadType;
 }
 
-// @public (undocumented)
+// @public
 export type RteUploadType = 'image' | 'video';
 
-// @public (undocumented)
+// @public
 export type RteUploadVideoMime = 'video/mp4' | 'video/webm';
-
-// (No @packageDocumentation comment for this package)
 
 ```

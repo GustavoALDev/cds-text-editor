@@ -12,6 +12,4 @@ export const RTE_RENDER_LABELS_ES: RteRenderLabels;
 // @public
 export const RTE_RENDER_LABELS_PT_BR: RteRenderLabels;
 
-// (No @packageDocumentation comment for this package)
-
 ```

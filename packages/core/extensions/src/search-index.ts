@@ -7,7 +7,9 @@ export const MAX_SEARCH_QUERY = 1000;
 
 /** Resultado da busca: posições do documento (ordem de documento). */
 export interface RteSearchMatch {
+  /** Início do trecho no documento do editor. */
   from: number;
+  /** Fim do trecho (exclusivo) no documento do editor. */
   to: number;
 }
 

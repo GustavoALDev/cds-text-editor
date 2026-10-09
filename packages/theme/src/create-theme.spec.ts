@@ -3,7 +3,7 @@ import golden from './__fixtures__/spike-golden.json';
 import { contrastRatio, from8, toLinear, type Rgb8 } from './color/convert';
 import { toOklch } from './color/oklab';
 import { createRteTheme } from './create-theme';
-import { ANGULAR_DEFAULTS } from './defaults';
+import { RTE_THEME_PRESETS } from './presets';
 
 interface GoldenCase {
   /** Casos de sementes iguais nos três papéis. */
@@ -46,9 +46,9 @@ describe('createRteTheme', () => {
 
   it('defaults to the Angular palette in light mode', () => {
     const vars = createRteTheme();
-    expect(vars['--rte-primary']).toBe(ANGULAR_DEFAULTS.primary);
-    expect(vars['--rte-secondary']).toBe(ANGULAR_DEFAULTS.secondary);
-    expect(vars['--rte-tertiary']).toBe(ANGULAR_DEFAULTS.tertiary);
+    expect(vars['--rte-primary']).toBe(RTE_THEME_PRESETS.angular.primary);
+    expect(vars['--rte-secondary']).toBe(RTE_THEME_PRESETS.angular.secondary);
+    expect(vars['--rte-tertiary']).toBe(RTE_THEME_PRESETS.angular.tertiary);
   });
 
   it.each(['banana', '', 'var(--x)', '12px', '#12'])(

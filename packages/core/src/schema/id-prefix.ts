@@ -1,5 +1,5 @@
 /** Prefixo padrão dos ids de título (A4). */
-export const DEFAULT_ID_PREFIX = 'rt-';
+export const RTE_DEFAULT_ID_PREFIX = 'rt-';
 
 const ID_PREFIX = /^[a-z][a-z0-9-]{0,14}-$/;
 

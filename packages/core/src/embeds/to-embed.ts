@@ -1,14 +1,23 @@
 import { isAllowedUrl } from '../schema/url';
-import { DEFAULT_EMBED_PROVIDERS } from './providers';
+import { RTE_EMBED_PROVIDERS } from './providers';
 import { validateEmbedProvider } from './validate-provider';
 import type { RteEmbedProvider } from '../schema/types';
 
+/**
+ * Mídia incorporada resolvida por `toEmbed`: o `iframe` que o esquema aceita.
+ */
 export interface RteEmbed {
+  /** Identificador do provedor que reconheceu o endereço. */
   provider: string;
+  /** Endereço canônico do `iframe` (sempre `https`). */
   src: string;
+  /** Título acessível do `iframe` (o nome do provedor). */
   title: string;
+  /** Largura em pixels do `iframe`. */
   width: number;
+  /** Altura em pixels do `iframe`. */
   height: number;
+  /** Proporção CSS (`largura / altura`) quando o provedor a define. */
   aspectRatio?: string;
 }
 
@@ -32,7 +41,7 @@ function validHosts(p: RteEmbedProvider): string[] | null {
  */
 export function toEmbed(
   url: string,
-  providers: readonly RteEmbedProvider[] = DEFAULT_EMBED_PROVIDERS,
+  providers: readonly RteEmbedProvider[] = RTE_EMBED_PROVIDERS,
 ): RteEmbed | null {
   if (typeof url !== 'string') return null;
   for (const provider of providers) {
@@ -49,7 +58,7 @@ export function toEmbed(
           relative: false,
           fragment: false,
           hosts,
-          patterns: provider.srcPatterns,
+          patterns: [...provider.srcPatterns],
           maxLength: 2048,
         },
         result.src,

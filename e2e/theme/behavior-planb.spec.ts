@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { parseColor } from '../../packages/theme/src/color/parse';
 import { contrastRatio, to8 } from '../../packages/theme/src/color/convert';
 import { createRteTheme } from '../../packages/theme/src/create-theme';
-import type { ApplyRteThemeOptions } from '../../packages/theme/src/apply-theme';
+import type { RteApplyThemeOptions } from '../../packages/theme/src/apply-theme';
 import { loadThemePage } from './helpers/page';
 import { addCss, computed, shown, trackErrors } from './helpers/behavior';
 
@@ -28,7 +28,7 @@ const rgb8 = (hex: string | undefined) => to8(parseColor(hex ?? '')!);
 /** Aplica no #root e registra quantos filhos foram inseridos (sondas) durante a aplicação. */
 function apply(
   page: Page,
-  options: ApplyRteThemeOptions,
+  options: RteApplyThemeOptions,
 ): Promise<{ before: number; after: number; added: number }> {
   return page.evaluate(async (o) => {
     const root = document.getElementById('root')!;

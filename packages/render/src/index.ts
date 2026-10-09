@@ -1,4 +1,9 @@
-export const RENDER_VERSION = '0.0.0';
+/**
+ * Exibição do conteúdo gravado: a diretiva `rteContent`, os rótulos e `provideRteRender`.
+ *
+ * @packageDocumentation
+ */
+
 export { RteContent } from './content/rte-content';
 export { RTE_RENDER_LABELS, RTE_RENDER_LABELS_EN } from './labels';
 export { provideRteRender } from './provide';

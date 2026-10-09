@@ -1,30 +1,41 @@
 import { contrastRatio, toHex, toLinear, type Rgb8 } from './color/convert';
 import { oklchToSrgb, toOklch } from './color/oklab';
 import { parseColor } from './color/parse';
-import type { ColorParser } from './defaults';
+import type { RteColorParser } from './defaults';
 import { createRteTheme } from './create-theme';
 import { STATIC_TOKENS } from './static-tokens';
 import type { RteTheme } from './types';
 
+/** Resultado de uma verificação de contraste do tema. */
 export interface RteThemeCheck {
   /** Identificador estável: `C1`..`C6b` (primária), `C1:secondary`, `static:danger:surface`... */
   id: string;
+  /** Descrição legível do par de cores verificado. */
   label: string;
+  /** Modo (`light` ou `dark`) em que a verificação foi feita. */
   mode: 'light' | 'dark';
+  /** Razão de contraste medida. */
   ratio: number;
+  /** Razão de contraste mínima exigida. */
   min: number;
   /** Sempre `ratio >= min`. */
   pass: boolean;
 }
 
+/** Relatório de `checkRteTheme`. */
 export interface RteThemeReport {
+  /** `true` quando todas as verificações passaram. */
   ok: boolean;
+  /** Todas as verificações de contraste feitas, aprovadas ou não. */
   checks: RteThemeCheck[];
   /** Campos (`primary` | `secondary` | `tertiary`) cujo valor não pôde ser lido e caíram no padrão. */
   invalid: string[];
 }
 
-export type CheckThemeOptions = RteTheme & { parseColor?: ColorParser };
+/**
+ * Opções de `checkRteTheme`: as sementes de `RteTheme` mais o leitor de cores.
+ */
+export type RteCheckThemeOptions = RteTheme & { parseColor?: RteColorParser };
 
 const FIELDS = ['primary', 'secondary', 'tertiary'] as const;
 const MODES = ['light', 'dark'] as const;
@@ -96,7 +107,7 @@ const staticSpecs = (): Spec[] => [
     ]),
 ];
 
-function readable(parse: ColorParser, value: string): boolean {
+function readable(parse: RteColorParser, value: string): boolean {
   try {
     const rgb = parse(value);
     return rgb !== null && rgb.every(Number.isFinite);
@@ -111,7 +122,9 @@ function readable(parse: ColorParser, value: string): boolean {
  * Nunca lança. Não toca no DOM do documento (o `parseColor` padrão usa um `<canvas>` no navegador para nomes e `color()`). Campo omitido usa o padrão sem ser inválido; um valor ilegível
  * (parser devolve `null` ou lança) entra em `invalid`.
  */
-export function checkRteTheme(options: CheckThemeOptions = {}): RteThemeReport {
+export function checkRteTheme(
+  options: RteCheckThemeOptions = {},
+): RteThemeReport {
   const parse = options.parseColor ?? parseColor;
   const invalid = FIELDS.filter((f) => {
     const value = options[f];
@@ -142,9 +155,10 @@ export function checkRteTheme(options: CheckThemeOptions = {}): RteThemeReport {
   return { ok: checks.every((c) => c.pass), checks, invalid };
 }
 
-export interface SuggestRteColorOptions {
+/** Opções de `suggestRteColor`. */
+export interface RteSuggestColorOptions {
   /** Leitor de cores (padrão: `parseColor`). */
-  parseColor?: ColorParser;
+  parseColor?: RteColorParser;
   /**
    * Avaliador de uma semente (`true` = passa). Para testes e extensão; o padrão aprova a semente
    * quando todas as verificações do papel `primary` passam em `checkRteTheme`. Um `check`
@@ -164,10 +178,10 @@ const L_STEP = 0.01;
  */
 export function suggestRteColor(
   color: string,
-  options: SuggestRteColorOptions = {},
+  options: RteSuggestColorOptions = {},
 ): string | null {
   const parse = options.parseColor ?? parseColor;
-  let rgb: ReturnType<ColorParser> = null;
+  let rgb: ReturnType<RteColorParser> = null;
   try {
     rgb = parse(color);
   } catch {
@@ -242,7 +256,7 @@ export function formatFailedCheckWarnings(
  * se o `warn` fornecido lançar, o erro propaga (problema de quem o forneceu).
  */
 export function warnIfPoorTheme(
-  options: CheckThemeOptions = {},
+  options: RteCheckThemeOptions = {},
   warn: (message: string) => void = (m) => console.warn(m),
 ): RteThemeReport {
   const report = checkRteTheme(options);

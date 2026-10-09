@@ -4,7 +4,7 @@ Guia: [Exibição](../../apps/docs/content/guia/exibicao.md)
 
 Exibição do HTML produzido pelo editor, sem carregar o editor: igual ao do editor, segura por padrão e legível sem JavaScript (SSR e _prerender_).
 
-**Status: pré-lançamento.** Ainda sem versão publicada. Nome provisório (escopo `@cds` ainda não confirmado): `npm i @cds/rte-render`. Requer Angular `>=22.2.1 <23` e `@cds/rte-core`; o `@cds/rte-sanitizer` é _peer_ opcional (só quem usa o modo `sanitize`, o padrão, o instala).
+**Status: pré-lançamento.** Ainda sem versão publicada. Nome provisório (escopo `@cds` ainda não confirmado): `npm i @cds/rte-render`. Requer Angular `>=22.2.1 <23`; o `@cds/rte-core` vem como dependência. O `@cds/rte-sanitizer` não é dependência: só quem usa o modo `sanitize` (o padrão) o instala à parte, **na mesma versão do `@cds/rte-render`** (evita um segundo `@cds/rte-core` na árvore), e o passa a `provideRteRender`.
 
 ## Uso
 

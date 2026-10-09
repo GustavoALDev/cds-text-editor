@@ -1,5 +1,0 @@
----
-'@cds/rte-angular': minor
----
-
-Barra de ferramentas, menus e tema por instância (spec 05b1): `rte-editor` ganha a barra (`toolbar`: presets `minimal`/`article`/`full` em `RTE_TOOLBAR_PRESETS`, grupos de ids ou `false`; também em `provideRichText({ toolbar })`) com foco itinerante (APG _toolbar_), menus em `popover` nativo (APG _menu button_), ícones SVG internos (Lucide, ISC, e cinco do Feather, MIT), estado por transação sem re-render, comandos sem diálogo, guarda de tabela (`colspan`/`rowspan` > 100), `Alt+F10` e `focusToolbar()`; seção `toolbar` nos rótulos (`RteToolbarLabels`, pt-BR/en/es); entrada `theme` e `provideRichText({ theme })` aplicados por `applyRteTheme` (CSSOM, compatível com CSP) com `data-rte-mode` no host e `warnIfPoorTheme` em desenvolvimento. `@cds/rte-theme` passa a ser importado. O `blur` de `disabled`/`hidden`/`readonly` sai depois da detecção de mudanças (`afterRenderEffect`). O `editor.css` fica só com o funcional da edição, da barra e dos menus: incluir `theme.css`, `@cds/rte-core/styles/content.css` e `editor.css`, nessa ordem. O `Shift+Tab` do editável agora para na barra.

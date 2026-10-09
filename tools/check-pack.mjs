@@ -20,7 +20,7 @@ const NG_OUTPUT = [
   // CSS exportado como arquivo (`assets` do ng-package.json; spec 05a, D16).
   /^styles\/[^/]+\.css$/,
 ];
-const FORBIDDEN = [/\.spec\./, /\.tsbuildinfo$/];
+const FORBIDDEN = [/\.spec\./, /\.tsbuildinfo$/, /\.pkgdoc\.d\.ts$/];
 
 export function checkPackFiles(files, kind = 'tsup') {
   const output = kind === 'ng-packagr' ? NG_OUTPUT : TSUP_OUTPUT;

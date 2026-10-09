@@ -16,23 +16,39 @@ export type RteImageAlign = 'left' | 'center' | 'right' | 'full';
  * `caption: ''`, `credit: ''`.
  */
 export interface RteImageAttrs {
+  /** Endereço da imagem. */
   src: string;
+  /** Texto alternativo. `null` (não informado) sai como `alt=""`. */
   alt?: string | null;
+  /** Largura intrínseca em pixels. */
   width?: number | null;
+  /** Altura intrínseca em pixels. */
   height?: number | null;
+  /** Atributo `srcset` da imagem responsiva, em formato estrito. */
   srcset?: string | null;
+  /** Atributo `sizes` da imagem responsiva. */
   sizes?: string | null;
+  /** Alinhamento do bloco (padrão `center`). */
   align?: RteImageAlign;
+  /** Legenda da imagem. */
   caption?: string;
+  /** Crédito da imagem. */
   credit?: string;
 }
 
 /** Faixa de texto do vídeo (WCAG 1.2.2). */
 export interface RteVideoTrack {
+  /**
+   * Tipo da faixa: legenda de fala (`captions`) ou tradução (`subtitles`).
+   */
   kind: 'captions' | 'subtitles';
+  /** Endereço do arquivo de legenda (WebVTT). */
   src: string;
+  /** Idioma da faixa (código BCP 47). */
   srclang: string;
+  /** Nome da faixa exibido ao espectador. */
   label: string;
+  /** Marca a faixa como a escolhida por padrão. */
   default?: boolean;
 }
 
@@ -41,12 +57,19 @@ export interface RteVideoTrack {
  * `caption: ''`.
  */
 export interface RteVideoAttrs {
+  /** Endereço do vídeo. */
   src: string;
+  /** Largura em pixels. */
   width?: number | null;
+  /** Altura em pixels. */
   height?: number | null;
+  /** Endereço da imagem de capa. */
   poster?: string | null;
+  /** Pré-carregamento: `metadata` (padrão) ou `none`. */
   preload?: 'metadata' | 'none';
-  tracks?: RteVideoTrack[];
+  /** Faixas de legenda e de texto do vídeo. */
+  tracks?: readonly RteVideoTrack[];
+  /** Legenda do vídeo. */
   caption?: string;
 }
 

@@ -8,6 +8,7 @@ import {
   ViewEncapsulation,
   type Signal,
 } from '@angular/core';
+import type { RteHeadingLevel } from '@cds/rte-core';
 import { extractToc, type RteTocEntry } from '@cds/rte-core/html';
 import {
   RTE_RENDER_LABELS,
@@ -45,7 +46,7 @@ export class RteToc {
   /** HTML do qual os títulos são lidos; `null`/`undefined` = vazio. */
   readonly html = input<string | null | undefined>();
   /** Níveis de título incluídos (padrão `[2, 3]`). */
-  readonly levels = input<readonly number[]>([2, 3]);
+  readonly levels = input<readonly RteHeadingLevel[]>([2, 3]);
   /** Rótulos parciais; vencem o `provideRteRender` (H16). */
   readonly labels = input<Partial<RteRenderLabels> | undefined>();
 

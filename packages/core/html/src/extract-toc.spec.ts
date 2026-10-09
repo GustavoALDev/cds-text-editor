@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { extractToc } from './extract-toc';
+import { describe, expect, expectTypeOf, it } from 'vitest';
+import type { RteHeadingLevel } from '../../src/headings';
+import {
+  extractToc,
+  type RteExtractTocOptions,
+  type RteTocEntry,
+} from './extract-toc';
 
 const HTML =
   '<h2 id="rt-a">A</h2><h3 id="rt-b">B <em>x</em></h3><h4 id="rt-c">C</h4><h2>sem id</h2><h2 id="evil">E</h2>';
@@ -10,6 +15,25 @@ describe('extractToc', () => {
       { id: 'rt-a', text: 'A', level: 2 },
       { id: 'rt-b', text: 'B x', level: 3 },
     ]);
+  });
+
+  it('levels aceita readonly RteHeadingLevel[] (as const) e o nível sai tipado', () => {
+    const levels = [2, 3] as const;
+    const readonlyLevels: readonly RteHeadingLevel[] = [2, 3, 4];
+    expect(extractToc(HTML, { levels })).toHaveLength(2);
+    expect(extractToc(HTML, { levels: readonlyLevels })).toHaveLength(3);
+    expectTypeOf<RteExtractTocOptions['levels']>().toEqualTypeOf<
+      readonly RteHeadingLevel[] | undefined
+    >();
+    expectTypeOf<RteTocEntry['level']>().toEqualTypeOf<RteHeadingLevel>();
+    expectTypeOf<RteHeadingLevel>().toEqualTypeOf<2 | 3 | 4>();
+  });
+
+  it('níveis fora de 2–4 são ignorados (o tipo promete RteHeadingLevel)', () => {
+    const html = '<h1 id="rt-u">U</h1><h2 id="rt-a">A</h2><h5 id="rt-e">E</h5>';
+    expect(
+      extractToc(html, { levels: [1, 2, 5] as unknown as RteHeadingLevel[] }),
+    ).toEqual([{ id: 'rt-a', text: 'A', level: 2 }]);
   });
 
   it('levels inclui h4', () => {

@@ -7,11 +7,18 @@ import Heading from '@tiptap/extension-heading';
 import HorizontalRule from '@tiptap/extension-horizontal-rule';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
+import type { RteHeadingLevel } from '../../src/headings';
 import { getHtmlSchema } from '../../src/schema/get-html-schema';
 import { RTE_CONTENT_LABELS } from './labels';
 import { getRenderDocument, withRenderDocument } from './render-document';
-import { getRteHeadings, serializeRteHtml } from './serialize';
+import { getRteHeadings, serializeRteHtml, type RteHeading } from './serialize';
+
+describe('tipos', () => {
+  it('RteHeading.level é RteHeadingLevel', () => {
+    expectTypeOf<RteHeading['level']>().toEqualTypeOf<RteHeadingLevel>();
+  });
+});
 
 type Captured = { doc: Document | undefined; inner: Document | undefined };
 const captured: Captured = { doc: undefined, inner: undefined };

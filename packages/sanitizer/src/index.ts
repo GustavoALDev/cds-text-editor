@@ -1,4 +1,8 @@
-export const SANITIZER_VERSION = '0.0.0';
+/**
+ * Sanitizador do HTML gravado, para exibir com segurança conteúdo vindo de fonte não confiável.
+ *
+ * @packageDocumentation
+ */
 
 export {
   createSanitizer,

@@ -6,7 +6,13 @@ import type {
   RteUploadType,
 } from '@cds/rte-angular';
 
+/**
+ * Opções de `httpUploadAdapter`: envio `multipart/form-data` por `XMLHttpRequest`.
+ */
 export interface RteHttpUploadOptions {
+  /**
+   * Endereço do envio: um só para tudo ou um por tipo (`video` ausente desliga o envio de vídeo).
+   */
   endpoint: string | { image: string; video?: string };
   /** Nome do campo do arquivo no multipart; padrão `'file'`. */
   fieldName?: string;
@@ -22,6 +28,9 @@ export interface RteHttpUploadOptions {
   withCredentials?: boolean;
   /** 0 = sem limite. */
   timeoutMs?: number;
+  /**
+   * Converte o corpo da resposta no resultado do envio; o padrão espera `{ url, ... }`.
+   */
   mapResponse?(
     body: unknown,
     info: { file: File; kind: RteUploadType },

@@ -119,7 +119,8 @@ test('fillReadme: erro do resolvedor (região ou arquivo ausente) cita a linha',
 
 test('README raiz real: exemplos em dia com as regiões do Início rápido e os 4 marcadores do guia', () => {
   const root = resolvePath(dirname(fileURLToPath(import.meta.url)), '..');
-  const text = readFileSync(join(root, 'README.md'), 'utf8');
+  // checkout do Windows com core.autocrlf=true deixa o README em CRLF
+  const text = readFileSync(join(root, 'README.md'), 'utf8').replace(/\r\n/g, '\n');
   const examples = [];
   const resolveReal = (kind, arg) => {
     if (kind === 'generated') {

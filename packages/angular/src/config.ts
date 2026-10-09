@@ -29,11 +29,17 @@ export type RteEditorConfig = Omit<
 
 /** Contadores do rodapé (K11); cada um desligado por padrão. */
 export interface RteCountersConfig {
+  /** Mostra o contador de caracteres. */
   chars?: boolean;
+  /** Mostra o contador de palavras e o tempo de leitura. */
   words?: boolean;
 }
 
+/**
+ * Configuração padrão de todas as instâncias, fornecida por `provideRichText`; cada entrada do `RteEditor` tem precedência.
+ */
 export interface RteConfig {
+  /** Rótulos padrão, mesclados sobre o inglês. */
   labels?: RteLabelsSource;
   /** Padrões de criação para toda instância (D20). */
   editor?: RteEditorConfig;

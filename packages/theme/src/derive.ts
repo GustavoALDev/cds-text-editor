@@ -1,4 +1,4 @@
-import { clamp, luminance, toSrgb, type Rgb } from './color/convert';
+import { clamp, luminance, toSrgb, type RteRgb } from './color/convert';
 import {
   linearToOklab,
   mixOklab,
@@ -42,13 +42,13 @@ export const TEXT_TARGETS = { light: 0.13, dark: 0.28 } as const;
 export const MIX_PCT = { subtle: 12, border: 45 } as const;
 
 export interface DerivedRole {
-  seed: Rgb;
-  on: Rgb;
-  hover: Rgb;
-  active: Rgb;
-  text: Rgb;
-  subtle: Rgb;
-  border: Rgb;
+  seed: RteRgb;
+  on: RteRgb;
+  hover: RteRgb;
+  active: RteRgb;
+  text: RteRgb;
+  subtle: RteRgb;
+  border: RteRgb;
 }
 
 /**
@@ -56,26 +56,26 @@ export interface DerivedRole {
  * srgb-linear e da superfície em OKLCH. Porte do spike T6 com quatro desvios documentados (ADR 0002, "Desvios da fórmula do spike"); entradas e saídas em 0..1.
  */
 export function deriveRole(
-  seedLin: Rgb,
+  seedLin: RteRgb,
   surface: Oklch,
   dark: boolean,
 ): DerivedRole {
   const y = luminance(seedLin);
   const s = onLevel(y);
-  const state = (amt: number): Rgb =>
+  const state = (amt: number): RteRgb =>
     [0, 1, 2].map((i) =>
       stateChannel(seedLin[i] as number, amt, s),
-    ) as unknown as Rgb;
+    ) as unknown as RteRgb;
   // y === 0: TEXT_TARGETS.light / 0 = Infinity e Math.min(1, Infinity) = 1; y === 1: divisão por 0 dá -Infinity e
   // clamp resulta em 0. Ambos os casos já são corretos; clamp ainda trata NaN.
-  const text: Rgb = dark
+  const text: RteRgb = dark
     ? ([0, 1, 2].map((i) => {
         const c = seedLin[i] as number;
         return c + (1 - c) * clamp((TEXT_TARGETS.dark - y) / (1 - y));
-      }) as unknown as Rgb)
+      }) as unknown as RteRgb)
     : ([0, 1, 2].map(
         (i) => (seedLin[i] as number) * Math.min(1, TEXT_TARGETS.light / y),
-      ) as unknown as Rgb);
+      ) as unknown as RteRgb);
   const seedOk = linearToOklab(seedLin);
   const surfaceLab = oklchToOklab(surface);
   return {

@@ -1,4 +1,4 @@
-import { clamp, from8, toSrgb, type Rgb } from './convert';
+import { clamp, from8, toSrgb, type RteRgb } from './convert';
 import { fromOklch } from './oklab';
 
 // Número CSS: sem "." final (`5.` é inválido), expoente opcional.
@@ -78,7 +78,7 @@ function args(body: string): Args | null {
 const units = (c: Token[], allowed: Unit[][]): boolean =>
   c.every((t, i) => allowed[i]?.includes(t.unit));
 
-function parseHex(text: string): Rgb | null {
+function parseHex(text: string): RteRgb | null {
   if (!HEX_RE.test(text)) return null;
   const digits = text.slice(1);
   const full =
@@ -90,7 +90,7 @@ function parseHex(text: string): Rgb | null {
   return [channel(0), channel(2), channel(4)];
 }
 
-function parseRgb(body: string): Rgb | null {
+function parseRgb(body: string): RteRgb | null {
   const parsed = args(body);
   if (!parsed) return null;
   const { c, legacy } = parsed;
@@ -103,7 +103,7 @@ function parseRgb(body: string): Rgb | null {
   return [channel(c[0]), channel(c[1]), channel(c[2])];
 }
 
-function parseHsl(body: string): Rgb | null {
+function parseHsl(body: string): RteRgb | null {
   const parsed = args(body);
   if (!parsed) return null;
   const { c, legacy } = parsed;
@@ -122,7 +122,7 @@ function parseHsl(body: string): Rgb | null {
   return [f(0), f(8), f(4)];
 }
 
-function parseOklchBody(body: string): Rgb | null {
+function parseOklchBody(body: string): RteRgb | null {
   const parsed = args(body);
   // oklch() só tem a sintaxe moderna (sem vírgulas).
   if (!parsed || parsed.legacy) return null;
@@ -143,12 +143,12 @@ function parseOklchBody(body: string): Rgb | null {
 }
 
 /** Garante três canais finitos em [0, 1]; qualquer NaN/Infinity vira `null`. */
-function sanitize(rgb: Rgb | null): Rgb | null {
+function sanitize(rgb: RteRgb | null): RteRgb | null {
   if (!rgb || !rgb.every(Number.isFinite)) return null;
   return [clamp(rgb[0]), clamp(rgb[1]), clamp(rgb[2])];
 }
 
-function parsePure(input: string): Rgb | null {
+function parsePure(input: string): RteRgb | null {
   const text = input.trim().toLowerCase();
   if (text.startsWith('#')) return sanitize(parseHex(text));
   const m = FN_RE.exec(text);
@@ -162,7 +162,7 @@ function parsePure(input: string): Rgb | null {
  * Só o caminho puro (sem canvas), que não depende de contexto. Uso interno do plano B, que resolve
  * as demais formas no contexto do elemento; não é exportado por `index.ts`.
  */
-export function parseColorPure(input: string): Rgb | null {
+export function parseColorPure(input: string): RteRgb | null {
   if (typeof input !== 'string' || input.length > MAX_INPUT_LENGTH) return null;
   return parsePure(input);
 }
@@ -192,7 +192,7 @@ function getContext(): CanvasRenderingContext2D | null {
  * sobre duas bases (`#000` e `#fff`) e só vale se os dois resultados coincidirem.
  * Cores fora do gamut sRGB saem recortadas pelo próprio canvas.
  */
-function parseWithCanvas(input: string): Rgb | null {
+function parseWithCanvas(input: string): RteRgb | null {
   if (typeof document === 'undefined') return null;
   try {
     const ctx = getContext();
@@ -225,7 +225,7 @@ function parseWithCanvas(input: string): Rgb | null {
  * (não totalmente opaca) é rejeitada.
  * Nunca lança; o resultado tem sempre três canais finitos em [0, 1].
  */
-export function parseColor(input: string): Rgb | null {
+export function parseColor(input: string): RteRgb | null {
   // Teto defensivo: nenhuma cor CSS legítima precisa de mais que isso.
   if (typeof input !== 'string' || input.length > MAX_INPUT_LENGTH) return null;
   return parsePure(input) ?? parseWithCanvas(input);

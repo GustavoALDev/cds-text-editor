@@ -9,18 +9,24 @@ export interface RteRenderLabels {
   tableScroller: string;
 }
 
+/** Opções do conteúdo renderizado, fornecidas por `provideRteRender`. */
 export interface RteRenderOptions {
   /** Sanitizador do modo `sanitize`: `createSanitizer(opçõesDoEditor)` do `@cds/rte-sanitizer` (H4). */
   sanitize?: (html: string) => string;
   /** `href="#x"` vira `<caminho do documento>#x` (padrão) ou é mantido (H6). */
   fragmentLinks?: 'document' | 'keep';
+  /** Rótulos que substituem os padrões (parciais). */
   labels?: Partial<RteRenderLabels>;
 }
 
 /** Forma estrutural do `RteSanitizeError` (H5), sem importar o código do sanitizador. */
 export interface RteSanitizeErrorLike {
+  /** Sempre `'RteSanitizeError'`. */
   readonly name: 'RteSanitizeError';
+  /** Qual limite foi excedido. */
   readonly code: 'input-too-long' | 'max-depth';
+  /** Valor configurado do limite excedido. */
   readonly limit: number;
+  /** Mensagem do erro. */
   readonly message: string;
 }

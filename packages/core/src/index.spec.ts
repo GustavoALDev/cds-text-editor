@@ -4,9 +4,8 @@ import * as embeds from '../embeds/src/index';
 import * as html from '../html/src/index';
 
 const MAIN = [
-  'CORE_VERSION',
   'getHtmlSchema',
-  'DEFAULT_ID_PREFIX',
+  'RTE_DEFAULT_ID_PREFIX',
   'normalizeAttribute',
   'matchesRule',
   'isAllowedUrl',
@@ -30,7 +29,7 @@ const MAIN = [
   'RTE_HIGHLIGHT_COLORS',
   'normalizeHref',
   'getLinkAttributes',
-  'DEFAULT_LINK_POLICY',
+  'RTE_DEFAULT_LINK_POLICY',
   'slugify',
   'createHeadingIds',
   'countCharacters',
@@ -67,7 +66,10 @@ describe('API pública do @cds/rte-core', () => {
         'undefined',
       );
     }
-    expect(CORE_VERSION_OK()).toBe(true);
+  });
+
+  it('não exporta a constante de versão (a versão vem do package.json)', () => {
+    expect(Object.keys(main).filter((k) => /_VERSION$/.test(k))).toEqual([]);
   });
 
   it('não exporta internos', () => {
@@ -79,10 +81,10 @@ describe('API pública do @cds/rte-core', () => {
   it('/embeds exporta toEmbed e provedores, sem internos', () => {
     for (const n of [
       'toEmbed',
-      'DEFAULT_EMBED_PROVIDERS',
-      'YOUTUBE_PROVIDER',
-      'VIMEO_PROVIDER',
-      'SPOTIFY_PROVIDER',
+      'RTE_EMBED_PROVIDERS',
+      'RTE_YOUTUBE_PROVIDER',
+      'RTE_VIMEO_PROVIDER',
+      'RTE_SPOTIFY_PROVIDER',
       'assertEmbedProvider',
     ]) {
       expect(typeof (embeds as Record<string, unknown>)[n], n).not.toBe(
@@ -102,7 +104,3 @@ describe('API pública do @cds/rte-core', () => {
     }
   });
 });
-
-function CORE_VERSION_OK(): boolean {
-  return main.CORE_VERSION === '0.0.0';
-}

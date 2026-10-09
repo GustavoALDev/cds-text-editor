@@ -1,7 +1,8 @@
 import { TEXT_BLOCK_TAGS, collapseTextLine } from '../../src/text-lines';
 import { resolveMaxDepth, walkHtml } from './walk';
 
-export interface HtmlToTextOptions {
+/** Opções de `htmlToText`. */
+export interface RteHtmlToTextOptions {
   /** Profundidade máxima de elementos (padrão 256); `RangeError` se não for inteiro positivo. */
   maxDepth?: number;
 }
@@ -16,7 +17,7 @@ export interface HtmlToTextOptions {
  */
 export function htmlToText(
   html: string,
-  options: HtmlToTextOptions = {},
+  options: RteHtmlToTextOptions = {},
 ): string {
   const maxDepth = resolveMaxDepth(options.maxDepth);
   const lines: string[] = [];

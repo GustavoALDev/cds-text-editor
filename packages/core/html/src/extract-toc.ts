@@ -1,17 +1,22 @@
+import type { RteHeadingLevel } from '../../src/headings';
 import { getHtmlSchema } from '../../src/schema/get-html-schema';
 import { matchesRule } from '../../src/schema/rules';
 import { resolveMaxDepth, walkHtml } from './walk';
 
+/** Entrada do sumário: um título do conteúdo. */
 export interface RteTocEntry {
+  /** Id do título, para o link `#id`. */
   id: string;
   /** Texto puro já decodificado: escape ou use `textContent` antes de inserir em HTML. */
   text: string;
-  level: number;
+  /** Nível do título (2 a 4). */
+  level: RteHeadingLevel;
 }
 
-export interface ExtractTocOptions {
-  /** Níveis de título incluídos (padrão `[2, 3]`). */
-  levels?: number[];
+/** Opções de `extractToc`. */
+export interface RteExtractTocOptions {
+  /** Níveis de título incluídos (padrão `[2, 3]`); fora de 2–4 é ignorado. */
+  levels?: readonly RteHeadingLevel[];
   /** Prefixo dos ids (padrão `'rt-'`); `RangeError` se inválido. */
   idPrefix?: string;
   /** Profundidade máxima de elementos (padrão 256); `RangeError` se não for inteiro positivo. */
@@ -30,16 +35,19 @@ const HEADING = /^h([1-6])$/;
  */
 export function extractToc(
   html: string,
-  options: ExtractTocOptions = {},
+  options: RteExtractTocOptions = {},
 ): RteTocEntry[] {
   const maxDepth = resolveMaxDepth(options.maxDepth);
-  const levels = new Set(options.levels ?? [2, 3]);
+  const levels = new Set<number>(
+    (options.levels ?? [2, 3]).filter((n) => n >= 2 && n <= 4),
+  );
   const schema = getHtmlSchema(
     options.idPrefix === undefined ? {} : { idPrefix: options.idPrefix },
   );
   const idRule = schema.elements['h2']?.attributes['id']?.rule;
   const entries: RteTocEntry[] = [];
-  let current: { id: string; level: number; text: string } | null = null;
+  let current: { id: string; level: RteHeadingLevel; text: string } | null =
+    null;
 
   const finish = () => {
     if (current) {
@@ -56,7 +64,7 @@ export function extractToc(
         const m = HEADING.exec(name);
         if (!m) return;
         finish();
-        const level = Number(m[1]);
+        const level = Number(m[1]) as RteHeadingLevel;
         const id = attributes['id'];
         if (
           levels.has(level) &&

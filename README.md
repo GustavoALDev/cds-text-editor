@@ -1,6 +1,6 @@
 # cds-text-editor
 
-Editor de texto rico para **Angular 22+**, construído sobre o **Tiptap 3**, publicado como um conjunto de pacotes independentes sob licença MIT.
+Editor de texto rico para **Angular 22+**, construído sobre o **Tiptap 3**, publicado como um conjunto de pacotes versionados juntos sob licença MIT.
 
 > **Status: em construção.** Os cinco pacotes estão implementados (spec 05 fechada no ADR 0016) e sem versão publicada; a confirmação nos três navegadores é a rodada do CI. A superfície pública de cada entry está congelada em relatórios `packages/*/api/*.api.md` (alvo `api`).
 
@@ -14,7 +14,7 @@ Os pacotes ainda não foram publicados e o nome `@cds/*` é provisório (`TODO-A
 
 <!-- readme: generated install-command -->
 ```bash
-npm install @cds/rte-angular @cds/rte-core @cds/rte-theme \
+npm install @cds/rte-angular \
   @tiptap/core@^3.31.4 \
   @tiptap/extension-blockquote@^3.31.4 \
   @tiptap/extension-bold@^3.31.4 \

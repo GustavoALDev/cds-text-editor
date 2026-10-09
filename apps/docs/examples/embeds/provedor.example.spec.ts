@@ -1,9 +1,9 @@
-import { DEFAULT_EMBED_PROVIDERS, toEmbed } from '@cds/rte-core/embeds';
+import { RTE_EMBED_PROVIDERS, toEmbed } from '@cds/rte-core/embeds';
 import { describe, expect, it } from 'vitest';
 import { MEU_PLAYER } from './provedor';
 
 describe('provedor de embed próprio', () => {
-  const providers = [...DEFAULT_EMBED_PROVIDERS, MEU_PLAYER];
+  const providers = [...RTE_EMBED_PROVIDERS, MEU_PLAYER];
 
   it('monta o src do iframe a partir do endereço da página', () => {
     const embed = toEmbed('https://example.com/v/abcd1234', providers);

@@ -9,12 +9,15 @@ import type { Transaction } from '@tiptap/pm/state';
 
 /** Delta de uma transação (V13). Endereços canônicos, ordenados, sem repetição. */
 export interface RteMediaChange {
+  /** Endereços de mídia acrescentados pela transação. */
   readonly added: readonly string[];
+  /** Endereços de mídia retirados pela transação. */
   readonly removed: readonly string[];
 }
 
 /** Líquido desde a base (criação ou última carga externa) (V13). */
 export interface RteMediaSession {
+  /** Endereços de mídia presentes no documento agora. */
   readonly current: readonly string[];
   /** `current − base`. */
   readonly added: readonly string[];

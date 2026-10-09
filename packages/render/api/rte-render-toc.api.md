@@ -5,6 +5,7 @@
 ```ts
 
 import * as _angular_core from '@angular/core';
+import { RteHeadingLevel } from '@cds/rte-core';
 import { RteRenderLabels } from '@cds/rte-render';
 import { RteTocEntry } from '@cds/rte-core/html';
 import { Signal } from '@angular/core';
@@ -14,7 +15,7 @@ export class RteToc {
     readonly entries: Signal<readonly RteTocEntry[]>;
     readonly html: _angular_core.InputSignal<string | null | undefined>;
     readonly labels: _angular_core.InputSignal<Partial<RteRenderLabels> | undefined>;
-    readonly levels: _angular_core.InputSignal<readonly number[]>;
+    readonly levels: _angular_core.InputSignal<readonly RteHeadingLevel[]>;
     // (undocumented)
     static ɵcmp: _angular_core.ɵɵComponentDeclaration<RteToc, "rte-toc", never, { "html": { "alias": "html"; "required": false; "isSignal": true; }; "levels": { "alias": "levels"; "required": false; "isSignal": true; }; "labels": { "alias": "labels"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;
     // (undocumented)
@@ -22,7 +23,5 @@ export class RteToc {
 }
 
 export { RteTocEntry }
-
-// (No @packageDocumentation comment for this package)
 
 ```

@@ -1,10 +1,6 @@
-import type { Rgb } from './types';
+import type { RteRgb } from './types';
 
-/** Cores padrão do Angular (ADR 0002). */
-export const ANGULAR_DEFAULTS = {
-  primary: '#8514f5',
-  secondary: '#f637e3',
-  tertiary: '#0546ff',
-} as const;
-
-export type ColorParser = (input: string) => Rgb | null;
+/**
+ * Leitor de cores: recebe uma cor CSS em texto e devolve o RGB, ou `null` se não a entender.
+ */
+export type RteColorParser = (input: string) => RteRgb | null;

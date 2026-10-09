@@ -29,9 +29,7 @@ export type RteEditorRef = () => RteEditor | null | undefined;
 
 // @public
 export interface RteEmptyHeadingsError extends ValidationError {
-    // (undocumented)
     readonly count: number;
-    // (undocumented)
     readonly kind: 'rteEmptyHeadings';
 }
 
@@ -52,30 +50,23 @@ export class RteImagesHaveAltValidator extends RteCountValidator {
 
 // @public
 export interface RteImagesMissingAltError extends ValidationError {
-    // (undocumented)
     readonly count: number;
-    // (undocumented)
     readonly kind: 'rteImagesMissingAlt';
 }
 
 // @public
 export function rteMaxChars<K extends PathKind = PathKind.Root>(path: RtePath<K>, max: number | LogicFn<string, number | undefined, K>): void;
 
-// @public (undocumented)
+// @public
 export interface RteMaxCharsError extends ValidationError {
-    // (undocumented)
     readonly actual: number;
-    // (undocumented)
     readonly kind: 'rteMaxChars';
-    // (undocumented)
     readonly max: number;
 }
 
 // @public
 export class RteMaxCharsValidator extends RteTextValidator {
-    // (undocumented)
     protected build(): ValidatorFn;
-    // (undocumented)
     readonly rteMaxChars: i0.InputSignalWithTransform<number, unknown>;
     // (undocumented)
     static ɵdir: i0.ɵɵDirectiveDeclaration<RteMaxCharsValidator, "rte-editor[rteMaxChars]", never, { "rteMaxChars": { "alias": "rteMaxChars"; "required": true; "isSignal": true; }; }, {}, never, never, true, never>;
@@ -86,21 +77,16 @@ export class RteMaxCharsValidator extends RteTextValidator {
 // @public
 export function rteMaxWords<K extends PathKind = PathKind.Root>(path: RtePath<K>, max: number | LogicFn<string, number | undefined, K>): void;
 
-// @public (undocumented)
+// @public
 export interface RteMaxWordsError extends ValidationError {
-    // (undocumented)
     readonly actual: number;
-    // (undocumented)
     readonly kind: 'rteMaxWords';
-    // (undocumented)
     readonly max: number;
 }
 
 // @public
 export class RteMaxWordsValidator extends RteTextValidator {
-    // (undocumented)
     protected build(): ValidatorFn;
-    // (undocumented)
     readonly rteMaxWords: i0.InputSignalWithTransform<number, unknown>;
     // (undocumented)
     static ɵdir: i0.ɵɵDirectiveDeclaration<RteMaxWordsValidator, "rte-editor[rteMaxWords]", never, { "rteMaxWords": { "alias": "rteMaxWords"; "required": true; "isSignal": true; }; }, {}, never, never, true, never>;
@@ -113,9 +99,7 @@ export function rteNoEmptyHeadings<K extends PathKind = PathKind.Root>(path: Rte
 
 // @public
 export class RteNoEmptyHeadingsValidator extends RteTextValidator {
-    // (undocumented)
     protected build(): ValidatorFn | null;
-    // (undocumented)
     readonly rteNoEmptyHeadings: i0.InputSignalWithTransform<boolean, unknown>;
     // (undocumented)
     static ɵdir: i0.ɵɵDirectiveDeclaration<RteNoEmptyHeadingsValidator, "rte-editor[rteNoEmptyHeadings]", never, { "rteNoEmptyHeadings": { "alias": "rteNoEmptyHeadings"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;
@@ -123,14 +107,12 @@ export class RteNoEmptyHeadingsValidator extends RteTextValidator {
     static ɵfac: i0.ɵɵFactoryDeclaration<RteNoEmptyHeadingsValidator, never>;
 }
 
-// @public (undocumented)
+// @public
 export type RtePath<K extends PathKind> = SchemaPath<string, SchemaPathRules.Supported, K>;
 
 // @public
 export interface RteReactiveValidationError {
-    // (undocumented)
     readonly context?: unknown;
-    // (undocumented)
     readonly kind: string;
 }
 
@@ -139,17 +121,14 @@ export function rteRequired<K extends PathKind = PathKind.Root>(path: RtePath<K>
     when?: LogicFn<string, boolean, K>;
 }): void;
 
-// @public (undocumented)
+// @public
 export interface RteRequiredError extends ValidationError {
-    // (undocumented)
     readonly kind: 'rteRequired';
 }
 
 // @public
 export class RteRequiredValidator extends RteTextValidator {
-    // (undocumented)
     protected build(): ValidatorFn | null;
-    // (undocumented)
     readonly rteRequired: i0.InputSignalWithTransform<boolean, unknown>;
     // (undocumented)
     static ɵdir: i0.ɵɵDirectiveDeclaration<RteRequiredValidator, "rte-editor[rteRequired]", never, { "rteRequired": { "alias": "rteRequired"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;
@@ -167,9 +146,7 @@ export interface RteSafeLinksOptions {
 
 // @public
 export class RteSafeLinksValidator extends RteTextValidator {
-    // (undocumented)
     protected build(): ValidatorFn;
-    // (undocumented)
     readonly rteSafeLinks: i0.InputSignal<"" | RteSafeLinksOptions | undefined>;
     // (undocumented)
     static ɵdir: i0.ɵɵDirectiveDeclaration<RteSafeLinksValidator, "rte-editor[rteSafeLinks]", never, { "rteSafeLinks": { "alias": "rteSafeLinks"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;
@@ -179,11 +156,8 @@ export class RteSafeLinksValidator extends RteTextValidator {
 
 // @public
 export interface RteUnsafeLinksError extends ValidationError {
-    // (undocumented)
     readonly count: number;
-    // (undocumented)
     readonly hrefs: readonly string[];
-    // (undocumented)
     readonly kind: 'rteUnsafeLinks';
 }
 
@@ -201,13 +175,11 @@ export class RteUploadsFinishedValidator extends RteCountValidator {
 
 // @public
 export interface RteUploadsPendingError extends ValidationError {
-    // (undocumented)
     readonly count: number;
-    // (undocumented)
     readonly kind: 'rteUploadsPending';
 }
 
-// @public (undocumented)
+// @public
 export type RteValidationError = RteRequiredError | RteMaxCharsError | RteMaxWordsError | RteUploadsPendingError | RteImagesMissingAltError | RteUnsafeLinksError | RteEmptyHeadingsError;
 
 // @public
@@ -218,7 +190,5 @@ export const RteValidators: {
     safeLinks(options?: RteSafeLinksOptions): ValidatorFn;
     noEmptyHeadings(): ValidatorFn;
 };
-
-// (No @packageDocumentation comment for this package)
 
 ```

@@ -64,7 +64,9 @@ export abstract class RteTextValidator {
 /** `{ rteRequired: true }` sem texto e sem mídia. Seletor `rteRequired` (não o `required` nativo). */
 @Directive({ selector: 'rte-editor[rteRequired]' })
 export class RteRequiredValidator extends RteTextValidator {
+  /** Liga (padrão) ou desliga a exigência de conteúdo. */
   readonly rteRequired = input(true, { transform: booleanAttribute });
+  /** Cria o validador, ou `null` quando a entrada está desligada. */
   protected build(): ValidatorFn | null {
     return this.rteRequired() ? RteValidators.required : null;
   }
@@ -73,9 +75,11 @@ export class RteRequiredValidator extends RteTextValidator {
 /** `{ rteMaxChars: { max, actual } }`; `[rteMaxChars]="n"` (mesma medida do `textStats()`). */
 @Directive({ selector: 'rte-editor[rteMaxChars]' })
 export class RteMaxCharsValidator extends RteTextValidator {
+  /** Limite máximo de caracteres. */
   readonly rteMaxChars = input.required<number, unknown>({
     transform: numberAttribute,
   });
+  /** Cria o validador com o limite atual. */
   protected build(): ValidatorFn {
     return RteValidators.maxChars(this.rteMaxChars());
   }
@@ -84,9 +88,11 @@ export class RteMaxCharsValidator extends RteTextValidator {
 /** `{ rteMaxWords: { max, actual } }`; `[rteMaxWords]="n"`. */
 @Directive({ selector: 'rte-editor[rteMaxWords]' })
 export class RteMaxWordsValidator extends RteTextValidator {
+  /** Limite máximo de palavras. */
   readonly rteMaxWords = input.required<number, unknown>({
     transform: numberAttribute,
   });
+  /** Cria o validador com o limite atual. */
   protected build(): ValidatorFn {
     return RteValidators.maxWords(this.rteMaxWords());
   }
@@ -95,7 +101,11 @@ export class RteMaxWordsValidator extends RteTextValidator {
 /** `{ rteUnsafeLinks: { count, ... } }`; `rteSafeLinks` ou `[rteSafeLinks]="{ policy }"`. */
 @Directive({ selector: 'rte-editor[rteSafeLinks]' })
 export class RteSafeLinksValidator extends RteTextValidator {
+  /**
+   * Opções da conferência (por exemplo, a política de links); vazio usa a política padrão.
+   */
   readonly rteSafeLinks = input<RteSafeLinksOptions | '' | undefined>('');
+  /** Cria o validador com as opções atuais. */
   protected build(): ValidatorFn {
     const options = this.rteSafeLinks();
     return RteValidators.safeLinks(options === '' ? undefined : options);
@@ -105,7 +115,9 @@ export class RteSafeLinksValidator extends RteTextValidator {
 /** `{ rteEmptyHeadings: { count } }` com títulos vazios; `[rteNoEmptyHeadings]="false"` desliga. */
 @Directive({ selector: 'rte-editor[rteNoEmptyHeadings]' })
 export class RteNoEmptyHeadingsValidator extends RteTextValidator {
+  /** Liga (padrão) ou desliga a conferência de títulos vazios. */
   readonly rteNoEmptyHeadings = input(true, { transform: booleanAttribute });
+  /** Cria o validador, ou `null` quando a entrada está desligada. */
   protected build(): ValidatorFn | null {
     return this.rteNoEmptyHeadings() ? RteValidators.noEmptyHeadings() : null;
   }

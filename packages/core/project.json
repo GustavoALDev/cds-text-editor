@@ -17,7 +17,7 @@
     },
     "verify-package": {
       "executor": "nx:run-commands",
-      "dependsOn": ["build"],
+      "dependsOn": ["build", "api"],
       "inputs": [
         "production",
         "^production",
@@ -78,6 +78,11 @@
         },
         "{projectRoot}/api/**/*",
         "{workspaceRoot}/tools/api-report.mjs",
+        "{workspaceRoot}/tools/css-api.mjs",
+        "{projectRoot}/styles/*.css",
+        "{projectRoot}/src/*.css",
+        "{projectRoot}/README.md",
+        "{workspaceRoot}/apps/docs/content/guia/*.md",
         {
           "env": "UPDATE_API"
         }
@@ -85,7 +90,7 @@
       "outputs": ["{projectRoot}/api"],
       "cache": true,
       "options": {
-        "command": "node tools/api-report.mjs packages/core",
+        "command": "node tools/api-report.mjs packages/core && node tools/css-api.mjs packages/core",
         "cwd": "{workspaceRoot}"
       }
     },
