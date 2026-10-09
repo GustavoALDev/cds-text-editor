@@ -9,7 +9,7 @@ import {
   type Rule,
 } from 'postcss';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { DEFAULT_EMBED_PROVIDERS } from './embeds/providers';
+import { RTE_EMBED_PROVIDERS } from './embeds/providers';
 import { RTE_HIGHLIGHT_COLORS, RTE_TEXT_COLORS } from './schema/palette';
 import { getHtmlSchema } from './schema/get-html-schema';
 
@@ -99,7 +99,7 @@ function schemaClasses(): string[] {
       embeds: true,
       newsBlocks: true,
     },
-    embedProviders: DEFAULT_EMBED_PROVIDERS,
+    embedProviders: RTE_EMBED_PROVIDERS,
   });
   const values = new Set<string>();
   for (const spec of Object.values(schema.elements))

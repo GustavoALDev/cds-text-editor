@@ -1,9 +1,9 @@
-import type { DraftStorage } from '@cds/rte-core';
+import type { RteDraftStorage } from '@cds/rte-core';
 
 /** Rascunho do editor (S3): tudo opcional, padrões do core. */
 export interface RteDraftConfig {
   /** Padrão: `createLocalDraftStorage()` (cai para memória sem `localStorage`). */
-  readonly storage?: DraftStorage;
+  readonly storage?: RteDraftStorage;
   /** Idade máxima do rascunho em ms; padrão do core (7 dias). */
   readonly maxAgeMs?: number;
   /** Mostra o aviso de restauração embutido (padrão `true`, S6). */

@@ -9,7 +9,6 @@ import * as _cds_rte_angular from '@cds/rte-angular';
 import * as _cds_rte_core from '@cds/rte-core';
 import * as _cds_rte_core_extensions from '@cds/rte-core/extensions';
 import { clearLocalDrafts } from '@cds/rte-core';
-import { DraftStorage } from '@cds/rte-core';
 import { Editor } from '@tiptap/core';
 import { EnvironmentProviders } from '@angular/core';
 import { FormValueControl } from '@angular/forms/signals';
@@ -19,6 +18,7 @@ import { RteAttrRule } from '@cds/rte-core';
 import { RteCharLimitState } from '@cds/rte-core/extensions';
 import { RteCodeLanguage } from '@cds/rte-core/code-languages';
 import { RteContentLabels } from '@cds/rte-core/extensions';
+import { RteDraftStorage } from '@cds/rte-core';
 import { RteEditorOptions } from '@cds/rte-core/extensions';
 import { RteHtmlSchema } from '@cds/rte-core';
 import { RteImageAlign } from '@cds/rte-core/extensions';
@@ -260,7 +260,7 @@ export interface RteDraftAvailable {
 export interface RteDraftConfig {
     readonly maxAgeMs?: number;
     readonly prompt?: boolean;
-    readonly storage?: DraftStorage;
+    readonly storage?: RteDraftStorage;
 }
 
 // @public

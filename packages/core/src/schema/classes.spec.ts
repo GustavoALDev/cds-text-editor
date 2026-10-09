@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_EMBED_PROVIDERS } from '../embeds/providers';
+import { RTE_EMBED_PROVIDERS } from '../embeds/providers';
 import { isAllowedClass } from './classes';
 import { getHtmlSchema } from './get-html-schema';
 import type { RteElementSpec } from './types';
@@ -38,7 +38,7 @@ describe('isAllowedClass', () => {
 
   it('getHtmlSchema aceita listas readonly', () => {
     const schema = getHtmlSchema({
-      embedProviders: DEFAULT_EMBED_PROVIDERS,
+      embedProviders: RTE_EMBED_PROVIDERS,
       mediaHosts: ['a.com'] as const,
     });
     expect(schema.version).toBe(1);

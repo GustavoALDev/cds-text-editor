@@ -3,14 +3,14 @@
  * Em computadores compartilhados, chame `clear()` no logout.
  */
 
-export interface DraftStorage {
+export interface RteDraftStorage {
   get(key: string): string | null;
   set(key: string, value: string): void;
   remove(key: string): void;
 }
 
-export interface DraftStoreOptions {
-  storage: DraftStorage;
+export interface RteDraftStoreOptions {
+  storage: RteDraftStorage;
   key: string;
   /** Idade máxima do rascunho em ms (padrão: 7 dias). */
   maxAgeMs?: number | undefined;
@@ -18,7 +18,7 @@ export interface DraftStoreOptions {
   now?: (() => number) | undefined;
 }
 
-export interface DraftStore {
+export interface RteDraftStore {
   /** Devolve `false` se o armazenamento falhar (cota, bloqueio). */
   save(html: string): boolean;
   load(): { html: string; savedAt: number } | null;
@@ -30,7 +30,7 @@ const DEFAULT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const FUTURE_SKEW_MS = 60_000;
 const PROBE_KEY = '__rte_draft_probe__';
 
-export function createMemoryDraftStorage(): DraftStorage {
+export function createMemoryDraftStorage(): RteDraftStorage {
   const data = new Map<string, string>();
   return {
     get: (key) => data.get(key) ?? null,
@@ -46,7 +46,7 @@ type WebStorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
  * `globalThis.localStorage` só acontece aqui (nunca no topo do módulo).
  * Erros em tempo de chamada propagam; `createDraftStore` os converte.
  */
-export function createLocalDraftStorage(): DraftStorage {
+export function createLocalDraftStorage(): RteDraftStorage {
   try {
     const ls = (globalThis as { localStorage?: WebStorageLike }).localStorage;
     if (ls) {
@@ -64,7 +64,7 @@ export function createLocalDraftStorage(): DraftStorage {
   return createMemoryDraftStorage();
 }
 
-export function createDraftStore(options: DraftStoreOptions): DraftStore {
+export function createDraftStore(options: RteDraftStoreOptions): RteDraftStore {
   const { storage, key } = options;
   const maxAgeMs = options.maxAgeMs ?? DEFAULT_MAX_AGE_MS;
   const now = options.now ?? Date.now;

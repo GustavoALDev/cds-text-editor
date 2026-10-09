@@ -1,5 +1,5 @@
 export { parseSrcset, formatSrcset } from './schema/srcset';
-export type { SrcsetCandidate } from './schema/srcset';
+export type { RteSrcsetCandidate } from './schema/srcset';
 
 export type RteResizeCorner = 'nw' | 'ne' | 'sw' | 'se';
 

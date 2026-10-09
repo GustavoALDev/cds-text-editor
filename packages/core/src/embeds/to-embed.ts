@@ -1,5 +1,5 @@
 import { isAllowedUrl } from '../schema/url';
-import { DEFAULT_EMBED_PROVIDERS } from './providers';
+import { RTE_EMBED_PROVIDERS } from './providers';
 import { validateEmbedProvider } from './validate-provider';
 import type { RteEmbedProvider } from '../schema/types';
 
@@ -32,7 +32,7 @@ function validHosts(p: RteEmbedProvider): string[] | null {
  */
 export function toEmbed(
   url: string,
-  providers: readonly RteEmbedProvider[] = DEFAULT_EMBED_PROVIDERS,
+  providers: readonly RteEmbedProvider[] = RTE_EMBED_PROVIDERS,
 ): RteEmbed | null {
   if (typeof url !== 'string') return null;
   for (const provider of providers) {

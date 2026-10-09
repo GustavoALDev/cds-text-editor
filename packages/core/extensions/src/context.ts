@@ -1,6 +1,6 @@
 import type { RteCodeLanguage } from '../../code-languages/src/index';
-import { DEFAULT_EMBED_PROVIDERS } from '../../src/embeds/providers';
-import { DEFAULT_LINK_POLICY } from '../../src/links';
+import { RTE_EMBED_PROVIDERS } from '../../src/embeds/providers';
+import { RTE_DEFAULT_LINK_POLICY } from '../../src/links';
 import type { RteLinkPolicy } from '../../src/links';
 import { getHtmlSchema } from '../../src/schema/get-html-schema';
 import type { RteEmbedProvider, RteHtmlSchema } from '../../src/schema/types';
@@ -34,8 +34,8 @@ export function createExtensionContext(
   return {
     schema,
     idPrefix: schema.idPrefix,
-    linkPolicy: { ...DEFAULT_LINK_POLICY, ...options.linkPolicy },
-    providers: options.embedProviders ?? DEFAULT_EMBED_PROVIDERS,
+    linkPolicy: { ...RTE_DEFAULT_LINK_POLICY, ...options.linkPolicy },
+    providers: options.embedProviders ?? RTE_EMBED_PROVIDERS,
     codeLanguages: options.codeLanguages ?? [],
     imageMinWidth: options.image?.minWidth ?? DEFAULT_IMAGE_MIN_WIDTH,
     labels: () => resolveContentLabels(source),

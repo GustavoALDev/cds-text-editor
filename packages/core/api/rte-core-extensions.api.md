@@ -355,6 +355,12 @@ export interface RteSearchState {
 }
 
 // @public (undocumented)
+export interface RteSerializeHtmlOptions {
+    idPrefix?: string;
+    labels?: RteContentLabelsSource;
+}
+
+// @public (undocumented)
 export interface RteSlashItem {
     readonly command?: (chain: ChainedCommands, editor: Editor) => ChainedCommands;
     readonly group?: string;
@@ -456,13 +462,7 @@ export interface RteVideoTrack {
 }
 
 // @public
-export function serializeRteHtml(doc: Node_2, options?: SerializeRteHtmlOptions): string;
-
-// @public (undocumented)
-export interface SerializeRteHtmlOptions {
-    idPrefix?: string;
-    labels?: RteContentLabelsSource;
-}
+export function serializeRteHtml(doc: Node_2, options?: RteSerializeHtmlOptions): string;
 
 // (No @packageDocumentation comment for this package)
 

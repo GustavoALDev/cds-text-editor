@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RTE_CODE_LANGUAGES } from '../../code-languages/src/index';
 import { validateHtml } from '../../html/src/validate-html';
 import type { RteHtmlViolation } from '../../html/src/validate-html';
-import { DEFAULT_EMBED_PROVIDERS } from '../../src/embeds/providers';
+import { RTE_EMBED_PROVIDERS } from '../../src/embeds/providers';
 import { getHtmlSchema } from '../../src/schema/get-html-schema';
 import type {
   RteEmbedProvider,
@@ -245,7 +245,7 @@ describe('recursos desligados e variações de opção', () => {
     ['embedProviders []', { embedProviders: [] }],
     [
       'provedor do consumidor',
-      { embedProviders: [...DEFAULT_EMBED_PROVIDERS, CONSUMER] },
+      { embedProviders: [...RTE_EMBED_PROVIDERS, CONSUMER] },
     ],
   ])('%s: saída sem violação', (_, options) => {
     const out = getRteHtml(load({ ...BASE, ...options }));
@@ -265,7 +265,7 @@ describe('recursos desligados e variações de opção', () => {
   it('o provedor do consumidor convive com os padrão', () => {
     const editor = load({
       ...BASE,
-      embedProviders: [...DEFAULT_EMBED_PROVIDERS, CONSUMER],
+      embedProviders: [...RTE_EMBED_PROVIDERS, CONSUMER],
     });
     expect(getRteHtml(editor)).toBe(fixture);
   });

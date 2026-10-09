@@ -4,7 +4,7 @@ import {
   createDraftStore,
   createLocalDraftStorage,
   createMemoryDraftStorage,
-  type DraftStorage,
+  type RteDraftStorage,
 } from './draft';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -92,7 +92,7 @@ describe('createDraftStore', () => {
   });
 
   it('save devolve false se storage.set lança; load devolve null se get lança', () => {
-    const bad: DraftStorage = {
+    const bad: RteDraftStorage = {
       get() {
         throw new Error('x');
       },
@@ -110,7 +110,7 @@ describe('createDraftStore', () => {
   });
 
   it('load não lança se remove lançar ao descartar envelope inválido', () => {
-    const storage: DraftStorage = {
+    const storage: RteDraftStorage = {
       get: () => '{nope',
       set: () => undefined,
       remove() {
@@ -166,7 +166,7 @@ describe('createLocalDraftStorage', () => {
     delete g['localStorage'];
   });
 
-  function roundTrip(s: DraftStorage) {
+  function roundTrip(s: RteDraftStorage) {
     s.set('a', '1');
     expect(s.get('a')).toBe('1');
     s.remove('a');

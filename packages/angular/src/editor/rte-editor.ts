@@ -28,7 +28,7 @@ import {
   type RtePaletteColor,
 } from '@cds/rte-core';
 import type { RteCodeLanguage } from '@cds/rte-core/code-languages';
-import { DEFAULT_EMBED_PROVIDERS } from '@cds/rte-core/embeds';
+import { RTE_EMBED_PROVIDERS } from '@cds/rte-core/embeds';
 import {
   createEditorExtensions,
   getSearchState,
@@ -429,7 +429,7 @@ export class RteEditor implements FormValueControl<string> {
 
   /**
    * Nomes dos provedores de *embed* ativos (pré-voo 4): a dica do diálogo e
-   * a condição do item `embed`. `DEFAULT_EMBED_PROVIDERS` fica no *chunk*
+   * a condição do item `embed`. `RTE_EMBED_PROVIDERS` fica no *chunk*
    * principal; o `rte-dialogs` só recebe os nomes.
    */
   /**
@@ -444,7 +444,7 @@ export class RteEditor implements FormValueControl<string> {
   /** @internal */
   protected readonly embedProviderNames: Signal<readonly string[]> = computed(
     () =>
-      (this.editorConfig().embedProviders ?? DEFAULT_EMBED_PROVIDERS).map(
+      (this.editorConfig().embedProviders ?? RTE_EMBED_PROVIDERS).map(
         (p) => p.name,
       ),
     { equal: sameIds },

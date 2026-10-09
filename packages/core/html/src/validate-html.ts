@@ -28,7 +28,7 @@ export type RteHtmlViolation = {
   path: string;
 };
 
-export interface ValidateHtmlOptions {
+export interface RteValidateHtmlOptions {
   /** `canonical` (padrão): igual à saída do sanitizador; `accepted`: só aceito. */
   mode?: 'canonical' | 'accepted';
   /** Padrão 256. */
@@ -100,7 +100,7 @@ function checkStyle(
 export function validateHtml(
   html: string,
   schema: RteHtmlSchema,
-  options: ValidateHtmlOptions = {},
+  options: RteValidateHtmlOptions = {},
 ): RteHtmlViolation[] {
   const canonical = (options.mode ?? 'canonical') === 'canonical';
   const maxDepth = resolveMaxDepth(options.maxDepth);

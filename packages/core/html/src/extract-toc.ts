@@ -9,7 +9,7 @@ export interface RteTocEntry {
   level: number;
 }
 
-export interface ExtractTocOptions {
+export interface RteExtractTocOptions {
   /** Níveis de título incluídos (padrão `[2, 3]`). */
   levels?: number[];
   /** Prefixo dos ids (padrão `'rt-'`); `RangeError` se inválido. */
@@ -30,7 +30,7 @@ const HEADING = /^h([1-6])$/;
  */
 export function extractToc(
   html: string,
-  options: ExtractTocOptions = {},
+  options: RteExtractTocOptions = {},
 ): RteTocEntry[] {
   const maxDepth = resolveMaxDepth(options.maxDepth);
   const levels = new Set(options.levels ?? [2, 3]);

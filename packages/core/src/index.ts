@@ -1,6 +1,4 @@
-export const CORE_VERSION = '0.0.0';
-
-export { getHtmlSchema, DEFAULT_ID_PREFIX } from './schema/get-html-schema';
+export { getHtmlSchema, RTE_DEFAULT_ID_PREFIX } from './schema/get-html-schema';
 export {
   normalizeAttribute,
   matchesRule,
@@ -33,7 +31,11 @@ export type {
   RteEmbedProvider,
 } from './schema/types';
 
-export { normalizeHref, getLinkAttributes, DEFAULT_LINK_POLICY } from './links';
+export {
+  normalizeHref,
+  getLinkAttributes,
+  RTE_DEFAULT_LINK_POLICY,
+} from './links';
 export type { RteLinkPolicy } from './links';
 
 export { slugify, createHeadingIds } from './headings';
@@ -47,7 +49,11 @@ export {
   RTE_TABLE_CELL_MIN_WIDTH,
 } from './table-sizing';
 export type { RteTableSizing } from './table-sizing';
-export type { RteResizeCorner, RteResizeInput, SrcsetCandidate } from './image';
+export type {
+  RteResizeCorner,
+  RteResizeInput,
+  RteSrcsetCandidate,
+} from './image';
 
 export {
   clearLocalDrafts,
@@ -55,4 +61,8 @@ export {
   createLocalDraftStorage,
   createMemoryDraftStorage,
 } from './draft';
-export type { DraftStorage, DraftStoreOptions, DraftStore } from './draft';
+export type {
+  RteDraftStorage,
+  RteDraftStoreOptions,
+  RteDraftStore,
+} from './draft';

@@ -1,8 +1,8 @@
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_EMBED_PROVIDERS, YOUTUBE_PROVIDER } from '../embeds/providers';
+import { RTE_EMBED_PROVIDERS, RTE_YOUTUBE_PROVIDER } from '../embeds/providers';
 import {
-  DEFAULT_ID_PREFIX,
+  RTE_DEFAULT_ID_PREFIX,
   assertEnsureTokens,
   getHtmlSchema,
   mergeElements,
@@ -53,9 +53,12 @@ function isDeepFrozen(v: unknown): boolean {
 }
 
 describe('assertIdPrefix', () => {
-  it.each(['rt-', 'x-', 'a'.repeat(15) + '-', 'news-2-', 'a--'])('aceita %j', (p) => {
-    expect(() => assertIdPrefix(p)).not.toThrow();
-  });
+  it.each(['rt-', 'x-', 'a'.repeat(15) + '-', 'news-2-', 'a--'])(
+    'aceita %j',
+    (p) => {
+      expect(() => assertIdPrefix(p)).not.toThrow();
+    },
+  );
 
   it.each([
     'X',
@@ -70,12 +73,9 @@ describe('assertIdPrefix', () => {
     'location',
     '-',
     'a'.repeat(16) + '-',
-  ])(
-    'recusa %j com RangeError',
-    (p) => {
-      expect(() => assertIdPrefix(p)).toThrow(RangeError);
-    },
-  );
+  ])('recusa %j com RangeError', (p) => {
+    expect(() => assertIdPrefix(p)).toThrow(RangeError);
+  });
 });
 
 describe('getHtmlSchema: padrão', () => {
@@ -85,7 +85,7 @@ describe('getHtmlSchema: padrão', () => {
     expect(s.version).toBe(1);
     expect(s.features).toEqual(ALL_FEATURES);
     expect(s.idPrefix).toBe('rt-');
-    expect(DEFAULT_ID_PREFIX).toBe('rt-');
+    expect(RTE_DEFAULT_ID_PREFIX).toBe('rt-');
   });
 
   it('id dos títulos: padrão com prefixo, opcional', () => {
@@ -325,7 +325,7 @@ describe('getHtmlSchema: padrão', () => {
       'open.spotify.com',
     ]);
     expect(src.patterns).toEqual(
-      DEFAULT_EMBED_PROVIDERS.flatMap((p) => p.srcPatterns),
+      RTE_EMBED_PROVIDERS.flatMap((p) => p.srcPatterns),
     );
     expect(iframe?.attributes['title']?.required).toBe(true);
     expect(Object.keys(iframe?.styles ?? {})).toEqual(['aspect-ratio']);
@@ -485,9 +485,12 @@ describe('getHtmlSchema: opções', () => {
     );
   });
 
-  it.each(['X', '1a', 'a'.repeat(17), 'x', 'doc'])('idPrefix %j lança RangeError', (p) => {
-    expect(() => getHtmlSchema({ idPrefix: p })).toThrow(RangeError);
-  });
+  it.each(['X', '1a', 'a'.repeat(17), 'x', 'doc'])(
+    'idPrefix %j lança RangeError',
+    (p) => {
+      expect(() => getHtmlSchema({ idPrefix: p })).toThrow(RangeError);
+    },
+  );
 
   it('tables: false retira as tags de tabela', () => {
     const s = getHtmlSchema({ features: { tables: false } });
@@ -576,10 +579,10 @@ describe('getHtmlSchema: opções', () => {
   });
 
   it('só os provedores ativos entram no iframe', () => {
-    const s = getHtmlSchema({ embedProviders: [YOUTUBE_PROVIDER] });
+    const s = getHtmlSchema({ embedProviders: [RTE_YOUTUBE_PROVIDER] });
     const src = s.elements['iframe']?.attributes['src']?.rule as RteUrlRule;
     expect(src.hosts).toEqual(['www.youtube-nocookie.com']);
-    expect(src.patterns).toEqual(YOUTUBE_PROVIDER.srcPatterns);
+    expect(src.patterns).toEqual(RTE_YOUTUBE_PROVIDER.srcPatterns);
     expect(isAllowedUrl(src, 'https://player.vimeo.com/video/123')).toBeNull();
   });
 
@@ -611,11 +614,13 @@ describe('getHtmlSchema: opções', () => {
   it('provedor com id inválido ou repetido lança', () => {
     expect(() =>
       getHtmlSchema({
-        embedProviders: [{ ...YOUTUBE_PROVIDER, id: 'Bad Id' }],
+        embedProviders: [{ ...RTE_YOUTUBE_PROVIDER, id: 'Bad Id' }],
       }),
     ).toThrow(TypeError);
     expect(() =>
-      getHtmlSchema({ embedProviders: [YOUTUBE_PROVIDER, YOUTUBE_PROVIDER] }),
+      getHtmlSchema({
+        embedProviders: [RTE_YOUTUBE_PROVIDER, RTE_YOUTUBE_PROVIDER],
+      }),
     ).toThrow(TypeError);
   });
 
@@ -979,7 +984,7 @@ describe('provedores de embed: mesmo validador do toEmbed', () => {
 
   it('padrões padrão continuam válidos', () => {
     expect(() =>
-      getHtmlSchema({ embedProviders: [...DEFAULT_EMBED_PROVIDERS] }),
+      getHtmlSchema({ embedProviders: [...RTE_EMBED_PROVIDERS] }),
     ).not.toThrow();
   });
 });

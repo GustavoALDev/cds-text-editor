@@ -5,22 +5,10 @@
 ```ts
 
 // @public
-export function extractToc(html: string, options?: ExtractTocOptions): RteTocEntry[];
-
-// @public (undocumented)
-export interface ExtractTocOptions {
-    idPrefix?: string;
-    levels?: number[];
-    maxDepth?: number;
-}
+export function extractToc(html: string, options?: RteExtractTocOptions): RteTocEntry[];
 
 // @public
-export function htmlToText(html: string, options?: HtmlToTextOptions): string;
-
-// @public (undocumented)
-export interface HtmlToTextOptions {
-    maxDepth?: number;
-}
+export function htmlToText(html: string, options?: RteHtmlToTextOptions): string;
 
 // @public
 export function inspectRteHtml(html: string): RteHtmlInspection;
@@ -93,6 +81,13 @@ export interface RteElementSpec {
 }
 
 // @public (undocumented)
+export interface RteExtractTocOptions {
+    idPrefix?: string;
+    levels?: number[];
+    maxDepth?: number;
+}
+
+// @public (undocumented)
 export type RteFeatureId = 'base' | 'links' | 'colors' | 'code' | 'tables' | 'tasks' | 'media' | 'embeds' | 'newsBlocks';
 
 // @public
@@ -117,6 +112,11 @@ export interface RteHtmlSchema {
     };
     // (undocumented)
     version: 1;
+}
+
+// @public (undocumented)
+export interface RteHtmlToTextOptions {
+    maxDepth?: number;
 }
 
 // @public (undocumented)
@@ -159,14 +159,14 @@ export type RteUrlRule = {
     maxLength: number;
 };
 
-// @public
-export function validateHtml(html: string, schema: RteHtmlSchema, options?: ValidateHtmlOptions): RteHtmlViolation[];
-
 // @public (undocumented)
-export interface ValidateHtmlOptions {
+export interface RteValidateHtmlOptions {
     maxDepth?: number;
     mode?: 'canonical' | 'accepted';
 }
+
+// @public
+export function validateHtml(html: string, schema: RteHtmlSchema, options?: RteValidateHtmlOptions): RteHtmlViolation[];
 
 // (No @packageDocumentation comment for this package)
 

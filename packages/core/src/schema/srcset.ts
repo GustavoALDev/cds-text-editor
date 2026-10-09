@@ -1,4 +1,4 @@
-export interface SrcsetCandidate {
+export interface RteSrcsetCandidate {
   url: string;
   descriptor?: string;
 }
@@ -11,12 +11,12 @@ const DESCRIPTOR =
  * nem vírgulas e descritor `Nw` ou `Nx`. Com mais de um candidato, todos
  * precisam de descritor. Devolve `null` se algo estiver fora do formato.
  */
-export function parseSrcset(value: string): SrcsetCandidate[] | null {
-  const out: SrcsetCandidate[] = [];
+export function parseSrcset(value: string): RteSrcsetCandidate[] | null {
+  const out: RteSrcsetCandidate[] = [];
   for (const raw of value.split(',')) {
     const [url, descriptor, extra] = raw.trim().split(/\s+/);
     if (!url || extra !== undefined) return null;
-    const candidate: SrcsetCandidate = { url };
+    const candidate: RteSrcsetCandidate = { url };
     if (descriptor !== undefined) {
       if (!DESCRIPTOR.test(descriptor)) return null;
       candidate.descriptor = descriptor;
@@ -28,7 +28,7 @@ export function parseSrcset(value: string): SrcsetCandidate[] | null {
   return out;
 }
 
-export function formatSrcset(candidates: SrcsetCandidate[]): string {
+export function formatSrcset(candidates: RteSrcsetCandidate[]): string {
   return candidates
     .map((c) =>
       c.descriptor === undefined ? c.url : `${c.url} ${c.descriptor}`,

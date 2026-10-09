@@ -8,7 +8,16 @@
 export function assertEmbedProvider(p: RteEmbedProvider): void;
 
 // @public (undocumented)
-export const DEFAULT_EMBED_PROVIDERS: readonly RteEmbedProvider[];
+export const RTE_EMBED_PROVIDERS: readonly RteEmbedProvider[];
+
+// @public (undocumented)
+export const RTE_SPOTIFY_PROVIDER: RteEmbedProvider;
+
+// @public (undocumented)
+export const RTE_VIMEO_PROVIDER: RteEmbedProvider;
+
+// @public (undocumented)
+export const RTE_YOUTUBE_PROVIDER: RteEmbedProvider;
 
 // @public (undocumented)
 export interface RteEmbed {
@@ -46,17 +55,8 @@ export interface RteEmbedProvider {
     } | null;
 }
 
-// @public (undocumented)
-export const SPOTIFY_PROVIDER: RteEmbedProvider;
-
 // @public
 export function toEmbed(url: string, providers?: readonly RteEmbedProvider[]): RteEmbed | null;
-
-// @public (undocumented)
-export const VIMEO_PROVIDER: RteEmbedProvider;
-
-// @public (undocumented)
-export const YOUTUBE_PROVIDER: RteEmbedProvider;
 
 // (No @packageDocumentation comment for this package)
 

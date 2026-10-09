@@ -9,7 +9,7 @@ import {
   createDraftStore,
   createLocalDraftStorage,
   createMemoryDraftStorage,
-  type DraftStorage,
+  type RteDraftStorage,
 } from '@cds/rte-core';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import {
@@ -45,7 +45,7 @@ export interface DraftSetup {
   host: DraftHost;
   cmp: RteEditor;
   editor: Editor;
-  storage: DraftStorage;
+  storage: RteDraftStorage;
   loader: ReturnType<typeof vi.fn<RteDraftLoader>>;
 }
 
@@ -54,7 +54,7 @@ export const realDraftLoader: RteDraftLoader = () =>
 
 /** Grava um rascunho no armazenamento, como o editor o faria. */
 export function seedDraft(
-  storage: DraftStorage,
+  storage: RteDraftStorage,
   key: string,
   html: string,
   now?: () => number,
@@ -67,7 +67,10 @@ export function seedDraft(
 }
 
 /** Lê o HTML gravado de uma chave, ou `null`. */
-export function storedDraft(storage: DraftStorage, key: string): string | null {
+export function storedDraft(
+  storage: RteDraftStorage,
+  key: string,
+): string | null {
   return (
     createDraftStore({ storage, key: `rte-draft:${key}` }).load()?.html ?? null
   );
@@ -76,7 +79,7 @@ export function storedDraft(storage: DraftStorage, key: string): string | null {
 export interface DraftSetupOptions {
   value?: string;
   key?: string | null | undefined;
-  storage?: DraftStorage;
+  storage?: RteDraftStorage;
   /** Sem `storage` no provider: o armazenamento padrão (`localStorage`). */
   defaultStorage?: boolean;
   draft?: RteDraftConfig;

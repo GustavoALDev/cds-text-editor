@@ -2,7 +2,7 @@ import type { Editor } from '@tiptap/core';
 import { DOMSerializer } from '@tiptap/pm/model';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { createHeadingIds } from '../../src/headings';
-import { DEFAULT_ID_PREFIX } from '../../src/schema/id-prefix';
+import { RTE_DEFAULT_ID_PREFIX } from '../../src/schema/id-prefix';
 import { resolveContentLabels } from './labels';
 import { withRenderDocument } from './render-document';
 import {
@@ -17,7 +17,7 @@ import type {
   RteContentLabelsSource,
 } from './types';
 
-export interface SerializeRteHtmlOptions {
+export interface RteSerializeHtmlOptions {
   /** Prefixo dos ids de título (padrão `'rt-'`). */
   idPrefix?: string;
   /** Rótulos dos títulos vazios de caixa (padrão `en`). */
@@ -41,11 +41,11 @@ const CALLOUT_VARIANT = 'rt-callout--';
  */
 export function serializeRteHtml(
   doc: ProseMirrorNode,
-  options: SerializeRteHtmlOptions = {},
+  options: RteSerializeHtmlOptions = {},
 ): string {
   // lança RangeError para prefixo inválido antes de renderizar
   const nextId = createHeadingIds({
-    prefix: options.idPrefix ?? DEFAULT_ID_PREFIX,
+    prefix: options.idPrefix ?? RTE_DEFAULT_ID_PREFIX,
   });
   const labels = resolveContentLabels(options.labels);
   const document = createStringDocument();
@@ -85,7 +85,7 @@ export function getRteHeadings(
   options: { idPrefix?: string } = {},
 ): RteHeading[] {
   const nextId = createHeadingIds({
-    prefix: options.idPrefix ?? DEFAULT_ID_PREFIX,
+    prefix: options.idPrefix ?? RTE_DEFAULT_ID_PREFIX,
   });
   const headings: RteHeading[] = [];
   doc.descendants((node, pos) => {

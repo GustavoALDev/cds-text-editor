@@ -1,7 +1,11 @@
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { dangerousUrl } from './schema/testing/dangerous-urls';
-import { DEFAULT_LINK_POLICY, getLinkAttributes, normalizeHref } from './links';
+import {
+  RTE_DEFAULT_LINK_POLICY,
+  getLinkAttributes,
+  normalizeHref,
+} from './links';
 
 describe('normalizeHref', () => {
   it('completa domínio sem esquema com https', () => {
@@ -53,7 +57,7 @@ describe('normalizeHref', () => {
     expect(() => normalizeHref('a.com', { protocols: [p] })).toThrow(TypeError),
   );
   it('política padrão', () => {
-    expect(DEFAULT_LINK_POLICY).toEqual({
+    expect(RTE_DEFAULT_LINK_POLICY).toEqual({
       protocols: ['https', 'http', 'mailto', 'tel'],
       allowRelative: true,
       defaultRel: [],

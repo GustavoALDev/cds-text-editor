@@ -13,7 +13,7 @@ export interface RteLinkPolicy {
   target: 'preserve' | 'blank' | 'never';
 }
 
-export const DEFAULT_LINK_POLICY: Readonly<RteLinkPolicy> = Object.freeze({
+export const RTE_DEFAULT_LINK_POLICY: Readonly<RteLinkPolicy> = Object.freeze({
   protocols: Object.freeze(['https', 'http', 'mailto', 'tel']) as string[],
   allowRelative: true,
   defaultRel: Object.freeze([]) as unknown as string[],
@@ -27,7 +27,7 @@ const EMAIL = /^[^\s@/:]+@[^\s@/:]+\.[^\s@/:]+$/;
 const BARE_DOMAIN = /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#].*)?$/i;
 
 function resolvePolicy(policy: Partial<RteLinkPolicy>): RteLinkPolicy {
-  return { ...DEFAULT_LINK_POLICY, ...policy };
+  return { ...RTE_DEFAULT_LINK_POLICY, ...policy };
 }
 
 const SAFE_PROTOCOLS = ['https', 'http', 'mailto', 'tel'];

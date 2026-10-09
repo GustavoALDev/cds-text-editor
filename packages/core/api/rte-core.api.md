@@ -16,9 +16,6 @@ export function computeResize(input: RteResizeInput): {
     height: number;
 };
 
-// @public (undocumented)
-export const CORE_VERSION = "0.0.0";
-
 // @public
 export function countCharacters(text: string): number;
 
@@ -26,7 +23,7 @@ export function countCharacters(text: string): number;
 export function countWords(text: string): number;
 
 // @public (undocumented)
-export function createDraftStore(options: DraftStoreOptions): DraftStore;
+export function createDraftStore(options: RteDraftStoreOptions): RteDraftStore;
 
 // @public
 export function createHeadingIds(options?: {
@@ -35,48 +32,10 @@ export function createHeadingIds(options?: {
 }): (text: string) => string;
 
 // @public
-export function createLocalDraftStorage(): DraftStorage;
+export function createLocalDraftStorage(): RteDraftStorage;
 
 // @public (undocumented)
-export function createMemoryDraftStorage(): DraftStorage;
-
-// @public
-export const DEFAULT_ID_PREFIX = "rt-";
-
-// @public (undocumented)
-export const DEFAULT_LINK_POLICY: Readonly<RteLinkPolicy>;
-
-// @public
-export interface DraftStorage {
-    // (undocumented)
-    get(key: string): string | null;
-    // (undocumented)
-    remove(key: string): void;
-    // (undocumented)
-    set(key: string, value: string): void;
-}
-
-// @public (undocumented)
-export interface DraftStore {
-    // (undocumented)
-    clear(): void;
-    // (undocumented)
-    load(): {
-        html: string;
-        savedAt: number;
-    } | null;
-    save(html: string): boolean;
-}
-
-// @public (undocumented)
-export interface DraftStoreOptions {
-    // (undocumented)
-    key: string;
-    maxAgeMs?: number | undefined;
-    now?: (() => number) | undefined;
-    // (undocumented)
-    storage: DraftStorage;
-}
+export function createMemoryDraftStorage(): RteDraftStorage;
 
 // @public
 export function escapeHtmlAttribute(value: string): string;
@@ -85,7 +44,7 @@ export function escapeHtmlAttribute(value: string): string;
 export function escapeHtmlText(text: string): string;
 
 // @public (undocumented)
-export function formatSrcset(candidates: SrcsetCandidate[]): string;
+export function formatSrcset(candidates: RteSrcsetCandidate[]): string;
 
 // @public
 export function getElementSpec(schema: RteHtmlSchema, tag: string): RteElementSpec | undefined;
@@ -127,12 +86,18 @@ export function normalizeHref(input: string, policy?: Partial<RteLinkPolicy>): s
 export function parseColWidth(value: string | null | undefined): number | null;
 
 // @public
-export function parseSrcset(value: string): SrcsetCandidate[] | null;
+export function parseSrcset(value: string): RteSrcsetCandidate[] | null;
 
 // @public
 export function readingTime(text: string, options?: {
     wordsPerMinute?: number;
 }): number;
+
+// @public
+export const RTE_DEFAULT_ID_PREFIX = "rt-";
+
+// @public (undocumented)
+export const RTE_DEFAULT_LINK_POLICY: Readonly<RteLinkPolicy>;
 
 // @public
 export const RTE_HIGHLIGHT_COLORS: readonly RtePaletteColor[];
@@ -182,6 +147,38 @@ export interface RteAttrSpec {
     required?: boolean;
     // (undocumented)
     rule: RteAttrRule;
+}
+
+// @public
+export interface RteDraftStorage {
+    // (undocumented)
+    get(key: string): string | null;
+    // (undocumented)
+    remove(key: string): void;
+    // (undocumented)
+    set(key: string, value: string): void;
+}
+
+// @public (undocumented)
+export interface RteDraftStore {
+    // (undocumented)
+    clear(): void;
+    // (undocumented)
+    load(): {
+        html: string;
+        savedAt: number;
+    } | null;
+    save(html: string): boolean;
+}
+
+// @public (undocumented)
+export interface RteDraftStoreOptions {
+    // (undocumented)
+    key: string;
+    maxAgeMs?: number | undefined;
+    now?: (() => number) | undefined;
+    // (undocumented)
+    storage: RteDraftStorage;
 }
 
 // @public (undocumented)
@@ -351,6 +348,14 @@ export type RteSanitizedAttributes = {
     attribute: string;
 };
 
+// @public (undocumented)
+export interface RteSrcsetCandidate {
+    // (undocumented)
+    descriptor?: string;
+    // (undocumented)
+    url: string;
+}
+
 // @public
 export type RteTableSizing = {
     width: number;
@@ -389,14 +394,6 @@ export function serializeTokens(rule: RteTokensRule, value: string): string | nu
 
 // @public
 export function slugify(text: string, maxLength?: number): string;
-
-// @public (undocumented)
-export interface SrcsetCandidate {
-    // (undocumented)
-    descriptor?: string;
-    // (undocumented)
-    url: string;
-}
 
 // (No @packageDocumentation comment for this package)
 
