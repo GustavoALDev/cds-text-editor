@@ -13,8 +13,6 @@
     "@angular/core": ">=22.2.1 <23",
     "@angular/common": ">=22.2.1 <23",
     "@angular/forms": ">=22.2.1 <23",
-    "@cds/rte-core": "0.0.0",
-    "@cds/rte-theme": "0.0.0",
     "@tiptap/core": "^3.31.4",
     "@tiptap/extension-blockquote": "^3.31.4",
     "@tiptap/extension-bold": "^3.31.4",
@@ -56,5 +54,9 @@
   "publishConfig": {
     "access": "public",
     "provenance": true
+  },
+  "dependencies": {
+    "@cds/rte-core": "0.0.0",
+    "@cds/rte-theme": "0.0.0"
   }
 }

@@ -3,12 +3,20 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { checkRepoRules, checkRootReadmeNotice, checkRoteiro } from './check-repo-rules.mjs';
+import {
+  checkRepoRules,
+  checkRootReadmeNotice,
+  checkRoteiro,
+} from './check-repo-rules.mjs';
 
 test('README raiz: aviso "não afiliado" antes do primeiro ## e depois do último', () => {
-  const ok = '# T\n\nNão afiliado à Tiptap.\n\n## A\n\ntexto\n\n> não afiliado\n';
+  const ok =
+    '# T\n\nNão afiliado à Tiptap.\n\n## A\n\ntexto\n\n> não afiliado\n';
   assert.deepEqual(checkRootReadmeNotice(ok), []);
-  assert.equal(checkRootReadmeNotice('# T\n\n## A\n\n> não afiliado\n').length, 1);
+  assert.equal(
+    checkRootReadmeNotice('# T\n\n## A\n\n> não afiliado\n').length,
+    1,
+  );
   assert.equal(
     checkRootReadmeNotice('# T\n\nnão afiliado\n\n## A\n\ntexto\n').length,
     1,
@@ -715,7 +723,13 @@ test('docs: CSS de exemplo (src/styles/exemplos*.css) não mira :root, html nem 
       '/* :root só no comentário */\n.meu-tema { --rte-primary: #123456; }\n.meu-tema .rte-root, .outro .body { color: red; }\n',
   });
   assert.deepEqual(docsErrors(ok), []);
-  for (const seletor of [':root', 'html', 'body', 'html.escuro', '.a, body > p']) {
+  for (const seletor of [
+    ':root',
+    'html',
+    'body',
+    'html.escuro',
+    '.a, body > p',
+  ]) {
     const bad = fixture({
       ...CLEAN_DOCS,
       'apps/docs/src/styles/exemplos-tema.css': `${seletor} { color: red; }\n`,
@@ -733,4 +747,88 @@ test('docs: CSS de exemplo (src/styles/exemplos*.css) não mira :root, html nem 
     'apps/docs/src/styles/docs.css': ':root { color-scheme: light dark; }\n',
   });
   assert.deepEqual(docsErrors(chrome), []);
+});
+
+// --- 09c T1: dependências internas exatas (AP12) ---
+
+const pkgJson = (name, extra = {}, version = '0.0.0') =>
+  JSON.stringify({ name, version, ...extra });
+const corePkg = pkgJson('@cds/rte-core');
+
+function depsFixture(angularExtra, extraFiles = {}) {
+  return fixture({
+    'packages/core/package.json': corePkg,
+    'packages/angular/package.json': pkgJson('@cds/rte-angular', angularExtra),
+    'packages/angular/ng-package.json': JSON.stringify({
+      allowedNonPeerDependencies: ['@cds/rte-core'],
+    }),
+    'packages/angular/src/index.ts': "import { x } from '@cds/rte-core';\n",
+    ...extraFiles,
+  });
+}
+
+test('deps internas: cenário correto passa', () => {
+  const root = depsFixture({ dependencies: { '@cds/rte-core': '0.0.0' } });
+  assert.deepEqual(checkRepoRules(root), []);
+});
+
+test('deps internas: faixa ^0.0.0 reprova', () => {
+  const root = depsFixture({ dependencies: { '@cds/rte-core': '^0.0.0' } });
+  const errors = checkRepoRules(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /@cds\/rte-core.*exata/);
+});
+
+test('deps internas: versão diferente da do pacote referido reprova', () => {
+  const root = depsFixture({ dependencies: { '@cds/rte-core': '0.0.1' } });
+  const errors = checkRepoRules(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /0.0.0.*0.0.1/);
+});
+
+test('deps internas: peerDependencies com @cds/rte-core reprova', () => {
+  const root = depsFixture({
+    dependencies: { '@cds/rte-core': '0.0.0' },
+    peerDependencies: { '@cds/rte-core': '0.0.0' },
+  });
+  const errors = checkRepoRules(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /peer/);
+});
+
+test('deps internas: peerDependenciesMeta com @cds/rte-* reprova', () => {
+  const root = depsFixture({
+    dependencies: { '@cds/rte-core': '0.0.0' },
+    peerDependenciesMeta: { '@cds/rte-core': { optional: true } },
+  });
+  assert.equal(checkRepoRules(root).length, 1);
+});
+
+test('deps internas: import de @cds/rte-core em src sem dependencies reprova', () => {
+  const root = depsFixture({});
+  const errors = checkRepoRules(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /packages\/angular\/src\/index\.ts.*@cds\/rte-core/);
+});
+
+test('deps internas: import só em *.spec.ts não exige dependência', () => {
+  const root = depsFixture(
+    {},
+    {
+      'packages/angular/src/index.ts': 'export const a = 1;\n',
+      'packages/angular/src/a.spec.ts':
+        "import { x } from '@cds/rte-core/html';\n",
+    },
+  );
+  assert.deepEqual(checkRepoRules(root), []);
+});
+
+test('deps internas: ng-package.json sem allowedNonPeerDependencies reprova', () => {
+  const root = depsFixture(
+    { dependencies: { '@cds/rte-core': '0.0.0' } },
+    { 'packages/angular/ng-package.json': JSON.stringify({ dest: 'x' }) },
+  );
+  const errors = checkRepoRules(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /allowedNonPeerDependencies/);
 });

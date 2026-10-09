@@ -12,7 +12,7 @@ Ainda sem versão publicada (nome provisório, escopo `@cds` ainda não confirma
 npm i @cds/rte-sanitizer @cds/rte-core
 ```
 
-`@cds/rte-core` é _peer dependency_ (a mesma versão do sanitizador). A única dependência direta é o `htmlparser2`.
+`@cds/rte-core` é dependência com a mesma versão exata do sanitizador (instalada junto). A outra dependência direta é o `htmlparser2`.
 
 ## Uso no servidor
 

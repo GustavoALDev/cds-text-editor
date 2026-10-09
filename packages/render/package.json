@@ -12,14 +12,7 @@
   "peerDependencies": {
     "@angular/core": ">=22.2.1 <23",
     "@angular/common": ">=22.2.1 <23",
-    "@angular/platform-browser": ">=22.2.1 <23",
-    "@cds/rte-core": "0.0.0",
-    "@cds/rte-sanitizer": "0.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@cds/rte-sanitizer": {
-      "optional": true
-    }
+    "@angular/platform-browser": ">=22.2.1 <23"
   },
   "repository": {
     "type": "git",
@@ -37,5 +30,8 @@
   "publishConfig": {
     "access": "public",
     "provenance": true
+  },
+  "dependencies": {
+    "@cds/rte-core": "0.0.0"
   }
 }

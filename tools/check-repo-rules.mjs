@@ -549,6 +549,84 @@ export function checkRoteiro(rootDir) {
   return errors;
 }
 
+// Dependências internas (spec 09c, AP12): `@cds/rte-*` importado vai em `dependencies`
+// com a versão exata do pacote referido; nenhum peer interno; ng-package.json lista as
+// internas em `allowedNonPeerDependencies`.
+const INTERNAL_SCOPE = '@cds/rte-';
+const INTERNAL_IMPORT = /^(@cds\/rte-[a-z]+)(?:\/|$)/;
+
+export function checkInternalDeps(rootDir) {
+  const errors = [];
+  const packagesDir = join(rootDir, 'packages');
+  if (!existsSync(packagesDir)) return errors;
+  const manifests = new Map();
+  for (const dir of readdirSync(packagesDir)) {
+    const path = join(packagesDir, dir, 'package.json');
+    if (!existsSync(path)) continue;
+    const manifest = JSON.parse(readFileSync(path, 'utf8'));
+    manifests.set(dir, manifest);
+  }
+  const versions = new Map(
+    [...manifests.values()].map((m) => [m.name, m.version]),
+  );
+  for (const [dir, manifest] of manifests) {
+    const where = `packages/${dir}/package.json`;
+    for (const field of ['peerDependencies', 'peerDependenciesMeta']) {
+      for (const dep of Object.keys(manifest[field] ?? {})) {
+        if (dep.startsWith(INTERNAL_SCOPE)) {
+          errors.push(
+            `${where}: ${dep} em ${field} (proibido: dependência interna vai em dependencies, com versão exata)`,
+          );
+        }
+      }
+    }
+    const internal = Object.entries(manifest.dependencies ?? {}).filter(([d]) =>
+      d.startsWith(INTERNAL_SCOPE),
+    );
+    for (const [dep, range] of internal) {
+      const expected = versions.get(dep);
+      if (expected === undefined) continue;
+      if (range !== expected) {
+        errors.push(
+          `${where}: dependência ${dep} deve ser a versão exata ${expected} (está "${range}")`,
+        );
+      }
+    }
+    const declared = new Set(Object.keys(manifest.dependencies ?? {}));
+    const pkgDir = join(packagesDir, dir);
+    const reported = new Set();
+    for (const file of walk(
+      pkgDir,
+      (n) => /\.ts$/.test(n) && !/\.(spec|d)\.ts$/.test(n),
+    )) {
+      if (file.split(sep).includes('testing-support')) continue;
+      for (const spec of importSpecifiers(readFileSync(file, 'utf8'))) {
+        const m = INTERNAL_IMPORT.exec(spec);
+        if (!m || m[1] === manifest.name || declared.has(m[1])) continue;
+        const key = `${file}|${m[1]}`;
+        if (reported.has(key)) continue;
+        reported.add(key);
+        errors.push(
+          `${relative(rootDir, file).split(sep).join('/')}: importa ${m[1]}, que falta em dependencies de ${where}`,
+        );
+      }
+    }
+    const ngPath = join(pkgDir, 'ng-package.json');
+    if (internal.length && existsSync(ngPath)) {
+      const ng = JSON.parse(readFileSync(ngPath, 'utf8'));
+      const allowed = new Set(ng.allowedNonPeerDependencies ?? []);
+      for (const [dep] of internal) {
+        if (!allowed.has(dep)) {
+          errors.push(
+            `packages/${dir}/ng-package.json: allowedNonPeerDependencies deve listar ${dep}`,
+          );
+        }
+      }
+    }
+  }
+  return errors;
+}
+
 export function checkRepoRules(rootDir) {
   const errors = [];
   errors.push(...checkApp(rootDir, 'demo'), ...checkApp(rootDir, 'docs'));
@@ -565,6 +643,7 @@ export function checkRepoRules(rootDir) {
       }
     }
   }
+  errors.push(...checkInternalDeps(rootDir));
   const rootReadme = join(rootDir, 'README.md');
   if (existsSync(join(rootDir, 'package.json')) && existsSync(rootReadme))
     errors.push(...checkRootReadmeNotice(readFileSync(rootReadme, 'utf8')));

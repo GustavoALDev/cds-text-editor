@@ -156,12 +156,6 @@ export default [
             '{projectRoot}/vitest-base.config.mts',
             '{projectRoot}/size-page.mjs',
           ],
-          ignoredDependencies: [
-            // Peer opcional sem import algum (pré-voo 3): documenta o
-            // acoplamento de versão com o sanitizador que o consumidor passa
-            // a `provideRteRender`.
-            '@cds/rte-sanitizer',
-          ],
         },
       ],
     },
