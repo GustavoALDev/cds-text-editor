@@ -1,5 +1,4 @@
 import {
-  ANGULAR_DEFAULTS,
   parseColor,
   RTE_THEME_PRESETS,
   type RteNeutral,
@@ -53,9 +52,9 @@ export const PRESET_NAMES = Object.keys(
 ) as readonly RteThemePresetName[];
 
 export const DEFAULT_STATE: PlaygroundState = {
-  primary: ANGULAR_DEFAULTS.primary,
-  secondary: ANGULAR_DEFAULTS.secondary,
-  tertiary: ANGULAR_DEFAULTS.tertiary,
+  primary: RTE_THEME_PRESETS.angular.primary,
+  secondary: RTE_THEME_PRESETS.angular.secondary,
+  tertiary: RTE_THEME_PRESETS.angular.tertiary,
   mode: 'auto',
   neutral: 'tinted',
   radius: DEFAULT_RADIUS,
@@ -77,7 +76,9 @@ export function applyPreset(
 }
 
 /** Nome do preset cujas três cores são as do estado (ou `null`). */
-export function activePreset(state: PlaygroundState): RteThemePresetName | null {
+export function activePreset(
+  state: PlaygroundState,
+): RteThemePresetName | null {
   for (const name of PRESET_NAMES) {
     const preset = RTE_THEME_PRESETS[name];
     if (
@@ -97,7 +98,7 @@ export function same(a: string, b: string): boolean {
 
 /** `true` se o texto é igual ao padrão Angular do campo. */
 export function isDefaultColor(field: ColorField, text: string): boolean {
-  return same(text, ANGULAR_DEFAULTS[field]);
+  return same(text, RTE_THEME_PRESETS.angular[field]);
 }
 
 export type Supports = (property: string, value: string) => boolean;

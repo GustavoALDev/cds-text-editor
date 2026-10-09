@@ -5,45 +5,16 @@
 ```ts
 
 // @public
-export const ANGULAR_DEFAULTS: {
-    readonly primary: "#8514f5";
-    readonly secondary: "#f637e3";
-    readonly tertiary: "#0546ff";
-};
+export function applyRteTheme(element: HTMLElement, options?: RteApplyThemeOptions): () => void;
 
 // @public
-export function applyRteTheme(element: HTMLElement, options?: ApplyRteThemeOptions): () => void;
-
-// @public (undocumented)
-export type ApplyRteThemeOptions = RteTheme & {
-    force?: boolean;
-};
+export function checkRteTheme(options?: RteCheckThemeOptions): RteThemeReport;
 
 // @public
-export function checkRteTheme(options?: CheckThemeOptions): RteThemeReport;
-
-// @public (undocumented)
-export type CheckThemeOptions = RteTheme & {
-    parseColor?: ColorParser;
-};
-
-// @public (undocumented)
-export type ColorParser = (input: string) => Rgb | null;
+export function createRteTheme(options?: RteCreateThemeOptions): RteThemeVariables;
 
 // @public
-export function createRteTheme(options?: CreateRteThemeOptions): RteThemeVariables;
-
-// @public (undocumented)
-export interface CreateRteThemeOptions extends RteTheme {
-    dark?: boolean;
-    parseColor?: ColorParser;
-}
-
-// @public
-export function parseColor(input: string): Rgb | null;
-
-// @public (undocumented)
-export type Rgb = readonly [number, number, number];
+export function parseColor(input: string): RteRgb | null;
 
 // @public
 export const RTE_THEME_PRESETS: {
@@ -75,7 +46,35 @@ export const RTE_THEME_PRESETS: {
 };
 
 // @public (undocumented)
+export type RteApplyThemeOptions = RteTheme & {
+    force?: boolean;
+};
+
+// @public (undocumented)
+export type RteCheckThemeOptions = RteTheme & {
+    parseColor?: RteColorParser;
+};
+
+// @public (undocumented)
+export type RteColorParser = (input: string) => RteRgb | null;
+
+// @public (undocumented)
+export interface RteCreateThemeOptions extends RteTheme {
+    dark?: boolean;
+    parseColor?: RteColorParser;
+}
+
+// @public (undocumented)
 export type RteNeutral = 'tinted' | 'gray';
+
+// @public (undocumented)
+export type RteRgb = readonly [number, number, number];
+
+// @public (undocumented)
+export interface RteSuggestColorOptions {
+    check?: (color: string) => boolean;
+    parseColor?: RteColorParser;
+}
 
 // @public
 export interface RteTheme {
@@ -124,22 +123,13 @@ export interface RteThemeReport {
 export type RteThemeVariables = Record<`--rte-${string}`, string>;
 
 // @public
-export function suggestRteColor(color: string, options?: SuggestRteColorOptions): string | null;
-
-// @public (undocumented)
-export interface SuggestRteColorOptions {
-    check?: (color: string) => boolean;
-    parseColor?: ColorParser;
-}
+export function suggestRteColor(color: string, options?: RteSuggestColorOptions): string | null;
 
 // @public
 export function supportsRelativeColors(): boolean;
 
-// @public (undocumented)
-export const THEME_VERSION = "0.0.0";
-
 // @public
-export function warnIfPoorTheme(options?: CheckThemeOptions, warn?: (message: string) => void): RteThemeReport;
+export function warnIfPoorTheme(options?: RteCheckThemeOptions, warn?: (message: string) => void): RteThemeReport;
 
 // (No @packageDocumentation comment for this package)
 

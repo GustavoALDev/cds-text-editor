@@ -1,4 +1,4 @@
-export type { Rgb, Rgb8 } from './color/convert';
+export type { RteRgb, Rgb8 } from './color/convert';
 
 export type RteThemeMode = 'auto' | 'inherit' | 'light' | 'dark';
 export type RteNeutral = 'tinted' | 'gray';

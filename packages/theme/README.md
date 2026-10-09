@@ -133,7 +133,6 @@ Públicas e estáveis. As variáveis internas do pacote não fazem parte do cont
 
 ```ts
 import {
-  ANGULAR_DEFAULTS,
   RTE_THEME_PRESETS,
   applyRteTheme,
   checkRteTheme,
@@ -153,7 +152,7 @@ import {
 | `checkRteTheme(options)`                | Relatório de contraste (`{ ok, checks, invalid }`): 72 verificações, 36 por modo                                                                                                                                                                               |
 | `warnIfPoorTheme(options, warn?)`       | Em desenvolvimento: avisa (pt-BR, `console.warn` por padrão) sobre cores ilegíveis e verificações reprovadas; devolve o relatório                                                                                                                              |
 | `suggestRteColor(color)`                | Semente mais próxima (menor mudança de luminosidade OKLCH, passo 0,01 até 0,5) que passa nas verificações do papel `primary` de `checkRteTheme`, como `#rrggbb`; `null` se a cor já passa, é ilegível ou nada próximo passa                                    |
-| `RTE_THEME_PRESETS`, `ANGULAR_DEFAULTS` | Presets e padrão do Angular                                                                                                                                                                                                                                    |
+| `RTE_THEME_PRESETS` | Presets de cores-semente; `RTE_THEME_PRESETS.angular` é o padrão do Angular |
 
 ```ts
 const vars = createRteTheme({

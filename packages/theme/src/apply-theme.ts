@@ -27,7 +27,7 @@ export const FORCED_COLORS_TOKENS = [
   '--rte-tertiary-border',
 ] as const;
 
-export type ApplyRteThemeOptions = RteTheme & {
+export type RteApplyThemeOptions = RteTheme & {
   /** Usa o plano B (variáveis calculadas em JS) mesmo com suporte nativo. */
   force?: boolean;
 };
@@ -186,7 +186,7 @@ export function resolveMode(mode: RteThemeMode | undefined): 'light' | 'dark' {
  */
 export function applyRteTheme(
   element: HTMLElement,
-  options: ApplyRteThemeOptions = {},
+  options: RteApplyThemeOptions = {},
 ): () => void {
   if (!hasDom()) return noop;
   active.get(element)?.();

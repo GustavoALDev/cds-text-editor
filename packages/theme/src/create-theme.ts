@@ -1,16 +1,17 @@
-import { clamp, map3, toHex, toLinear, type Rgb } from './color/convert';
+import { clamp, map3, toHex, toLinear, type RteRgb } from './color/convert';
 import { oklchToSrgb, toOklch, type Oklch } from './color/oklab';
 import { parseColor } from './color/parse';
-import { ANGULAR_DEFAULTS, type ColorParser } from './defaults';
+import type { RteColorParser } from './defaults';
+import { RTE_THEME_PRESETS } from './presets';
 import { deriveRole } from './derive';
 import { STATIC_TOKENS } from './static-tokens';
 import type { RteTheme, RteThemeVariables } from './types';
 
-export interface CreateRteThemeOptions extends RteTheme {
+export interface RteCreateThemeOptions extends RteTheme {
   /** Força claro/escuro; vence `mode`. */
   dark?: boolean;
   /** Leitor de cores (padrão: `parseColor`). */
-  parseColor?: ColorParser;
+  parseColor?: RteColorParser;
 }
 
 const ROLES = ['primary', 'secondary', 'tertiary'] as const;
@@ -40,7 +41,7 @@ type NeutralName = keyof typeof NEUTRAL_SPEC;
  * canais finitos são recortados em [0, 1].
  */
 export function createRteTheme(
-  options: CreateRteThemeOptions = {},
+  options: RteCreateThemeOptions = {},
 ): RteThemeVariables {
   return buildRteTheme(options);
 }
@@ -50,12 +51,12 @@ export function createRteTheme(
  * consumidor (`surface`, sRGB 0..1), da qual saem `*-subtle` e `*-border`, como no theme.css.
  */
 export function buildRteTheme(
-  options: CreateRteThemeOptions,
-  surface?: Rgb,
+  options: RteCreateThemeOptions,
+  surface?: RteRgb,
 ): RteThemeVariables {
   const parse = options.parseColor ?? parseColor;
-  const resolve = (value: string | undefined, fallback: string): Rgb => {
-    let parsed: Rgb | null = null;
+  const resolve = (value: string | undefined, fallback: string): RteRgb => {
+    let parsed: RteRgb | null = null;
     try {
       parsed = value === undefined ? null : parse(value);
     } catch {
@@ -63,14 +64,14 @@ export function buildRteTheme(
     }
     if (parsed && parsed.every(Number.isFinite))
       return map3(parsed, (v) => clamp(v));
-    return parseColor(fallback) as Rgb;
+    return parseColor(fallback) as RteRgb;
   };
   const dark = options.dark ?? options.mode === 'dark';
   const tint = options.neutral === 'gray' ? 0 : 1;
   const seeds = {
-    primary: resolve(options.primary, ANGULAR_DEFAULTS.primary),
-    secondary: resolve(options.secondary, ANGULAR_DEFAULTS.secondary),
-    tertiary: resolve(options.tertiary, ANGULAR_DEFAULTS.tertiary),
+    primary: resolve(options.primary, RTE_THEME_PRESETS.angular.primary),
+    secondary: resolve(options.secondary, RTE_THEME_PRESETS.angular.secondary),
+    tertiary: resolve(options.tertiary, RTE_THEME_PRESETS.angular.tertiary),
   };
 
   const [, c, h] = toOklch(toLinear(seeds.primary));
@@ -81,7 +82,7 @@ export function buildRteTheme(
   };
   const surfaceOk = surface ? toOklch(toLinear(surface)) : neutral('surface');
 
-  const tokens: Record<string, Rgb> = {};
+  const tokens: Record<string, RteRgb> = {};
   for (const name of Object.keys(NEUTRAL_SPEC) as NeutralName[])
     tokens[name] = oklchToSrgb(...neutral(name));
   for (const role of ROLES) {
@@ -94,7 +95,7 @@ export function buildRteTheme(
     tokens[`${role}-subtle`] = d.subtle;
     tokens[`${role}-border`] = d.border;
   }
-  tokens['focus'] = tokens['primary-text'] as Rgb;
+  tokens['focus'] = tokens['primary-text'] as RteRgb;
 
   const vars: RteThemeVariables = {};
   for (const [name, value] of Object.entries(tokens))

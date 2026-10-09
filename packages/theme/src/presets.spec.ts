@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { checkRteTheme } from './check-theme';
 import { parseColor } from './color/parse';
-import { ANGULAR_DEFAULTS } from './defaults';
 import { RTE_THEME_PRESETS } from './presets';
 
 describe('RTE_THEME_PRESETS', () => {
@@ -15,8 +14,12 @@ describe('RTE_THEME_PRESETS', () => {
     ]);
   });
 
-  it('references ANGULAR_DEFAULTS for angular', () => {
-    expect(RTE_THEME_PRESETS.angular).toBe(ANGULAR_DEFAULTS);
+  it('angular é o padrão do Angular (ADR 0002)', () => {
+    expect(RTE_THEME_PRESETS.angular).toEqual({
+      primary: '#8514f5',
+      secondary: '#f637e3',
+      tertiary: '#0546ff',
+    });
   });
 
   it.each(Object.entries(RTE_THEME_PRESETS))(

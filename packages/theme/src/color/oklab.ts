@@ -1,9 +1,9 @@
-import { toSrgb, type Rgb } from './convert';
+import { toSrgb, type RteRgb } from './convert';
 
 export type Oklab = readonly [number, number, number];
 export type Oklch = readonly [number, number, number];
 
-export function linearToOklab([r, g, b]: Rgb): Oklab {
+export function linearToOklab([r, g, b]: RteRgb): Oklab {
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
   const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
   const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
@@ -14,7 +14,7 @@ export function linearToOklab([r, g, b]: Rgb): Oklab {
   ];
 }
 
-export function oklabToLinear([L, a, b]: Oklab): Rgb {
+export function oklabToLinear([L, a, b]: Oklab): RteRgb {
   const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
   const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
   const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
@@ -25,7 +25,7 @@ export function oklabToLinear([L, a, b]: Oklab): Rgb {
   ];
 }
 
-export function toOklch(lin: Rgb): Oklch {
+export function toOklch(lin: RteRgb): Oklch {
   const [L, a, b] = linearToOklab(lin);
   return [
     L,
@@ -34,12 +34,12 @@ export function toOklch(lin: Rgb): Oklch {
   ];
 }
 
-export function fromOklch([L, C, h]: Oklch): Rgb {
+export function fromOklch([L, C, h]: Oklch): RteRgb {
   const rad = (h * Math.PI) / 180;
   return oklabToLinear([L, C * Math.cos(rad), C * Math.sin(rad)]);
 }
 
-export const oklchToSrgb = (L: number, C: number, h: number): Rgb =>
+export const oklchToSrgb = (L: number, C: number, h: number): RteRgb =>
   toSrgb(fromOklch([L, C, h]));
 
 /** Oklch (L, C, h em graus) para Oklab (L, a, b). */
