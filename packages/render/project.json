@@ -80,9 +80,7 @@
     },
     "verify-package": {
       "executor": "nx:run-commands",
-      "dependsOn": [
-        "build"
-      ],
+      "dependsOn": ["build", "api"],
       "inputs": [
         "production",
         "^production",
