@@ -68,11 +68,11 @@ Nenhum recurso novo. Mudanças **de quebra intencionais** (permitidas: nada publ
 ## 7. Critérios de aceite
 
 - [ ] `npx nx run-many -t lint,typecheck,build,test,test-zone,verify-package,size,api` verde; `check:rules`, `test:tools`, `check:licenses`, `typecheck:e2e` e E2E nos 3 motores verdes no CI do PR.
-- [ ] Relatórios com os nomes da AP2/AP3, zero `(undocumented)` fora de `Rte*Labels`, relatórios CSS versionados; `api-diff` e `release-plan` no CI.
-- [ ] `fixed` com os 5, dependências internas exatas sem peers internos, 5 changesets consolidados, `changeset status` = `0.1.0` nos 5 (saída no ADR 0023).
-- [ ] `docs/support.md`, `SECURITY.md`, `docs/open-core.md`, `.changeset/README.md`, `CONTRIBUTING.md` coerentes com AP1–AP13.
-- [ ] `docs/release/prontidao-1.0.md` com todas as linhas do agente marcadas com evidência e as do dono em aberto como `TODO-AUTOR`.
-- [ ] ADR 0023, §6 de `09-release-governanca.md`, `docs/specs/README.md` e `CLAUDE.md` atualizados.
+- [x] Relatórios com os nomes da AP2/AP3, zero `(undocumented)` fora de `Rte*Labels`, relatórios CSS versionados; `api-diff` e `release-plan` no CI.
+- [x] `fixed` com os 5, dependências internas exatas sem peers internos, 5 changesets consolidados, `changeset status` = `0.1.0` nos 5 (saída no ADR 0023).
+- [x] `docs/support.md`, `SECURITY.md`, `docs/open-core.md`, `.changeset/README.md`, `CONTRIBUTING.md` coerentes com AP1–AP13.
+- [x] `docs/release/prontidao-1.0.md` com as linhas do agente com evidência e as do dono em aberto como `TODO-AUTOR` (ressalva: o CI do PR e os 14 dias sem mudança de quebra ficam `aberto` por natureza).
+- [x] ADR 0023, §6 de `09-release-governanca.md`, `docs/specs/README.md` e `CLAUDE.md` atualizados.
 
 ## 8. Consequências
 
