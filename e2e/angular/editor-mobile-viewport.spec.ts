@@ -141,6 +141,17 @@ function caretLine(page: Page, id: 'productivity'): Promise<Box> {
 const anchorY = (c: number, screenY: number, s = 2): number =>
   Math.round((s * c - screenY) / (s - 1));
 
+/**
+ * Faixa de `y` (px da tela, Pixel 7: 839 px de altura) em que o `Input.synthesizePinchGesture`
+ * mantém o ponto sob os dedos. Fora dela (medido no Chromium 1.63 em Linux: `y` <= ~90 ou
+ * `y` >= ~740) os dedos sairiam da tela e a viewport visual encosta no topo (0) ou na base
+ * (`altura / 2`), sem relação com `y`. A posição da linha depende da tipografia da máquina, então
+ * o `y` pedido é limitado a esta faixa em vez de supor que sempre dá para pôr a linha a 40 px da
+ * borda visual.
+ */
+const PINCH_Y_MIN = 110;
+const PINCH_Y_MAX_FROM_BOTTOM = 119;
+
 for (const where of ['topo', 'base'] as const) {
   test.describe('O7 lista do / com zoom por pinça', { tag: TAGS }, () => {
     test(`a lista fica dentro do retângulo visual (linha perto do ${where} visual)`, async ({
@@ -157,12 +168,15 @@ for (const where of ['topo', 'base'] as const) {
       await expect(list).toBeVisible();
       const line = await caretLine(page, 'productivity');
       const { innerHeight } = await pageScroll(page);
-      // topo: a linha vai para 40 px do topo visual (a lista cabe abaixo); base: para 40 px da
+      // topo: a linha vai para ~40 px do topo visual (a lista cabe abaixo); base: para ~40 px da
       // base (cabe acima)
       const screenY = where === 'topo' ? 40 : innerHeight - 40;
       await pinch(page, cdp, {
         x: Math.max(20, line.left),
-        y: Math.min(innerHeight - 10, Math.max(10, anchorY(line.top, screenY))),
+        y: Math.min(
+          innerHeight - PINCH_Y_MAX_FROM_BOTTOM,
+          Math.max(PINCH_Y_MIN, anchorY(line.top, screenY)),
+        ),
       });
       await frames(page);
       await expect(list).toBeVisible();
