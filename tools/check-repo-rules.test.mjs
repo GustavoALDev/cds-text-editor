@@ -4,6 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
+  checkOldNames,
   checkRepoRules,
   checkRootReadmeNotice,
   checkRoteiro,
@@ -831,4 +832,103 @@ test('deps internas: ng-package.json sem allowedNonPeerDependencies reprova', ()
   const errors = checkRepoRules(root);
   assert.equal(errors.length, 1);
   assert.match(errors[0], /allowedNonPeerDependencies/);
+});
+
+// --- Nomes antigos da API pública (spec 09c, AP3) ---
+
+const withRoot = (files) =>
+  fixture({ 'package.json': JSON.stringify({ name: 'x' }), ...files });
+const oldNameErrors = (files) => checkOldNames(withRoot(files));
+
+test('nomes antigos: .ts com DEFAULT_LINK_POLICY reprova, citando arquivo, antigo e novo', () => {
+  const errors = oldNameErrors({
+    'packages/core/src/a.ts': 'export const x = DEFAULT_LINK_POLICY;\n',
+  });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /packages\/core\/src\/a\.ts:1/);
+  assert.match(errors[0], /DEFAULT_LINK_POLICY/);
+  assert.match(errors[0], /RTE_DEFAULT_LINK_POLICY/);
+});
+
+test('nomes antigos: .md do site e bloco de código de README reprovam', () => {
+  const md =
+    'texto\n\n```ts\nimport { DraftStore } from "@cds/rte-core";\n```\n';
+  const errors = oldNameErrors({
+    'apps/docs/content/guia/x.md': md,
+    'packages/core/README.md': md,
+  });
+  assert.equal(errors.length, 2);
+  assert.ok(
+    errors.every((e) => /DraftStore/.test(e) && /RteDraftStore/.test(e)),
+  );
+});
+
+test('nomes antigos: nomes novos e falsos positivos passam', () => {
+  assert.deepEqual(
+    oldNameErrors({
+      'a.ts': [
+        'RTE_DEFAULT_LINK_POLICY',
+        'RteDraftStoreFoo',
+        'clearLocalDrafts',
+        'RteDraftStore',
+        'RteRgb',
+        'Rgb8',
+        'MyDraftStore',
+        'DraftStores',
+        'RTE_YOUTUBE_PROVIDER',
+        'YOUTUBE_PROVIDERS_X',
+      ].join('\n'),
+    }),
+    [],
+  );
+});
+
+test('nomes antigos: "Rgb" como palavra solta reprova, mas dentro de RteRgb não', () => {
+  assert.equal(oldNameErrors({ 'a.ts': 'type A = Rgb | null;\n' }).length, 1);
+  assert.equal(
+    oldNameErrors({ 'a.ts': 'type A = RteRgb | null;\n' }).length,
+    0,
+  );
+});
+
+test('nomes antigos: ADRs, specs e planos ficam de fora', () => {
+  const text = 'DEFAULT_LINK_POLICY e CORE_VERSION\n';
+  assert.deepEqual(
+    oldNameErrors({
+      'docs/decisions/x.md': text,
+      'docs/specs/x.md': text,
+      'docs/superpowers/plans/x.md': text,
+    }),
+    [],
+  );
+});
+
+test('nomes antigos: nome removido (CORE_VERSION) reprova, sem substituto', () => {
+  const errors = oldNameErrors({
+    'a.ts': 'export const CORE_VERSION = "0";\n',
+  });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /CORE_VERSION/);
+  assert.match(errors[0], /removido/);
+});
+
+test('nomes antigos: arquivo com CRLF é lido por linha e binário é ignorado', () => {
+  const root = withRoot({
+    'a.ts': 'ok\r\nDEFAULT_ID_PREFIX\r\n',
+  });
+  writeFileSync(join(root, 'b.bin'), Buffer.from([0, 68, 114, 97, 102]));
+  writeFileSync(
+    join(root, 'c.bin'),
+    Buffer.concat([Buffer.from([0]), Buffer.from('DraftStore')]),
+  );
+  const errors = checkOldNames(root);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /a\.ts:2/);
+});
+
+test('nomes antigos: checkRepoRules só varre quando há package.json na raiz', () => {
+  const sem = fixture({ 'a.ts': 'DraftStore\n' });
+  assert.deepEqual(checkRepoRules(sem), []);
+  const com = withRoot({ 'a.ts': 'DraftStore\n' });
+  assert.ok(checkRepoRules(com).some((e) => /DraftStore/.test(e)));
 });

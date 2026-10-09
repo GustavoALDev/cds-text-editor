@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { validateCompat } from './compat.mjs';
@@ -627,6 +628,122 @@ export function checkInternalDeps(rootDir) {
   return errors;
 }
 
+// Nomes públicos antigos (spec 09c, AP3): renomeados ou removidos; nada foi publicado, então não há alias.
+export const OLD_TO_NEW = {
+  DEFAULT_ID_PREFIX: 'RTE_DEFAULT_ID_PREFIX',
+  DEFAULT_LINK_POLICY: 'RTE_DEFAULT_LINK_POLICY',
+  DraftStorage: 'RteDraftStorage',
+  DraftStore: 'RteDraftStore',
+  DraftStoreOptions: 'RteDraftStoreOptions',
+  SrcsetCandidate: 'RteSrcsetCandidate',
+  DEFAULT_EMBED_PROVIDERS: 'RTE_EMBED_PROVIDERS',
+  YOUTUBE_PROVIDER: 'RTE_YOUTUBE_PROVIDER',
+  VIMEO_PROVIDER: 'RTE_VIMEO_PROVIDER',
+  SPOTIFY_PROVIDER: 'RTE_SPOTIFY_PROVIDER',
+  SerializeRteHtmlOptions: 'RteSerializeHtmlOptions',
+  ExtractTocOptions: 'RteExtractTocOptions',
+  HtmlToTextOptions: 'RteHtmlToTextOptions',
+  ValidateHtmlOptions: 'RteValidateHtmlOptions',
+  ApplyRteThemeOptions: 'RteApplyThemeOptions',
+  CheckThemeOptions: 'RteCheckThemeOptions',
+  CreateRteThemeOptions: 'RteCreateThemeOptions',
+  SuggestRteColorOptions: 'RteSuggestColorOptions',
+  ColorParser: 'RteColorParser',
+  Rgb: 'RteRgb',
+};
+// Removidos sem substituto (também proibidos).
+export const REMOVED_NAMES = [
+  'ANGULAR_DEFAULTS',
+  'CORE_VERSION',
+  'SANITIZER_VERSION',
+  'THEME_VERSION',
+  'RENDER_VERSION',
+];
+const OLD_NAME_SKIP_PREFIXES = [
+  'docs/decisions/',
+  'docs/specs/',
+  'docs/superpowers/',
+];
+const OLD_NAME_SKIP_FILES = new Set([
+  'tools/check-repo-rules.mjs',
+  'tools/check-repo-rules.test.mjs',
+  'package-lock.json',
+  'THIRD-PARTY-NOTICES.md',
+]);
+const OLD_NAME_SKIP_DIRS = new Set([
+  'node_modules',
+  'dist',
+  '.angular',
+  '.git',
+  '.nx',
+  'coverage',
+  'test-results',
+  'playwright-report',
+]);
+const OLD_NAME_MAX_BYTES = 2 * 1024 * 1024;
+const oldNameRegex = (name) =>
+  new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`, 'g');
+
+function trackedFiles(rootDir) {
+  const git = spawnSync('git', ['ls-files', '-z'], {
+    cwd: rootDir,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (git.status === 0 && git.stdout) {
+    return git.stdout
+      .split('\0')
+      .filter(Boolean)
+      .filter((p) => existsSync(join(rootDir, p)));
+  }
+  const out = [];
+  const visit = (dir) => {
+    for (const name of readdirSync(dir)) {
+      if (OLD_NAME_SKIP_DIRS.has(name)) continue;
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) visit(full);
+      else out.push(relative(rootDir, full).split(sep).join('/'));
+    }
+  };
+  visit(rootDir);
+  return out;
+}
+
+/** Nomes antigos da API pública (09c, AP3) em qualquer texto rastreado, exceto ADRs, specs e planos. */
+export function checkOldNames(rootDir) {
+  const errors = [];
+  const entries = [
+    ...Object.entries(OLD_TO_NEW).map(([old, novo]) => [old, novo]),
+    ...REMOVED_NAMES.map((old) => [old, null]),
+  ].map(([old, novo]) => [old, novo, oldNameRegex(old)]);
+  for (const path of trackedFiles(rootDir)) {
+    if (
+      OLD_NAME_SKIP_FILES.has(path) ||
+      OLD_NAME_SKIP_PREFIXES.some((p) => path.startsWith(p))
+    ) {
+      continue;
+    }
+    const full = join(rootDir, path);
+    if (statSync(full).size > OLD_NAME_MAX_BYTES) continue;
+    const buf = readFileSync(full);
+    if (buf.includes(0)) continue; // binário
+    const lines = buf.toString('utf8').split(/\r?\n/);
+    for (const [old, novo, re] of entries) {
+      for (let i = 0; i < lines.length; i++) {
+        re.lastIndex = 0;
+        if (re.test(lines[i])) {
+          errors.push(
+            `${path}:${i + 1}: nome antigo da API "${old}" ${
+              novo ? `(use "${novo}")` : '(removido, sem substituto)'
+            }`,
+          );
+        }
+      }
+    }
+  }
+  return errors;
+}
+
 export function checkRepoRules(rootDir) {
   const errors = [];
   errors.push(...checkApp(rootDir, 'demo'), ...checkApp(rootDir, 'docs'));
@@ -644,6 +761,8 @@ export function checkRepoRules(rootDir) {
     }
   }
   errors.push(...checkInternalDeps(rootDir));
+  if (existsSync(join(rootDir, 'package.json')))
+    errors.push(...checkOldNames(rootDir));
   const rootReadme = join(rootDir, 'README.md');
   if (existsSync(join(rootDir, 'package.json')) && existsSync(rootReadme))
     errors.push(...checkRootReadmeNotice(readFileSync(rootReadme, 'utf8')));
