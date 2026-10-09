@@ -322,19 +322,23 @@ export function resolveLegs({ floors, view, compatJson, set }) {
  * muda (Angular e Tiptap). Não pode ser um por família: o segundo `--no-save` reinstala a árvore
  * do *lockfile* e desfaz o primeiro (spike da 08a, T1). `npm` é o comando do npm em palavras
  * (`['npx','-y','npm@11']`; padrão `['npm']`). Devolve lista (vazia sem fase B) por simetria.
+ * Reinstalar o Angular exige `--legacy-peer-deps`: o npm mantém os `@angular/*` do *lockfile* que
+ * satisfazem os peers dos pacotes do *workspace* e reprova com ERESOLVE (visto com o 22.2.2). Os
+ * peers são provados pela fase A (consumidor por *tarball*); aqui o `npm ls` prova as versões.
  */
 export function installCommands(leg, fams, npm = ['npm']) {
   if (!leg.phaseB) return [];
+  const angular = ANGULAR_PHASE_B && leg.angular.label !== 'min';
   const base = [
     ...npm.slice(1),
     'install',
     '--no-save',
     '--no-audit',
     '--no-fund',
-    ...(leg.legacyPeerDeps ? ['--legacy-peer-deps'] : []),
+    ...(leg.legacyPeerDeps || angular ? ['--legacy-peer-deps'] : []),
   ];
   const packages = [];
-  if (ANGULAR_PHASE_B && leg.angular.label !== 'min') {
+  if (angular) {
     packages.push(
       ...fams.framework.map((n) => `${n}@${leg.angular.version}`),
       ...fams.tooling.map((n) => `${n}@${leg.angular.toolingVersion}`),

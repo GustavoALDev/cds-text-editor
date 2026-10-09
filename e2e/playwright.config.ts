@@ -4,6 +4,8 @@ const chrome = process.env['CHROME'];
 
 export default defineConfig({
   testDir: '.',
+  // A regressão visual tem config própria (e2e/visual/playwright.config.ts) e só roda no contêiner.
+  testIgnore: ['visual/**'],
   retries: process.env['CI'] ? 2 : 0,
   // No CI o repórter `json` alimenta `tools/quality-summary.mjs` (spec 08a, X11): um teste que
   // passou só na repetição aparece como `flaky`.
