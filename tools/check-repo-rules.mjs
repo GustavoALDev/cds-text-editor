@@ -20,6 +20,7 @@ const GOVERNANCE_FILES = [
   'docs/support.md',
   'docs/open-core.md',
   'docs/security.md',
+  'docs/release/prontidao-1.0.md',
   '.github/workflows/release.yml',
   '.github/PULL_REQUEST_TEMPLATE.md',
   '.github/ISSUE_TEMPLATE/bug_report.yml',
@@ -776,6 +777,70 @@ export function checkCssReports(rootDir) {
   return errors;
 }
 
+// Lista de prontidão para a 1.0 (spec 09c, AP14): tabela `| Item | Dono | Evidência | Estado |`.
+const PRONTIDAO = 'docs/release/prontidao-1.0.md';
+export function checkProntidao(rootDir) {
+  const path = join(rootDir, PRONTIDAO);
+  if (!existsSync(path)) {
+    return [
+      `${PRONTIDAO}: lista de prontidão para a 1.0 obrigatória ausente (spec 09c, AP14)`,
+    ];
+  }
+  const lines = readFileSync(path, 'utf8').replace(/\r\n/g, '\n').split('\n');
+  const cells = (line) =>
+    line
+      .trim()
+      .replace(/^\|/, '')
+      .replace(/\|$/, '')
+      .split('|')
+      .map((c) => c.trim());
+  const header = lines.findIndex((l) =>
+    /^\|\s*Item\s*\|\s*Dono\s*\|\s*Evidência\s*\|\s*Estado\s*\|\s*$/.test(l),
+  );
+  if (header < 0) {
+    return [
+      `${PRONTIDAO}: tabela "| Item | Dono | Evidência | Estado |" ausente (spec 09c, AP14)`,
+    ];
+  }
+  const errors = [];
+  let rows = 0;
+  for (let i = header + 2; i < lines.length; i++) {
+    if (!lines[i].trim().startsWith('|')) break;
+    rows++;
+    const [item = '', dono = '', evidencia = '', estado = ''] = cells(lines[i]);
+    const where = `${PRONTIDAO}:${i + 1}`;
+    if (dono !== 'agente' && dono !== 'dono') {
+      errors.push(
+        `${where}: dono deve ser "agente" ou "dono" (item "${item}")`,
+      );
+    }
+    const estadoBase = estado.split(/[\s—-]/)[0];
+    if (estadoBase !== 'feito' && estadoBase !== 'aberto') {
+      errors.push(
+        `${where}: estado deve ser "feito" ou "aberto" (item "${item}")`,
+      );
+    }
+    if (estadoBase === 'feito' && evidencia === '') {
+      errors.push(`${where}: item feito sem evidência (item "${item}")`);
+    }
+    if (
+      dono === 'dono' &&
+      estadoBase === 'aberto' &&
+      !lines[i].includes('TODO-AUTOR')
+    ) {
+      errors.push(
+        `${where}: item do dono em aberto sem TODO-AUTOR (item "${item}")`,
+      );
+    }
+  }
+  if (rows === 0) {
+    errors.push(
+      `${PRONTIDAO}: a tabela não tem nenhuma linha (spec 09c, AP14)`,
+    );
+  }
+  return errors;
+}
+
 export function checkRepoRules(rootDir) {
   const errors = [];
   errors.push(...checkCssReports(rootDir));
@@ -785,6 +850,7 @@ export function checkRepoRules(rootDir) {
   // Só no repositório real (com package.json na raiz); fixtures parciais de teste ficam de fora.
   if (existsSync(join(rootDir, 'package.json'))) {
     errors.push(...checkRoteiro(rootDir));
+    errors.push(...checkProntidao(rootDir));
     for (const file of GOVERNANCE_FILES) {
       if (!existsSync(join(rootDir, file))) {
         errors.push(

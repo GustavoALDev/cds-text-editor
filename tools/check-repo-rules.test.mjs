@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import {
   checkCssReports,
   checkOldNames,
+  checkProntidao,
   checkRepoRules,
   checkRootReadmeNotice,
   checkRoteiro,
@@ -966,4 +967,79 @@ test('CSS publicado: pacote sem CSS (sanitizer) não exige nada', () => {
     checkCssReports(withRoot({ 'packages/sanitizer/src/index.ts': '' })),
     [],
   );
+});
+
+// --- Lista de prontidão para a 1.0 (spec 09c, AP14) ---
+
+const PRONTIDAO = 'docs/release/prontidao-1.0.md';
+const tabelaProntidao = (linhas) =>
+  [
+    '# Prontidão',
+    '',
+    '| Item | Dono | Evidência | Estado |',
+    '| --- | --- | --- | --- |',
+    ...linhas,
+    '',
+  ].join('\n');
+const prontidaoErrors = (linhas) =>
+  checkProntidao(fixture({ [PRONTIDAO]: tabelaProntidao(linhas) }));
+
+test('prontidão: tabela válida passa', () => {
+  assert.deepEqual(
+    prontidaoErrors([
+      '| AP1 | agente | commit abc123 | feito |',
+      '| Prazo de 14 dias | agente | congelamento em 2026-10-09 | aberto |',
+      '| Publicar | dono | | aberto — TODO-AUTOR |',
+    ]),
+    [],
+  );
+});
+
+test('prontidão: dono ausente ou inválido reprova', () => {
+  const errors = prontidaoErrors([
+    '| A | | x | feito |',
+    '| B | robô | x | feito |',
+  ]);
+  assert.equal(errors.length, 2);
+  assert.match(errors[0], /dono/i);
+});
+
+test('prontidão: estado inválido reprova', () => {
+  const errors = prontidaoErrors(['| A | agente | x | pendente |']);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /estado/i);
+});
+
+test('prontidão: linha feita sem evidência reprova', () => {
+  const errors = prontidaoErrors(['| A | agente | | feito |']);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /evidência/i);
+});
+
+test('prontidão: linha do dono aberta sem TODO-AUTOR reprova', () => {
+  const errors = prontidaoErrors(['| A | dono | | aberto |']);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /TODO-AUTOR/);
+});
+
+test('prontidão: tabela sem linhas ou sem cabeçalho reprova', () => {
+  assert.equal(prontidaoErrors([]).length, 1);
+  assert.equal(
+    checkProntidao(fixture({ [PRONTIDAO]: '# Sem tabela\n' })).length,
+    1,
+  );
+});
+
+test('prontidão: arquivo ausente reprova e o repositório real passa', () => {
+  const errors = checkProntidao(fixture({ 'a.txt': 'x' }));
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /prontidao-1\.0\.md/);
+  assert.deepEqual(checkProntidao(resolve('.')), []);
+});
+
+test('prontidão: checkRepoRules só exige o arquivo com package.json na raiz', () => {
+  assert.ok(
+    !checkRepoRules(fixture({ 'a.txt': 'x' })).some((e) => /prontidao/.test(e)),
+  );
+  assert.ok(checkRepoRules(withRoot({})).some((e) => /prontidao-1\.0/.test(e)));
 });
