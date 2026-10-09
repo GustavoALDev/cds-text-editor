@@ -28,6 +28,7 @@ Evidências citam commits da branch `feat/spec-09c` (hashes curtos), ADRs e spec
 | Specs 07 e 08 fechadas no que é automático                                                                            | agente | `docs/specs/README.md`, ADRs 0019, 0020 e 0021                                                                                                                                                                                    | feito  |
 | CI verde nos 3 motores (chromium, firefox, webkit) no PR da 09c                                                       | agente | job do PR da 09c; **resultado vem do CI do PR**                                                                                                                                                                                   | aberto |
 | 14 dias corridos sem mudança de quebra nos relatórios depois do congelamento (AP9)                                    | agente | congelamento: `api-diff` ligado em 52177b3 (2026-10-09); data mínima: 14 dias depois do merge da 09c no `main`, nunca antes de 2026-10-23; verificar que nenhum PR depois do congelamento alterou ou removeu linha dos relatórios | aberto |
+| PR de versão da changesets/action passa no `release-plan`/`changeset status` (09b): o status reprova PR que toca `packages/**` sem changeset, inclusive o de versão | agente | pendente na 09b; PR comum sem mudança publicável usa `npx changeset add --empty` (CONTRIBUTING, `.changeset/README.md`, ADR 0023, Consequências) | aberto |
 
 ## Itens do dono
 

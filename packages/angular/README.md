@@ -10,10 +10,10 @@ Nome do pacote provisório (escopo `@cds` ainda não confirmado). Este projeto *
 
 ## Instalação
 
-Exige Angular `>=22.2.1 <23` (a 22.2.1 é a versão verificada para o caminho nativo de Reactive/Template Forms). Todos os peers são obrigatórios; o npm 7+ os instala sozinho, mas o comando completo é:
+Exige Angular `>=22.2.1 <23` (a 22.2.1 é a versão verificada para o caminho nativo de Reactive/Template Forms). Os peers (Angular, Tiptap, `lowlight` e `highlight.js`) são obrigatórios; o npm 7+ os instala sozinho, mas o comando completo é. `@cds/rte-core` e `@cds/rte-theme` não são peers: vêm como dependências do componente, na mesma versão.
 
 ```bash
-npm i @cds/rte-angular @cds/rte-core @cds/rte-theme \
+npm i @cds/rte-angular \
   @tiptap/core@^3.31.4 @tiptap/extension-blockquote@^3.31.4 @tiptap/extension-bold@^3.31.4 \
   @tiptap/extension-code@^3.31.4 @tiptap/extension-code-block@^3.31.4 @tiptap/extension-document@^3.31.4 \
   @tiptap/extension-hard-break@^3.31.4 @tiptap/extension-heading@^3.31.4 \

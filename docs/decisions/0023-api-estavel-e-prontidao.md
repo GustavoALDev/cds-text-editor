@@ -114,4 +114,5 @@ Nenhum campo `version` foi alterado e `changeset version`/`publish` não rodaram
 - A 09b encontra dependências, `fixed`, `release-plan` e changesets prontos; PB5, PB6 e PB15 passam a "feito na 09c"; o PR de versão só roda `changeset version` (os 5 em `0.1.0`). A renomeação de escopo (PB2) inclui a lista da AP3 na regra de nomes antigos.
 - O primeiro changelog é curto e descreve o estado final.
 - A `1.0.0` fica bloqueada pelos itens do dono, visíveis numa lista só.
+- Limitação conhecida (para a 09b): depois do `changeset version`, o `changeset status` reprova PR que toca `packages/**` sem changeset, e isso inclui o PR de versão da changesets/action (ele consome os changesets e altera `package.json` e changelogs). PR comum sem mudança publicável usa `npx changeset add --empty` (documentado no CONTRIBUTING e em `.changeset/README.md`); o tratamento do PR de versão fica registrado como item da 09b na lista de prontidão.
 - Riscos aceitos: o `api-diff` só vê changesets commitados; token do guia que nenhum CSS declara não é detectado; os itens do dono dependem de pessoas, não de código.
