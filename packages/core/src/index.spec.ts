@@ -69,7 +69,7 @@ describe('API pública do @cds/rte-core', () => {
   });
 
   it('não exporta a constante de versão (a versão vem do package.json)', () => {
-    expect(main).not.toHaveProperty('CORE_VERSION');
+    expect(Object.keys(main).filter((k) => /_VERSION$/.test(k))).toEqual([]);
   });
 
   it('não exporta internos', () => {

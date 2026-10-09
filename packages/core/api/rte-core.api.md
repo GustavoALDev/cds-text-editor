@@ -44,7 +44,7 @@ export function escapeHtmlAttribute(value: string): string;
 export function escapeHtmlText(text: string): string;
 
 // @public (undocumented)
-export function formatSrcset(candidates: RteSrcsetCandidate[]): string;
+export function formatSrcset(candidates: readonly RteSrcsetCandidate[]): string;
 
 // @public
 export function getElementSpec(schema: RteHtmlSchema, tag: string): RteElementSpec | undefined;
@@ -213,7 +213,7 @@ export interface RteElementSpec {
 // @public (undocumented)
 export interface RteEmbedProvider {
     // (undocumented)
-    hosts: string[];
+    hosts: readonly string[];
     // (undocumented)
     id: string;
     // (undocumented)
@@ -221,7 +221,7 @@ export interface RteEmbedProvider {
     // (undocumented)
     name: string;
     // (undocumented)
-    srcPatterns: string[];
+    srcPatterns: readonly string[];
     // (undocumented)
     toEmbed(url: string): {
         src: string;
@@ -255,6 +255,9 @@ export interface RteFeatures {
     tasks: boolean;
 }
 
+// @public
+export type RteHeadingLevel = 2 | 3 | 4;
+
 // @public (undocumented)
 export interface RteHtmlSchema {
     byFeature: Partial<Record<RteFeatureId, string[]>>;
@@ -280,12 +283,7 @@ export interface RteHtmlSchemaOptions {
     // (undocumented)
     features?: Partial<RteFeatures>;
     idPrefix?: string;
-    linkPolicy?: {
-        blockedDomains?: string[];
-        forceRel?: string[];
-        protocols?: string[];
-        allowRelative?: boolean;
-    };
+    linkPolicy?: RteSchemaLinkPolicy;
     // (undocumented)
     mediaHosts?: readonly string[];
 }
@@ -295,13 +293,13 @@ export interface RteLinkPolicy {
     // (undocumented)
     allowRelative: boolean;
     // (undocumented)
-    blockedDomains: string[];
+    blockedDomains: readonly string[];
     // (undocumented)
-    defaultRel: string[];
+    defaultRel: readonly string[];
     // (undocumented)
-    forceRel: string[];
+    forceRel: readonly string[];
     // (undocumented)
-    protocols: string[];
+    protocols: readonly string[];
     // (undocumented)
     target: 'preserve' | 'blank' | 'never';
 }
@@ -347,6 +345,14 @@ export type RteSanitizedAttributes = {
     action: 'remove' | 'unwrap';
     attribute: string;
 };
+
+// @public
+export interface RteSchemaLinkPolicy {
+    allowRelative?: boolean;
+    blockedDomains?: readonly string[];
+    forceRel?: readonly string[];
+    protocols?: readonly string[];
+}
 
 // @public (undocumented)
 export interface RteSrcsetCandidate {

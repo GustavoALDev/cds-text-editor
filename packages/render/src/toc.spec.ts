@@ -1,6 +1,7 @@
 import { Location, PlatformLocation } from '@angular/common';
 import { Component, signal, type Provider } from '@angular/core';
 import type { ComponentFixture } from '@angular/core/testing';
+import type { RteHeadingLevel } from '@cds/rte-core';
 import type { RteTocEntry } from '@cds/rte-core/html';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { provideRteRender } from './provide';
@@ -16,7 +17,7 @@ import type { RteRenderLabels } from './types';
 // R7 (H11): árvore do sumário, ids repetidos, `levels`, vazio, `href` com a
 // base e rótulo (H16).
 
-const e = (id: string, level: number): RteTocEntry => ({
+const e = (id: string, level: RteHeadingLevel): RteTocEntry => ({
   id,
   text: id,
   level,
@@ -65,8 +66,8 @@ describe('buildTocTree (H11)', () => {
 
 describe('uniqueTocEntries (H11)', () => {
   it('id repetido: a primeira ocorrência vence', () => {
-    const first = { id: 'rt-a', text: 'Primeiro', level: 2 };
-    const second = { id: 'rt-a', text: 'Segundo', level: 3 };
+    const first: RteTocEntry = { id: 'rt-a', text: 'Primeiro', level: 2 };
+    const second: RteTocEntry = { id: 'rt-a', text: 'Segundo', level: 3 };
     expect(uniqueTocEntries([first, e('rt-b', 2), second])).toEqual([
       first,
       e('rt-b', 2),
@@ -85,7 +86,7 @@ describe('uniqueTocEntries (H11)', () => {
 })
 class Host {
   readonly html = signal<string | null | undefined>('');
-  readonly levels = signal<readonly number[]>([2, 3]);
+  readonly levels = signal<readonly RteHeadingLevel[]>([2, 3]);
   readonly labels = signal<Partial<RteRenderLabels> | undefined>(undefined);
 }
 

@@ -284,9 +284,9 @@ describe('assertEmbedProvider (endurecido)', () => {
       expect(Object.isFrozen(p.srcPatterns)).toBe(true);
     }
     expect(Object.isFrozen(RTE_EMBED_PROVIDERS)).toBe(true);
-    expect(() => RTE_YOUTUBE_PROVIDER.hosts.push('evil.com')).toThrow(
-      TypeError,
-    );
+    expect(() =>
+      (RTE_YOUTUBE_PROVIDER.hosts as string[]).push('evil.com'),
+    ).toThrow(TypeError);
   });
 });
 

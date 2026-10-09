@@ -83,12 +83,15 @@ export interface RteElementSpec {
 // @public (undocumented)
 export interface RteExtractTocOptions {
     idPrefix?: string;
-    levels?: number[];
+    levels?: readonly RteHeadingLevel[];
     maxDepth?: number;
 }
 
 // @public (undocumented)
 export type RteFeatureId = 'base' | 'links' | 'colors' | 'code' | 'tables' | 'tasks' | 'media' | 'embeds' | 'newsBlocks';
+
+// @public
+export type RteHeadingLevel = 2 | 3 | 4;
 
 // @public
 export interface RteHtmlInspection {
@@ -143,7 +146,7 @@ export interface RteTocEntry {
     // (undocumented)
     id: string;
     // (undocumented)
-    level: number;
+    level: RteHeadingLevel;
     text: string;
 }
 

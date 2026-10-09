@@ -173,7 +173,7 @@ export interface RteElementSpec {
 // @public (undocumented)
 export interface RteEmbedProvider {
     // (undocumented)
-    hosts: string[];
+    hosts: readonly string[];
     // (undocumented)
     id: string;
     // (undocumented)
@@ -181,7 +181,7 @@ export interface RteEmbedProvider {
     // (undocumented)
     name: string;
     // (undocumented)
-    srcPatterns: string[];
+    srcPatterns: readonly string[];
     // (undocumented)
     toEmbed(url: string): {
         src: string;
@@ -220,12 +220,15 @@ export interface RteHeading {
     // (undocumented)
     id: string;
     // (undocumented)
-    level: 2 | 3 | 4;
+    level: RteHeadingLevel;
     // (undocumented)
     pos: number;
     // (undocumented)
     text: string;
 }
+
+// @public
+export type RteHeadingLevel = 2 | 3 | 4;
 
 // @public (undocumented)
 export interface RteHtmlSchema {
@@ -252,12 +255,7 @@ export interface RteHtmlSchemaOptions {
     // (undocumented)
     features?: Partial<RteFeatures>;
     idPrefix?: string;
-    linkPolicy?: {
-        blockedDomains?: string[];
-        forceRel?: string[];
-        protocols?: string[];
-        allowRelative?: boolean;
-    };
+    linkPolicy?: RteSchemaLinkPolicy;
     // (undocumented)
     mediaHosts?: readonly string[];
 }
@@ -292,13 +290,13 @@ export interface RteLinkPolicy {
     // (undocumented)
     allowRelative: boolean;
     // (undocumented)
-    blockedDomains: string[];
+    blockedDomains: readonly string[];
     // (undocumented)
-    defaultRel: string[];
+    defaultRel: readonly string[];
     // (undocumented)
-    forceRel: string[];
+    forceRel: readonly string[];
     // (undocumented)
-    protocols: string[];
+    protocols: readonly string[];
     // (undocumented)
     target: 'preserve' | 'blank' | 'never';
 }
@@ -319,6 +317,14 @@ export interface RtePullquoteAttrs {
     author?: string;
     // (undocumented)
     role?: string;
+}
+
+// @public
+export interface RteSchemaLinkPolicy {
+    allowRelative?: boolean;
+    blockedDomains?: readonly string[];
+    forceRel?: readonly string[];
+    protocols?: readonly string[];
 }
 
 // @public
@@ -442,7 +448,7 @@ export interface RteVideoAttrs {
     // (undocumented)
     src: string;
     // (undocumented)
-    tracks?: RteVideoTrack[];
+    tracks?: readonly RteVideoTrack[];
     // (undocumented)
     width?: number | null;
 }

@@ -28,7 +28,9 @@ export function parseSrcset(value: string): RteSrcsetCandidate[] | null {
   return out;
 }
 
-export function formatSrcset(candidates: RteSrcsetCandidate[]): string {
+export function formatSrcset(
+  candidates: readonly RteSrcsetCandidate[],
+): string {
   return candidates
     .map((c) =>
       c.descriptor === undefined ? c.url : `${c.url} ${c.descriptor}`,

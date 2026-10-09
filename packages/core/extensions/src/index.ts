@@ -40,8 +40,10 @@ export type {
   RteFeatures,
   RteHtmlSchema,
   RteHtmlSchemaOptions,
+  RteSchemaLinkPolicy,
   RtePaletteColor,
   RteUrlRule,
 } from '../../src/schema/types';
 export type { RteLinkPolicy } from '../../src/links';
+export type { RteHeadingLevel } from '../../src/headings';
 export type { RteCodeLanguage } from '../../code-languages/src/index';

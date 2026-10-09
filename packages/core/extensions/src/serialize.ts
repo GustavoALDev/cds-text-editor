@@ -1,7 +1,7 @@
 import type { Editor } from '@tiptap/core';
 import { DOMSerializer } from '@tiptap/pm/model';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import { createHeadingIds } from '../../src/headings';
+import { createHeadingIds, type RteHeadingLevel } from '../../src/headings';
 import { RTE_DEFAULT_ID_PREFIX } from '../../src/schema/id-prefix';
 import { resolveContentLabels } from './labels';
 import { withRenderDocument } from './render-document';
@@ -26,7 +26,7 @@ export interface RteSerializeHtmlOptions {
 
 export interface RteHeading {
   pos: number;
-  level: 2 | 3 | 4;
+  level: RteHeadingLevel;
   text: string;
   id: string;
 }
@@ -103,7 +103,7 @@ export function getRteHeadings(
 }
 
 /** Nível do título limitado a 2–4 (JSON pode trazer qualquer valor). */
-export function clampLevel(level: unknown): 2 | 3 | 4 {
+export function clampLevel(level: unknown): RteHeadingLevel {
   const n = Math.trunc(Number(level));
   if (!(n > 2)) return 2;
   return n >= 4 ? 4 : (n as 3);

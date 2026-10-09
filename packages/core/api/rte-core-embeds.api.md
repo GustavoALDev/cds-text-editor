@@ -38,7 +38,7 @@ export interface RteEmbed {
 // @public (undocumented)
 export interface RteEmbedProvider {
     // (undocumented)
-    hosts: string[];
+    hosts: readonly string[];
     // (undocumented)
     id: string;
     // (undocumented)
@@ -46,7 +46,7 @@ export interface RteEmbedProvider {
     // (undocumented)
     name: string;
     // (undocumented)
-    srcPatterns: string[];
+    srcPatterns: readonly string[];
     // (undocumented)
     toEmbed(url: string): {
         src: string;

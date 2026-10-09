@@ -1,5 +1,8 @@
 import { RTE_DEFAULT_ID_PREFIX, assertIdPrefix } from './schema/id-prefix';
 
+/** Nível de título do esquema (`h2`–`h4`). */
+export type RteHeadingLevel = 2 | 3 | 4;
+
 /** Comprimento máximo do atributo `id` no esquema. */
 const ID_MAX_LENGTH = 80;
 

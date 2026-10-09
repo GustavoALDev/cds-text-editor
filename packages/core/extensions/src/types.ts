@@ -46,7 +46,7 @@ export interface RteVideoAttrs {
   height?: number | null;
   poster?: string | null;
   preload?: 'metadata' | 'none';
-  tracks?: RteVideoTrack[];
+  tracks?: readonly RteVideoTrack[];
   caption?: string;
 }
 

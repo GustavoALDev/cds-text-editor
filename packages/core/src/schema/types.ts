@@ -100,12 +100,24 @@ export interface RteHtmlSchema {
 export interface RteEmbedProvider {
   id: string;
   name: string;
-  hosts: string[];
-  srcPatterns: string[];
+  hosts: readonly string[];
+  srcPatterns: readonly string[];
   match(url: string): boolean;
   toEmbed(
     url: string,
   ): { src: string; height?: number; aspectRatio?: string } | null;
+}
+
+/** Política de links aceita por `getHtmlSchema` (`RteHtmlSchemaOptions.linkPolicy`). */
+export interface RteSchemaLinkPolicy {
+  /** Domínios bloqueados. */
+  blockedDomains?: readonly string[];
+  /** Tokens de `rel` sempre aplicados. */
+  forceRel?: readonly string[];
+  /** Protocolos aceitos (só restringe o padrão). */
+  protocols?: readonly string[];
+  /** Aceita caminhos relativos (padrão `true`). */
+  allowRelative?: boolean;
 }
 
 /** Opções de `getHtmlSchema`. */
@@ -126,10 +138,5 @@ export interface RteHtmlSchemaOptions {
    * no editor. `protocols` (padrão `https`, `http`, `mailto`, `tel`) só pode restringir; um valor fora
    * dessa lista lança `TypeError`. `allowRelative: false` recusa também o fragmento (`#x`).
    */
-  linkPolicy?: {
-    blockedDomains?: string[];
-    forceRel?: string[];
-    protocols?: string[];
-    allowRelative?: boolean;
-  };
+  linkPolicy?: RteSchemaLinkPolicy;
 }

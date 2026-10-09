@@ -5,11 +5,11 @@ import { isAllowedUrl } from './schema/url';
 
 /** Política de links (seção 7 da spec 03a). */
 export interface RteLinkPolicy {
-  protocols: string[];
+  protocols: readonly string[];
   allowRelative: boolean;
-  defaultRel: string[];
-  forceRel: string[];
-  blockedDomains: string[];
+  defaultRel: readonly string[];
+  forceRel: readonly string[];
+  blockedDomains: readonly string[];
   target: 'preserve' | 'blank' | 'never';
 }
 

@@ -6,6 +6,7 @@ export { validateHtml } from './validate-html';
 export type { RteHtmlViolation, RteValidateHtmlOptions } from './validate-html';
 export { inspectRteHtml } from './inspect-rte-html';
 export type { RteHtmlInspection } from './inspect-rte-html';
+export type { RteHeadingLevel } from '../../src/headings';
 export type {
   RteAttrRule,
   RteAttrSpec,

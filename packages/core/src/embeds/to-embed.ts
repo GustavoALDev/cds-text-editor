@@ -49,7 +49,7 @@ export function toEmbed(
           relative: false,
           fragment: false,
           hosts,
-          patterns: provider.srcPatterns,
+          patterns: [...provider.srcPatterns],
           maxLength: 2048,
         },
         result.src,

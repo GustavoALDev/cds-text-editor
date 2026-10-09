@@ -21,6 +21,7 @@ export { RTE_TEXT_COLORS, RTE_HIGHLIGHT_COLORS } from './schema/palette';
 export type {
   RteHtmlSchema,
   RteHtmlSchemaOptions,
+  RteSchemaLinkPolicy,
   RteElementSpec,
   RteAttrSpec,
   RteAttrRule,
@@ -39,6 +40,7 @@ export {
 export type { RteLinkPolicy } from './links';
 
 export { slugify, createHeadingIds } from './headings';
+export type { RteHeadingLevel } from './headings';
 export { countCharacters, countWords, readingTime } from './text';
 
 export { computeResize, parseSrcset, formatSrcset } from './image';
