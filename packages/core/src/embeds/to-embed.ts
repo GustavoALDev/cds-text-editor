@@ -3,12 +3,21 @@ import { RTE_EMBED_PROVIDERS } from './providers';
 import { validateEmbedProvider } from './validate-provider';
 import type { RteEmbedProvider } from '../schema/types';
 
+/**
+ * Mídia incorporada resolvida por `toEmbed`: o `iframe` que o esquema aceita.
+ */
 export interface RteEmbed {
+  /** Identificador do provedor que reconheceu o endereço. */
   provider: string;
+  /** Endereço canônico do `iframe` (sempre `https`). */
   src: string;
+  /** Título acessível do `iframe` (o nome do provedor). */
   title: string;
+  /** Largura em pixels do `iframe`. */
   width: number;
+  /** Altura em pixels do `iframe`. */
   height: number;
+  /** Proporção CSS (`largura / altura`) quando o provedor a define. */
   aspectRatio?: string;
 }
 

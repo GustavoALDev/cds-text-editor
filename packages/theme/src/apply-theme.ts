@@ -27,6 +27,7 @@ export const FORCED_COLORS_TOKENS = [
   '--rte-tertiary-border',
 ] as const;
 
+/** Opções de `applyRteTheme`: as sementes de `RteTheme` mais `force`. */
 export type RteApplyThemeOptions = RteTheme & {
   /** Usa o plano B (variáveis calculadas em JS) mesmo com suporte nativo. */
   force?: boolean;

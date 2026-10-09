@@ -6,7 +6,9 @@ import type { RteContentLabels } from './types';
 
 /** Armazenamento `editor.storage.rtContent`, lido por `getRteHtml`. */
 export interface RteContentStorage {
+  /** Esquema do HTML em uso pelo editor. */
   schema: RteHtmlSchema;
+  /** Prefixo dos ids de título em uso. */
   idPrefix: string;
   /** Rótulos resolvidos a cada chamada (lição 4). */
   labels(): RteContentLabels;

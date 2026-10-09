@@ -11,4 +11,5 @@ export const RTE_THEME_PRESETS = {
   monochrome: { primary: '#374151', secondary: '#6b7280', tertiary: '#111827' },
 } as const;
 
+/** Nome de um tema pronto de `RTE_THEME_PRESETS`. */
 export type RteThemePresetName = keyof typeof RTE_THEME_PRESETS;

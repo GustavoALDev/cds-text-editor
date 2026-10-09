@@ -14,13 +14,10 @@ export const RTE_CODE_LANGUAGES: readonly RteCodeLanguage[];
 
 // @public
 export interface RteCodeLanguage {
-    // (undocumented)
     readonly aliases: readonly string[];
     readonly id: string;
     load(): Promise<LanguageFn>;
     readonly name: string;
 }
-
-// (No @packageDocumentation comment for this package)
 
 ```

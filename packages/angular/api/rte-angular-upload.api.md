@@ -12,16 +12,14 @@ import { RteUploadType } from '@cds/rte-angular';
 // @public
 export function httpUploadAdapter(options: RteHttpUploadOptions): RteUploadAdapter;
 
-// @public (undocumented)
+// @public
 export interface RteHttpUploadOptions {
-    // (undocumented)
     endpoint: string | {
         image: string;
         video?: string;
     };
     fieldName?: string;
     headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-    // (undocumented)
     mapResponse?(body: unknown, info: {
         file: File;
         kind: RteUploadType;
@@ -29,7 +27,5 @@ export interface RteHttpUploadOptions {
     timeoutMs?: number;
     withCredentials?: boolean;
 }
-
-// (No @packageDocumentation comment for this package)
 
 ```

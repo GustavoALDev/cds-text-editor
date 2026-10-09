@@ -2,47 +2,69 @@ import type { ValidationErrors } from '@angular/forms';
 import type { ValidationError } from '@angular/forms/signals';
 import { RTE_LABELS_EN, type RteLabels } from '@cds/rte-angular';
 
+/** Erro do validador `rteRequired`: sem texto e sem mídia. */
 export interface RteRequiredError extends ValidationError {
+  /** Identifica o erro `rteRequired`. */
   readonly kind: 'rteRequired';
 }
 
+/** Erro do validador `rteMaxChars`: texto acima do limite de caracteres. */
 export interface RteMaxCharsError extends ValidationError {
+  /** Identifica o erro `rteMaxChars`. */
   readonly kind: 'rteMaxChars';
+  /** Limite configurado. */
   readonly max: number;
+  /** Quantidade de caracteres do valor. */
   readonly actual: number;
 }
 
+/** Erro do validador `rteMaxWords`: texto acima do limite de palavras. */
 export interface RteMaxWordsError extends ValidationError {
+  /** Identifica o erro `rteMaxWords`. */
   readonly kind: 'rteMaxWords';
+  /** Limite configurado. */
   readonly max: number;
+  /** Quantidade de palavras do valor. */
   readonly actual: number;
 }
 
 /** Envios em curso no editor (`rteUploadsFinished`, E19). */
 export interface RteUploadsPendingError extends ValidationError {
+  /** Identifica o erro `rteUploadsPending`. */
   readonly kind: 'rteUploadsPending';
+  /** Quantidade de envios em curso. */
   readonly count: number;
 }
 
 /** Imagens com `alt: null` no editor (`rteImagesHaveAlt`, E19). */
 export interface RteImagesMissingAltError extends ValidationError {
+  /** Identifica o erro `rteImagesMissingAlt`. */
   readonly kind: 'rteImagesMissingAlt';
+  /** Quantidade de imagens sem texto alternativo. */
   readonly count: number;
 }
 
 /** Links fora da política no valor (`rteSafeLinks`, K13); até 5 endereços em `hrefs`. */
 export interface RteUnsafeLinksError extends ValidationError {
+  /** Identifica o erro `rteUnsafeLinks`. */
   readonly kind: 'rteUnsafeLinks';
+  /** Quantidade de links fora da política. */
   readonly count: number;
+  /** Até 5 endereços fora da política, para exibir ao autor. */
   readonly hrefs: readonly string[];
 }
 
 /** Títulos `h2`–`h4` vazios no valor (`rteNoEmptyHeadings`, K13). */
 export interface RteEmptyHeadingsError extends ValidationError {
+  /** Identifica o erro `rteEmptyHeadings`. */
   readonly kind: 'rteEmptyHeadings';
+  /** Quantidade de títulos vazios. */
   readonly count: number;
 }
 
+/**
+ * União dos erros que os validadores do editor produzem; o campo `kind` distingue cada um.
+ */
 export type RteValidationError =
   | RteRequiredError
   | RteMaxCharsError
@@ -57,7 +79,9 @@ export type RteValidationError =
  * (`ReactiveValidationError`): o objeto do validador fica em `context`.
  */
 export interface RteReactiveValidationError {
+  /** Identificador do erro (`rteMaxChars`, `rteRequired`...). */
   readonly kind: string;
+  /** Objeto do validador (`max`, `actual`, `count`...). */
   readonly context?: unknown;
 }
 

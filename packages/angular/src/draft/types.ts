@@ -12,10 +12,14 @@ export interface RteDraftConfig {
 
 /** Erro do rascunho (S4): falha de escrita ou armazenamento indisponível. */
 export interface RteDraftErrorEvent {
+  /**
+   * `write` quando a escrita falhou; `unavailable` quando não há armazenamento.
+   */
   readonly reason: 'write' | 'unavailable';
 }
 
 /** Rascunho encontrado e ainda não decidido (S5): só a data, nunca o conteúdo. */
 export interface RteDraftAvailable {
+  /** Quando o rascunho foi salvo (ms desde a época). */
   readonly savedAt: number;
 }

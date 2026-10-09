@@ -9,6 +9,9 @@ import type {
 } from '../../src/schema/types';
 import { resolveMaxDepth } from './walk';
 
+/**
+ * Divergência do HTML em relação ao esquema encontrada por `validateHtml`.
+ */
 export type RteHtmlViolation = {
   kind:
     | 'unknown-element'
@@ -28,6 +31,7 @@ export type RteHtmlViolation = {
   path: string;
 };
 
+/** Opções de `validateHtml`. */
 export interface RteValidateHtmlOptions {
   /** `canonical` (padrão): igual à saída do sanitizador; `accepted`: só aceito. */
   mode?: 'canonical' | 'accepted';

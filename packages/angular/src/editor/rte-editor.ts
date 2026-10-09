@@ -241,22 +241,43 @@ export class RteEditor implements FormValueControl<string> {
   protected static readonly ɵdialogKit = RTE_DIALOG_KIT;
 
   // Contrato de controle (preenchido pelo [formField]; utilizável sem formulário)
+  /** HTML canônico do conteúdo (ligação de duas vias). */
   readonly value = model('');
+  /** Desabilita o editor (preenchido por `[formField]`). */
   readonly disabled = input(false, { transform: booleanAttribute });
+  /** Editor somente leitura (preenchido por `[formField]`). */
   readonly readonly = input(false, { transform: booleanAttribute });
+  /** Oculta o editor (preenchido por `[formField]`). */
   readonly hidden = input(false, { transform: booleanAttribute });
+  /** Marca o editor como obrigatório (preenchido por `[formField]`). */
   readonly required = input(false, { transform: booleanAttribute });
+  /** Marca o editor como inválido (preenchido por `[formField]`). */
   readonly invalid = input(false, { transform: booleanAttribute });
+  /** Indica que o campo foi tocado (preenchido por `[formField]`). */
   readonly touched = input(false, { transform: booleanAttribute });
+  /**
+   * Limite de caracteres (preenchido por `[formField]`); o editor recusa ou corta o que passar.
+   */
   readonly maxLength = input<number | undefined>(undefined);
+  /** Emite quando o foco sai do editor (marca o campo como tocado). */
   readonly touch = output<void>();
 
   // Configuração
+  /** Texto de apoio exibido com o editor vazio. */
   readonly placeholder = input('');
+  /**
+   * Nome acessível do editor; sem ele nem `ariaLabelledBy`, vale o rótulo padrão.
+   */
   readonly ariaLabel = input<string | undefined>(undefined);
+  /** Id de elemento que nomeia o editor (`aria-labelledby`). */
   readonly ariaLabelledBy = input<string | undefined>(undefined);
+  /** Id de elemento que descreve o editor (`aria-describedby`). */
   readonly ariaDescribedBy = input<string | undefined>(undefined);
+  /**
+   * Rótulos desta instância, mesclados sobre os do provider e sobre o inglês.
+   */
   readonly labels = input<RteLabelsSource | undefined>(undefined);
+  /** Opções de criação do Tiptap e do conteúdo; lidas só na criação. */
   readonly options = input<RteEditorConfig | undefined>(undefined);
   /** Barra: entrada > `provideRichText` > `'article'`; vale ao vivo (U8). */
   readonly toolbar = input<RteToolbarConfig | undefined>(undefined);
@@ -278,8 +299,11 @@ export class RteEditor implements FormValueControl<string> {
   readonly showWordCount = input<boolean | undefined>(undefined);
 
   // Saídas
+  /** Emite a instância do Tiptap assim que ela é criada. */
   readonly editorReady = output<Editor>();
+  /** Emite quando o editor recebe o foco. */
   readonly editorFocus = output<void>();
+  /** Emite quando o foco sai do editor. */
   readonly editorBlur = output<void>();
   /** Delta por transação que muda o conjunto de endereços de mídia (V13). */
   readonly mediaChange = output<RteMediaChange>();
@@ -318,9 +342,17 @@ export class RteEditor implements FormValueControl<string> {
   private destroyed = false;
 
   // Estado (somente leitura)
+  /**
+   * Instância do Tiptap, ou `null` antes da criação e depois da destruição. Contrato do Tiptap 3, não desta biblioteca.
+   */
   readonly editor: Signal<Editor | null> = this.instance.asReadonly();
+  /** `true` quando o documento não tem texto nem mídia. */
   readonly isEmpty: Signal<boolean> = this.bridge.isEmpty;
+  /** `true` quando o foco está no texto editável. */
   readonly isFocused: Signal<boolean> = this.bridge.isFocused;
+  /**
+   * Contagem de caracteres e palavras com o limite, ou `null` antes da criação.
+   */
   readonly textStats: Signal<RteCharLimitState | null> = this.bridge.textStats;
   /** Líquido da sessão de mídia (V13). */
   readonly mediaSession: Signal<RteMediaSession> = this.mediaState.asReadonly();
@@ -621,6 +653,7 @@ export class RteEditor implements FormValueControl<string> {
 
   /** Barra de busca (K7–K10): o estado é do core; a barra é o *chunk* `rte-search`. */
   private readonly searchOpenState = signal(false);
+  /** `true` enquanto a barra de busca está aberta. */
   readonly searchOpen: Signal<boolean> = this.searchOpenState.asReadonly();
   /** @internal */
   protected readonly searchState = createSearchState({
@@ -775,6 +808,7 @@ export class RteEditor implements FormValueControl<string> {
   });
   /** Envios em curso, na ordem do gesto (E18). */
   readonly uploads = this.uploading.uploads;
+  /** Quantidade de envios ainda em curso. */
   readonly pendingUploads = this.uploading.pendingUploads;
   /** @internal */
   protected readonly announcements = this.uploading.announcements;

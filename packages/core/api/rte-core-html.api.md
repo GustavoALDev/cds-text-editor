@@ -13,7 +13,7 @@ export function htmlToText(html: string, options?: RteHtmlToTextOptions): string
 // @public
 export function inspectRteHtml(html: string): RteHtmlInspection;
 
-// @public (undocumented)
+// @public
 export type RteAttrRule = {
     kind: 'enum';
     values: string[];
@@ -41,26 +41,20 @@ export type RteAttrRule = {
     maxLength: number;
 };
 
-// @public (undocumented)
+// @public
 export interface RteAttrSpec {
-    // (undocumented)
     default?: string;
-    // (undocumented)
     required?: boolean;
-    // (undocumented)
     rule: RteAttrRule;
 }
 
-// @public (undocumented)
+// @public
 export interface RteElementSpec {
-    // (undocumented)
     attributes: Record<string, RteAttrSpec>;
-    // (undocumented)
     classes?: {
         values?: string[];
         patterns?: string[];
     };
-    // (undocumented)
     ensureTokens?: {
         attribute: string;
         tokens: string[];
@@ -71,7 +65,6 @@ export interface RteElementSpec {
     }[];
     onInvalid?: 'remove' | 'unwrap';
     requireChild?: string[];
-    // (undocumented)
     styleFrom?: {
         attribute: string;
         property: string;
@@ -80,14 +73,14 @@ export interface RteElementSpec {
     styles?: Record<string, RteAttrRule>;
 }
 
-// @public (undocumented)
+// @public
 export interface RteExtractTocOptions {
     idPrefix?: string;
     levels?: readonly RteHeadingLevel[];
     maxDepth?: number;
 }
 
-// @public (undocumented)
+// @public
 export type RteFeatureId = 'base' | 'links' | 'colors' | 'code' | 'tables' | 'tasks' | 'media' | 'embeds' | 'newsBlocks';
 
 // @public
@@ -100,29 +93,25 @@ export interface RteHtmlInspection {
     readonly truncated: boolean;
 }
 
-// @public (undocumented)
+// @public
 export interface RteHtmlSchema {
     byFeature: Partial<Record<RteFeatureId, string[]>>;
     elements: Record<string, RteElementSpec>;
-    // (undocumented)
     features: RteFeatureId[];
-    // (undocumented)
     idPrefix: string;
-    // (undocumented)
     palette: {
         text: readonly RtePaletteColor[];
         highlight: readonly RtePaletteColor[];
     };
-    // (undocumented)
     version: 1;
 }
 
-// @public (undocumented)
+// @public
 export interface RteHtmlToTextOptions {
     maxDepth?: number;
 }
 
-// @public (undocumented)
+// @public
 export type RteHtmlViolation = {
     kind: 'unknown-element' | 'unknown-attribute' | 'invalid-attribute' | 'non-canonical-attribute' | 'missing-required-attribute' | 'invalid-class' | 'invalid-style' | 'missing-ensured-token' | 'missing-required-child' | 'unexpected-node' | 'max-depth';
     tag: string;
@@ -131,26 +120,21 @@ export type RteHtmlViolation = {
     path: string;
 };
 
-// @public (undocumented)
+// @public
 export interface RtePaletteColor {
-    // (undocumented)
     dark: string;
-    // (undocumented)
     light: string;
-    // (undocumented)
     name: string;
 }
 
-// @public (undocumented)
+// @public
 export interface RteTocEntry {
-    // (undocumented)
     id: string;
-    // (undocumented)
     level: RteHeadingLevel;
     text: string;
 }
 
-// @public (undocumented)
+// @public
 export type RteUrlRule = {
     kind: 'url';
     schemes: string[];
@@ -162,7 +146,7 @@ export type RteUrlRule = {
     maxLength: number;
 };
 
-// @public (undocumented)
+// @public
 export interface RteValidateHtmlOptions {
     maxDepth?: number;
     mode?: 'canonical' | 'accepted';
@@ -170,7 +154,5 @@ export interface RteValidateHtmlOptions {
 
 // @public
 export function validateHtml(html: string, schema: RteHtmlSchema, options?: RteValidateHtmlOptions): RteHtmlViolation[];
-
-// (No @packageDocumentation comment for this package)
 
 ```

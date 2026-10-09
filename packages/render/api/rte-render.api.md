@@ -26,7 +26,6 @@ export class RteContent implements OnInit {
     readonly error: Signal<RteSanitizeErrorLike | null>;
     readonly labels: _angular_core.InputSignal<Partial<RteRenderLabels> | undefined>;
     readonly mode: _angular_core.InputSignal<RteRenderMode>;
-    // (undocumented)
     ngOnInit(): void;
     readonly renderedHtml: Signal<string>;
     readonly rteContent: _angular_core.InputSignal<string | null | undefined>;
@@ -45,26 +44,19 @@ export interface RteRenderLabels {
 // @public
 export type RteRenderMode = 'sanitize' | 'trusted';
 
-// @public (undocumented)
+// @public
 export interface RteRenderOptions {
     fragmentLinks?: 'document' | 'keep';
-    // (undocumented)
     labels?: Partial<RteRenderLabels>;
     sanitize?: (html: string) => string;
 }
 
 // @public
 export interface RteSanitizeErrorLike {
-    // (undocumented)
     readonly code: 'input-too-long' | 'max-depth';
-    // (undocumented)
     readonly limit: number;
-    // (undocumented)
     readonly message: string;
-    // (undocumented)
     readonly name: 'RteSanitizeError';
 }
-
-// (No @packageDocumentation comment for this package)
 
 ```

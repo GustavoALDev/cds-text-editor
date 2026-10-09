@@ -47,7 +47,7 @@ export const RTE_SLASH_ITEMS: readonly RteSlashItem[];
 // @public
 export const RTE_SLASH_LABELS: Readonly<Record<'pt-BR' | 'en' | 'es', RteSlashLabels>>;
 
-// @public (undocumented)
+// @public
 export type RteAttrRule = {
     kind: 'enum';
     values: string[];
@@ -75,13 +75,10 @@ export type RteAttrRule = {
     maxLength: number;
 };
 
-// @public (undocumented)
+// @public
 export interface RteAttrSpec {
-    // (undocumented)
     default?: string;
-    // (undocumented)
     required?: boolean;
-    // (undocumented)
     rule: RteAttrRule;
 }
 
@@ -91,7 +88,6 @@ export type RteCalloutVariant = 'info' | 'success' | 'warning' | 'danger';
 // @public
 export interface RteCharLimitState extends RteTextStats {
     limit: number | null;
-    // (undocumented)
     overLimit: boolean;
     rejected: number;
     remaining: number | null;
@@ -99,7 +95,6 @@ export interface RteCharLimitState extends RteTextStats {
 
 // @public
 export interface RteCodeLanguage {
-    // (undocumented)
     readonly aliases: readonly string[];
     readonly id: string;
     load(): Promise<LanguageFn>;
@@ -120,10 +115,8 @@ export type RteContentLabelsSource = Partial<RteContentLabels> | (() => Partial<
 
 // @public
 export interface RteContentStorage {
-    // (undocumented)
     idPrefix: string;
     labels(): RteContentLabels;
-    // (undocumented)
     schema: RteHtmlSchema;
 }
 
@@ -141,16 +134,13 @@ export interface RteEditorOptions extends RteHtmlSchemaOptions {
     slash?: RteSlashOptions;
 }
 
-// @public (undocumented)
+// @public
 export interface RteElementSpec {
-    // (undocumented)
     attributes: Record<string, RteAttrSpec>;
-    // (undocumented)
     classes?: {
         values?: string[];
         patterns?: string[];
     };
-    // (undocumented)
     ensureTokens?: {
         attribute: string;
         tokens: string[];
@@ -161,7 +151,6 @@ export interface RteElementSpec {
     }[];
     onInvalid?: 'remove' | 'unwrap';
     requireChild?: string[];
-    // (undocumented)
     styleFrom?: {
         attribute: string;
         property: string;
@@ -170,19 +159,13 @@ export interface RteElementSpec {
     styles?: Record<string, RteAttrRule>;
 }
 
-// @public (undocumented)
+// @public
 export interface RteEmbedProvider {
-    // (undocumented)
     hosts: readonly string[];
-    // (undocumented)
     id: string;
-    // (undocumented)
     match(url: string): boolean;
-    // (undocumented)
     name: string;
-    // (undocumented)
     srcPatterns: readonly string[];
-    // (undocumented)
     toEmbed(url: string): {
         src: string;
         height?: number;
@@ -190,73 +173,53 @@ export interface RteEmbedProvider {
     } | null;
 }
 
-// @public (undocumented)
+// @public
 export type RteFeatureId = 'base' | 'links' | 'colors' | 'code' | 'tables' | 'tasks' | 'media' | 'embeds' | 'newsBlocks';
 
-// @public (undocumented)
+// @public
 export interface RteFeatures {
-    // (undocumented)
     code: boolean;
-    // (undocumented)
     colors: boolean;
-    // (undocumented)
     embeds: boolean;
-    // (undocumented)
     media: boolean;
-    // (undocumented)
     newsBlocks: boolean;
-    // (undocumented)
     search: boolean;
-    // (undocumented)
     slashCommands: boolean;
-    // (undocumented)
     tables: boolean;
-    // (undocumented)
     tasks: boolean;
 }
 
-// @public (undocumented)
+// @public
 export interface RteHeading {
-    // (undocumented)
     id: string;
-    // (undocumented)
     level: RteHeadingLevel;
-    // (undocumented)
     pos: number;
-    // (undocumented)
     text: string;
 }
 
 // @public
 export type RteHeadingLevel = 2 | 3 | 4;
 
-// @public (undocumented)
+// @public
 export interface RteHtmlSchema {
     byFeature: Partial<Record<RteFeatureId, string[]>>;
     elements: Record<string, RteElementSpec>;
-    // (undocumented)
     features: RteFeatureId[];
-    // (undocumented)
     idPrefix: string;
-    // (undocumented)
     palette: {
         text: readonly RtePaletteColor[];
         highlight: readonly RtePaletteColor[];
     };
-    // (undocumented)
     version: 1;
 }
 
 // @public
 export interface RteHtmlSchemaOptions {
     allowRelativeMedia?: boolean;
-    // (undocumented)
     embedProviders?: readonly RteEmbedProvider[];
-    // (undocumented)
     features?: Partial<RteFeatures>;
     idPrefix?: string;
     linkPolicy?: RteSchemaLinkPolicy;
-    // (undocumented)
     mediaHosts?: readonly string[];
 }
 
@@ -265,57 +228,37 @@ export type RteImageAlign = 'left' | 'center' | 'right' | 'full';
 
 // @public
 export interface RteImageAttrs {
-    // (undocumented)
     align?: RteImageAlign;
-    // (undocumented)
     alt?: string | null;
-    // (undocumented)
     caption?: string;
-    // (undocumented)
     credit?: string;
-    // (undocumented)
     height?: number | null;
-    // (undocumented)
     sizes?: string | null;
-    // (undocumented)
     src: string;
-    // (undocumented)
     srcset?: string | null;
-    // (undocumented)
     width?: number | null;
 }
 
 // @public
 export interface RteLinkPolicy {
-    // (undocumented)
     allowRelative: boolean;
-    // (undocumented)
     blockedDomains: readonly string[];
-    // (undocumented)
     defaultRel: readonly string[];
-    // (undocumented)
     forceRel: readonly string[];
-    // (undocumented)
     protocols: readonly string[];
-    // (undocumented)
     target: 'preserve' | 'blank' | 'never';
 }
 
-// @public (undocumented)
+// @public
 export interface RtePaletteColor {
-    // (undocumented)
     dark: string;
-    // (undocumented)
     light: string;
-    // (undocumented)
     name: string;
 }
 
 // @public
 export interface RtePullquoteAttrs {
-    // (undocumented)
     author?: string;
-    // (undocumented)
     role?: string;
 }
 
@@ -329,49 +272,39 @@ export interface RteSchemaLinkPolicy {
 
 // @public
 export interface RteSearchMatch {
-    // (undocumented)
     from: number;
-    // (undocumented)
     to: number;
 }
 
 // @public
 export interface RteSearchOptions {
-    // (undocumented)
     caseSensitive?: boolean;
-    // (undocumented)
     wholeWord?: boolean;
 }
 
 // @public
 export interface RteSearchState {
     activeIndex: number;
-    // (undocumented)
     capped: boolean;
-    // (undocumented)
     caseSensitive: boolean;
     lastReplaced: number | null;
     matches: readonly RteSearchMatch[];
-    // (undocumented)
     query: string;
-    // (undocumented)
     total: number;
-    // (undocumented)
     wholeWord: boolean;
 }
 
-// @public (undocumented)
+// @public
 export interface RteSerializeHtmlOptions {
     idPrefix?: string;
     labels?: RteContentLabelsSource;
 }
 
-// @public (undocumented)
+// @public
 export interface RteSlashItem {
     readonly command?: (chain: ChainedCommands, editor: Editor) => ChainedCommands;
     readonly group?: string;
     readonly id: string;
-    // (undocumented)
     readonly keywords?: readonly string[];
     readonly title?: string | (() => string);
 }
@@ -379,7 +312,7 @@ export interface RteSlashItem {
 // @public
 export type RteSlashItemId = 'paragraph' | 'heading2' | 'heading3' | 'heading4' | 'bulletList' | 'orderedList' | 'taskList' | 'blockquote' | 'codeBlock' | 'table' | 'horizontalRule' | 'callout' | 'pullquote' | 'readAlso' | 'image' | 'video' | 'embed';
 
-// @public (undocumented)
+// @public
 export type RteSlashLabels = Record<RteSlashItemId, {
     title: string;
     keywords: readonly string[];
@@ -388,15 +321,12 @@ export type RteSlashLabels = Record<RteSlashItemId, {
 // @public
 export interface RteSlashMenuState {
     activeIndex: number;
-    // (undocumented)
     items: readonly {
         id: string;
         title: string;
         group?: string;
     }[];
-    // (undocumented)
     open: boolean;
-    // (undocumented)
     query: string;
     range: {
         from: number;
@@ -404,9 +334,8 @@ export interface RteSlashMenuState {
     } | null;
 }
 
-// @public (undocumented)
+// @public
 export interface RteSlashOptions {
-    // (undocumented)
     items?: readonly RteSlashItem[] | ((defaults: readonly RteSlashItem[]) => readonly RteSlashItem[]);
     labels?: Partial<RteSlashLabels> | (() => Partial<RteSlashLabels>);
     onUiItem?: (id: string, editor: Editor) => void;
@@ -415,15 +344,13 @@ export interface RteSlashOptions {
 // @public
 export type RteTextDirection = 'ltr' | 'rtl';
 
-// @public (undocumented)
+// @public
 export interface RteTextStats {
-    // (undocumented)
     characters: number;
-    // (undocumented)
     words: number;
 }
 
-// @public (undocumented)
+// @public
 export type RteUrlRule = {
     kind: 'url';
     schemes: string[];
@@ -437,39 +364,25 @@ export type RteUrlRule = {
 
 // @public
 export interface RteVideoAttrs {
-    // (undocumented)
     caption?: string;
-    // (undocumented)
     height?: number | null;
-    // (undocumented)
     poster?: string | null;
-    // (undocumented)
     preload?: 'metadata' | 'none';
-    // (undocumented)
     src: string;
-    // (undocumented)
     tracks?: readonly RteVideoTrack[];
-    // (undocumented)
     width?: number | null;
 }
 
 // @public
 export interface RteVideoTrack {
-    // (undocumented)
     default?: boolean;
-    // (undocumented)
     kind: 'captions' | 'subtitles';
-    // (undocumented)
     label: string;
-    // (undocumented)
     src: string;
-    // (undocumented)
     srclang: string;
 }
 
 // @public
 export function serializeRteHtml(doc: Node_2, options?: RteSerializeHtmlOptions): string;
-
-// (No @packageDocumentation comment for this package)
 
 ```

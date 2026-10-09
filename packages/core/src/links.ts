@@ -5,14 +5,25 @@ import { isAllowedUrl } from './schema/url';
 
 /** Política de links (seção 7 da spec 03a). */
 export interface RteLinkPolicy {
+  /** Protocolos aceitos, sem os dois-pontos. */
   protocols: readonly string[];
+  /** Aceita endereços relativos e âncoras do próprio site. */
   allowRelative: boolean;
+  /** Tokens de `rel` aplicados aos links por padrão. */
   defaultRel: readonly string[];
+  /** Tokens de `rel` sempre aplicados. */
   forceRel: readonly string[];
+  /** Domínios cujos links são recusados. */
   blockedDomains: readonly string[];
+  /**
+   * `preserve` mantém o `_blank` escolhido pelo autor, `blank` abre links externos em nova aba, `never` nunca emite `target`.
+   */
   target: 'preserve' | 'blank' | 'never';
 }
 
+/**
+ * Política de links padrão: `https`, `http`, `mailto` e `tel`; relativos aceitos; `target` preservado.
+ */
 export const RTE_DEFAULT_LINK_POLICY: Readonly<RteLinkPolicy> = Object.freeze({
   protocols: Object.freeze(['https', 'http', 'mailto', 'tel']) as string[],
   allowRelative: true,

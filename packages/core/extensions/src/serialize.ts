@@ -17,6 +17,7 @@ import type {
   RteContentLabelsSource,
 } from './types';
 
+/** Opções de `serializeRteHtml`. */
 export interface RteSerializeHtmlOptions {
   /** Prefixo dos ids de título (padrão `'rt-'`). */
   idPrefix?: string;
@@ -24,10 +25,15 @@ export interface RteSerializeHtmlOptions {
   labels?: RteContentLabelsSource;
 }
 
+/** Título do documento do editor, com a posição para navegar até ele. */
 export interface RteHeading {
+  /** Posição do título no documento do editor. */
   pos: number;
+  /** Nível do título (2 a 4). */
   level: RteHeadingLevel;
+  /** Texto do título. */
   text: string;
+  /** Id do título, no formato do esquema. */
   id: string;
 }
 

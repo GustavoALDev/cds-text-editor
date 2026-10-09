@@ -24,6 +24,4 @@ export class RteToc {
 
 export { RteTocEntry }
 
-// (No @packageDocumentation comment for this package)
-
 ```

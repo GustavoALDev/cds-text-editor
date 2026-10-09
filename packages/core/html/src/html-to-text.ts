@@ -1,6 +1,7 @@
 import { TEXT_BLOCK_TAGS, collapseTextLine } from '../../src/text-lines';
 import { resolveMaxDepth, walkHtml } from './walk';
 
+/** Opções de `htmlToText`. */
 export interface RteHtmlToTextOptions {
   /** Profundidade máxima de elementos (padrão 256); `RangeError` se não for inteiro positivo. */
   maxDepth?: number;

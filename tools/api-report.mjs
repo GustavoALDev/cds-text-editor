@@ -112,6 +112,80 @@ const REPORT_MESSAGES = () => ({
   tsdocMessageReporting: { default: { logLevel: 'none' } },
 });
 
+const tag = (entryName) => (entryName ? `${entryName}: ` : '');
+const DECL_RE =
+  /^export (?:declare )?(abstract )?(class|interface|type|const|enum|function) (\w+)/;
+const PREFIX_RE = /^(Rte|RTE_)/;
+
+// AP2: declaração exportada que não é função começa por Rte/RTE_ (funções ficam sem
+// prefixo). `allow` = [{ name, reason }]: exceção só com motivo. Reexportações
+// (`export { X }`) não são conferidas aqui: o nome vem da declaração no entry de origem.
+export function checkPrefixConvention(
+  reportText,
+  { allow = [], entryName = '' } = {},
+) {
+  const errors = [];
+  for (const line of reportText.split(/\r?\n/)) {
+    const m = DECL_RE.exec(line);
+    if (!m || m[2] === 'function') continue;
+    const name = m[3];
+    if (PREFIX_RE.test(name)) continue;
+    const ex = allow.find((a) => a.name === name);
+    if (ex?.reason) continue;
+    errors.push(
+      ex
+        ? `${tag(entryName)}exceção ao prefixo de "${name}" sem motivo (informe "reason")`
+        : `${tag(entryName)}${m[2]} "${name}" não começa por Rte/RTE_ (convenção AP2)`,
+    );
+  }
+  return errors;
+}
+
+// AP8: @packageDocumentation no entry e nenhum "(undocumented)", exceto membros de
+// interfaces Rte*Labels (documentadas no nível da interface) e os static ɵ que o
+// compilador do Angular gera (não há onde escrever JSDoc).
+export function checkDocumentation(reportText, entryName = '') {
+  const errors = [];
+  const lines = reportText.split(/\r?\n/);
+  if (lines.some((l) => l.includes('No @packageDocumentation comment')))
+    errors.push(
+      `${tag(entryName)}entry sem @packageDocumentation (uma frase em pt-BR no arquivo-raiz do entry)`,
+    );
+  let top = null;
+  for (let i = 0; i < lines.length; i++) {
+    const m = DECL_RE.exec(lines[i]);
+    if (m) top = m[3];
+    if (!lines[i].includes('(undocumented)')) continue;
+    const next = lines[i + 1] ?? '';
+    const nm = DECL_RE.exec(next);
+    if (nm) {
+      errors.push(`${tag(entryName)}"${nm[3]}" sem JSDoc ((undocumented))`);
+      continue;
+    }
+    if (/^\s+(static )?ɵ/.test(next)) continue;
+    if (/^Rte\w*Labels$/.test(top ?? '') && /^\s/.test(lines[i])) continue;
+    errors.push(
+      `${tag(entryName)}membro de "${top}" sem JSDoc: ${next.trim().slice(0, 80)}`,
+    );
+  }
+  return errors;
+}
+
+// Fonte do entry: <pacote>/src/index.ts (raiz) ou <pacote>/<subcaminho>/src/index.ts.
+export function sourceEntryFile(pkgDir, subpath) {
+  const sub = subpath === '.' ? '' : subpath.replace(/^\.\//, '');
+  return join(pkgDir, sub, 'src', 'index.ts');
+}
+
+// Bloco /** ... @packageDocumentation */ do arquivo-raiz do entry, ou null.
+export function extractPackageDoc(sourceText) {
+  const re = /\/\*\*(?:(?!\*\/)[\s\S])*?@packageDocumentation[\s\S]*?\*\//;
+  return re.exec(sourceText.replaceAll('\r\n', '\n'))?.[0] ?? null;
+}
+
+// Exceções ao prefixo da AP2 (nome + motivo). Vazia: nenhuma declaração fora da convenção.
+export const PREFIX_EXCEPTIONS = [];
+
 // Símbolos `ɵ` no relatório público vazam detalhe de implementação: só os
 // membros estáticos gerados pelo compilador do Angular são aceitos (Z8).
 export function internalLeaks(report) {
@@ -142,11 +216,27 @@ export async function runExtractor({
   packageJsonFullPath,
   modelDir,
   syntheticPackage,
+  checkConventions = false,
+  packageDoc = null,
 }) {
   const { Extractor, ExtractorConfig } =
     await import('@microsoft/api-extractor');
   const work = mkdtempSync(join(tmpdir(), 'api-report-'));
   mkdirSync(join(work, 'out'));
+  // Cópia ao lado do .d.ts (imports relativos continuam valendo) com o comentário do pacote no topo.
+  let dts = entry.dts;
+  let pkgDocCopy = null;
+  if (packageDoc) {
+    // O empacotador pode manter o comentário fora do topo (depois dos imports): troca pelo do fonte.
+    const original = readFileSync(entry.dts, 'utf8');
+    const existing = extractPackageDoc(original);
+    pkgDocCopy = entry.dts.replace(/\.d\.ts$/, '.pkgdoc.d.ts');
+    writeFileSync(
+      pkgDocCopy,
+      packageDoc + '\n' + (existing ? original.replace(existing, '') : original),
+    );
+    dts = pkgDocCopy;
+  }
   try {
     // Duas passadas: o relatório usa o nome real do pacote (cabeçalho "API Report File for"),
     // o modelo usa o nome sintético do entry; a passada do modelo não toca no relatório.
@@ -154,7 +244,7 @@ export async function runExtractor({
       ExtractorConfig.prepare({
         configObject: {
           projectFolder: projectFolder ?? dirname(entry.dts),
-          mainEntryPointFilePath: entry.dts,
+          mainEntryPointFilePath: dts,
           bundledPackages: [],
           compiler: {
             overrideTsconfig: {
@@ -167,7 +257,7 @@ export async function runExtractor({
                 strict: true,
                 paths,
               },
-              files: [entry.dts],
+              files: [dts],
             },
           },
           apiReport: {
@@ -222,7 +312,17 @@ export async function runExtractor({
     const changed =
       next !== null && (current === null || norm(current) !== norm(next));
     if (next === null) errors.push('o api-extractor não gerou o relatório');
-    else errors.push(...internalLeaks(next));
+    else {
+      errors.push(...internalLeaks(next));
+      if (checkConventions) {
+        errors.push(
+          ...checkPrefixConvention(next, {
+            allow: PREFIX_EXCEPTIONS,
+          }),
+          ...checkDocumentation(next, entry.name),
+        );
+      }
+    }
     if (next !== null && changed && update) {
       mkdirSync(reportDir, { recursive: true });
       writeFileSync(target, norm(next));
@@ -249,13 +349,14 @@ export async function runExtractor({
     }
     return { ok: errors.length === 0, apiReportChanged: changed, errors };
   } finally {
+    if (pkgDocCopy) rmSync(pkgDocCopy, { force: true });
     rmSync(work, { recursive: true, force: true });
   }
 }
 
 export async function main(
   packageDir,
-  { update, root = process.cwd(), modelDir } = {},
+  { update, root = process.cwd(), modelDir, checkConventions = false } = {},
 ) {
   const dir = resolve(packageDir);
   const entries = listEntries(dir);
@@ -281,7 +382,11 @@ export async function main(
         errors.push(`.d.ts ausente (rode o build): ${entry.dts}`);
         continue;
       }
+      const srcEntry = sourceEntryFile(pkgDir, entry.subpath);
       const r = await runExtractor({
+        packageDoc: existsSync(srcEntry)
+          ? extractPackageDoc(readFileSync(srcEntry, 'utf8'))
+          : null,
         entry,
         reportDir,
         update,
@@ -289,6 +394,7 @@ export async function main(
         projectFolder: root,
         packageJsonFullPath: join(dir, 'package.json'),
         modelDir,
+        checkConventions,
         syntheticPackage: {
           name: syntheticName({ report: entry.name }, realPkg.name),
           version: realPkg.version,
@@ -321,6 +427,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const modelArg = i > 0 ? process.argv[i + 1] : process.env.RTE_API_MODEL;
   const errors = await main(dir, {
     update: process.env.UPDATE_API === '1',
+    checkConventions: true,
     modelDir: modelArg ? resolve(modelArg) : undefined,
   });
   if (errors.length) {

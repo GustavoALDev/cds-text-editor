@@ -1,3 +1,9 @@
+/**
+ * Extensões do Tiptap 3 do editor de texto rico e a serialização canônica do HTML.
+ *
+ * @packageDocumentation
+ */
+
 export { createEditorExtensions } from './factory';
 export { serializeRteHtml, getRteHeadings, getRteHtml } from './serialize';
 export type { RteSerializeHtmlOptions, RteHeading } from './serialize';

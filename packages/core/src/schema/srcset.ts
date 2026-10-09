@@ -1,5 +1,8 @@
+/** Candidato de um `srcset`: endereço e descritor opcional. */
 export interface RteSrcsetCandidate {
+  /** Endereço da imagem. */
   url: string;
+  /** Descritor de largura (`640w`) ou de densidade (`2x`). */
   descriptor?: string;
 }
 
@@ -28,6 +31,9 @@ export function parseSrcset(value: string): RteSrcsetCandidate[] | null {
   return out;
 }
 
+/**
+ * Monta o texto de um `srcset` a partir dos candidatos (inverso de `parseSrcset`).
+ */
 export function formatSrcset(
   candidates: readonly RteSrcsetCandidate[],
 ): string {

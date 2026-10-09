@@ -1,3 +1,9 @@
+/**
+ * Leitura do HTML gravado sem DOM: texto simples, sumário e validação contra o esquema.
+ *
+ * @packageDocumentation
+ */
+
 export { htmlToText } from './html-to-text';
 export type { RteHtmlToTextOptions } from './html-to-text';
 export { extractToc } from './extract-toc';

@@ -20,18 +20,25 @@ export type { RteSearchMatch } from './search-index';
 
 /** Opções da busca (spec 03c, C8); ausentes mantêm o valor atual. */
 export interface RteSearchOptions {
+  /** Diferencia maiúsculas de minúsculas. */
   caseSensitive?: boolean;
+  /** Casa só palavras inteiras. */
   wholeWord?: boolean;
 }
 
 /** Estado público da busca (spec 03c, §4 e C18). */
 export interface RteSearchState {
+  /** Consulta atual. */
   query: string;
+  /** Se a busca diferencia maiúsculas de minúsculas. */
   caseSensitive: boolean;
+  /** Se a busca casa só palavras inteiras. */
   wholeWord: boolean;
   /** Ordem de documento, no máximo 1000. */
   matches: readonly RteSearchMatch[];
+  /** Quantidade de resultados, limitada ao teto de 1000. */
   total: number;
+  /** `true` quando há mais resultados que o teto de 1000. */
   capped: boolean;
   /** `-1` sem resultado. */
   activeIndex: number;

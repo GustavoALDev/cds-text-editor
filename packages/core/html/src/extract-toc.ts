@@ -3,13 +3,17 @@ import { getHtmlSchema } from '../../src/schema/get-html-schema';
 import { matchesRule } from '../../src/schema/rules';
 import { resolveMaxDepth, walkHtml } from './walk';
 
+/** Entrada do sumário: um título do conteúdo. */
 export interface RteTocEntry {
+  /** Id do título, para o link `#id`. */
   id: string;
   /** Texto puro já decodificado: escape ou use `textContent` antes de inserir em HTML. */
   text: string;
+  /** Nível do título (2 a 4). */
   level: RteHeadingLevel;
 }
 
+/** Opções de `extractToc`. */
 export interface RteExtractTocOptions {
   /** Níveis de título incluídos (padrão `[2, 3]`); fora de 2–4 é ignorado. */
   levels?: readonly RteHeadingLevel[];

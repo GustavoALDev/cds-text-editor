@@ -9,6 +9,4 @@ import { Editor } from '@tiptap/core';
 // @public
 export function getRteEditor(host: Element): Editor | null;
 
-// (No @packageDocumentation comment for this package)
-
 ```

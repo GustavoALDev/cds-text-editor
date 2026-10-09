@@ -1,3 +1,9 @@
+/**
+ * Gramáticas do `highlight.js` carregadas sob demanda para os blocos de código.
+ *
+ * @packageDocumentation
+ */
+
 import type { LanguageFn } from 'highlight.js';
 
 /** Linguagem de bloco de código carregada sob demanda (spec 03b, §6). */
@@ -6,6 +12,9 @@ export interface RteCodeLanguage {
   readonly id: string;
   /** Rótulo para a UI. */
   readonly name: string;
+  /**
+   * Nomes alternativos aceitos para a linguagem (por exemplo `js` para `javascript`).
+   */
   readonly aliases: readonly string[];
   /** Gramática do `highlight.js`, por `import()`. */
   load(): Promise<LanguageFn>;

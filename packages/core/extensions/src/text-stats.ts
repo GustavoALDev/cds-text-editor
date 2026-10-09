@@ -7,8 +7,11 @@ import { createStringDocument } from './string-dom';
 import { emptyTitleLabel } from './titles';
 import type { RteContentLabels, RteContentLabelsSource } from './types';
 
+/** Contagem de caracteres e palavras do texto visível. */
 export interface RteTextStats {
+  /** Quantidade de caracteres (pontos de código). */
   characters: number;
+  /** Quantidade de palavras. */
   words: number;
 }
 

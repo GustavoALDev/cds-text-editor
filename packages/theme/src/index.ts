@@ -1,3 +1,9 @@
+/**
+ * Tema por variáveis CSS `--rte-*` a partir de até três cores-semente, com o plano B em TypeScript e a verificação de contraste.
+ *
+ * @packageDocumentation
+ */
+
 export { createRteTheme } from './create-theme';
 export type { RteCreateThemeOptions } from './create-theme';
 export { checkRteTheme, suggestRteColor, warnIfPoorTheme } from './check-theme';

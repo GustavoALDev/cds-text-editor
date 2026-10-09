@@ -65,6 +65,9 @@ function youtubeParts(
   return { id, short, start };
 }
 
+/**
+ * Provedor do YouTube (vídeos e Shorts), incorporado por `youtube-nocookie.com`.
+ */
 export const RTE_YOUTUBE_PROVIDER: RteEmbedProvider = freezeProvider({
   id: 'youtube',
   name: 'YouTube',
@@ -96,6 +99,7 @@ function vimeoId(url: string): string | null {
   return id !== undefined && /^\d{1,12}$/.test(id) ? id : null;
 }
 
+/** Provedor do Vimeo. */
 export const RTE_VIMEO_PROVIDER: RteEmbedProvider = freezeProvider({
   id: 'vimeo',
   name: 'Vimeo',
@@ -122,6 +126,7 @@ function spotifyParts(url: string): { type: string; id: string } | null {
   return /^[A-Za-z0-9]{22}$/.test(id) ? { type, id } : null;
 }
 
+/** Provedor do Spotify (faixas, álbuns, listas e episódios). */
 export const RTE_SPOTIFY_PROVIDER: RteEmbedProvider = freezeProvider({
   id: 'spotify',
   name: 'Spotify',
@@ -140,6 +145,9 @@ export const RTE_SPOTIFY_PROVIDER: RteEmbedProvider = freezeProvider({
   },
 });
 
+/**
+ * Provedores de mídia incorporada embutidos (YouTube, Vimeo e Spotify), usados como padrão.
+ */
 export const RTE_EMBED_PROVIDERS: readonly RteEmbedProvider[] = Object.freeze([
   RTE_YOUTUBE_PROVIDER,
   RTE_VIMEO_PROVIDER,

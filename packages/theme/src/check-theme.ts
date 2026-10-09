@@ -6,24 +6,35 @@ import { createRteTheme } from './create-theme';
 import { STATIC_TOKENS } from './static-tokens';
 import type { RteTheme } from './types';
 
+/** Resultado de uma verificação de contraste do tema. */
 export interface RteThemeCheck {
   /** Identificador estável: `C1`..`C6b` (primária), `C1:secondary`, `static:danger:surface`... */
   id: string;
+  /** Descrição legível do par de cores verificado. */
   label: string;
+  /** Modo (`light` ou `dark`) em que a verificação foi feita. */
   mode: 'light' | 'dark';
+  /** Razão de contraste medida. */
   ratio: number;
+  /** Razão de contraste mínima exigida. */
   min: number;
   /** Sempre `ratio >= min`. */
   pass: boolean;
 }
 
+/** Relatório de `checkRteTheme`. */
 export interface RteThemeReport {
+  /** `true` quando todas as verificações passaram. */
   ok: boolean;
+  /** Todas as verificações de contraste feitas, aprovadas ou não. */
   checks: RteThemeCheck[];
   /** Campos (`primary` | `secondary` | `tertiary`) cujo valor não pôde ser lido e caíram no padrão. */
   invalid: string[];
 }
 
+/**
+ * Opções de `checkRteTheme`: as sementes de `RteTheme` mais o leitor de cores.
+ */
 export type RteCheckThemeOptions = RteTheme & { parseColor?: RteColorParser };
 
 const FIELDS = ['primary', 'secondary', 'tertiary'] as const;
@@ -144,6 +155,7 @@ export function checkRteTheme(
   return { ok: checks.every((c) => c.pass), checks, invalid };
 }
 
+/** Opções de `suggestRteColor`. */
 export interface RteSuggestColorOptions {
   /** Leitor de cores (padrão: `parseColor`). */
   parseColor?: RteColorParser;

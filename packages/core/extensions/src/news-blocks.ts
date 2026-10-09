@@ -22,7 +22,9 @@ import type { RteCalloutVariant } from './types';
 
 /** Atributos de `rtPullquote` (B10: texto puro). */
 export interface RtePullquoteAttrs {
+  /** Autor da citação, em texto puro. */
   author?: string;
+  /** Cargo ou função do autor, em texto puro. */
   role?: string;
 }
 

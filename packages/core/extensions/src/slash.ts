@@ -18,10 +18,15 @@ import type { RteSlashItem, RteSlashOptions } from './slash-items';
 
 /** Estado público do menu `/` (spec 03c, §4 e C18). */
 export interface RteSlashMenuState {
+  /** Se o menu está aberto. */
   open: boolean;
+  /** Texto digitado depois da barra. */
   query: string;
   /** Do `/` ao cursor (posicionamento na spec 05); `null` fechado. */
   range: { from: number; to: number } | null;
+  /**
+   * Itens que casam com a consulta, com o grupo para agrupar na interface.
+   */
   items: readonly { id: string; title: string; group?: string }[];
   /** `-1` sem itens. */
   activeIndex: number;

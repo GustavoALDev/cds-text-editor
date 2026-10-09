@@ -16,6 +16,7 @@ export interface RteCharLimitState extends RteTextStats {
   limit: number | null;
   /** `limit - characters` (negativo acima do limite); `null` sem limite. */
   remaining: number | null;
+  /** `true` quando o conteúdo ultrapassa o limite. */
   overLimit: boolean;
   /** Entradas diretas recusadas ou cortadas desde a criação. */
   rejected: number;

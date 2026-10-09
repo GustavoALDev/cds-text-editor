@@ -22,7 +22,7 @@ export function countCharacters(text: string): number;
 // @public
 export function countWords(text: string): number;
 
-// @public (undocumented)
+// @public
 export function createDraftStore(options: RteDraftStoreOptions): RteDraftStore;
 
 // @public
@@ -34,7 +34,7 @@ export function createHeadingIds(options?: {
 // @public
 export function createLocalDraftStorage(): RteDraftStorage;
 
-// @public (undocumented)
+// @public
 export function createMemoryDraftStorage(): RteDraftStorage;
 
 // @public
@@ -43,7 +43,7 @@ export function escapeHtmlAttribute(value: string): string;
 // @public
 export function escapeHtmlText(text: string): string;
 
-// @public (undocumented)
+// @public
 export function formatSrcset(candidates: readonly RteSrcsetCandidate[]): string;
 
 // @public
@@ -73,7 +73,7 @@ export function isAllowedClass(spec: RteElementSpec, token: string): boolean;
 // @public
 export function isAllowedUrl(rule: RteUrlRule, value: string): string | null;
 
-// @public (undocumented)
+// @public
 export function matchesRule(rule: RteAttrRule, value: string): boolean;
 
 // @public
@@ -96,7 +96,7 @@ export function readingTime(text: string, options?: {
 // @public
 export const RTE_DEFAULT_ID_PREFIX = "rt-";
 
-// @public (undocumented)
+// @public
 export const RTE_DEFAULT_LINK_POLICY: Readonly<RteLinkPolicy>;
 
 // @public
@@ -111,7 +111,7 @@ export const RTE_TABLE_CELL_MIN_WIDTH = 25;
 // @public
 export const RTE_TEXT_COLORS: readonly RtePaletteColor[];
 
-// @public (undocumented)
+// @public
 export type RteAttrRule = {
     kind: 'enum';
     values: string[];
@@ -139,31 +139,23 @@ export type RteAttrRule = {
     maxLength: number;
 };
 
-// @public (undocumented)
+// @public
 export interface RteAttrSpec {
-    // (undocumented)
     default?: string;
-    // (undocumented)
     required?: boolean;
-    // (undocumented)
     rule: RteAttrRule;
 }
 
 // @public
 export interface RteDraftStorage {
-    // (undocumented)
     get(key: string): string | null;
-    // (undocumented)
     remove(key: string): void;
-    // (undocumented)
     set(key: string, value: string): void;
 }
 
-// @public (undocumented)
+// @public
 export interface RteDraftStore {
-    // (undocumented)
     clear(): void;
-    // (undocumented)
     load(): {
         html: string;
         savedAt: number;
@@ -171,26 +163,21 @@ export interface RteDraftStore {
     save(html: string): boolean;
 }
 
-// @public (undocumented)
+// @public
 export interface RteDraftStoreOptions {
-    // (undocumented)
     key: string;
     maxAgeMs?: number | undefined;
     now?: (() => number) | undefined;
-    // (undocumented)
     storage: RteDraftStorage;
 }
 
-// @public (undocumented)
+// @public
 export interface RteElementSpec {
-    // (undocumented)
     attributes: Record<string, RteAttrSpec>;
-    // (undocumented)
     classes?: {
         values?: string[];
         patterns?: string[];
     };
-    // (undocumented)
     ensureTokens?: {
         attribute: string;
         tokens: string[];
@@ -201,7 +188,6 @@ export interface RteElementSpec {
     }[];
     onInvalid?: 'remove' | 'unwrap';
     requireChild?: string[];
-    // (undocumented)
     styleFrom?: {
         attribute: string;
         property: string;
@@ -210,19 +196,13 @@ export interface RteElementSpec {
     styles?: Record<string, RteAttrRule>;
 }
 
-// @public (undocumented)
+// @public
 export interface RteEmbedProvider {
-    // (undocumented)
     hosts: readonly string[];
-    // (undocumented)
     id: string;
-    // (undocumented)
     match(url: string): boolean;
-    // (undocumented)
     name: string;
-    // (undocumented)
     srcPatterns: readonly string[];
-    // (undocumented)
     toEmbed(url: string): {
         src: string;
         height?: number;
@@ -230,108 +210,76 @@ export interface RteEmbedProvider {
     } | null;
 }
 
-// @public (undocumented)
+// @public
 export type RteFeatureId = 'base' | 'links' | 'colors' | 'code' | 'tables' | 'tasks' | 'media' | 'embeds' | 'newsBlocks';
 
-// @public (undocumented)
+// @public
 export interface RteFeatures {
-    // (undocumented)
     code: boolean;
-    // (undocumented)
     colors: boolean;
-    // (undocumented)
     embeds: boolean;
-    // (undocumented)
     media: boolean;
-    // (undocumented)
     newsBlocks: boolean;
-    // (undocumented)
     search: boolean;
-    // (undocumented)
     slashCommands: boolean;
-    // (undocumented)
     tables: boolean;
-    // (undocumented)
     tasks: boolean;
 }
 
 // @public
 export type RteHeadingLevel = 2 | 3 | 4;
 
-// @public (undocumented)
+// @public
 export interface RteHtmlSchema {
     byFeature: Partial<Record<RteFeatureId, string[]>>;
     elements: Record<string, RteElementSpec>;
-    // (undocumented)
     features: RteFeatureId[];
-    // (undocumented)
     idPrefix: string;
-    // (undocumented)
     palette: {
         text: readonly RtePaletteColor[];
         highlight: readonly RtePaletteColor[];
     };
-    // (undocumented)
     version: 1;
 }
 
 // @public
 export interface RteHtmlSchemaOptions {
     allowRelativeMedia?: boolean;
-    // (undocumented)
     embedProviders?: readonly RteEmbedProvider[];
-    // (undocumented)
     features?: Partial<RteFeatures>;
     idPrefix?: string;
     linkPolicy?: RteSchemaLinkPolicy;
-    // (undocumented)
     mediaHosts?: readonly string[];
 }
 
 // @public
 export interface RteLinkPolicy {
-    // (undocumented)
     allowRelative: boolean;
-    // (undocumented)
     blockedDomains: readonly string[];
-    // (undocumented)
     defaultRel: readonly string[];
-    // (undocumented)
     forceRel: readonly string[];
-    // (undocumented)
     protocols: readonly string[];
-    // (undocumented)
     target: 'preserve' | 'blank' | 'never';
 }
 
-// @public (undocumented)
+// @public
 export interface RtePaletteColor {
-    // (undocumented)
     dark: string;
-    // (undocumented)
     light: string;
-    // (undocumented)
     name: string;
 }
 
-// @public (undocumented)
+// @public
 export type RteResizeCorner = 'nw' | 'ne' | 'sw' | 'se';
 
-// @public (undocumented)
+// @public
 export interface RteResizeInput {
-    // (undocumented)
     corner: RteResizeCorner;
-    // (undocumented)
     dx: number;
-    // (undocumented)
     dy: number;
-    // (undocumented)
     height: number;
-    // (undocumented)
     maxWidth?: number;
-    // (undocumented)
     minWidth?: number;
-    // (undocumented)
     width: number;
 }
 
@@ -354,11 +302,9 @@ export interface RteSchemaLinkPolicy {
     protocols?: readonly string[];
 }
 
-// @public (undocumented)
+// @public
 export interface RteSrcsetCandidate {
-    // (undocumented)
     descriptor?: string;
-    // (undocumented)
     url: string;
 }
 
@@ -369,12 +315,12 @@ export type RteTableSizing = {
     minWidth: number;
 };
 
-// @public (undocumented)
+// @public
 export type RteTokensRule = Extract<RteAttrRule, {
     kind: 'tokens';
 }>;
 
-// @public (undocumented)
+// @public
 export type RteUrlRule = {
     kind: 'url';
     schemes: string[];
@@ -400,7 +346,5 @@ export function serializeTokens(rule: RteTokensRule, value: string): string | nu
 
 // @public
 export function slugify(text: string, maxLength?: number): string;
-
-// (No @packageDocumentation comment for this package)
 
 ```

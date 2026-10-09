@@ -1,3 +1,4 @@
+/** Cor sRGB como trio `[r, g, b]`, cada canal em 0..1. */
 export type RteRgb = readonly [number, number, number];
 export type Rgb8 = readonly [number, number, number];
 

@@ -1,3 +1,9 @@
+/**
+ * Auxiliares para testar aplicações que usam o `RteEditor`, com acesso à instância do Tiptap.
+ *
+ * @packageDocumentation
+ */
+
 import type { Editor } from '@tiptap/core';
 
 /** Mesma chave do componente (D23): `Symbol.for` vale entre bundles. */

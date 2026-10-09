@@ -45,32 +45,32 @@ export const RTE_THEME_PRESETS: {
     };
 };
 
-// @public (undocumented)
+// @public
 export type RteApplyThemeOptions = RteTheme & {
     force?: boolean;
 };
 
-// @public (undocumented)
+// @public
 export type RteCheckThemeOptions = RteTheme & {
     parseColor?: RteColorParser;
 };
 
-// @public (undocumented)
+// @public
 export type RteColorParser = (input: string) => RteRgb | null;
 
-// @public (undocumented)
+// @public
 export interface RteCreateThemeOptions extends RteTheme {
     dark?: boolean;
     parseColor?: RteColorParser;
 }
 
-// @public (undocumented)
+// @public
 export type RteNeutral = 'tinted' | 'gray';
 
-// @public (undocumented)
+// @public
 export type RteRgb = readonly [number, number, number];
 
-// @public (undocumented)
+// @public
 export interface RteSuggestColorOptions {
     check?: (color: string) => boolean;
     parseColor?: RteColorParser;
@@ -78,44 +78,33 @@ export interface RteSuggestColorOptions {
 
 // @public
 export interface RteTheme {
-    // (undocumented)
     mode?: RteThemeMode;
-    // (undocumented)
     neutral?: RteNeutral;
-    // (undocumented)
     primary?: string;
-    // (undocumented)
     secondary?: string;
-    // (undocumented)
     tertiary?: string;
 }
 
-// @public (undocumented)
+// @public
 export interface RteThemeCheck {
     id: string;
-    // (undocumented)
     label: string;
-    // (undocumented)
     min: number;
-    // (undocumented)
     mode: 'light' | 'dark';
     pass: boolean;
-    // (undocumented)
     ratio: number;
 }
 
-// @public (undocumented)
+// @public
 export type RteThemeMode = 'auto' | 'inherit' | 'light' | 'dark';
 
-// @public (undocumented)
+// @public
 export type RteThemePresetName = keyof typeof RTE_THEME_PRESETS;
 
-// @public (undocumented)
+// @public
 export interface RteThemeReport {
-    // (undocumented)
     checks: RteThemeCheck[];
     invalid: string[];
-    // (undocumented)
     ok: boolean;
 }
 
@@ -130,7 +119,5 @@ export function supportsRelativeColors(): boolean;
 
 // @public
 export function warnIfPoorTheme(options?: RteCheckThemeOptions, warn?: (message: string) => void): RteThemeReport;
-
-// (No @packageDocumentation comment for this package)
 
 ```

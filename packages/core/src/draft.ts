@@ -4,13 +4,19 @@
  */
 
 export interface RteDraftStorage {
+  /** Lê o valor guardado na chave, ou `null`. */
   get(key: string): string | null;
+  /** Grava o valor na chave. */
   set(key: string, value: string): void;
+  /** Apaga a chave. */
   remove(key: string): void;
 }
 
+/** Opções de `createDraftStore`. */
 export interface RteDraftStoreOptions {
+  /** Armazenamento que guarda o rascunho. */
   storage: RteDraftStorage;
+  /** Chave do rascunho no armazenamento (não pode ser vazia). */
   key: string;
   /** Idade máxima do rascunho em ms (padrão: 7 dias). */
   maxAgeMs?: number | undefined;
@@ -18,10 +24,15 @@ export interface RteDraftStoreOptions {
   now?: (() => number) | undefined;
 }
 
+/** Armazenamento de um rascunho: salvar, carregar e apagar. */
 export interface RteDraftStore {
   /** Devolve `false` se o armazenamento falhar (cota, bloqueio). */
   save(html: string): boolean;
+  /**
+   * Devolve o rascunho com a data do salvamento (ms desde a época), ou `null` se não há ou expirou.
+   */
   load(): { html: string; savedAt: number } | null;
+  /** Apaga o rascunho. */
   clear(): void;
 }
 
@@ -30,6 +41,9 @@ const DEFAULT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const FUTURE_SKEW_MS = 60_000;
 const PROBE_KEY = '__rte_draft_probe__';
 
+/**
+ * Cria um armazenamento em memória, útil em testes e quando o armazenamento do navegador não está disponível.
+ */
 export function createMemoryDraftStorage(): RteDraftStorage {
   const data = new Map<string, string>();
   return {
@@ -64,6 +78,9 @@ export function createLocalDraftStorage(): RteDraftStorage {
   return createMemoryDraftStorage();
 }
 
+/**
+ * Cria um armazenamento de rascunho (um HTML por chave) sobre o `storage` informado; o rascunho expira após `maxAgeMs`.
+ */
 export function createDraftStore(options: RteDraftStoreOptions): RteDraftStore {
   const { storage, key } = options;
   const maxAgeMs = options.maxAgeMs ?? DEFAULT_MAX_AGE_MS;

@@ -7,6 +7,9 @@ import { deriveRole } from './derive';
 import { STATIC_TOKENS } from './static-tokens';
 import type { RteTheme, RteThemeVariables } from './types';
 
+/**
+ * Opções de `createRteTheme`: as sementes de `RteTheme` mais `dark` e o leitor de cores.
+ */
 export interface RteCreateThemeOptions extends RteTheme {
   /** Força claro/escuro; vence `mode`. */
   dark?: boolean;

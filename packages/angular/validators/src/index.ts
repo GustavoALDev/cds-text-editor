@@ -1,3 +1,9 @@
+/**
+ * Validadores do `RteEditor` para Signal Forms, Reactive Forms e Template Forms, e a formatação das mensagens de erro.
+ *
+ * @packageDocumentation
+ */
+
 export { formatRteError, isRteValidationError } from './errors';
 export type {
   RteEmptyHeadingsError,

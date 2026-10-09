@@ -1,3 +1,9 @@
+/**
+ * Esquema do HTML gravado, política de links, títulos, texto, imagem, rascunho e paleta do editor de texto rico, sem dependência de DOM nem de framework.
+ *
+ * @packageDocumentation
+ */
+
 export { getHtmlSchema, RTE_DEFAULT_ID_PREFIX } from './schema/get-html-schema';
 export {
   normalizeAttribute,

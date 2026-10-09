@@ -7,47 +7,35 @@
 // @public
 export function assertEmbedProvider(p: RteEmbedProvider): void;
 
-// @public (undocumented)
+// @public
 export const RTE_EMBED_PROVIDERS: readonly RteEmbedProvider[];
 
-// @public (undocumented)
+// @public
 export const RTE_SPOTIFY_PROVIDER: RteEmbedProvider;
 
-// @public (undocumented)
+// @public
 export const RTE_VIMEO_PROVIDER: RteEmbedProvider;
 
-// @public (undocumented)
+// @public
 export const RTE_YOUTUBE_PROVIDER: RteEmbedProvider;
 
-// @public (undocumented)
+// @public
 export interface RteEmbed {
-    // (undocumented)
     aspectRatio?: string;
-    // (undocumented)
     height: number;
-    // (undocumented)
     provider: string;
-    // (undocumented)
     src: string;
-    // (undocumented)
     title: string;
-    // (undocumented)
     width: number;
 }
 
-// @public (undocumented)
+// @public
 export interface RteEmbedProvider {
-    // (undocumented)
     hosts: readonly string[];
-    // (undocumented)
     id: string;
-    // (undocumented)
     match(url: string): boolean;
-    // (undocumented)
     name: string;
-    // (undocumented)
     srcPatterns: readonly string[];
-    // (undocumented)
     toEmbed(url: string): {
         src: string;
         height?: number;
@@ -57,7 +45,5 @@ export interface RteEmbedProvider {
 
 // @public
 export function toEmbed(url: string, providers?: readonly RteEmbedProvider[]): RteEmbed | null;
-
-// (No @packageDocumentation comment for this package)
 
 ```
