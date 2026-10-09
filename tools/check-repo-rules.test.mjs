@@ -4,6 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
+  checkCssReports,
   checkOldNames,
   checkRepoRules,
   checkRootReadmeNotice,
@@ -931,4 +932,38 @@ test('nomes antigos: checkRepoRules só varre quando há package.json na raiz', 
   assert.deepEqual(checkRepoRules(sem), []);
   const com = withRoot({ 'a.ts': 'DraftStore\n' });
   assert.ok(checkRepoRules(com).some((e) => /DraftStore/.test(e)));
+});
+
+// --- Relatórios do CSS publicado (spec 09c, AP7) ---
+
+test('CSS publicado: sem relatório nem css-public.json reprova', () => {
+  const root = withRoot({ 'packages/core/styles/content.css': '.rte-root{}' });
+  const errors = checkCssReports(root);
+  assert.equal(errors.length, 2);
+  assert.ok(errors.some((e) => /content\.css-api\.md/.test(e)));
+  assert.ok(errors.some((e) => /css-public\.json/.test(e)));
+});
+
+test('CSS publicado: src/*.css do tema também conta; com os dois arquivos passa', () => {
+  const files = {
+    'packages/theme/src/theme.css': '.rte-root{}',
+  };
+  assert.equal(checkCssReports(withRoot(files)).length, 2);
+  assert.deepEqual(
+    checkCssReports(
+      withRoot({
+        ...files,
+        'packages/theme/api/theme.css-api.md': '# x\n',
+        'packages/theme/api/css-public.json': '{}',
+      }),
+    ),
+    [],
+  );
+});
+
+test('CSS publicado: pacote sem CSS (sanitizer) não exige nada', () => {
+  assert.deepEqual(
+    checkCssReports(withRoot({ 'packages/sanitizer/src/index.ts': '' })),
+    [],
+  );
 });

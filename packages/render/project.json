@@ -131,6 +131,11 @@
         },
         "{projectRoot}/api/**/*",
         "{workspaceRoot}/tools/api-report.mjs",
+        "{workspaceRoot}/tools/css-api.mjs",
+        "{projectRoot}/styles/*.css",
+        "{projectRoot}/src/*.css",
+        "{projectRoot}/README.md",
+        "{workspaceRoot}/apps/docs/content/guia/*.md",
         {
           "env": "UPDATE_API"
         }
@@ -140,7 +145,7 @@
       ],
       "cache": true,
       "options": {
-        "command": "node tools/api-report.mjs dist/packages/render",
+        "command": "node tools/api-report.mjs dist/packages/render && node tools/css-api.mjs packages/render",
         "cwd": "{workspaceRoot}"
       }
     },

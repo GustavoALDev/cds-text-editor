@@ -10,6 +10,7 @@
     "visual": "node tools/visual.mjs",
     "check:rules": "node tools/check-repo-rules.mjs",
     "release-plan": "node tools/release-plan.mjs",
+    "api-diff": "node tools/api-diff.mjs",
     "notices": "node tools/generate-notices.mjs",
     "test:tools": "node --test \"tools/**/*.test.mjs\"",
     "test:examples": "node --test \"examples/server-node/test/*.test.mjs\"",

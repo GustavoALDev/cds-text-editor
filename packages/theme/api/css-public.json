@@ -1,0 +1,41 @@
+{
+  "classes": ["rte-root"],
+  "variables": [
+    "--rte-border",
+    "--rte-code-bg",
+    "--rte-code-comment",
+    "--rte-code-function",
+    "--rte-code-keyword",
+    "--rte-code-number",
+    "--rte-code-string",
+    "--rte-code-text",
+    "--rte-danger",
+    "--rte-density",
+    "--rte-focus",
+    "--rte-focus-width",
+    "--rte-font-mono",
+    "--rte-font-sans",
+    "--rte-font-size",
+    "--rte-line-height",
+    "--rte-neutral-tint",
+    "--rte-primary",
+    "--rte-primary-text",
+    "--rte-radius",
+    "--rte-secondary",
+    "--rte-success",
+    "--rte-surface",
+    "--rte-surface-raised",
+    "--rte-tertiary",
+    "--rte-text",
+    "--rte-text-muted",
+    "--rte-warning"
+  ],
+  "layers": [
+    "rte.base",
+    "rte.components",
+    "rte.content",
+    "rte.reset",
+    "rte.theme"
+  ],
+  "properties": []
+}

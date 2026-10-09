@@ -744,8 +744,41 @@ export function checkOldNames(rootDir) {
   return errors;
 }
 
+// CSS publicado (spec 09c, AP7): todo `styles/*.css` (e o `src/*.css` do tema) tem relatório
+// `api/<arquivo>.css-api.md` e a lista `api/css-public.json`.
+export function checkCssReports(rootDir) {
+  const errors = [];
+  const packagesDir = join(rootDir, 'packages');
+  if (!existsSync(packagesDir)) return errors;
+  for (const pkg of readdirSync(packagesDir)) {
+    const pkgDir = join(packagesDir, pkg);
+    if (!statSync(pkgDir).isDirectory()) continue;
+    const cssFiles = ['styles', 'src'].flatMap((sub) =>
+      existsSync(join(pkgDir, sub))
+        ? readdirSync(join(pkgDir, sub)).filter((f) => f.endsWith('.css'))
+        : [],
+    );
+    if (cssFiles.length === 0) continue;
+    if (!existsSync(join(pkgDir, 'api', 'css-public.json'))) {
+      errors.push(
+        `packages/${pkg}/api/css-public.json: lista pública do CSS ausente (spec 09c, AP7)`,
+      );
+    }
+    for (const css of cssFiles) {
+      const report = `${css.replace(/\.css$/, '')}.css-api.md`;
+      if (!existsSync(join(pkgDir, 'api', report))) {
+        errors.push(
+          `packages/${pkg}/api/${report}: relatório do CSS publicado ${css} ausente (rode UPDATE_API=1 node tools/css-api.mjs packages/${pkg})`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
 export function checkRepoRules(rootDir) {
   const errors = [];
+  errors.push(...checkCssReports(rootDir));
   errors.push(...checkApp(rootDir, 'demo'), ...checkApp(rootDir, 'docs'));
   errors.push(...checkCompat(rootDir));
   errors.push(...checkScreenshots(rootDir));
