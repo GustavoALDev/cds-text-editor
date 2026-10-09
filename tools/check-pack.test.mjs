@@ -116,3 +116,13 @@ test('tsup: accepts styles/*.css at the package root (CSS exportado, spec 05b1 U
   assert.equal(checkPackFiles(['styles/x.js'], 'tsup').length, 1);
   assert.equal(checkPackFiles(['styles/a/b.css'], 'tsup').length, 1);
 });
+
+test('rejects the temporary .pkgdoc.d.ts copy left by api-report', () => {
+  const errors = checkPackFiles([
+    'package.json',
+    'dist/index.d.ts',
+    'dist/index.pkgdoc.d.ts',
+  ]);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /pkgdoc/);
+});

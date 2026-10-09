@@ -260,9 +260,13 @@ const lines = (s) =>
     .filter(Boolean);
 
 /** Reúne as mudanças da base até o HEAD; `git` e `read` são injetáveis nos testes. */
-export function collectChanges({ base, git, read, packageDirs }) {
+export function collectChanges({ base: baseRef, git, read, packageDirs }) {
+  // O ponto de partida é o merge-base: a ponta da base pode ter andado depois do ramo.
+  const base = git(['merge-base', baseRef, 'HEAD']).trim();
   const changedReports = [];
-  for (const file of lines(git(['diff', '--name-only', `${base}...HEAD`]))) {
+  for (const file of lines(
+    git(['diff', '--no-renames', '--name-only', `${base}...HEAD`]),
+  )) {
     const pkg = packageOfReport(file);
     if (!pkg) continue;
     let oldText;
@@ -282,6 +286,7 @@ export function collectChanges({ base, git, read, packageDirs }) {
   for (const file of lines(
     git([
       'diff',
+      '--no-renames',
       '--name-only',
       '--diff-filter=AM',
       `${base}...HEAD`,

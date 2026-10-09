@@ -195,6 +195,22 @@ test('UPDATE_API regrava; sem ele a divergência falha', () => {
   }
 });
 
+test('relatório .css-api.md órfão é reportado na conferência e removido no UPDATE_API', () => {
+  const { root, pkg } = fixture('.rte-root{}', { ...emptyList, classes: ['rte-root'] });
+  try {
+    assert.deepEqual(runCssApi(pkg, { root, update: true }).errors, []);
+    const orphan = join(pkg, 'api', 'velho.css-api.md');
+    writeFileSync(orphan, 'x');
+    const r = runCssApi(pkg, { root, update: false });
+    assert.ok(r.errors.some((e) => /velho.css-api.md.*órfão/.test(e)), r.errors.join('|'));
+    assert.ok(existsSync(orphan));
+    assert.deepEqual(runCssApi(pkg, { root, update: true }).errors, []);
+    assert.ok(!existsSync(orphan));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('lista pública ausente falha', () => {
   const { root, pkg } = fixture('.rte-root{}', emptyList);
   try {

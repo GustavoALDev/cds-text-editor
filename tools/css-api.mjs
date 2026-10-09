@@ -293,10 +293,13 @@ export function runCssApi(
       );
     }
   }
-  if (update) {
-    for (const f of existsSync(apiDir) ? readdirSync(apiDir) : [])
-      if (f.endsWith('.css-api.md') && !expectedReports.has(f))
-        rmSync(join(apiDir, f));
+  for (const f of existsSync(apiDir) ? readdirSync(apiDir) : []) {
+    if (!f.endsWith('.css-api.md') || expectedReports.has(f)) continue;
+    if (update) rmSync(join(apiDir, f));
+    else
+      errors.push(
+        `${f}: relatório CSS órfão, o CSS correspondente não existe mais (rode com UPDATE_API=1)`,
+      );
   }
   return { errors, written };
 }

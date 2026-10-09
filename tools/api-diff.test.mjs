@@ -287,6 +287,7 @@ test('collectChanges usa o git injetado', () => {
   };
   const git = (args) => {
     calls.push(args.join(' '));
+    if (args[0] === 'merge-base') return 'abc123\n';
     if (args[0] === 'diff' && args.includes('--diff-filter=AM'))
       return '.changeset/novo.md\n.changeset/README.md\n';
     if (args[0] === 'diff')
@@ -314,4 +315,10 @@ test('collectChanges usa o git injetado', () => {
   assert.deepEqual(out.changesets[0].releases, { '@cds/rte-core': 'minor' });
   assert.deepEqual(out.versions, { '@cds/rte-core': '0.0.0' });
   assert.ok(calls.every((c) => !c.includes('push')));
+  // Base = merge-base (não a ponta da base) e sem detecção de renomeação (M3).
+  assert.ok(calls.some((c) => c === 'merge-base origin/main HEAD'));
+  assert.ok(calls.some((c) => c === 'show abc123:packages/core/api/rte-core.api.md'));
+  assert.ok(!calls.some((c) => c.includes('origin/main:')));
+  for (const c of calls.filter((c) => c.startsWith('diff')))
+    assert.ok(c.includes('--no-renames'), c);
 });

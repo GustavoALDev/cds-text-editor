@@ -222,22 +222,25 @@ export async function runExtractor({
   const { Extractor, ExtractorConfig } =
     await import('@microsoft/api-extractor');
   const work = mkdtempSync(join(tmpdir(), 'api-report-'));
-  mkdirSync(join(work, 'out'));
   // Cópia ao lado do .d.ts (imports relativos continuam valendo) com o comentário do pacote no topo.
   let dts = entry.dts;
   let pkgDocCopy = null;
-  if (packageDoc) {
-    // O empacotador pode manter o comentário fora do topo (depois dos imports): troca pelo do fonte.
-    const original = readFileSync(entry.dts, 'utf8');
-    const existing = extractPackageDoc(original);
-    pkgDocCopy = entry.dts.replace(/\.d\.ts$/, '.pkgdoc.d.ts');
-    writeFileSync(
-      pkgDocCopy,
-      packageDoc + '\n' + (existing ? original.replace(existing, '') : original),
-    );
-    dts = pkgDocCopy;
-  }
   try {
+    mkdirSync(join(work, 'out'));
+    if (packageDoc) {
+      // O empacotador pode manter o comentário fora do topo (depois dos imports): troca pelo do fonte.
+      // CRLF normalizado: `extractPackageDoc` devolve o comentário com LF.
+      const original = readFileSync(entry.dts, 'utf8').replaceAll('\r\n', '\n');
+      const existing = extractPackageDoc(original);
+      pkgDocCopy = entry.dts.replace(/\.d\.ts$/, '.pkgdoc.d.ts');
+      writeFileSync(
+        pkgDocCopy,
+        packageDoc +
+          '\n' +
+          (existing ? original.replace(existing, '') : original),
+      );
+      dts = pkgDocCopy;
+    }
     // Duas passadas: o relatório usa o nome real do pacote (cabeçalho "API Report File for"),
     // o modelo usa o nome sintético do entry; a passada do modelo não toca no relatório.
     const makeConfig = (model) =>
@@ -318,6 +321,7 @@ export async function runExtractor({
         errors.push(
           ...checkPrefixConvention(next, {
             allow: PREFIX_EXCEPTIONS,
+            entryName: entry.name,
           }),
           ...checkDocumentation(next, entry.name),
         );
