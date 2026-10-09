@@ -98,6 +98,9 @@ jobs:
         run: npx playwright test -c e2e e2e/angular/editor-perf-budget.spec.ts --workers=1 --retries=0 --reporter=list --output=e2e/test-results-n45
         env:
           CI: '1'
+          # o servidor do passo anterior pode seguir no ar (filho do nx); reaproveita em vez de falhar
+          # com "already used" (mesmo caso do perf-baseline.yml)
+          RTE_E2E_REUSE_SERVER: '1'
       # Portão de desempenho (spec 08b, O12): N45 x baseline do CI Linux. Regressão (Δ > max(10%, 3·CV)
       # e >= 2 ms nas duas voltas) é AVISO; RTE_PERF_GATE_ENFORCE=1 a torna bloqueante. Informativo sem
       # baseline ou com motor/CPU diferentes. Roda antes do resumo.
