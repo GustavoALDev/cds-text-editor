@@ -259,3 +259,107 @@ test('docs-content: índice de busca acima de 400 KB falha o build', () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+const README_SRC = [
+  '# Raiz',
+  '',
+  '<!-- readme: example examples/exemplo.ts#interno -->',
+  '<!-- /readme -->',
+  '',
+  '<!-- readme: generated install-command -->',
+  '<!-- /readme -->',
+  '',
+  'Fim.',
+].join('\n');
+
+const README_PACKAGES = {
+  angular: {
+    name: '@cds/rte-angular',
+    peerDependencies: { '@cds/rte-core': '0.0.0' },
+  },
+};
+
+test('docs-content: README raiz diverge sem UPDATE_README falha com a diferença; com ele reescreve', () => {
+  const root = pipelineRepo('# P\n');
+  const readme = join(root, 'README.md');
+  writeFileSync(readme, README_SRC);
+  const out = join(root, 'out');
+  try {
+    assert.throws(
+      () =>
+        main({ repoRoot: root, out, packages: README_PACKAGES, updateReadme: false }),
+      /README\.md:4: o conteúdo gerado difere.*UPDATE_README=1/s,
+    );
+    assert.equal(readFileSync(readme, 'utf8'), README_SRC);
+    main({ repoRoot: root, out, packages: README_PACKAGES, updateReadme: true });
+    const written = readFileSync(readme, 'utf8');
+    assert.match(
+      written,
+      /<!-- readme: example examples\/exemplo\.ts#interno -->\n```ts\nconst texto = htmlToText\(html\);\n```\n<!-- \/readme -->/,
+    );
+    assert.match(
+      written,
+      /```bash\nnpm install @cds\/rte-angular @cds\/rte-core\n```/,
+    );
+    assert.ok(written.endsWith('\nFim.'));
+    // agora confere sem reescrever
+    main({ repoRoot: root, out, packages: README_PACKAGES, updateReadme: false });
+    assert.equal(readFileSync(readme, 'utf8'), written);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('docs-content: README ausente, sem marcadores ou com readme: false não faz nada', () => {
+  const root = pipelineRepo('# P\n');
+  const out = join(root, 'out');
+  try {
+    main({ repoRoot: root, out, updateReadme: true });
+    writeFileSync(join(root, 'README.md'), '# Sem marcadores\n');
+    main({ repoRoot: root, out, updateReadme: false });
+    writeFileSync(join(root, 'README.md'), README_SRC);
+    main({ repoRoot: root, out, readme: false, updateReadme: false });
+    assert.equal(readFileSync(join(root, 'README.md'), 'utf8'), README_SRC);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('docs-content: marcador do README com região ausente falha citando o arquivo', () => {
+  const root = pipelineRepo('# P\n');
+  writeFileSync(
+    join(root, 'README.md'),
+    '<!-- readme: example examples/exemplo.ts#nada -->\n<!-- /readme -->\n',
+  );
+  try {
+    assert.throws(
+      () => main({ repoRoot: root, out: join(root, 'o'), updateReadme: false }),
+      /README\.md:1: .*região "nada" não encontrada/,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('buildNav: quatro grupos do guia na ordem, a API depois; página fora da nav falha', () => {
+  const grupos = ['Começar', 'Usar', 'Operar', 'Referência'];
+  const nav = {
+    sections: grupos.map((title, i) => ({
+      title,
+      items: [{ page: `guia/p${i}`, title: `P${i}` }],
+    })),
+  };
+  const pages = grupos.map((_, i) => ({ id: `guia/p${i}` }));
+  const built = buildNav(
+    { sections: [...nav.sections, { title: 'Referência da API', items: [] }] },
+    pages,
+  );
+  assert.deepEqual(
+    built.sections.map((s) => s.title),
+    [...grupos, 'Referência da API'],
+  );
+  assert.throws(
+    () => buildNav(nav, [...pages, { id: 'guia/extra' }]),
+    /guia\/extra.*não está no nav\.json/,
+  );
+});

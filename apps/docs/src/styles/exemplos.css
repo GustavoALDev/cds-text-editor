@@ -1,0 +1,4 @@
+/* CSS dos exemplos do guia (spec 07d, L4): global, carregado depois de docs.css. Cada regra usa uma
+   classe envolvente (.meu-tema), nunca :root, html nem body, para não mudar o chrome do site
+   (conferido por tools/check-repo-rules.mjs). As regiões `#region` deste CSS são as que as páginas
+   mostram via <!-- example: ... -->; os exemplos compilados ficam em examples/**. */

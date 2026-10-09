@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { PlatformLocation } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RteEditor } from '@cds/rte-angular';
 import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
 import { provideRteRender, RteContent } from '@cds/rte-render';
@@ -16,10 +17,15 @@ export const RENDER_SAMPLE =
   '<h2 id="rt-detalhes">Detalhes</h2><p>Um <a href="https://example.com">link</a> e <strong>negrito</strong>.</p>' +
   '<h3 id="rt-subsecao">Subseção</h3><p>Mais um parágrafo.</p>';
 
-/** HTML bruto de exemplo, com marcação perigosa que a exibição remove. */
-export const RENDER_UNSAFE_SAMPLE =
+/**
+ * HTML bruto de exemplo, com marcação perigosa que a exibição remove. A imagem usa o caminho
+ * absoluto sob a base do site (`/` no desenvolvimento, `/cds-text-editor/demo/` no Pages).
+ */
+export const unsafeSample = (base = '/'): string =>
   '<h2>Colado de fora</h2><p>Texto seguro.</p><script>alert(1)</script>' +
-  '<img src="/exemplo.png" onerror="alert(2)" alt="Exemplo"><p onclick="alert(3)">Parágrafo.</p>';
+  `<img src="${base}exemplo.png" onerror="alert(2)" alt="Exemplo"><p onclick="alert(3)">Parágrafo.</p>`;
+
+export const RENDER_UNSAFE_SAMPLE = unsafeSample();
 
 /** Página "Exibição": o HTML do editor exibido por `[rteContent]` com sumário. */
 @Component({
@@ -34,7 +40,9 @@ export class RenderPage {
   protected readonly tocLabels = RTE_RENDER_LABELS_PT_BR;
   protected readonly options = RENDER_OPTIONS;
   protected readonly html = signal(RENDER_SAMPLE);
-  protected readonly raw = signal(RENDER_UNSAFE_SAMPLE);
+  protected readonly raw = signal(
+    unsafeSample(inject(PlatformLocation).getBaseHrefFromDOM() || '/'),
+  );
   protected readonly readmeUrl =
     'https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/render/README.md';
 

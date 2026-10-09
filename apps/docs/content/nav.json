@@ -1,11 +1,39 @@
 {
   "sections": [
     {
-      "title": "Guia",
+      "title": "Começar",
       "items": [
         { "page": "guia/inicio-rapido", "title": "Início rápido" },
         { "page": "guia/instalacao", "title": "Instalação" },
         { "page": "guia/configuracao", "title": "Configuração" }
+      ]
+    },
+    {
+      "title": "Usar",
+      "items": [
+        { "page": "guia/formularios", "title": "Formulários" },
+        { "page": "guia/barra-e-recursos", "title": "Barra e recursos" },
+        { "page": "guia/idiomas", "title": "Idiomas" },
+        { "page": "guia/tema", "title": "Tema" },
+        { "page": "guia/envio-e-midia", "title": "Envio e mídia" },
+        { "page": "guia/embeds", "title": "Embeds" },
+        { "page": "guia/exibicao", "title": "Exibição" }
+      ]
+    },
+    {
+      "title": "Operar",
+      "items": [
+        { "page": "guia/seguranca", "title": "Segurança" },
+        { "page": "guia/ssr-e-csp", "title": "SSR e CSP" },
+        { "page": "guia/navegadores", "title": "Navegadores" },
+        { "page": "guia/desempenho", "title": "Desempenho" }
+      ]
+    },
+    {
+      "title": "Referência",
+      "items": [
+        { "page": "guia/migracao", "title": "Migração" },
+        { "page": "guia/faq", "title": "Perguntas frequentes" }
       ]
     }
   ]

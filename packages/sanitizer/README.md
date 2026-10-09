@@ -1,5 +1,7 @@
 # @cds/rte-sanitizer
 
+Guia: [Segurança](../../apps/docs/content/guia/seguranca.md)
+
 Sanitizador do HTML do editor. Uma função pura, sem DOM e igual em Node e no navegador: recebe HTML não confiável e devolve só o que o esquema do `@cds/rte-core` aceita, na forma canônica que o editor produz. A saída nunca executa nada, o HTML do editor atravessa sem mudar nenhum byte e sanitizar é idempotente. A engine é própria, sobre o `htmlparser2` (ADR 0006).
 
 Ainda sem versão publicada (nome provisório, escopo `@cds` ainda não confirmado).

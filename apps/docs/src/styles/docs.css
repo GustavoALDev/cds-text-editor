@@ -265,3 +265,15 @@ body {
   text-align: start;
   vertical-align: top;
 }
+
+/* Botões nativos dos exemplos vivos (sem classe): cores explícitas dos tokens do site, porque o
+   WebKit no escuro mantém o texto/fundo padrão do botão e o contraste falha no axe. */
+.doc button:not([class]) {
+  color: var(--rte-on-surface, CanvasText);
+  background: var(--rte-surface, Canvas);
+  border: 1px solid currentcolor;
+  border-radius: 4px;
+  padding: 0.2rem 0.6rem;
+  font: inherit;
+  cursor: pointer;
+}

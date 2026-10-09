@@ -1,0 +1,23 @@
+<!-- #region template -->
+<rte-editor
+  [(ngModel)]="text"
+  #campo="ngModel"
+  name="corpo"
+  ariaLabel="Texto (Template Forms)"
+  rteRequired
+  [rteMaxChars]="max"
+  [rteMaxWords]="50"
+  rteSafeLinks
+  rteNoEmptyHeadings
+  [maxLength]="max"
+/>
+<p aria-live="polite" data-testid="template-erro">
+  {{ message(campo.errors) }}
+</p>
+<!-- #endregion -->
+<p>
+  <button type="button" (click)="fillTooLong()">
+    Preencher acima do limite
+  </button>
+  <button type="button" (click)="clear()">Esvaziar</button>
+</p>

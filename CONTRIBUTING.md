@@ -36,4 +36,8 @@ Testes E2E: veja [e2e/README.md](e2e/README.md).
 4. Se a mudança afeta um pacote publicado, adicione um changeset (`npx changeset`). Cada pacote tem versão independente.
 5. Lint, build, testes e `check:rules` precisam passar; o CI (`.github/workflows/ci.yml`) roda essas verificações em todo PR.
 
+## Desempenho
+
+Os números de desempenho do editor são preliminares e de 2026-10-07 ([ADR 0016](https://github.com/GustavoALDev/cds-text-editor/blob/main/docs/decisions/0016-desempenho-e-api.md)): no Chromium local, no cenário completo, a tecla leva 15 a 16 ms de mediana a frio e 46 a 63 ms depois de 150 a 200 transações seguidas, contra um orçamento de 50 ms no p95. Os orçamentos só reprovam localmente, com `RTE_PERF_ENFORCE=1` (`e2e/angular/editor-perf-budget.spec.ts`); no CI eles apenas informam, porque os runners são cerca de 2 vezes mais lentos que a máquina local (adendo de 2026-10-08 do ADR 0016), e lá vale só a guarda de 2 vezes o orçamento. Quem muda algo que afeta o custo por tecla ou de criação roda essa verificação local antes de abrir o PR.
+
 Ao participar, você concorda com o [Código de Conduta](CODE_OF_CONDUCT.md).

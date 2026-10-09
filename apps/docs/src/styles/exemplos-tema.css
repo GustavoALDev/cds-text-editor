@@ -1,0 +1,42 @@
+/* CSS dos exemplos da página Tema (spec 07d, T2): global, carregado depois de exemplos.css. Toda regra
+   usa uma classe envolvente (.meu-tema, .meu-site--*), para não mudar o chrome do site. As regiões
+   são as que a página mostra via <!-- example: ... -->. */
+
+/* #region sementes */
+.meu-tema {
+  --rte-primary: #0369a1;
+  --rte-secondary: #0e7490;
+  --rte-tertiary: #4f46e5;
+}
+/* #endregion */
+
+/* #region forma */
+.meu-tema {
+  --rte-radius: 2px;
+  --rte-density: 0.85;
+  --rte-font-size: 0.9rem;
+}
+/* #endregion */
+
+/* #region fino */
+.meu-tema .rte-root {
+  --rte-danger: #c62828;
+  --rte-focus-width: 4px;
+}
+/* #endregion */
+
+/* #region componentes */
+.meu-tema .rte-toolbar__separator {
+  opacity: 0.6;
+}
+/* #endregion */
+
+/* #region escuro */
+.meu-site--claro {
+  color-scheme: light;
+}
+
+.meu-site--escuro {
+  color-scheme: dark;
+}
+/* #endregion */

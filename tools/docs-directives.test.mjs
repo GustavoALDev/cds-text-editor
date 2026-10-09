@@ -229,3 +229,44 @@ test('blocos autorizados por diretiva saem marcados', () => {
   );
   assert.equal(marked.split(OK_MARK).length - 1, 2);
 });
+
+test('extractRegion: regiões de CSS (/* #region */) só em arquivos .css', () => {
+  const css = readFixture('exemplo.css');
+  assert.equal(
+    extractRegion(css, 'tema', 'exemplo.css'),
+    '.meu-tema {\n  --rte-primary: #0b57d0;\n}',
+  );
+  const nivel = extractRegion(css, 'nivel-2', 'exemplo.css');
+  assert.match(nivel, /--rte-radius: 2px; \/\* texto \/\/ #region x \*\//);
+  const all = extractRegion(css, undefined, 'exemplo.css');
+  assert.ok(!/\/\* #(end)?region/.test(all));
+  assert.match(all, /\.meu-tema \.rte-root/);
+  // em outra linguagem o marcador de CSS é texto comum
+  assert.throws(
+    () => extractRegion(css, 'tema', 'exemplo.ts'),
+    /região "tema" não encontrada/,
+  );
+});
+
+test('extractRegion: região de CSS ausente ou sem #endregion falha citando o arquivo', () => {
+  assert.throws(
+    () => extractRegion('.a{}', 'x', 'tema.css'),
+    /tema\.css: região "x" não encontrada/,
+  );
+  assert.throws(
+    () => extractRegion('/* #region a */\n.a{}', 'a', 'tema.css'),
+    /tema\.css: a região "a" não foi fechada com #endregion/,
+  );
+  assert.throws(
+    () => extractRegion('.a{}\n/* #endregion */', 'a', 'tema.css'),
+    /tema\.css: #endregion sem #region correspondente/,
+  );
+});
+
+test('example: região de um .css vira bloco css', () => {
+  const out = expandDirectives('<!-- example: exemplo.css#tema -->', ctx());
+  assert.equal(
+    out,
+    '```css\n.meu-tema {\n  --rte-primary: #0b57d0;\n}\n```',
+  );
+});

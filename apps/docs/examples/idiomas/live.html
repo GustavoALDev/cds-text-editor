@@ -1,0 +1,15 @@
+<!-- #region template -->
+<p>
+  @for (l of langs; track l) {
+  <button
+    type="button"
+    [attr.data-lang]="l"
+    [attr.aria-pressed]="lang() === l"
+    (click)="lang.set(l)"
+  >
+    {{ l }}
+  </button>
+  }
+</p>
+<rte-editor [(value)]="html" [labels]="labels()" toolbar="article" />
+<!-- #endregion -->
