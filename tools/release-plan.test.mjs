@@ -111,3 +111,33 @@ test('CLI com --status sai 0 e 1', () => {
   const r1 = spawnSync(process.execPath, [tool, '--status', bad], { cwd, env });
   assert.equal(r1.status, 1);
 });
+
+test('changesets reais: exatamente 5, um por pacote, minor, com seção Segurança e sem nome antigo', async () => {
+  const root = resolve(import.meta.dirname, '..');
+  const dir = join(root, '.changeset');
+  const files = readdirSync(dir).filter(
+    (f) => f.endsWith('.md') && f !== 'README.md',
+  );
+  assert.equal(files.length, 5, files.join(', '));
+  const { OLD_TO_NEW, REMOVED_NAMES } = await import('./check-repo-rules.mjs');
+  const old = [...Object.keys(OLD_TO_NEW), ...REMOVED_NAMES];
+  const seen = [];
+  for (const f of files) {
+    const text = readFileSync(join(dir, f), 'utf8').replace(/\r\n/g, '\n');
+    const fm = /^---\n([\s\S]*?)\n---\n/.exec(text);
+    assert.ok(fm, `${f}: sem frontmatter`);
+    const lines = fm[1].split('\n').filter(Boolean);
+    assert.equal(lines.length, 1, `${f}: deve citar um só pacote`);
+    const m = /^'(@cds\/rte-[a-z]+)': minor$/.exec(lines[0]);
+    assert.ok(m, `${f}: esperado "'@cds/rte-x': minor"`);
+    seen.push(m[1]);
+    assert.match(text, /\*\*Segurança\.\*\*/, `${f}: falta a seção Segurança`);
+    for (const name of old) {
+      assert.ok(
+        !new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`).test(text),
+        `${f}: nome antigo ${name}`,
+      );
+    }
+  }
+  assert.deepEqual(seen.sort(), PACKAGES.slice().sort());
+});
