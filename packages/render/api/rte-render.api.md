@@ -14,9 +14,6 @@ import { Signal } from '@angular/core';
 // @public
 export function provideRteRender(options: RteRenderOptions): Provider[];
 
-// @public (undocumented)
-export const RENDER_VERSION = "0.0.0";
-
 // @public
 export const RTE_RENDER_LABELS: InjectionToken<RteRenderLabels>;
 

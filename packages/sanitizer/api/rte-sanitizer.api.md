@@ -29,9 +29,6 @@ export interface RteSanitizeOptions extends RteHtmlSchemaOptions {
     maxInputLength?: number;
 }
 
-// @public (undocumented)
-export const SANITIZER_VERSION = "0.0.0";
-
 // @public
 export function sanitizeRichText(html: string, options?: RteSanitizeOptions | null): string;
 

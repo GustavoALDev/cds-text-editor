@@ -15,7 +15,6 @@ import { describe, expect, it } from 'vitest';
 describe('@cds/rte-render', () => {
   it('exporta só a API pública do entry .', () => {
     expect(Object.keys(api).sort()).toEqual([
-      'RENDER_VERSION',
       'RTE_RENDER_LABELS',
       'RTE_RENDER_LABELS_EN',
       'RteContent',
@@ -23,7 +22,6 @@ describe('@cds/rte-render', () => {
       'ɵinjectFragmentBase',
       'ɵmergeRenderLabels',
     ]);
-    expect(api.RENDER_VERSION).toBe('0.0.0');
   });
 
   it('o /toc exporta só o RteToc (Ruling 11)', () => {
