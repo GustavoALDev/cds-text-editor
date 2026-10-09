@@ -95,3 +95,7 @@ O salto do `editor` vem do que as partes 05b2 a 05d1 colocaram no principal (ARI
 ## Adendo (2026-10-08): números do CI Linux
 
 No CI do PR #18 o regime quente do N45 não sobe: Chromium p95 frio com render 48,8 ms e quente 36,6; Firefox 59/54; WebKit 70/50; criação completa 232 a 300 ms; INP 56 a 72 ms. Isso confirma o degrau como do ambiente local (CPU sob carga sustentada). Os runners são ~2x mais lentos que a máquina local, mas sem degrau. `valueEmission` segue dispensado (Z5) e os orçamentos continuam só locais (`RTE_PERF_ENFORCE=1`).
+
+## Nota da 08b (ADR 0021)
+
+O **degrau quente** fica fechado como do ambiente local: o CI Linux não o mostra (adendo acima) e a baseline de desempenho do CI (`e2e/perf/baseline.linux.json`, run 37822212209) não o tem. A rodada em máquina ociosa (O11) ficou **pendente do dono** (ADR 0021, seção (f)); a Z5 só reabre se essa rodada ou uma baseline futura do CI mostrar o degrau. O `perf-gate` (regra dos 10%) avisa e não bloqueia por padrão.

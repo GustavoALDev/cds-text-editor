@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { checkRepoRules, checkRootReadmeNotice } from './check-repo-rules.mjs';
+import { checkRepoRules, checkRootReadmeNotice, checkRoteiro } from './check-repo-rules.mjs';
 
 test('README raiz: aviso "não afiliado" antes do primeiro ## e depois do último', () => {
   const ok = '# T\n\nNão afiliado à Tiptap.\n\n## A\n\ntexto\n\n> não afiliado\n';
@@ -647,6 +647,65 @@ test('docs: bloco cercado em lista (recuo >= 4) ou citação é recusado', () =>
     assert.equal(errors.length, 1, nome);
     assert.match(errors[0], /aninhado em lista ou citação/, nome);
   }
+});
+
+// Spec 08b (O2): teto das capturas visuais (300 KB por arquivo, 20 MB no total).
+function shotsErrors(files) {
+  return checkRepoRules(fixture(files)).filter((e) =>
+    /__screenshots__/.test(e),
+  );
+}
+const SHOTS = 'e2e/visual/__screenshots__/visual-chromium/a.spec.ts';
+
+test('capturas: diretório ausente não faz nada', () => {
+  assert.deepEqual(shotsErrors({}), []);
+});
+
+test('capturas: dentro do teto passa', () => {
+  assert.deepEqual(
+    shotsErrors({ [`${SHOTS}/ok.png`]: Buffer.alloc(100 * 1024) }),
+    [],
+  );
+});
+
+test('capturas: arquivo de 301 KB reprova com o caminho', () => {
+  const errors = shotsErrors({
+    [`${SHOTS}/grande.png`]: Buffer.alloc(301 * 1024),
+  });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /grande\.png/);
+  assert.match(errors[0], /300 KB/);
+});
+
+test('capturas: total acima de 20 MB reprova', () => {
+  const files = {};
+  for (let i = 0; i < 75; i++)
+    files[`${SHOTS}/f${i}.png`] = Buffer.alloc(280 * 1024);
+  const errors = shotsErrors(files);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /20 MB/);
+});
+
+// Spec 08b (O9): roteiro manual de leitor de tela.
+test('roteiro: o repositório real tem o roteiro completo', () => {
+  assert.deepEqual(checkRoteiro(resolve('.')), []);
+});
+
+test('roteiro: sem o arquivo reprova (pt-BR) no repositório com package.json', () => {
+  const errors = checkRepoRules(
+    fixture({ 'package.json': '{}', 'packages/core/src/index.ts': '' }),
+  );
+  assert.ok(errors.some((e) => /roteiro-leitor-de-tela\.md.*ausente/.test(e)));
+});
+
+test('roteiro: seção, campo do modelo e critério da K4 faltando reprovam', () => {
+  const root = fixture({
+    'docs/quality/roteiro-leitor-de-tela.md': '# Roteiro\n\n## Severidade\n',
+  });
+  const errors = checkRoteiro(root);
+  assert.ok(errors.some((e) => e.includes('F4. Menu')));
+  assert.ok(errors.some((e) => e.includes('"Executor:"')));
+  assert.ok(errors.some((e) => e.includes('critério da K4')));
 });
 
 test('docs: CSS de exemplo (src/styles/exemplos*.css) não mira :root, html nem body (07d, L4)', () => {

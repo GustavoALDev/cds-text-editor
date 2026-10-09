@@ -120,6 +120,69 @@ for (const zone of [false, true]) {
       ).toBeNull();
     });
 
+    test('foco no aviso que some por evento externo vai ao editável, N63 (spec 08b, ADR 0014)', async ({
+      context,
+    }) => {
+      const a = await context.newPage();
+      const b = await context.newPage();
+      await open(b);
+      await open(a);
+      await editableOf(a, 'draft').click();
+      await a.keyboard.type('de outra aba');
+      expect(await savedHtml(a)).toContain('de outra aba');
+      await expect(b.locator(PROMPT)).toBeVisible();
+      await b.bringToFront();
+      await b.locator(PROMPT).getByRole('button', { name: 'Restore' }).focus();
+      await expect(
+        b.locator(PROMPT).getByRole('button', { name: 'Restore' }),
+      ).toBeFocused();
+      // outra aba apaga o rascunho: o aviso some em b e o foco não cai no body
+      await a.evaluate((k) => localStorage.removeItem(k), STORAGE_KEY);
+      await expect(b.locator(PROMPT)).toHaveCount(0);
+      await expect(editableOf(b, 'draft')).toBeFocused();
+    });
+
+    test('pagehide descarrega o rascunho antes do adiamento, N40 (spec 08b, N62)', async ({
+      page,
+    }, testInfo) => {
+      await open(page);
+      await editableOf(page, 'draft').click();
+      await page.keyboard.type('saiu rápido');
+      // antes dos 1000 ms: ainda nada gravado
+      expect(
+        await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY),
+      ).toBeNull();
+      await page.reload();
+      await waitForEditor(page, 'draft');
+      let stored = await page.evaluate(
+        (k) => localStorage.getItem(k),
+        STORAGE_KEY,
+      );
+      if (stored === null) {
+        // o motor não disparou  sozinho no reload: dispara à mão (causa no ADR 0021)
+        testInfo.annotations.push({
+          type: 'pagehide-manual',
+          description: 'reload não disparou pagehide a tempo',
+        });
+        // no Chromium do CI o reload dispara o pagehide de verdade: o fallback manual aqui
+        // esconderia uma regressão do descarregamento (ADR 0021)
+        expect(
+          !process.env['CI'] || testInfo.project.name !== 'chromium',
+          'o reload não disparou pagehide no Chromium do CI (fallback manual usado)',
+        ).toBe(true);
+        await editableOf(page, 'draft').click();
+        await page.keyboard.type('saiu rápido');
+        await page.evaluate(() =>
+          window.dispatchEvent(new PageTransitionEvent('pagehide')),
+        );
+        stored = await page.evaluate(
+          (k) => localStorage.getItem(k),
+          STORAGE_KEY,
+        );
+      }
+      expect(stored).toContain('saiu rápido');
+    });
+
     test('clearLocalDrafts limpa os rascunhos', async ({ page }) => {
       await open(page);
       await editableOf(page, 'draft').click();

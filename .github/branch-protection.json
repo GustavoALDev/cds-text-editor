@@ -1,7 +1,14 @@
 {
   "required_status_checks": {
     "strict": true,
-    "contexts": ["verify", "demo", "docs", "compat / compat (latest×latest)"]
+    "contexts": [
+      "verify",
+      "demo",
+      "docs",
+      "compat / compat (latest×latest)",
+      "visual",
+      "visual-demo"
+    ]
   },
   "enforce_admins": true,
   "required_pull_request_reviews": null,

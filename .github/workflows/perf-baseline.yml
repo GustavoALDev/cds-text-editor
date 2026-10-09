@@ -1,0 +1,120 @@
+name: Atualizar baseline de desempenho
+
+# Spec 08b (O11, O12): roda o N45 10 vezes por motor no mesmo tipo de máquina do job `verify`
+# (ubuntu-latest), agrega mediana e CV por métrica (`node tools/perf-gate.mjs baseline`) e faz commit de
+# `e2e/perf/baseline.linux.json` no próprio branch. O `perf-gate` do ci.yml compara com ele.
+# Único workflow (além do visual-update.yml e do release.yml) com `contents: write`; nunca roda em `main`.
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch que recebe o commit da baseline (nunca main)'
+        required: true
+        type: string
+      reason:
+        description: 'Motivo da atualização (vai na mensagem do commit)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: perf-baseline-${{ inputs.branch || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      CI: '1'
+      NX_DAEMON: 'false'
+      TARGET_BRANCH: ${{ inputs.branch || github.ref_name }}
+      REASON: ${{ inputs.reason }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      # Guarda: o branch e o motivo chegam por variável de ambiente, nunca interpolados no script.
+      # Normaliza `refs/heads/x` e recusa também o branch padrão do repositório.
+      - name: Recusar main e branches protegidos
+        run: |
+          BRANCH="${TARGET_BRANCH#refs/heads/}"
+          case "$BRANCH" in
+            main|master|HEAD|'')
+              echo "::error::Recusado: este workflow não atualiza a baseline em '$BRANCH'. Use um branch de trabalho e abra um PR."
+              exit 1
+              ;;
+          esac
+          if [ "$BRANCH" = "$DEFAULT_BRANCH" ]; then
+            echo "::error::Recusado: '$BRANCH' é o branch padrão do repositório. Use um branch de trabalho e abra um PR."
+            exit 1
+          fi
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+      # Sem persistir o token no .git/config: o npm ci e os testes rodam sem credencial de escrita.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm i -g npm@11
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      # 10 execuções por motor, em série (1 worker, sem retentativa). Cada execução grava
+      # e2e/test-results/perf/n45-<motor>.json (amostras das duas voltas); copiamos para perf-runs.
+      - name: Rodar o N45 10 vezes por motor
+        env:
+          RTE_E2E_REUSE_SERVER: '1'
+        run: |
+          # servidor do app de teste uma vez só: o `webServer` do Playwright, no CI, não é
+          # reaproveitado e deixava a porta ocupada para a execução seguinte
+          npx nx run angular-e2e-app:serve-static > serve.log 2>&1 &
+          for t in $(seq 120); do
+            curl -sf http://127.0.0.1:4317/__health > /dev/null && break
+            sleep 5
+          done
+          curl -sf http://127.0.0.1:4317/__health > /dev/null || { cat serve.log; exit 1; }
+          for engine in chromium firefox webkit; do
+            mkdir -p "perf-runs/$engine"
+            for i in $(seq 10); do
+              npx playwright test -c e2e e2e/angular/editor-perf-budget.spec.ts --project="$engine" --workers=1 --retries=0
+              cp "e2e/test-results/perf/n45-$engine.json" "perf-runs/$engine/run-$i.json"
+            done
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf-runs
+          path: perf-runs/
+          retention-days: 14
+          if-no-files-found: ignore
+      - name: Agregar a baseline
+        run: |
+          PW_VERSION=$(npx playwright --version | awk '{print $2}')
+          node tools/perf-gate.mjs baseline perf-runs --playwright "$PW_VERSION"
+          cat e2e/perf/baseline.linux.json >> "$GITHUB_STEP_SUMMARY"
+      # O token só existe neste passo (cabeçalho do git, nunca gravado no .git/config). O push tenta até
+      # 3 vezes, refazendo o rebase no branch.
+      - name: Commit da baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f e2e/perf/baseline.linux.json
+          if git diff --cached --quiet; then
+            echo "A baseline não mudou."
+            exit 0
+          fi
+          git commit -m "test(perf): atualiza baseline do N45 ($REASON)"
+          AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          for attempt in 1 2 3; do
+            git -c "http.extraheader=$AUTH" pull --rebase origin "$BRANCH" || exit 1
+            if git -c "http.extraheader=$AUTH" push origin "HEAD:refs/heads/$BRANCH"; then
+              exit 0
+            fi
+            echo "Push recusado (tentativa $attempt de 3)."
+          done
+          exit 1

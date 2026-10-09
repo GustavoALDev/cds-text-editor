@@ -2,7 +2,7 @@
 
 > Depende da spec 05 (e usa 02, 06 e 07). Referência: plano seções 3.4, 6.6, 8 (Fase 6), 9 e 9.1.
 >
-> **Divisão (2026-10-07):** dividida em duas partes. **08a** ([`08a-matriz-de-versoes-e-relatorios.md`](08a-matriz-de-versoes-e-relatorios.md)): matriz de versões no CI (resolve o [DECIDIR] da §3), E2E contra o `examples/server-node` e auditoria dos fluxos da §4, propriedade do tema nos 3 motores (R6), relatórios de cobertura, tamanho, desempenho e *flakes* como artefatos (R8), branch protegida. **08a concluída** (ADR 0019; falta o CI do PR). **08b** (diretrizes L1–L10 no Apêndice A da 08a): regressão visual, teclado virtual/móvel, roteiro manual de leitor de tela (inclui a K4 do ADR 0015), matriz de navegadores documentada (R7) e pendências de desempenho do ADR 0016 (degrau quente, máquina ociosa, *baseline* e regra de 10%).
+> **Divisão (2026-10-07):** dividida em duas partes. **08a** ([`08a-matriz-de-versoes-e-relatorios.md`](08a-matriz-de-versoes-e-relatorios.md)): matriz de versões no CI (resolve o [DECIDIR] da §3), E2E contra o `examples/server-node` e auditoria dos fluxos da §4, propriedade do tema nos 3 motores (R6), relatórios de cobertura, tamanho, desempenho e *flakes* como artefatos (R8), branch protegida. **08a concluída** (ADR 0019; falta o CI do PR). **08b concluída** (ADR 0021; falta o CI do PR; o roteiro executado e a proteção do branch ficam com o dono). **08b** (diretrizes L1–L10 no Apêndice A da 08a): regressão visual, teclado virtual/móvel, roteiro manual de leitor de tela (inclui a K4 do ADR 0015), matriz de navegadores documentada (R7) e pendências de desempenho do ADR 0016 (degrau quente, máquina ociosa, *baseline* e regra de 10%).
 
 ## 1. Objetivo
 
@@ -43,11 +43,12 @@ Publicação (spec 09). Teste manual com leitor de tela é um roteiro documentad
 
 ## 6. Critérios de aceite
 
-- [ ] Todos os fluxos da tabela passam em Chromium, Firefox e WebKit (ou divergência documentada e justificada).
-- [ ] axe: 0 violações sérias; roteiro manual de leitor de tela executado e registrado.
-- [ ] Desempenho dentro das metas e com *baseline* versionado; regressão > 10 % derruba o CI.
-- [ ] App SSR de fumaça verde; instalação limpa em Angular 22 verde.
-- [ ] Pipeline **obrigatório** para merge (branch protegida).
+- [x] Todos os fluxos da tabela passam em Chromium, Firefox e WebKit (ou divergência documentada e justificada). Evidência: E2E dos 3 motores no job `verify` (ADR 0019); divergências documentadas nos ADR 0019 e 0021.
+- [x] axe: 0 violações sérias. Evidência: axe nos 3 motores e nos projetos móveis (`mobile-chromium`, `mobile-webkit`; ADR 0021, seção (b)).
+- [ ] Roteiro manual de leitor de tela executado e registrado. **Pendente, dono: spec 09 (`TODO-AUTOR`).** Roteiro publicado em `docs/quality/roteiro-leitor-de-tela.md`; registro na seção "Execuções" do ADR 0021.
+- [ ] Desempenho dentro das metas e com *baseline* versionado; regressão > 10 % derruba o CI. **Parcial:** baseline versionada (`e2e/perf/baseline.linux.json`) e `perf-gate` ativo, mas a regra é **aviso** por padrão (só 1 de 21 métricas tem CV <= 3% em VM compartilhada; `RTE_PERF_GATE_ENFORCE=1` a torna bloqueante; ADR 0021, seção (f)).
+- [x] App SSR de fumaça verde; instalação limpa em Angular 22 verde. Evidência: job `demo` (instalação por *tarball*) e pernas da matriz `compat` (ADR 0019, seção (h.1)).
+- [ ] Pipeline **obrigatório** para merge (branch protegida). **Pendente:** `.github/branch-protection.json` pronto (`verify`, `demo`, `docs`, `compat`, `visual`, `visual-demo`), aplicação só com confirmação do dono (comando no ADR 0021, seção (h)).
 
 ## 7. Riscos
 

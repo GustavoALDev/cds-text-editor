@@ -1,0 +1,124 @@
+name: Atualizar capturas visuais
+
+# Spec 08b (O3): gera as baselines da regressão visual no mesmo contêiner do job `visual` do ci.yml e
+# faz commit no próprio branch. Único workflow (além do release.yml) com `contents: write`.
+# Nunca roda em `main` (a guarda abaixo recusa) nem atualiza capturas em PR automaticamente.
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch que recebe o commit com as capturas (nunca main)'
+        required: true
+        type: string
+      reason:
+        description: 'Motivo da atualização (vai na mensagem do commit)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: visual-update-${{ inputs.branch || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --init --ipc=host
+    env:
+      HOME: /root
+      RTE_VISUAL_CONTAINER: '1'
+      CI: '1'
+      NX_DAEMON: 'false'
+      TARGET_BRANCH: ${{ inputs.branch || github.ref_name }}
+      REASON: ${{ inputs.reason }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      # Guarda: o branch e o motivo chegam por variável de ambiente, nunca interpolados no script.
+      # Normaliza `refs/heads/x` e recusa também o branch padrão do repositório.
+      - name: Recusar main e branches protegidos
+        run: |
+          BRANCH="${TARGET_BRANCH#refs/heads/}"
+          case "$BRANCH" in
+            main|master|HEAD|'')
+              echo "::error::Recusado: este workflow não atualiza capturas em '$BRANCH'. Use um branch de trabalho e abra um PR."
+              exit 1
+              ;;
+          esac
+          if [ "$BRANCH" = "$DEFAULT_BRANCH" ]; then
+            echo "::error::Recusado: '$BRANCH' é o branch padrão do repositório. Use um branch de trabalho e abra um PR."
+            exit 1
+          fi
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+      # Sem persistir o token no .git/config: o npm ci e os testes rodam sem credencial de escrita.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref_name }}
+          persist-credentials: false
+      # O mesmo CPU do job `visual` do ci.yml? O Skia pode escolher caminhos AVX-512 por CPU; registrar
+      # o modelo e as flags ajuda a explicar um diff de pixels entre execuções.
+      - name: Registrar o CPU
+        run: |
+          grep -m1 'model name' /proc/cpuinfo || true
+          echo "avx512: $(grep -o -w 'avx512[a-z_0-9]*' /proc/cpuinfo | sort -u | xargs)"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - run: npm i -g npm@11
+      - run: npm ci
+      # O demo (O5) é reconstruído aqui, com os mesmos passos do job demo do ci.yml (pack, prepare,
+      # install, build), em vez de baixar o artefato demo-static de outro run: determinístico e sem
+      # depender do ci.yml da mesma ref já ter terminado.
+      - run: echo "RTE_CONSUMER_DIR=$RUNNER_TEMP/cds-rte-consumer/demo" >> "$GITHUB_ENV"
+      - run: npx nx run-many -t build -p core sanitizer theme angular render
+      - run: node tools/consumer.mjs pack prepare install build
+      # `changed` só regrava o que mudou além da tolerância (e cria o que falta): rodar duas vezes no mesmo
+      # código não gera commit, e um PNG que só difere por ruído do rasterizador não é regravado.
+      # `expectShot` anota em RTE_VISUAL_USED as baselines que os testes usaram.
+      - name: Regenerar as capturas
+        env:
+          RTE_VISUAL_USED: ${{ runner.temp }}/visual-used.txt
+        run: |
+          : > "$RTE_VISUAL_USED"
+          npx playwright test -c e2e/visual --update-snapshots=changed
+          RTE_DEMO_DIR="$RTE_CONSUMER_DIR/dist/demo/browser" npx playwright test -c apps/demo/e2e/visual/playwright.config.ts --update-snapshots=changed
+      # Capturas ÓRFÃS (sem teste correspondente) saem à parte, só depois de uma rodada inteira que passou.
+      - name: Remover capturas órfãs
+        run: node tools/visual.mjs prune "$RUNNER_TEMP/visual-used.txt" e2e/visual/__screenshots__ apps/demo/e2e/visual/__screenshots__
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-screenshots
+          path: |
+            e2e/visual/__screenshots__/
+            apps/demo/e2e/visual/__screenshots__/
+          retention-days: 14
+          if-no-files-found: ignore
+      # O token só existe neste passo (cabeçalho do git, nunca gravado no .git/config). O push tenta até
+      # 3 vezes, refazendo o rebase no branch (outro commit pode ter entrado durante a rodada).
+      - name: Commit das capturas
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -f e2e/visual/__screenshots__ apps/demo/e2e/visual/__screenshots__
+          if git diff --cached --quiet; then
+            echo "Nenhuma captura mudou."
+            exit 0
+          fi
+          git commit -m "test(visual): atualiza capturas ($REASON)"
+          AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          for attempt in 1 2 3; do
+            git -c "http.extraheader=$AUTH" pull --rebase origin "$BRANCH" || exit 1
+            if git -c "http.extraheader=$AUTH" push origin "HEAD:refs/heads/$BRANCH"; then
+              exit 0
+            fi
+            echo "Push recusado (tentativa $attempt de 3)."
+          done
+          exit 1

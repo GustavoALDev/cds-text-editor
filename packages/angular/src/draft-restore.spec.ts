@@ -3,7 +3,7 @@ import { getHtmlSchema } from '@cds/rte-core';
 import { validateHtml } from '@cds/rte-core/html';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installDialogShim } from './testing-support/dialog';
-import { setupDraft, storedDraft } from './testing-support/draft';
+import { drainDraft, setupDraft, storedDraft } from './testing-support/draft';
 import { installPopoverShim } from './testing-support/popover';
 import { settle } from './testing-support/render';
 
@@ -121,6 +121,52 @@ describe('várias abas (S7)', () => {
     localStorage.setItem(KEY, envelope('<p>outra</p>'));
     fire(envelope('<p>outra</p>'));
     expect(s.cmp.draftAvailable()).toBeNull();
+  });
+
+  it('aviso que some por evento externo devolve o foco ao editável (ADR 0014)', async () => {
+    const s = await setupDraft({ defaultStorage: true });
+    localStorage.setItem(KEY, envelope('<p>de outra aba</p>'));
+    fire(envelope('<p>de outra aba</p>'));
+    await drainDraft(s.fixture);
+    await settle(s.fixture);
+    const button = (s.fixture.nativeElement as HTMLElement).querySelector(
+      'section.rte-draft button',
+    ) as HTMLButtonElement | null;
+    expect(button).not.toBeNull();
+    button?.focus();
+    expect(document.activeElement).toBe(button);
+    const focus = vi.spyOn(s.editor.view.dom as HTMLElement, 'focus');
+    localStorage.removeItem(KEY);
+    fire(null);
+    await settle(s.fixture);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(s.cmp.draftAvailable()).toBeNull();
+    expect(
+      (s.fixture.nativeElement as HTMLElement).querySelector('section.rte-draft'),
+    ).toBeNull();
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(s.editor.view.dom.contains(document.activeElement)).toBe(true);
+  });
+
+  it('aviso que some por evento externo não rouba o foco de outro campo', async () => {
+    const s = await setupDraft({ defaultStorage: true });
+    localStorage.setItem(KEY, envelope('<p>de outra aba</p>'));
+    fire(envelope('<p>de outra aba</p>'));
+    await drainDraft(s.fixture);
+    await settle(s.fixture);
+    const other = document.createElement('input');
+    document.body.appendChild(other);
+    other.focus();
+    const focus = vi.spyOn(s.editor.view.dom as HTMLElement, 'focus');
+    localStorage.removeItem(KEY);
+    fire(null);
+    await settle(s.fixture);
+    expect(
+      (s.fixture.nativeElement as HTMLElement).querySelector('section.rte-draft'),
+    ).toBeNull();
+    expect(focus).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(other);
+    other.remove();
   });
 
   it('chave de outro rascunho é ignorada', async () => {

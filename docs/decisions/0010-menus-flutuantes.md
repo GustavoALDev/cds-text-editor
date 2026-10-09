@@ -174,3 +174,7 @@ Revisão Opus da branch (`de90c8c..aa52d13`): pronta com correções, sem achado
 - **Spec 05d:** os orçamentos de desempenho somam o custo do N26 ao do N15; o menu `/` oculta os menus flutuantes enquanto aberto (como um diálogo) e a ordem do `Escape` é definida lá (hoje o `Escape` flutuante é uma extensão de prioridade mínima, então o `/` ganha); `api-extractor` cobre `RteFloatingMenuKind`, `RteFloatingMenusConfig`, `focusFloatingMenu` e `RteFloatingMenuLabels`.
 - **Spec 08:** aparelhos reais, leitores de tela e motores mais antigos.
 - O orçamento do `@cds/rte-angular` agora é `editor` 26688 B, `whole` 26752 B, `dialogs` 5824 B, `floating` 8192 B, `i18n` 3072 B e `validators` 1344 B.
+
+## Nota da 08b (ADR 0021)
+
+A pendência do menu da tabela cobrindo o parágrafo seguinte foi **fechada**: Chromium, Firefox e WebKit dão a mesma geometria e o mesmo `placement` (`below`, recuo previsto da M9); aceito como UX, com teste de alcance (`Escape` oculta o menu; clicar no parágrafo coberto move o cursor). Ver ADR 0021, seção (c).

@@ -76,11 +76,28 @@ jobs:
       # CI=1: repórter `json` em e2e/test-results/report.json (testes instáveis) e retentativas.
       # FC_RUNS=100: as propriedades do tema (e2e/theme/property.spec.ts) custam ~1,5 s por execução e
       # por motor; o padrão local é 200 e quem quiser mais roda com FC_RUNS=1000.
-      - run: npx playwright test -c e2e
+      # O N45 sai desta execução (paralela, ruidosa) e roda isolado no passo seguinte.
+      - run: npx playwright test -c e2e --grep-invert "N45"
         env:
           CI: '1'
           FC_RUNS: '100'
+      # N45 nas mesmas condições da baseline (perf-baseline.yml): 1 worker, sem retentativa. Pasta de
+      # saída à parte para não apagar o report.json e as versões da execução geral.
+      - name: Desempenho (N45 isolado)
+        run: npx playwright test -c e2e e2e/angular/editor-perf-budget.spec.ts --workers=1 --retries=0 --reporter=list --output=e2e/test-results-n45
+        env:
+          CI: '1'
+          # o servidor do passo anterior pode seguir no ar (filho do nx); reaproveita em vez de falhar
+          # com "already used" (mesmo caso do perf-baseline.yml)
+          RTE_E2E_REUSE_SERVER: '1'
+      # Portão de desempenho (spec 08b, O12): N45 x baseline do CI Linux. Regressão (Δ > max(10%, 3·CV)
+      # e >= 2 ms nas duas voltas) é AVISO; RTE_PERF_GATE_ENFORCE=1 a torna bloqueante. Informativo sem
+      # baseline ou com motor/CPU diferentes. Roda antes do resumo.
+      - name: Desempenho (perf-gate)
+        if: always()
+        run: node tools/perf-gate.mjs
       # Resumo do job (tamanho x orçamento, cobertura, testes instáveis, N45) e avisos de flakes.
+      # Pisos de cobertura por pacote (O13, tools/coverage-floor.json): abaixo do piso o passo sai com 1.
       - name: Resumo de qualidade
         if: always()
         run: node tools/quality-summary.mjs
@@ -93,6 +110,7 @@ jobs:
             dist/reports/size/
             e2e/test-results/report.json
             e2e/test-results/perf/
+            e2e/test-results/browsers/
           retention-days: 14
           if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
@@ -102,6 +120,50 @@ jobs:
           path: |
             playwright-report/
             e2e/test-results/
+          if-no-files-found: ignore
+
+  # Regressão visual (spec 08b, O1–O5): captura por elemento no contêiner oficial do Playwright
+  # (tag = versão exata do @playwright/test; conferida por tools/visual-image.test.mjs). Roda em todo
+  # PR (CSS atravessa pacotes; o `affected` não enxerga isso). Baselines: workflow visual-update.yml.
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --init --ipc=host
+    env:
+      HOME: /root
+      RTE_VISUAL_CONTAINER: '1'
+      CI: '1'
+      NX_DAEMON: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm i -g npm@11
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-visual-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            nx-visual-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+      # O `serve-static` do app de teste depende do build (Nx); o webServer do Playwright o sobe.
+      - run: npx playwright test -c e2e/visual
+      # Capturas que passaram só na repetição viram aviso (O2).
+      - name: Resumo do visual
+        if: always()
+        run: node tools/quality-summary.mjs --visual e2e/test-results/report-visual.json
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-report
+          path: |
+            playwright-report/visual/
+            e2e/test-results/visual/
+          retention-days: 14
           if-no-files-found: ignore
 
   # Demo (spec 07b, W14): consome os tarballs dos pacotes como um app externo (fora do repositório),
@@ -176,6 +238,46 @@ jobs:
         with:
           name: demo-npm-ls
           path: ${{ runner.temp }}/npm-ls.txt
+          if-no-files-found: ignore
+
+  # Regressão visual do demo (spec 08b, O5): só Chromium, no mesmo contêiner do job visual, sobre o
+  # artefato demo-static que o job demo já provou (servido por apps/demo/serve.mjs, CSP estrita).
+  # Baselines: workflow visual-update.yml (que reconstrói o demo).
+  visual-demo:
+    needs: demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --init --ipc=host
+    env:
+      HOME: /root
+      RTE_VISUAL_CONTAINER: '1'
+      CI: '1'
+      NX_DAEMON: 'false'
+      RTE_DEMO_PORT: 4318
+      RTE_DEMO_DIR: demo-static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm i -g npm@11
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: demo-static
+          path: demo-static
+      - run: npx playwright test -c apps/demo/e2e/visual/playwright.config.ts --project=visual-demo-chromium
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-demo-report
+          path: |
+            playwright-report/visual-demo/
+            apps/demo/e2e/test-results/visual/
+          retention-days: 14
           if-no-files-found: ignore
 
   # Site de documentação (spec 07c, X12): gera o modelo de API e o conteúdo, constrói o site como

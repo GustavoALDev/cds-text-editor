@@ -221,3 +221,14 @@ export function dropFiles(
     { id, files: [...files], point },
   );
 }
+
+/** Um WebM de `bytes` bytes (o `e2e.webm` com bytes depois do fim): envio longo em rede lenta. */
+export function paddedWebmFile(name: string, bytes: number): PageFile {
+  const webm = publicFile('e2e.webm');
+  const padding = Buffer.alloc(Math.max(0, bytes - webm.length));
+  return {
+    name,
+    type: 'video/webm',
+    base64: Buffer.concat([webm, padding]).toString('base64'),
+  };
+}

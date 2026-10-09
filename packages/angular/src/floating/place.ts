@@ -1,6 +1,7 @@
 import type { Editor } from '@tiptap/core';
 import { positionFloating, type RteRect } from '../toolbar/position';
 import { readFloatingAnchor, readVisibleArea } from './anchor';
+import { readViewport } from './visual-viewport';
 import type { RteFloatingContext } from './visibility';
 
 /** Classe transitória enquanto o menu é medido (M10). */
@@ -34,11 +35,7 @@ export function placeFloatingMenu(o: {
   show: () => void;
 }): 'placed' | 'clipped' {
   const { editor, ctx, el, view } = o;
-  const root = view.document.documentElement;
-  const viewport = {
-    width: root.clientWidth || view.innerWidth,
-    height: root.clientHeight || view.innerHeight,
-  };
+  const viewport = readViewport(view);
   const visible = readVisibleArea(editor.view.dom, o.ancestors(), viewport);
   const anchor = readFloatingAnchor(editor, ctx);
   if (!visible || !anchor || !touches(anchor, visible)) return 'clipped';

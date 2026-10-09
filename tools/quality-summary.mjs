@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 // Resumo de qualidade do CI (spec 08a, X10-X12): tamanho x orçamento, cobertura por pacote,
-// testes instáveis (passaram só na repetição) e N45 por motor. Informativo: nunca reprova.
+// testes instáveis (passaram só na repetição) e N45 por motor. Informativo, exceto os pisos de
+// cobertura por pacote (spec 08b, O13; `tools/coverage-floor.json`), que reprovam com código 1.
 
 const NO_DATA = '_sem dados_';
 
@@ -42,6 +43,43 @@ export function loadCoverage(dir) {
   return result;
 }
 
+/**
+ * Pisos de cobertura (O13): `{ pacote: { lines, branches } }`. Devolve as mensagens (pt-BR) de quem
+ * ficou abaixo do piso (igual passa) ou não tem relatório.
+ */
+export function checkFloors(coverage, floors) {
+  const errors = [];
+  for (const [pkg, floor] of Object.entries(floors ?? {})) {
+    const total = coverage?.[pkg];
+    if (!total) {
+      errors.push(
+        `relatório de cobertura de \`${pkg}\` ausente: rode \`nx run ${pkg}:coverage\``,
+      );
+      continue;
+    }
+    for (const [metric, label] of [
+      ['lines', 'linhas'],
+      ['branches', 'ramos'],
+    ]) {
+      const measured = total[metric]?.pct;
+      if (typeof measured !== 'number' || measured < floor[metric]) {
+        errors.push(
+          `cobertura de ${label} de \`${pkg}\` abaixo do piso: ${typeof measured === 'number' ? measured.toFixed(2) : 'sem medida'}% < ${floor[metric]}%`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
+/** Versões dos motores: `<dir>/<projeto>.json` (`{ project, name, version }`) do repórter do E2E. */
+export function loadBrowsers(dir) {
+  return jsonFiles(dir)
+    .map((f) => readJson(join(dir, f)))
+    .filter((r) => r && typeof r.project === 'string' && r.version)
+    .sort((a, b) => a.project.localeCompare(b.project));
+}
+
 /** Arquivos `n45-<motor>.json` gravados pelo teste de desempenho. */
 export function loadPerf(dir) {
   return jsonFiles(dir)
@@ -74,10 +112,10 @@ function flakyTests(report) {
 }
 
 /** Avisos `::warning` do GitHub Actions, um por teste instável. */
-export function flakyWarnings(report) {
+export function flakyWarnings(report, dir = 'e2e') {
   return flakyTests(report).map(
     (t) =>
-      `::warning file=e2e/${t.file}${t.line ? `,line=${t.line}` : ''}::Teste instável (passou só na repetição): ${t.title} [${t.project}]`,
+      `::warning file=${dir}/${t.file}${t.line ? `,line=${t.line}` : ''}::Teste instável (passou só na repetição): ${t.title} [${t.project}]`,
   );
 }
 
@@ -136,6 +174,14 @@ function flakySection(report) {
   );
 }
 
+function browsersSection(browsers) {
+  if (!browsers?.length) return NO_DATA;
+  return table(
+    ['projeto', 'motor', 'versão'],
+    browsers.map((b) => [b.project, b.name ?? b.project, b.version]),
+  );
+}
+
 function perfSection(perf) {
   if (!perf?.length) return NO_DATA;
   const m = (e, key, name) => e[key]?.metrics?.[name];
@@ -175,6 +221,7 @@ export function buildSummary({
   playwrightReport,
   perf,
   versions,
+  browsers,
 } = {}) {
   const parts = [
     '## Qualidade',
@@ -182,6 +229,7 @@ export function buildSummary({
     `### Cobertura por pacote\n\n${coverageSection(coverage)}`,
     `### Testes instáveis (E2E)\n\n${flakySection(playwrightReport)}`,
     `### N45 por motor\n\n${perfSection(perf)}`,
+    `### Navegadores\n\n${browsersSection(browsers)}`,
   ];
   if (versions && Object.keys(versions).length) {
     parts.push(
@@ -194,6 +242,16 @@ export function buildSummary({
   return `${parts.join('\n\n')}\n`;
 }
 
+/** Resumo só do visual (spec 08b, O2): capturas que passaram apenas na repetição. */
+export function buildVisualSummary(visualReport) {
+  return `## Visual
+
+### Visual: testes instáveis
+
+${flakySection(visualReport)}
+`;
+}
+
 function option(argv, name, fallback) {
   const i = argv.indexOf(name);
   return i >= 0 && argv[i + 1] ? argv[i + 1] : fallback;
@@ -201,21 +259,47 @@ function option(argv, name, fallback) {
 
 function main() {
   const argv = process.argv.slice(2);
+  const visualFile = option(argv, '--visual');
+  if (visualFile) {
+    const visualReport = readJson(visualFile);
+    const md = buildVisualSummary(visualReport);
+    const target = process.env.GITHUB_STEP_SUMMARY;
+    if (target) appendFileSync(target, md);
+    else process.stdout.write(md);
+    for (const w of flakyWarnings(visualReport, 'e2e/visual')) console.log(w);
+    return;
+  }
   const playwrightReport = readJson(
     option(argv, '--playwright', 'e2e/test-results/report.json'),
   );
   const versionsFile = option(argv, '--versions');
+  const coverage = loadCoverage(
+    option(argv, '--coverage', 'coverage/packages'),
+  );
   const md = buildSummary({
     sizes: loadSizes(option(argv, '--sizes', 'dist/reports/size')),
-    coverage: loadCoverage(option(argv, '--coverage', 'coverage/packages')),
+    coverage,
     playwrightReport,
     perf: loadPerf(option(argv, '--perf', 'e2e/test-results/perf')),
+    browsers: loadBrowsers(
+      option(argv, '--browsers', 'e2e/test-results/browsers'),
+    ),
     versions: versionsFile ? readJson(versionsFile) : undefined,
   });
+  const floors = readJson(
+    option(argv, '--floors', 'tools/coverage-floor.json'),
+  );
+  const floorErrors = floors ? checkFloors(coverage, floors) : [];
+  const floorList = floorErrors.length
+    ? floorErrors.map((e) => `- FALHA: ${e}`).join('\n')
+    : '_todos os pacotes acima do piso_';
+  const floorMd = floors ? `\n### Pisos de cobertura\n\n${floorList}\n` : '';
   const target = process.env.GITHUB_STEP_SUMMARY;
-  if (target) appendFileSync(target, md);
-  else process.stdout.write(md);
+  if (target) appendFileSync(target, md + floorMd);
+  else process.stdout.write(md + floorMd);
   for (const w of flakyWarnings(playwrightReport)) console.log(w);
+  for (const e of floorErrors) console.log(`::error::${e}`);
+  if (floorErrors.length) process.exitCode = 1;
 }
 
 if (

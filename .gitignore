@@ -13,6 +13,8 @@ vitest.config.*.timestamp*
 .angular
 
 __screenshots__/
+!e2e/visual/__screenshots__/
+!apps/demo/e2e/visual/__screenshots__/
 
 packages/*/LICENSE
 !tools/fixtures/quality/coverage/

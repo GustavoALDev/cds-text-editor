@@ -11,17 +11,12 @@ test.describe('compat: angular/editor-draft-save', { tag: '@compat' }, () => {
   // N40 (spec 05c2b, R5, R8; S8-S10): `isDirty`, `markSaved(html)` com
   // `onMediaRemoved` e o aviso `beforeunload` (`warnOnUnsaved`) em navegador
   // real. Rota `draft-save`, CSP estrita, nos builds zoneless e zone.js.
-  // Chromium: o diálogo de `beforeunload` do Playwright exige ativação.
+  // Os 3 motores (spec 08b, N62): o diálogo de `beforeunload` exige ativação do usuário.
 
   const IMG_TWO = '/e2e.png?b';
 
   for (const zone of [false, true]) {
     test.describe(`N40 salvar e sair (${zone ? 'zone.js' : 'zoneless'})`, () => {
-      test.skip(
-        ({ browserName }) => browserName !== 'chromium',
-        'N40 roda só no Chromium',
-      );
-
       async function open(page: Page): Promise<void> {
         await gotoApp(page, '/draft-save', { zone });
         await waitForEditor(page, 'draft-save');

@@ -1,0 +1,123 @@
+{
+  "playwright": "1.63.0",
+  "browsers": {
+    "chromium": "153.0.8010.12",
+    "firefox": "155.0",
+    "webkit": "26.6"
+  },
+  "cpu": "AMD EPYC 9V45 96-Core Processor",
+  "date": "2026-10-08",
+  "metrics": {
+    "chromium": {
+      "base N8 frio p95": {
+        "median": 17.8,
+        "cv": 7.22,
+        "runs": 10
+      },
+      "completo frio +render p95": {
+        "median": 22.7,
+        "cv": 4.8,
+        "runs": 10
+      },
+      "completo frio N8 p95": {
+        "median": 18.85,
+        "cv": 8.76,
+        "runs": 10
+      },
+      "completo quente +render p95": {
+        "median": 14.55,
+        "cv": 9.56,
+        "runs": 10
+      },
+      "completo quente N8 p95": {
+        "median": 12,
+        "cv": 6.44,
+        "runs": 10
+      },
+      "criação mediana": {
+        "median": 99.275,
+        "cv": 2.67,
+        "runs": 10
+      },
+      "busca p95": {
+        "median": 23.3,
+        "cv": 6.94,
+        "runs": 10
+      }
+    },
+    "firefox": {
+      "base N8 frio p95": {
+        "median": 19,
+        "cv": 11.14,
+        "runs": 10
+      },
+      "completo frio +render p95": {
+        "median": 25,
+        "cv": 6.1,
+        "runs": 10
+      },
+      "completo frio N8 p95": {
+        "median": 20.5,
+        "cv": 10.21,
+        "runs": 10
+      },
+      "completo quente +render p95": {
+        "median": 22.5,
+        "cv": 9.74,
+        "runs": 10
+      },
+      "completo quente N8 p95": {
+        "median": 18,
+        "cv": 8.05,
+        "runs": 10
+      },
+      "criação mediana": {
+        "median": 116,
+        "cv": 4.91,
+        "runs": 10
+      },
+      "busca p95": {
+        "median": 25,
+        "cv": 9.95,
+        "runs": 10
+      }
+    },
+    "webkit": {
+      "base N8 frio p95": {
+        "median": 32,
+        "cv": 10.49,
+        "runs": 10
+      },
+      "completo frio +render p95": {
+        "median": 36.5,
+        "cv": 6,
+        "runs": 10
+      },
+      "completo frio N8 p95": {
+        "median": 29,
+        "cv": 10.81,
+        "runs": 10
+      },
+      "completo quente +render p95": {
+        "median": 21.5,
+        "cv": 10.11,
+        "runs": 10
+      },
+      "completo quente N8 p95": {
+        "median": 18.5,
+        "cv": 10.67,
+        "runs": 10
+      },
+      "criação mediana": {
+        "median": 129.25,
+        "cv": 5.01,
+        "runs": 10
+      },
+      "busca p95": {
+        "median": 36,
+        "cv": 9.54,
+        "runs": 10
+      }
+    }
+  }
+}

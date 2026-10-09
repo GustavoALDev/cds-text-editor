@@ -1,3 +1,6 @@
 # Fixtures de conteúdo comparados byte a byte (spec 03b, §7.2): LF em todo checkout,
 # inclusive com core.autocrlf=true no Windows.
 fixtures/content/** text eol=lf
+
+# Capturas da regressao visual (spec 08b): binarias, sem LFS.
+e2e/visual/__screenshots__/** binary

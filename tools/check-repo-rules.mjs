@@ -419,6 +419,46 @@ function checkApp(rootDir, app) {
   return errors;
 }
 
+// Spec 08b (O2): capturas da regressão visual versionadas em git comum, com teto por arquivo e total.
+const SHOT_MAX_FILE = 300 * 1024;
+const SHOT_MAX_TOTAL = 20 * 1024 * 1024;
+const SHOT_DIRS = [
+  ['e2e', 'visual', '__screenshots__'],
+  ['apps', 'demo', 'e2e', 'visual', '__screenshots__'],
+];
+function checkScreenshots(rootDir) {
+  return SHOT_DIRS.flatMap((parts) =>
+    checkScreenshotsIn(rootDir, join(rootDir, ...parts)),
+  );
+}
+function checkScreenshotsIn(rootDir, base) {
+  if (!existsSync(base)) return [];
+  const errors = [];
+  let total = 0;
+  const walkShots = (dir) => {
+    for (const name of readdirSync(dir)) {
+      const full = join(dir, name);
+      const st = statSync(full);
+      if (st.isDirectory()) walkShots(full);
+      else {
+        total += st.size;
+        if (st.size > SHOT_MAX_FILE) {
+          errors.push(
+            `${relative(rootDir, full).split(sep).join('/')}: captura com ${Math.ceil(st.size / 1024)} KB acima do teto de 300 KB por arquivo (spec 08b, O2)`,
+          );
+        }
+      }
+    }
+  };
+  walkShots(base);
+  if (total > SHOT_MAX_TOTAL) {
+    errors.push(
+      `${relative(rootDir, base).split(sep).join('/')}: ${(total / 1024 / 1024).toFixed(1)} MB acima do teto de 20 MB no total (spec 08b, O2)`,
+    );
+  }
+  return errors;
+}
+
 /** README raiz (spec 07d, L6): o aviso "não afiliado" aparece antes do primeiro `##` e depois do último. */
 export function checkRootReadmeNotice(text) {
   const lines = text.replace(/\r\n/g, '\n').split('\n');
@@ -451,12 +491,72 @@ function checkCompat(rootDir) {
   }
 }
 
+// Spec 08b (O9): o roteiro manual de leitor de tela existe e traz os fluxos, o critério da K4 e o
+// modelo de registro. Só no repositório real (com package.json na raiz).
+const ROTEIRO = 'docs/quality/roteiro-leitor-de-tela.md';
+const ROTEIRO_SECOES = [
+  '### F1. Rótulo e descrição do editável',
+  '### F2. Barra de ferramentas',
+  '### F3. `Alt+F10` e menus flutuantes',
+  '### F4. Menu `/` (inserção de blocos), critério da K4',
+  '### F5. Busca',
+  '### F6. Diálogos',
+  '### F7. Contadores e limite',
+  '### F8. Envio de arquivos',
+  '### F9. Rascunho',
+  '### F10. `rte-render`',
+  '### F11. Modo de navegação × foco do NVDA',
+  '## Seção móvel real',
+  '## Critério da K4',
+  '## Severidade',
+  '## Modelo de registro',
+];
+const ROTEIRO_CAMPOS = [
+  'Data:',
+  'Executor:',
+  'Commit:',
+  'Sistema operacional:',
+  'Leitor de tela e versão:',
+  'Navegador e versão:',
+  'Resultado da K4:',
+];
+export function checkRoteiro(rootDir) {
+  const path = join(rootDir, ROTEIRO);
+  if (!existsSync(path)) {
+    return [
+      `${ROTEIRO}: roteiro manual de leitor de tela obrigatório ausente (spec 08b, O9)`,
+    ];
+  }
+  const text = readFileSync(path, 'utf8').replace(/\r\n/g, '\n');
+  const errors = [];
+  for (const secao of ROTEIRO_SECOES) {
+    if (!text.includes(`\n${secao}`)) {
+      errors.push(`${ROTEIRO}: seção ausente "${secao}" (spec 08b, O9)`);
+    }
+  }
+  for (const campo of ROTEIRO_CAMPOS) {
+    if (!text.includes(campo)) {
+      errors.push(
+        `${ROTEIRO}: campo "${campo}" ausente do modelo de registro (spec 08b, O9)`,
+      );
+    }
+  }
+  if (!/aria-activedescendant/.test(text) || !/região viva/.test(text)) {
+    errors.push(
+      `${ROTEIRO}: o critério da K4 deve citar aria-activedescendant e a região viva (spec 08b, O9)`,
+    );
+  }
+  return errors;
+}
+
 export function checkRepoRules(rootDir) {
   const errors = [];
   errors.push(...checkApp(rootDir, 'demo'), ...checkApp(rootDir, 'docs'));
   errors.push(...checkCompat(rootDir));
+  errors.push(...checkScreenshots(rootDir));
   // Só no repositório real (com package.json na raiz); fixtures parciais de teste ficam de fora.
   if (existsSync(join(rootDir, 'package.json'))) {
+    errors.push(...checkRoteiro(rootDir));
     for (const file of GOVERNANCE_FILES) {
       if (!existsSync(join(rootDir, file))) {
         errors.push(
