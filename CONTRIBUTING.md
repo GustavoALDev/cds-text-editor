@@ -33,7 +33,7 @@ Testes E2E: veja [e2e/README.md](e2e/README.md).
 1. O trabalho segue **spec → plano → implementação → verificação** (índice em `docs/specs/README.md`).
 2. **Nenhum recurso é feito sem teste automatizado e verificação em navegador real.**
 3. Crie uma branch a partir de `main` e abra um PR usando o template.
-4. Se a mudança afeta um pacote publicado, adicione um changeset (`npx changeset`). Cada pacote tem versão independente.
+4. Se a mudança afeta um pacote publicado, adicione um changeset (`npx changeset`). Os 5 pacotes são versionados juntos (`fixed`): todos saem na mesma versão. Mudança no relatório de API (`packages/*/api/*.api.md`), no CSS público (`*.css-api.md`) ou no esquema (`docs/html-schema.md`) exige changeset do tipo certo: em `0.x`, remoção ou alteração pede `minor`; a partir da `1.0`, `major`. Para regravar os relatórios use `UPDATE_API=1 npx nx run-many -t api`.
 5. Lint, build, testes e `check:rules` precisam passar; o CI (`.github/workflows/ci.yml`) roda essas verificações em todo PR.
 
 ## Desempenho

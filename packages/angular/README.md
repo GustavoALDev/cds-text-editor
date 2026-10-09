@@ -121,6 +121,8 @@ O caminho de controle nativo do `FormValueControl` não lê `NG_VALIDATORS`; por
 | `RteSafeLinksValidator`       | `rte-editor[rteSafeLinks]` (ou `="{ policy }"`) | `{ rteUnsafeLinks: { count, ... } }` |
 | `RteNoEmptyHeadingsValidator` | `rte-editor[rteNoEmptyHeadings]`                | `{ rteEmptyHeadings: { count } }`    |
 
+Essas diretivas **não são feitas para herança**: as classes-base (`RteTextValidator`, `RteCountValidator`) são `@internal` e ficam fora do contrato de semver (ver [docs/support.md](../../docs/support.md)).
+
 O seletor é `rteRequired` (e não `required`) para não colidir com o `required` nativo do Angular, que continua valendo e mede a string HTML. `[rteRequired]="false"` e `[rteNoEmptyHeadings]="false"` desligam. Como no caminho funcional, o limite não chega ao editor (use `[maxLength]` para barrar a digitação).
 
 ### `maxLength` nativo × `rteMaxChars`

@@ -18,8 +18,10 @@ Inclua a versão do pacote, o passo a passo para reproduzir e o impacto estimado
 
 | Versão                         | Correções de segurança |
 | ------------------------------ | ---------------------- |
-| `main` (pré-1.0, tag `next`)   | Sim                    |
+| `main` (pré-1.0)               | Sim                    |
 | Última `1.x` (a partir da 1.0) | Sim                    |
 | `1.x` anterior à última        | Não                    |
+
+`TODO-AUTOR`: canal e _dist-tag_ de distribuição (09b); a tabela acima não cita canal até o dono decidir.
 
 Detalhes da política em [docs/support.md](docs/support.md); modelo de ameaças em [docs/security.md](docs/security.md).
