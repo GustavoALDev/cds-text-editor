@@ -35,7 +35,12 @@ export function htmlToPlain(html) {
     .trim();
 }
 
-const HEADING = /<(h[23])\b([^>]*)>([\s\S]*?)<\/\1>/gi;
+/** Título da página sem o escopo npm (`@comodeviaser/rte-core` → `rte-core`): repetido em toda entrada da API. */
+export function shortTitle(title) {
+  return title.replace(/^@[^/\s]+\//, '');
+}
+
+const HEADING =/<(h[23])\b([^>]*)>([\s\S]*?)<\/\1>/gi;
 
 /** Entradas `{ page, pageTitle, anchor, title, text }` de uma página. */
 export function pageEntries(page) {
@@ -51,7 +56,7 @@ export function pageEntries(page) {
     if (text || current.anchor)
       entries.push({
         page: page.id,
-        pageTitle: page.title,
+        pageTitle: shortTitle(page.title),
         anchor: current.anchor,
         title: current.title,
         text: normalize(text).slice(0, MAX_SECTION_CHARS).trim(),

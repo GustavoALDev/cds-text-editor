@@ -4,6 +4,7 @@ import {
   assertIndexSize,
   buildSearchIndex,
   normalize,
+  shortTitle,
 } from './docs/search-index.mjs';
 
 const pages = [
@@ -43,6 +44,18 @@ test('uma entrada por seção h2/h3, com introdução e texto normalizado', () =
   assert.equal(idx[1].text, 'use providerichtext.');
   assert.equal(idx[2].text, 'texto forte.');
   assert.equal(idx[3].pageTitle, 'rte-core');
+});
+
+test('pageTitle da API sai sem o escopo npm', () => {
+  const [entry] = buildSearchIndex([
+    {
+      id: 'api/rte-core',
+      title: '@comodeviaser/rte-core',
+      segments: [{ html: '<h2 id="x">x</h2><p>y</p>' }],
+    },
+  ]);
+  assert.equal(entry.pageTitle, 'rte-core');
+  assert.equal(shortTitle('Configuração'), 'Configuração');
 });
 
 test('assertIndexSize falha acima do teto, em pt-BR', () => {
