@@ -1,8 +1,8 @@
 ---
-'@cds/rte-core': minor
+'@comodeviaser/rte-core': minor
 ---
 
-Primeira versão do `@cds/rte-core`: o esquema do HTML, as extensões do editor e os utilitários puros, sem dependência de Angular. Os 5 pacotes `@cds/rte-*` são versionados juntos.
+Primeira versão do `@comodeviaser/rte-core`: o esquema do HTML, as extensões do editor e os utilitários puros, sem dependência de Angular. Os 5 pacotes `@comodeviaser/rte-*` são versionados juntos.
 
 **Entries.**
 
@@ -11,7 +11,7 @@ Primeira versão do `@cds/rte-core`: o esquema do HTML, as extensões do editor 
 - `/html` (sem DOM; único entry com `htmlparser2`): `htmlToText`, `extractToc`, `validateHtml` e `inspectRteHtml` (uma passada que devolve os `href` dos links, a quantidade de títulos `h2`–`h4` vazios e `truncated`, quando a leitura parou por passar de 256 níveis de aninhamento), com as opções `RteHtmlToTextOptions`, `RteExtractTocOptions` e `RteValidateHtmlOptions`.
 - `/extensions`: as extensões Tiptap que produzem o HTML do esquema, a fábrica `createEditorExtensions`, o serializador canônico sem DOM (`getRteHtml`, `serializeRteHtml` com `RteSerializeHtmlOptions`, `getRteHeadings`), `RTE_CONTENT_LABELS` e `RTE_LABELS_META`. Inclui as extensões de produtividade (`rtSearch`, `rtSlashCommand`, `rtCharLimit` e `rtPlaceholder` são os nomes das extensões Tiptap, não exports do pacote): busca e substituição literais (`getSearchState`), comandos `/` sem interface (`getSlashMenuState`, `RTE_SLASH_LABELS`, `RTE_SLASH_ITEMS`), limite de caracteres só na entrada direta (`getCharLimitState`), placeholder e estatísticas incrementais (`getRteTextStats`); `features.search` e `features.slashCommands` registram as extensões e nada disso chega ao HTML. `setImage` e `setVideo` aceitam `{ at }` para inserir numa posição sem mexer na seleção. Atalhos: `Ctrl+Shift+B` cria citação, `Mod-Shift-9` alterna a lista de tarefas, e `setCallout` se desfaz com `undo`. O alinhamento (`text-align`) é lido do atributo `style`, não do CSSOM, então vale sob CSP sem `'unsafe-inline'`.
 - `/code-languages`: 24 linguagens de código carregadas sob demanda (`RTE_CODE_LANGUAGES`, `defineCodeLanguage`).
-- `@cds/rte-core/styles/content.css`: a aparência do conteúdo `rt-*` (camada `rte.content`, seletores sob `.rte-content`), tabelas (inclusive `caption` e `table.rte-table--sized`), `pre`, tarefas na exibição, parágrafos e títulos vazios com uma linha de altura, e as cores da paleta no claro e no escuro (`--rte-content-color`/`--rte-content-highlight`; `!important` só nessas duas declarações). As barras laterais usam `border-inline-start` (seguem o `dir`). Compartilhado pelo editor e pela exibição; ordem de inclusão: `theme.css`, `content.css`, `editor.css`.
+- `@comodeviaser/rte-core/styles/content.css`: a aparência do conteúdo `rt-*` (camada `rte.content`, seletores sob `.rte-content`), tabelas (inclusive `caption` e `table.rte-table--sized`), `pre`, tarefas na exibição, parágrafos e títulos vazios com uma linha de altura, e as cores da paleta no claro e no escuro (`--rte-content-color`/`--rte-content-highlight`; `!important` só nessas duas declarações). As barras laterais usam `border-inline-start` (seguem o `dir`). Compartilhado pelo editor e pela exibição; ordem de inclusão: `theme.css`, `content.css`, `editor.css`.
 
 **Requisitos.** `@tiptap/*` (`^3.31.4`), `lowlight` e `highlight.js` são `peerDependencies` opcionais, usados só por `/extensions` e `/code-languages`; `htmlparser2` é dependência e só o entry `/html` a importa. Os parâmetros que recebem lista aceitam `readonly T[]`. O pacote publica a pasta `styles` e declara `sideEffects` para `**/*.css`.
 

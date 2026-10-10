@@ -6,7 +6,7 @@ import {
   type NgZone,
   type Signal,
 } from '@angular/core';
-import type { RteHtmlSchema } from '@cds/rte-core';
+import type { RteHtmlSchema } from '@comodeviaser/rte-core';
 import type { Editor, Extension } from '@tiptap/core';
 import type { RteUploadLabels } from '../labels/types';
 import { announcementTexts } from './announce';

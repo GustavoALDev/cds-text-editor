@@ -4,7 +4,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { RteEditor, type RteEditorConfig } from '@cds/rte-angular';
+import { RteEditor, type RteEditorConfig } from '@comodeviaser/rte-angular';
 import { E2eBridge, NO_FORM_STATE } from '../e2e-bridge';
 
 /** Documento inicial do editor `productivity` (N42, N43). */

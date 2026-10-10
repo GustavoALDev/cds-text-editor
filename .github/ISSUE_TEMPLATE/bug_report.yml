@@ -21,5 +21,5 @@ body:
     id: ambiente
     attributes:
       label: Versões e ambiente
-      description: Pacote e versão (@cds/rte-*), Angular, navegador, sistema operacional, Node.js.
+      description: Pacote e versão (@comodeviaser/rte-*), Angular, navegador, sistema operacional, Node.js.
     validations: { required: true }

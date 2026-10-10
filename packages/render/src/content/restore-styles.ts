@@ -1,4 +1,4 @@
-import { RTE_STYLE_PROPERTIES } from '@cds/rte-core';
+import { RTE_STYLE_PROPERTIES } from '@comodeviaser/rte-core';
 
 /** Comentários e o texto cru de elementos *raw text*: não são *tags* da árvore. */
 const COMMENT = /<!--[\s\S]*?-->/g;

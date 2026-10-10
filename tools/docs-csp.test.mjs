@@ -33,7 +33,7 @@ test('a <meta> do index.html tem o mesmo texto do cabeçalho', () => {
 
 test('o index.html usa o <base href> da publicação e lang pt-BR', () => {
   const html = readFileSync(resolve(ROOT, 'apps/docs/src/index.html'), 'utf8');
-  assert.match(html, /<base href="\/cds-text-editor\/"\s*\/?>/);
+  assert.match(html, /<base href="\/comodeviaser-editor\/"\s*\/?>/);
   assert.match(html, /<html lang="pt-BR">/);
 });
 
@@ -41,18 +41,18 @@ test('normalizeBase e resolveBase', () => {
   assert.equal(normalizeBase('/x'), '/x/');
   assert.equal(normalizeBase('/'), '/');
   assert.throws(() => normalizeBase('x/'), /começar com/);
-  assert.equal(resolveBase([], {}), '/cds-text-editor/');
+  assert.equal(resolveBase([], {}), '/comodeviaser-editor/');
   assert.equal(resolveBase([], { RTE_SITE_BASE: '/a' }), '/a/');
   assert.equal(resolveBase(['--base', '/b/'], { RTE_SITE_BASE: '/a' }), '/b/');
 });
 
 test('resolveRequest: sob a base, fora dela, raiz e prefixo sem barra', () => {
-  const base = '/cds-text-editor/';
-  assert.deepEqual(resolveRequest(base, '/cds-text-editor/guia/x/'), {
+  const base = '/comodeviaser-editor/';
+  assert.deepEqual(resolveRequest(base, '/comodeviaser-editor/guia/x/'), {
     kind: 'file',
     rel: 'guia/x/',
   });
-  assert.deepEqual(resolveRequest(base, '/cds-text-editor/'), {
+  assert.deepEqual(resolveRequest(base, '/comodeviaser-editor/'), {
     kind: 'file',
     rel: '',
   });
@@ -61,7 +61,7 @@ test('resolveRequest: sob a base, fora dela, raiz e prefixo sem barra', () => {
     kind: 'redirect',
     location: base,
   });
-  assert.deepEqual(resolveRequest(base, '/cds-text-editor'), {
+  assert.deepEqual(resolveRequest(base, '/comodeviaser-editor'), {
     kind: 'redirect',
     location: base,
   });
@@ -89,13 +89,13 @@ async function withServer(options, run) {
 }
 
 test('o servidor serve sob o prefixo, com CSP, 404.html e redirecionamento', async () => {
-  await withServer({ base: '/cds-text-editor/' }, async (origin) => {
-    const page = await fetch(`${origin}/cds-text-editor/guia/x/`);
+  await withServer({ base: '/comodeviaser-editor/' }, async (origin) => {
+    const page = await fetch(`${origin}/comodeviaser-editor/guia/x/`);
     assert.equal(page.status, 200);
     assert.equal(await page.text(), 'pagina-x');
     assert.equal(page.headers.get('content-security-policy'), CSP);
 
-    const missing = await fetch(`${origin}/cds-text-editor/nada/aqui`);
+    const missing = await fetch(`${origin}/comodeviaser-editor/nada/aqui`);
     assert.equal(missing.status, 404);
     assert.equal(await missing.text(), 'nao-encontrada');
 
@@ -104,19 +104,19 @@ test('o servidor serve sob o prefixo, com CSP, 404.html e redirecionamento', asy
 
     const root = await fetch(`${origin}/`, { redirect: 'manual' });
     assert.equal(root.status, 302);
-    assert.equal(root.headers.get('location'), '/cds-text-editor/');
+    assert.equal(root.headers.get('location'), '/comodeviaser-editor/');
 
-    const post = await fetch(`${origin}/cds-text-editor/`, { method: 'POST' });
+    const post = await fetch(`${origin}/comodeviaser-editor/`, { method: 'POST' });
     assert.equal(post.status, 405);
 
-    const traversal = await fetch(`${origin}/cds-text-editor/..%2f..%2fx`);
+    const traversal = await fetch(`${origin}/comodeviaser-editor/..%2f..%2fx`);
     assert.equal(traversal.status, 404);
   });
 });
 
 test('--no-csp-header: sem o cabeçalho', async () => {
   await withServer({ cspHeader: false }, async (origin) => {
-    const page = await fetch(`${origin}/cds-text-editor/`);
+    const page = await fetch(`${origin}/comodeviaser-editor/`);
     assert.equal(page.status, 200);
     assert.equal(page.headers.get('content-security-policy'), null);
   });

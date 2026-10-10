@@ -5,19 +5,19 @@ description: Enviar imagens e vídeos para o seu servidor, acompanhar o progress
 
 # Envio e mídia
 
-Sem configuração, o editor não envia arquivo nenhum: os diálogos de imagem e vídeo só aceitam endereço, e soltar um arquivo é ignorado. Com um **adaptador**, o editor ganha envio por diálogo, colar e soltar, marcadores no texto e uma bandeja de envios. Esta página mostra o caminho principal; as tabelas completas de opções estão no [README do `@cds/rte-angular`](https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/angular/README.md) e na página [`api/angular-upload`](api/angular-upload).
+Sem configuração, o editor não envia arquivo nenhum: os diálogos de imagem e vídeo só aceitam endereço, e soltar um arquivo é ignorado. Com um **adaptador**, o editor ganha envio por diálogo, colar e soltar, marcadores no texto e uma bandeja de envios. Esta página mostra o caminho principal; as tabelas completas de opções estão no [README do `@comodeviaser/rte-angular`](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/angular/README.md) e na página [`api/angular-upload`](api/angular-upload).
 
 > O site não envia nada, nem de mentira: todos os exemplos desta página são só compilados. Para ver o envio funcionando, abra a [demonstração de arquivos](demo/files).
 
 ## Servidor de exemplo: referência, não produto
 
-O repositório traz o [`examples/server-node`](https://github.com/GustavoALDev/cds-text-editor/blob/main/examples/server-node/README.md), que cumpre o contrato do `httpUploadAdapter`. Ele existe para você ler e adaptar, **não para publicar como está**. As defesas que ele mostra são o mínimo que o seu servidor também precisa ter:
+O repositório traz o [`examples/server-node`](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/examples/server-node/README.md), que cumpre o contrato do `httpUploadAdapter`. Ele existe para você ler e adaptar, **não para publicar como está**. As defesas que ele mostra são o mínimo que o seu servidor também precisa ter:
 
 - **Tipo pelo conteúdo (_magic bytes_)**, nunca pelo MIME ou pela extensão que o navegador declara; SVG é recusado.
 - **Revalidação no servidor.** A conferência de tipo e de tamanho no editor é conveniência; só a do servidor vale.
 - Autenticação (o exemplo exige `Authorization: Bearer` em `/upload`, `/csrf` e `/content`), CSRF ligado à sessão, nome de arquivo gerado por você, limites (tamanho, teto de pixels, envios simultâneos), `Range` e `X-Content-Type-Options: nosniff` ao servir.
 
-A lista completa de deveres do servidor, com o porquê de cada um, está em [`docs/security.md`](https://github.com/GustavoALDev/cds-text-editor/blob/main/docs/security.md); esta página não a repete.
+A lista completa de deveres do servidor, com o porquê de cada um, está em [`docs/security.md`](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/docs/security.md); esta página não a repete.
 
 O servidor de exemplo não implementa CORS de propósito: o caminho esperado é o app e o servidor na mesma origem, que em desenvolvimento se resolve com um _proxy_ (veja abaixo).
 

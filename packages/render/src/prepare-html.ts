@@ -1,4 +1,4 @@
-import { escapeHtmlAttribute } from '@cds/rte-core';
+import { escapeHtmlAttribute } from '@comodeviaser/rte-core';
 
 /** Classe do rolador que embrulha cada tabela (H6, H7). */
 export const RTE_TABLE_SCROLL_CLASS = 'rte-table-scroll';

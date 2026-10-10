@@ -1,5 +1,5 @@
-import type { RteLabels, RteUploadErrorReason } from '@cds/rte-angular';
-import { RTE_CONTENT_LABELS, RTE_SLASH_LABELS } from '@cds/rte-core/extensions';
+import type { RteLabels, RteUploadErrorReason } from '@comodeviaser/rte-angular';
+import { RTE_CONTENT_LABELS, RTE_SLASH_LABELS } from '@comodeviaser/rte-core/extensions';
 
 const UPLOAD_REASONS: Readonly<Record<RteUploadErrorReason, string>> =
   Object.freeze({

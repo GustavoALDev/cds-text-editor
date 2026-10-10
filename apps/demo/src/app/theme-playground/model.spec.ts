@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { RTE_THEME_PRESETS } from '@cds/rte-theme';
+import { RTE_THEME_PRESETS } from '@comodeviaser/rte-theme';
 import { describe, expect, it } from 'vitest';
 import {
   activePreset,
@@ -24,7 +24,7 @@ import {
 } from './model';
 
 const themeCss = readFileSync(
-  resolve(process.cwd(), 'node_modules/@cds/rte-theme/dist/theme.css'),
+  resolve(process.cwd(), 'node_modules/@comodeviaser/rte-theme/dist/theme.css'),
   'utf8',
 );
 

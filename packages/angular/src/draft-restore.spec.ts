@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { getHtmlSchema } from '@cds/rte-core';
-import { validateHtml } from '@cds/rte-core/html';
+import { getHtmlSchema } from '@comodeviaser/rte-core';
+import { validateHtml } from '@comodeviaser/rte-core/html';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installDialogShim } from './testing-support/dialog';
 import { drainDraft, setupDraft, storedDraft } from './testing-support/draft';

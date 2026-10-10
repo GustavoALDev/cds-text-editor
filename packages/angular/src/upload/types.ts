@@ -1,4 +1,4 @@
-import type { RteVideoTrack } from '@cds/rte-core/extensions';
+import type { RteVideoTrack } from '@comodeviaser/rte-core/extensions';
 
 /** Contexto passado ao adaptador de envio (E4). */
 export interface RteUploadContext {

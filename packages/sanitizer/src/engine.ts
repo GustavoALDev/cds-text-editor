@@ -1,5 +1,5 @@
 // Engine interna (spec 04, S1): leitura, sanitização e serialização.
-import type { RteHtmlSchema } from '@cds/rte-core';
+import type { RteHtmlSchema } from '@comodeviaser/rte-core';
 import { parseHtml } from './parse';
 import { sanitizeTree } from './sanitize-tree';
 import { serializeNodes } from './serialize';

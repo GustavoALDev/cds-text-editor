@@ -1,9 +1,9 @@
 @layer rte.reset, rte.base, rte.theme, rte.components, rte.content;
 
 /*
- * @cds/rte-angular — CSS funcional do editor (spec 05a, D16–D18).
+ * @comodeviaser/rte-angular — CSS funcional do editor (spec 05a, D16–D18).
  *
- * Incluir depois de `@cds/rte-theme/theme.css` (por exemplo em `angular.json` → `styles`). Nada é
+ * Incluir depois de `@comodeviaser/rte-theme/theme.css` (por exemplo em `angular.json` → `styles`). Nada é
  * injetado em tempo de execução (Tiptap com `injectCSS: false`): funciona com
  * `style-src 'self'` sem nonce. A ordem das camadas é a do tema, então não depende de qual arquivo
  * carrega primeiro, e o CSS do consumidor sem camada sempre vence. Cores só por tokens `--rte-*`.
@@ -12,7 +12,7 @@
  * - `rte.content`: tudo dentro do editável `.rte-content` (o CSS base do Tiptap portado, sem
  *   `!important`, mais placeholder, tarefas, alças da imagem, tabelas em edição, `hljs-*`, busca
  *   e comandos `/`). Só o funcional da edição: a aparência do conteúdo (`rt-*`, tabelas, `pre`,
- *   cores da paleta) é do `content.css` do `@cds/rte-core` (spec 05b1, U16). Ordem de inclusão:
+ *   cores da paleta) é do `content.css` do `@comodeviaser/rte-core` (spec 05b1, U16). Ordem de inclusão:
  *   `theme.css` → `content.css` → `editor.css`. Onde o seletor coincidiria com o do `content.css`,
  *   o daqui leva `.rte-editor` na frente (mais específico, sem repetir o seletor).
  */

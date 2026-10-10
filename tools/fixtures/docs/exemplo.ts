@@ -1,5 +1,5 @@
 // #region cabecalho
-import { htmlToText } from '@cds/rte-core/html';
+import { htmlToText } from '@comodeviaser/rte-core/html';
 // #endregion
 
 // #region uso

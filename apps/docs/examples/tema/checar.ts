@@ -1,5 +1,5 @@
 // #region guarda
-import { checkRteTheme, suggestRteColor, type RteTheme } from '@cds/rte-theme';
+import { checkRteTheme, suggestRteColor, type RteTheme } from '@comodeviaser/rte-theme';
 
 export interface Veredito {
   readonly aprovado: boolean;

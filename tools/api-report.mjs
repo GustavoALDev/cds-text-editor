@@ -66,7 +66,7 @@ export function checkReportSet(entries, reportDir) {
   return errors;
 }
 
-// Mapeia @cds/rte-* para os .d.ts publicados de todos os pacotes do workspace.
+// Mapeia @comodeviaser/rte-* para os .d.ts publicados de todos os pacotes do workspace.
 // Os pacotes do workspace são expostos por junções em <stage>/node_modules/<pacote>, para o
 // compilador tratá-los como pacotes externos (referências, nunca agregados; Z8).
 export function workspacePaths(root, stage, links = []) {

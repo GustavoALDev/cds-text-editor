@@ -22,7 +22,7 @@ import {
   type Signal,
   type WritableSignal,
 } from '@angular/core';
-import type { RteLinkPolicy } from '@cds/rte-core';
+import type { RteLinkPolicy } from '@comodeviaser/rte-core';
 import type { Editor } from '@tiptap/core';
 import type { Transaction } from '@tiptap/pm/state';
 import type { RteDialogKind } from '../dialogs/types';

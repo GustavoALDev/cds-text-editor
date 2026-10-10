@@ -248,8 +248,8 @@ export function parseChangeset(text) {
 export function packageOfReport(file) {
   const f = file.replace(/\\/g, '/');
   const m = /^packages\/([^/]+)\/api\/[^/]+\.(?:api|css-api)\.md$/.exec(f);
-  if (m) return `@cds/rte-${m[1]}`;
-  if (f === 'docs/html-schema.md') return '@cds/rte-core';
+  if (m) return `@comodeviaser/rte-${m[1]}`;
+  if (f === 'docs/html-schema.md') return '@comodeviaser/rte-core';
   return null;
 }
 

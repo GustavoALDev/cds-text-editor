@@ -36,8 +36,8 @@ Todas tomadas como na spec, salvo os desvios da seção (b).
 
 ### (b) Desvios e fatos registrados pelas tarefas
 
-- **T1, spike do consumidor:** `tools/consumer.mjs` deduplica o core sozinho: instalar os 5 tarballs deixa **uma versão só** de `@cds/rte-core` (a do tarball). Nem `overrides` nem instalação conjunta no mesmo comando (as reservas da spec) foram necessários. `changeset status` com os 34 changesets antigos já planejava os 5 em `0.1.0`: o `fixed` sobe o theme (que tinha só um changeset `patch`) para `0.1.0`.
-- **T1:** o peer opcional `@cds/rte-sanitizer` do `render` saiu (o `render` não o importa); `angular` depende de `core` e `theme`, `sanitizer` de `core` e `render` de `core`, todos em `dependencies` com versão exata; os `ng-package.json` de `angular` e `render` ganharam `allowedNonPeerDependencies`.
+- **T1, spike do consumidor:** `tools/consumer.mjs` deduplica o core sozinho: instalar os 5 tarballs deixa **uma versão só** de `@comodeviaser/rte-core` (a do tarball). Nem `overrides` nem instalação conjunta no mesmo comando (as reservas da spec) foram necessários. `changeset status` com os 34 changesets antigos já planejava os 5 em `0.1.0`: o `fixed` sobe o theme (que tinha só um changeset `patch`) para `0.1.0`.
+- **T1:** o peer opcional `@comodeviaser/rte-sanitizer` do `render` saiu (o `render` não o importa); `angular` depende de `core` e `theme`, `sanitizer` de `core` e `render` de `core`, todos em `dependencies` com versão exata; os `ng-package.json` de `angular` e `render` ganharam `allowedNonPeerDependencies`.
 - **T2:** o `check:rules` só vê arquivos **rastreados** (`git ls-files`); sem git, percorre a árvore. Ficam de fora da regra de nomes antigos: `docs/decisions`, `docs/specs`, `docs/superpowers`, o próprio `check-repo-rules` e seu teste, o lockfile e o `THIRD-PARTY-NOTICES.md`. A regra casa palavra inteira (não casa `RteDraftStoreFoo`, `clearLocalDrafts` nem `RteRgb`). O comando de instalação do README raiz foi regenerado (`UPDATE_README=1`), sem os pacotes internos como peers (a490c89).
 - **T2:** `extractToc` agora **ignora níveis fora de 2 a 4**, para o tipo `RteHeadingLevel` valer em tempo de execução.
 - **T3:** o `@packageDocumentation` é **lido do fonte** do entry e injetado numa cópia temporária `*.pkgdoc.d.ts`, porque os `.d.ts` empacotados de tsup e ng-packagr o descartam. Isenções da AP8: membros de interfaces `Rte*Labels` (documentadas no nível da interface) e estáticos `ɵ` gerados pelo Angular. 328 itens documentados; relatórios regravados só com comentários novos e sem `(undocumented)`.
@@ -84,14 +84,14 @@ Todas tomadas como na spec, salvo os desvios da seção (b).
 
 ### (f) Versões e dependências
 
-`npm ls @cds/rte-core` após instalar os 5 tarballs: uma versão só, vinda do tarball (spike da T1). Saída de `npm run release-plan` (que roda `changeset status`):
+`npm ls @comodeviaser/rte-core` após instalar os 5 tarballs: uma versão só, vinda do tarball (spike da T1). Saída de `npm run release-plan` (que roda `changeset status`):
 
 ```text
-@cds/rte-angular: 0.0.0 -> 0.1.0 (minor)
-@cds/rte-core: 0.0.0 -> 0.1.0 (minor)
-@cds/rte-render: 0.0.0 -> 0.1.0 (minor)
-@cds/rte-sanitizer: 0.0.0 -> 0.1.0 (minor)
-@cds/rte-theme: 0.0.0 -> 0.1.0 (minor)
+@comodeviaser/rte-angular: 0.0.0 -> 0.1.0 (minor)
+@comodeviaser/rte-core: 0.0.0 -> 0.1.0 (minor)
+@comodeviaser/rte-render: 0.0.0 -> 0.1.0 (minor)
+@comodeviaser/rte-sanitizer: 0.0.0 -> 0.1.0 (minor)
+@comodeviaser/rte-theme: 0.0.0 -> 0.1.0 (minor)
 ```
 
 Nenhum campo `version` foi alterado e `changeset version`/`publish` não rodaram. O `release-plan` falha se o grupo `fixed` ficar incompleto ou se alguma versão planejada for `>= 1.0.0` sem `RTE_ALLOW_1_0=1`.

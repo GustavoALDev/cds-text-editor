@@ -1,8 +1,8 @@
 // Contrato byte a byte com o editor (spec 04, R2 e R4): a saída do editor é
 // ponto fixo do sanitizador e o esquema reduzido é respeitado. O corpus é
 // gerado pelo teste do core (`editor-corpus.json`) e lido aqui como JSON (R12).
-import { getHtmlSchema, normalizeHref, type RteFeatureId } from '@cds/rte-core';
-import { validateHtml } from '@cds/rte-core/html';
+import { getHtmlSchema, normalizeHref, type RteFeatureId } from '@comodeviaser/rte-core';
+import { validateHtml } from '@comodeviaser/rte-core/html';
 import { describe, expect, it } from 'vitest';
 import { createSanitizer, sanitizeRichText } from './index';
 import type { RteSanitizeOptions } from './index';

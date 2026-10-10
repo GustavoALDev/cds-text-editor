@@ -5,7 +5,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { slug } from './slug.mjs';
 
-export const REPO_URL = 'https://github.com/GustavoALDev/cds-text-editor'; // TODO-AUTOR: organização final
+export const REPO_URL = 'https://github.com/GustavoALDev/comodeviaser-editor'; // TODO-AUTOR: organização final
 
 /** `rte-core-html` -> `core-html` (id da página: `api/core-html`). */
 export const apiPageId = (synthetic) => `api/${synthetic.replace(/^rte-/, '')}`;

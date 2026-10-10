@@ -1,4 +1,4 @@
-import { normalizeAttribute, type RteAttrRule } from '@cds/rte-core';
+import { normalizeAttribute, type RteAttrRule } from '@comodeviaser/rte-core';
 import type { RteUploadRules } from './rules';
 import type { RteUploadType } from './types';
 

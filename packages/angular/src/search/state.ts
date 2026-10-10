@@ -2,7 +2,7 @@ import { computed, type Signal } from '@angular/core';
 import {
   getSearchState,
   type RteSearchState,
-} from '@cds/rte-core/extensions';
+} from '@comodeviaser/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 
 /** Maior seleção que vira consulta inicial (K7). */

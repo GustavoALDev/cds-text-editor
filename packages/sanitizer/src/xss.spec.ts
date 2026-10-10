@@ -1,8 +1,8 @@
 // Corpus de XSS (spec 04, §6.1 e R5): cada caso tem a saída exata, é ponto
 // fixo, passa no verificador executável (`findUnsafe`) e no oráculo
 // independente do core (`validateHtml`).
-import { getHtmlSchema } from '@cds/rte-core';
-import { validateHtml } from '@cds/rte-core/html';
+import { getHtmlSchema } from '@comodeviaser/rte-core';
+import { validateHtml } from '@comodeviaser/rte-core/html';
 import { Parser } from 'htmlparser2';
 import { describe, expect, it } from 'vitest';
 import { createSanitizer } from './index';

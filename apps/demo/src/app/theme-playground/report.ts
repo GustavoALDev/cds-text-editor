@@ -3,7 +3,7 @@ import {
   suggestRteColor,
   type RteTheme,
   type RteThemeReport,
-} from '@cds/rte-theme';
+} from '@comodeviaser/rte-theme';
 import { type ColorField, toRteTheme, type PlaygroundState } from './model';
 
 export type ReportMode = 'light' | 'dark';

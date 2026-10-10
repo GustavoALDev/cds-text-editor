@@ -5,8 +5,8 @@ import { serverRoutes } from './app.routes.server';
 
 describe('esqueleto do site', () => {
   it('internalUrl resolve links relativos à base, com âncora', () => {
-    const base = 'http://x.test/cds-text-editor/guia/inicio-rapido';
-    const root = 'http://x.test/cds-text-editor/';
+    const base = 'http://x.test/comodeviaser-editor/guia/inicio-rapido';
+    const root = 'http://x.test/comodeviaser-editor/';
     expect(internalUrl('guia/configuracao#providers', root)).toBe(
       '/guia/configuracao#providers',
     );
@@ -16,14 +16,14 @@ describe('esqueleto do site', () => {
   });
 
   it('internalUrl recusa links de fora do site ou da base', () => {
-    const root = 'http://x.test/cds-text-editor/';
+    const root = 'http://x.test/comodeviaser-editor/';
     expect(internalUrl('https://outro.test/a', root)).toBeNull();
     expect(internalUrl('/demo/', root)).toBeNull();
     expect(internalUrl('mailto:a@b.c', root)).toBeNull();
   });
 
   it('internalUrl deixa o navegador seguir links para o demo, dentro da base', () => {
-    const root = 'http://x.test/cds-text-editor/';
+    const root = 'http://x.test/comodeviaser-editor/';
     expect(internalUrl('demo/theme?preset=x', root)).toBeNull();
     expect(internalUrl('demo/', root)).toBeNull();
     expect(internalUrl('guia/x#y', root)).toBe('/guia/x#y');

@@ -1,4 +1,4 @@
-import { getTableSizing, parseColWidth } from '@cds/rte-core';
+import { getTableSizing, parseColWidth } from '@comodeviaser/rte-core';
 import { RTE_TABLE_SIZED_CLASS } from '../prepare-html';
 
 /**

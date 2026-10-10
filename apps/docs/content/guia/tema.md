@@ -5,7 +5,7 @@ description: A escada de personalização de 0 a 4, o modo inherit para sites co
 
 # Tema
 
-Você informa até três cores (`primary`, `secondary`, `tertiary`) e o resto (hover, fundo suave, borda, texto legível, foco, neutros, claro e escuro) é **derivado em CSS**, com contraste acessível por construção. O pacote `@cds/rte-theme` não depende de Angular e não precisa de _build_ de tema. A tabela completa de variáveis está no [README do tema](https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/theme/README.md#escada-de-personalização-níveis-0-a-4) e a API em [`api/theme`](api/theme); a decisão está no ADR 0002.
+Você informa até três cores (`primary`, `secondary`, `tertiary`) e o resto (hover, fundo suave, borda, texto legível, foco, neutros, claro e escuro) é **derivado em CSS**, com contraste acessível por construção. O pacote `@comodeviaser/rte-theme` não depende de Angular e não precisa de _build_ de tema. A tabela completa de variáveis está no [README do tema](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/theme/README.md#escada-de-personalização-níveis-0-a-4) e a API em [`api/theme`](api/theme); a decisão está no ADR 0002.
 
 ## A escada, do mais simples ao mais fino
 

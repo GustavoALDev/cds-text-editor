@@ -6,7 +6,7 @@ import {
   type RteElementSpec,
   type RteHtmlSchema,
   type RteUrlRule,
-} from '@cds/rte-core';
+} from '@comodeviaser/rte-core';
 import * as fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
 import { createSanitizer, RteSanitizeError } from './index';

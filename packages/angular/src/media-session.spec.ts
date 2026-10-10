@@ -11,9 +11,9 @@ import {
   RteEditor,
   type RteMediaChange,
   type RteMediaSession,
-} from '@cds/rte-angular';
-import { getHtmlSchema, parseSrcset } from '@cds/rte-core';
-import { getRteHtml } from '@cds/rte-core/extensions';
+} from '@comodeviaser/rte-angular';
+import { getHtmlSchema, parseSrcset } from '@comodeviaser/rte-core';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
 import type { Editor, JSONContent } from '@tiptap/core';
 import { closeHistory } from '@tiptap/pm/history';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';

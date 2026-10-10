@@ -1,6 +1,6 @@
 // #region recursos
 import { Component, viewChild } from '@angular/core';
-import { RteEditor, type RteEditorConfig } from '@cds/rte-angular';
+import { RteEditor, type RteEditorConfig } from '@comodeviaser/rte-angular';
 
 // `options` é lido uma vez, na criação: passe uma constante. `features` liga e desliga recursos
 // (todos ligados por padrão); o item correspondente some da barra.

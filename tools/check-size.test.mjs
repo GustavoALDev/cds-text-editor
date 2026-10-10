@@ -306,7 +306,7 @@ test('--config: entry com curinga mede o único arquivo casado', () => {
 });
 
 // Spec 05b2b (Tarefa 8b): com dois `@defer`, o rollup divide o entry principal
-// (`cds-rte-angular.mjs` só reexporta um chunk compartilhado). `externalChunks: true`
+// (`comodeviaser-rte-angular.mjs` só reexporta um chunk compartilhado). `externalChunks: true`
 // deixaria o chunk compartilhado fora e o entry mediria ~0; `"dynamic"` só deixa fora
 // os `import()`.
 const SHARED_MARK = 'conteudo-compartilhado-'.repeat(20);

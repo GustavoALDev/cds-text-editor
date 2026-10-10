@@ -103,7 +103,7 @@ Diretrizes F1–F9 (Apêndice A da 05b2a), vinculantes e refinadas acima: F1 imp
 
 ### (d) Números (2026-10-05)
 
-Tamanho (`min+gzip`, Angular, Tiptap, `@cds/*`, `lowlight` e `highlight.js` externos; `editor`/`whole` com `externalChunks: "dynamic"`, `dialogs` e `floating` medem o _chunk_; orçamento = `ceil(medido × 1,15 / 64) × 64`):
+Tamanho (`min+gzip`, Angular, Tiptap, `@comodeviaser/*`, `lowlight` e `highlight.js` externos; `editor`/`whole` com `externalChunks: "dynamic"`, `dialogs` e `floating` medem o _chunk_; orçamento = `ceil(medido × 1,15 / 64) × 64`):
 
 | Cenário      | Antes (05b2a) | Agora | Orçamento antes | Orçamento agora |
 | ------------ | ------------- | ----- | --------------- | --------------- |
@@ -118,7 +118,7 @@ Tamanho (`min+gzip`, Angular, Tiptap, `@cds/*`, `lowlight` e `highlight.js` exte
 
 Armadilha medida: com `externalChunks: true` o `editor` media 115 B; a medida oscila ~15 B entre _builds_ (hash dos nomes dos _chunks_).
 
-R1: `grep -c rte-floating` no _chunk_ dos diálogos = 0; o _chunk_ compartilhado do entry principal não tem `class RteFloatingMenus` (só a ocorrência do nome do seletor/arquivo no template do `@defer`); `class RteFloatingMenus` só existe no _chunk_ `cds-rte-angular-rte-floating-menus-<hash>.mjs`.
+R1: `grep -c rte-floating` no _chunk_ dos diálogos = 0; o _chunk_ compartilhado do entry principal não tem `class RteFloatingMenus` (só a ocorrência do nome do seletor/arquivo no template do `@defer`); `class RteFloatingMenus` só existe no _chunk_ `comodeviaser-rte-angular-rte-floating-menus-<hash>.mjs`.
 
 `editor.css`: 23581 B brutos, 5405 B gzip (05b2a: 22644 / 5109).
 
@@ -173,7 +173,7 @@ Revisão Opus da branch (`de90c8c..aa52d13`): pronta com correções, sem achado
 - **Spec 05c:** o menu de imagem ganha "Detalhes da imagem…" (origem no editável, como a M14); `RteFloatingMenuKind` ganha os tipos de mídia (vídeo e _embed_, ou um tipo `media`) com a mesma configuração (M17) e o rótulo em `floating`; o item de imagem da barra e o menu usam o mesmo `setImageAlign`.
 - **Spec 05d:** os orçamentos de desempenho somam o custo do N26 ao do N15; o menu `/` oculta os menus flutuantes enquanto aberto (como um diálogo) e a ordem do `Escape` é definida lá (hoje o `Escape` flutuante é uma extensão de prioridade mínima, então o `/` ganha); `api-extractor` cobre `RteFloatingMenuKind`, `RteFloatingMenusConfig`, `focusFloatingMenu` e `RteFloatingMenuLabels`.
 - **Spec 08:** aparelhos reais, leitores de tela e motores mais antigos.
-- O orçamento do `@cds/rte-angular` agora é `editor` 26688 B, `whole` 26752 B, `dialogs` 5824 B, `floating` 8192 B, `i18n` 3072 B e `validators` 1344 B.
+- O orçamento do `@comodeviaser/rte-angular` agora é `editor` 26688 B, `whole` 26752 B, `dialogs` 5824 B, `floating` 8192 B, `i18n` 3072 B e `validators` 1344 B.
 
 ## Nota da 08b (ADR 0021)
 

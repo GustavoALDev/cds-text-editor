@@ -15,7 +15,7 @@ import {
   renderApplication,
 } from '@angular/platform-server';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { provideRichText, RteEditor } from '@cds/rte-angular';
+import { provideRichText, RteEditor } from '@comodeviaser/rte-angular';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RTE_DRAFT_LOADER } from './draft/facade';
 import { RTE_UPLOAD_LOADER } from './upload/facade';

@@ -1,17 +1,17 @@
-# @cds/rte-render
+# @comodeviaser/rte-render
 
 Guia: [Exibição](../../apps/docs/content/guia/exibicao.md)
 
 Exibição do HTML produzido pelo editor, sem carregar o editor: igual ao do editor, segura por padrão e legível sem JavaScript (SSR e _prerender_).
 
-**Status: pré-lançamento.** Ainda sem versão publicada. Nome provisório (escopo `@cds` ainda não confirmado): `npm i @cds/rte-render`. Requer Angular `>=22.2.1 <23`; o `@cds/rte-core` vem como dependência. O `@cds/rte-sanitizer` não é dependência: só quem usa o modo `sanitize` (o padrão) o instala à parte, **na mesma versão do `@cds/rte-render`** (evita um segundo `@cds/rte-core` na árvore), e o passa a `provideRteRender`.
+**Status: pré-lançamento.** Ainda sem versão publicada. Instalação: `npm i @comodeviaser/rte-render`. Requer Angular `>=22.2.1 <23`; o `@comodeviaser/rte-core` vem como dependência. O `@comodeviaser/rte-sanitizer` não é dependência: só quem usa o modo `sanitize` (o padrão) o instala à parte, **na mesma versão do `@comodeviaser/rte-render`** (evita um segundo `@comodeviaser/rte-core` na árvore), e o passa a `provideRteRender`.
 
 ## Uso
 
 ```ts
 // app.config.ts: as MESMAS opções do editor
-import { createSanitizer } from '@cds/rte-sanitizer';
-import { provideRteRender } from '@cds/rte-render';
+import { createSanitizer } from '@comodeviaser/rte-sanitizer';
+import { provideRteRender } from '@comodeviaser/rte-render';
 import { editorOptions } from './editor-options';
 
 providers: [provideRteRender({ sanitize: createSanitizer(editorOptions) })];
@@ -27,8 +27,8 @@ providers: [provideRteRender({ sanitize: createSanitizer(editorOptions) })];
 ```
 
 ```ts
-import { RteContent } from '@cds/rte-render';
-import { RteToc } from '@cds/rte-render/toc';
+import { RteContent } from '@comodeviaser/rte-render';
+import { RteToc } from '@comodeviaser/rte-render/toc';
 ```
 
 `provideRteRender` vale na raiz, numa rota ou num componente. O pacote **não** importa o código do sanitizador: ele só entra no _bundle_ se você chamar `createSanitizer`. As opções de `createSanitizer` precisam ser as do editor (provedores de _embed_, `mediaHosts`, `linkPolicy`); com outras, o servidor continua sendo a autoridade e a diferença só remove mais ou menos, nunca executa.
@@ -45,23 +45,23 @@ import { RteToc } from '@cds/rte-render/toc';
 Ordem de inclusão:
 
 ```
-@cds/rte-theme/theme.css  →  @cds/rte-core/styles/content.css  →  @cds/rte-render/styles/render.css
+@comodeviaser/rte-theme/theme.css  →  @comodeviaser/rte-core/styles/content.css  →  @comodeviaser/rte-render/styles/render.css
 ```
 
 O `render.css` só tem o que é de leitura (rolador de tabela, sumário, margem de rolagem das âncoras e foco visível dos links); a aparência `rt-*` é do `content.css`, a mesma do editor. Camadas `rte.components` e `rte.content`; só tokens `--rte-*`; `forced-colors` tratado.
 
-**Tema e modo escuro.** O _host_ (`.rte-content` e `rte-toc`) é `.rte-root` e pinta por padrão `color: var(--rte-text)` e `background-color: var(--rte-surface)`, para ficar legível no escuro sem fundo do site. Claro/escuro por `data-rte-mode="light|dark|auto"` posto por você no próprio elemento (o `rte-toc` e o artigo aceitam). Tema por instância: CSS ou `applyRteTheme(el)` do `@cds/rte-theme`, chamado por você. Para um fundo transparente ou outra cor, **sobrescreva** `background-color`/`color` no elemento (por exemplo `article.post { background-color: transparent; }`): `data-rte-mode="inherit"` não torna o fundo transparente.
+**Tema e modo escuro.** O _host_ (`.rte-content` e `rte-toc`) é `.rte-root` e pinta por padrão `color: var(--rte-text)` e `background-color: var(--rte-surface)`, para ficar legível no escuro sem fundo do site. Claro/escuro por `data-rte-mode="light|dark|auto"` posto por você no próprio elemento (o `rte-toc` e o artigo aceitam). Tema por instância: CSS ou `applyRteTheme(el)` do `@comodeviaser/rte-theme`, chamado por você. Para um fundo transparente ou outra cor, **sobrescreva** `background-color`/`color` no elemento (por exemplo `article.post { background-color: transparent; }`): `data-rte-mode="inherit"` não torna o fundo transparente.
 
 ## Âncoras, sumário e rolagem
 
 - Links de fragmento do conteúdo (`href="#x"`) viram `<caminho do documento>#x` (com consulta), porque o `<base href="/">` de todo app Angular os mandaria para a raiz. A navegação é a nativa (rolagem, `:target`, histórico, foco), com e sem JS; nada intercepta clique. `provideRteRender({ fragmentLinks: 'keep' })` mantém o `href` original (`'document'` é o padrão). **Limitação:** `HashLocationStrategy` não é suportada; use `'keep'`. Trocar `pathname`/`search` (navegação, filtro por _query_) muda a base e re-insere o conteúdo (`iframe`/`video` recarregam); só o _hash_ não. A base sai com uma só barra inicial (um `pathname` `//outro.host/x` não vira link para outro _host_).
 - `--rte-scroll-margin` (padrão `1rem`) é o `scroll-margin-top` de todo `[id]` do conteúdo; ajuste-o para cabeçalho fixo do site.
-- `rte-toc` (`@cds/rte-render/toc`, a única parte que carrega o `htmlparser2`): `<rte-toc [html]="…" [levels]="[2, 3]" [labels]="…" />` gera `nav.rte-toc > ol.rte-toc__list > li.rte-toc__item > a.rte-toc__link`, aninhado por nível (nível que salta fica sob o último anterior), ignora título vazio, vale a primeira ocorrência de `id` repetido e, sem entradas, não renderiza nada (nem o `nav`). Os `href` usam a mesma base das âncoras. O servidor pode pré-calcular as entradas com `extractToc` de `@cds/rte-core/html`.
+- `rte-toc` (`@comodeviaser/rte-render/toc`, a única parte que carrega o `htmlparser2`): `<rte-toc [html]="…" [levels]="[2, 3]" [labels]="…" />` gera `nav.rte-toc > ol.rte-toc__list > li.rte-toc__item > a.rte-toc__link`, aninhado por nível (nível que salta fica sob o último anterior), ignora título vazio, vale a primeira ocorrência de `id` repetido e, sem entradas, não renderiza nada (nem o `nav`). Os `href` usam a mesma base das âncoras. O servidor pode pré-calcular as entradas com `extractToc` de `@comodeviaser/rte-core/html`.
 - **Tabelas largas:** cada `table` fica num `div.rte-table-scroll` (no HTML do servidor também). Quando transborda, o rolador ganha `tabindex="0"`, `role="region"` e `aria-label` (rótulo `tableScroller`) e responde a setas, `Home` e `End`; quando deixa de transbordar, os três saem (só tabela larga vira parada de `Tab`).
 
 ## Rótulos
 
-`RTE_RENDER_LABELS_EN` é o padrão; `RTE_RENDER_LABELS_PT_BR` e `RTE_RENDER_LABELS_ES` estão em `@cds/rte-render/i18n`. Forneça por `provideRteRender({ labels })` ou `RTE_RENDER_LABELS` — um ou outro: `provideRteRender` sempre fornece `RTE_RENDER_LABELS` e, num mesmo ramo, encobre o token de um injetor acima — ou pela entrada `labels` (parcial) da diretiva e do `rte-toc`, que vence o _provider_ e troca ao vivo.
+`RTE_RENDER_LABELS_EN` é o padrão; `RTE_RENDER_LABELS_PT_BR` e `RTE_RENDER_LABELS_ES` estão em `@comodeviaser/rte-render/i18n`. Forneça por `provideRteRender({ labels })` ou `RTE_RENDER_LABELS` — um ou outro: `provideRteRender` sempre fornece `RTE_RENDER_LABELS` e, num mesmo ramo, encobre o token de um injetor acima — ou pela entrada `labels` (parcial) da diretiva e do `rte-toc`, que vence o _provider_ e troca ao vivo.
 
 ## CSP e _Trusted Types_
 
@@ -93,14 +93,14 @@ O mesmo código roda no servidor. A hidratação re-atribui o `innerHTML` do _ho
 
 Os relatórios da superfície pública (gerados pelo `api-extractor` e conferidos pelo alvo `nx run render:api`; após uma mudança intencional, `UPDATE_API=1 npx nx run render:api`) ficam em `packages/render/api/`:
 
-- [`rte-render.api.md`](api/rte-render.api.md): `@cds/rte-render`
-- [`rte-render-i18n.api.md`](api/rte-render-i18n.api.md): `@cds/rte-render/i18n`
-- [`rte-render-toc.api.md`](api/rte-render-toc.api.md): `@cds/rte-render/toc`
+- [`rte-render.api.md`](api/rte-render.api.md): `@comodeviaser/rte-render`
+- [`rte-render-i18n.api.md`](api/rte-render-i18n.api.md): `@comodeviaser/rte-render/i18n`
+- [`rte-render-toc.api.md`](api/rte-render-toc.api.md): `@comodeviaser/rte-render/toc`
 
 Exports com prefixo `ɵ` e tudo marcado `@internal` ficam fora dos relatórios e não são API pública.
 
 Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
-Repositório: cds-text-editor (monorepo). Licença MIT.
+Repositório: comodeviaser-editor (monorepo). Licença MIT.
 
 > Projeto independente, **não afiliado à Tiptap nem ao ProseMirror**.

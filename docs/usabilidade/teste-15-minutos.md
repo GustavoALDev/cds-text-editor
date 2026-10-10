@@ -5,7 +5,7 @@ Critério da spec 07 (§5) e protocolo da spec 07d (L10). O roteiro está em [`r
 ## Preparação (comum às rodadas)
 
 - Kit: `node tools/kit.mjs` gera `dist/rte-kit-<sha>.zip` (tarballs, `manifest.json`, `examples/server-node`, `LEIA-ME.txt`).
-- Site: `node apps/docs/serve.mjs --dir <browser/> --base /cds-text-editor/` (ou o Pages, `TODO-AUTOR`).
+- Site: `node apps/docs/serve.mjs --dir <browser/> --base /comodeviaser-editor/` (ou o Pages, `TODO-AUTOR`).
 - App: `npx -y @angular/cli@22.2.1 new app --defaults --skip-git` (CSS, zoneless, sem SSR).
 
 ## Rodada 0 (ensaio interno, agente sem contexto do repositório)

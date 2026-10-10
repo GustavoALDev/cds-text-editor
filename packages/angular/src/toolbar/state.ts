@@ -1,5 +1,5 @@
 import { computed, type Signal } from '@angular/core';
-import { RTE_HIGHLIGHT_COLORS, RTE_TEXT_COLORS } from '@cds/rte-core';
+import { RTE_HIGHLIGHT_COLORS, RTE_TEXT_COLORS } from '@comodeviaser/rte-core';
 import type { Editor } from '@tiptap/core';
 import type { Mark, Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { EditorState } from '@tiptap/pm/state';

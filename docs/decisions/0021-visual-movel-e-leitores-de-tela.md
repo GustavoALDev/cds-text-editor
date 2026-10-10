@@ -88,7 +88,7 @@ Nenhuma ainda. `TODO-AUTOR`: executar o [roteiro](../quality/roteiro-leitor-de-t
 
   ```bash
   curl -X PUT -H "Authorization: Bearer $PAT" -H "Accept: application/vnd.github+json" \
-    https://api.github.com/repos/GustavoALDev/cds-text-editor/branches/main/protection \
+    https://api.github.com/repos/GustavoALDev/comodeviaser-editor/branches/main/protection \
     --data @.github/branch-protection.json
   ```
 

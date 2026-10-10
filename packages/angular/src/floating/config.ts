@@ -1,5 +1,5 @@
 import { isDevMode } from '@angular/core';
-import type { RteFeatureId } from '@cds/rte-core';
+import type { RteFeatureId } from '@comodeviaser/rte-core';
 import type { RteToolbarItemId } from '../toolbar/items';
 import {
   RTE_FLOATING_FEATURE,

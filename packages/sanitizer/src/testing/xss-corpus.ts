@@ -1,7 +1,7 @@
 // Corpus de XSS do sanitizador (spec 04, §6.1 e R5). Cada caso tem a saída
 // exata, escrita à mão a partir de S1–S13. Só opções serializáveis, para o
 // mesmo corpus rodar no navegador (E2E). Fora do build.
-import { getHtmlSchema } from '@cds/rte-core';
+import { getHtmlSchema } from '@comodeviaser/rte-core';
 import type { RteSanitizeOptions } from '../index';
 
 export type XssCategory =

@@ -9,8 +9,8 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { form, FormField } from '@angular/forms/signals';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteEditor, type RteFloatingMenusConfig } from '@cds/rte-angular';
-import { getRteHtml } from '@cds/rte-core/extensions';
+import { RteEditor, type RteFloatingMenusConfig } from '@comodeviaser/rte-angular';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 import { EditorState, NodeSelection } from '@tiptap/pm/state';
 import { CellSelection } from '@tiptap/pm/tables';

@@ -5,7 +5,7 @@ description: Presets da barra, recursos que ligam e desligam itens, menus flutua
 
 # Barra e recursos
 
-A barra de ferramentas, os menus que aparecem junto ao texto e os recursos opcionais se configuram por entradas do `rte-editor` e por `provideRichText` (a [Configuração](guia/configuracao) explica qual valor vence). Esta página mostra o caminho de cada um; a referência completa está no [README do `@cds/rte-angular`](https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/angular/README.md#barra-de-ferramentas) e em [`api/angular`](api/angular).
+A barra de ferramentas, os menus que aparecem junto ao texto e os recursos opcionais se configuram por entradas do `rte-editor` e por `provideRichText` (a [Configuração](guia/configuracao) explica qual valor vence). Esta página mostra o caminho de cada um; a referência completa está no [README do `@comodeviaser/rte-angular`](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/angular/README.md#barra-de-ferramentas) e em [`api/angular`](api/angular).
 
 ## Presets e grupos
 

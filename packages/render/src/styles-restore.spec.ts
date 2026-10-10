@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { createSanitizer } from '@cds/rte-sanitizer';
+import { createSanitizer } from '@comodeviaser/rte-sanitizer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RteContent } from './content/rte-content';
 import { restoreContentStyles } from './content/restore-styles';

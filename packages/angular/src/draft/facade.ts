@@ -59,7 +59,7 @@ export type RteDraftLoader = () => Promise<RteDraftModule>;
 
 /**
  * Carregador do *chunk* `rte-draft` (S2): o `import()` que o ng-packagr
- * separa em `fesm2022/cds-rte-angular-rte-draft-<hash>.mjs`. Interno; os
+ * separa em `fesm2022/comodeviaser-rte-angular-rte-draft-<hash>.mjs`. Interno; os
  * testes o trocam para contar chamadas ou falhar a carga.
  */
 export const RTE_DRAFT_LOADER = new InjectionToken<RteDraftLoader>(

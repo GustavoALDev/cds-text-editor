@@ -4,7 +4,7 @@ import type {
   RteUploadedImage,
   RteUploadedVideo,
   RteUploadType,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 
 /**
  * Opções de `httpUploadAdapter`: envio `multipart/form-data` por `XMLHttpRequest`.

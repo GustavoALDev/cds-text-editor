@@ -9,14 +9,14 @@ import {
   type RteEditorConfig,
   type RteLabelsInput,
   type RteToolbarConfig,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 import {
   RTE_LABELS_EN,
   RTE_LABELS_ES,
   RTE_LABELS_PT_BR,
-} from '@cds/rte-angular/i18n';
-import { RTE_CODE_LANGUAGES } from '@cds/rte-core/code-languages';
-import type { RteTheme } from '@cds/rte-theme';
+} from '@comodeviaser/rte-angular/i18n';
+import { RTE_CODE_LANGUAGES } from '@comodeviaser/rte-core/code-languages';
+import type { RteTheme } from '@comodeviaser/rte-theme';
 import {
   E2eBridge,
   NO_FORM_STATE,

@@ -3,7 +3,7 @@ import {
   parseSrcset,
   type RteAttrRule,
   type RteHtmlSchema,
-} from '@cds/rte-core';
+} from '@comodeviaser/rte-core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
 

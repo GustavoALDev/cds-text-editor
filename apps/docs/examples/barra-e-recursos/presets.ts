@@ -1,6 +1,6 @@
 // #region barra
 import { Component } from '@angular/core';
-import { RteEditor, type RteToolbarGroups } from '@cds/rte-angular';
+import { RteEditor, type RteToolbarGroups } from '@comodeviaser/rte-angular';
 
 // Grupos próprios: listas de ids na ordem de exibição (cada lista vira um grupo).
 const GRUPOS: RteToolbarGroups = [

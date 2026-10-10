@@ -6,8 +6,8 @@ import {
 } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteEditor, type RteEditorConfig } from '@cds/rte-angular';
-import { getRteHtml, getSearchState } from '@cds/rte-core/extensions';
+import { RteEditor, type RteEditorConfig } from '@comodeviaser/rte-angular';
+import { getRteHtml, getSearchState } from '@comodeviaser/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeCoords } from './testing-support/geometry';

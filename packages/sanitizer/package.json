@@ -1,7 +1,7 @@
 {
-  "name": "@cds/rte-sanitizer",
+  "name": "@comodeviaser/rte-sanitizer",
   "version": "0.0.0",
-  "description": "Sanitização do HTML do editor de texto rico cds-text-editor.",
+  "description": "Sanitização do HTML do editor de texto rico DEVI.A Editor.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -18,11 +18,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GustavoALDev/cds-text-editor.git",
+    "url": "git+https://github.com/GustavoALDev/comodeviaser-editor.git",
     "directory": "packages/sanitizer"
   },
-  "bugs": "https://github.com/GustavoALDev/cds-text-editor/issues",
-  "homepage": "https://github.com/GustavoALDev/cds-text-editor#readme",
+  "bugs": "https://github.com/GustavoALDev/comodeviaser-editor/issues",
+  "homepage": "https://github.com/GustavoALDev/comodeviaser-editor#readme",
   "keywords": [
     "rich-text-editor",
     "tiptap",
@@ -32,7 +32,7 @@
     "xss"
   ],
   "dependencies": {
-    "@cds/rte-core": "0.0.0",
+    "@comodeviaser/rte-core": "0.0.0",
     "htmlparser2": "^12.0.0"
   },
   "publishConfig": {

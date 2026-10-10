@@ -5,7 +5,7 @@ description: Rótulos em pt-BR, en e es, a troca de idioma por signal sem recria
 
 # Idiomas
 
-Os textos do editor (barra, nome acessível, _placeholder_, diálogos, menus, mensagens de erro) vêm de `RteLabels`. Sem configuração ficam em inglês. Os pacotes completos estão em `@cds/rte-angular/i18n`: `RTE_LABELS_PT_BR`, `RTE_LABELS_EN` e `RTE_LABELS_ES` (o `RTE_LABELS` do entry principal é o token de injeção que dá os rótulos em vigor). A referência está em [`api/angular-i18n`](api/angular-i18n) e na seção "Rótulos e idioma" do [README](https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/angular/README.md#rótulos-e-idioma).
+Os textos do editor (barra, nome acessível, _placeholder_, diálogos, menus, mensagens de erro) vêm de `RteLabels`. Sem configuração ficam em inglês. Os pacotes completos estão em `@comodeviaser/rte-angular/i18n`: `RTE_LABELS_PT_BR`, `RTE_LABELS_EN` e `RTE_LABELS_ES` (o `RTE_LABELS` do entry principal é o token de injeção que dá os rótulos em vigor). A referência está em [`api/angular-i18n`](api/angular-i18n) e na seção "Rótulos e idioma" do [README](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/angular/README.md#rótulos-e-idioma).
 
 ## Trocar o idioma sem recriar
 

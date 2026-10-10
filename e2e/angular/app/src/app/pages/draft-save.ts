@@ -5,7 +5,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RteEditor, type RteUploadAdapter } from '@cds/rte-angular';
+import { RteEditor, type RteUploadAdapter } from '@comodeviaser/rte-angular';
 
 const FIGURE = (src: string, alt: string) =>
   `<figure class="rt-figure rt-figure--center"><img src="${src}" alt="${alt}" loading="lazy" decoding="async"></figure>`;

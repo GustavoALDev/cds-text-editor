@@ -1,10 +1,10 @@
 // #region provedor
 import type { ApplicationConfig } from '@angular/core';
-import { provideRichText } from '@cds/rte-angular';
+import { provideRichText } from '@comodeviaser/rte-angular';
 import {
   RTE_EMBED_PROVIDERS,
   type RteEmbedProvider,
-} from '@cds/rte-core/embeds';
+} from '@comodeviaser/rte-core/embeds';
 
 export const MEU_PLAYER: RteEmbedProvider = {
   id: 'meu-player', // vira a classe rt-embed--meu-player

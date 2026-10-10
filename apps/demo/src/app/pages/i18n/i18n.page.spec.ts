@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import { RteEditor } from '@cds/rte-angular';
-import { RTE_LABELS_EN, RTE_LABELS_ES, RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
-import { getRteEditor } from '@cds/rte-angular/testing';
+import { RteEditor } from '@comodeviaser/rte-angular';
+import { RTE_LABELS_EN, RTE_LABELS_ES, RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
+import { getRteEditor } from '@comodeviaser/rte-angular/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { I18nPage } from './i18n.page';
 

@@ -1,4 +1,4 @@
-import { getRteHtml } from '@cds/rte-core/extensions';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- ajudante de teste do core, só teste
 import { typeText } from '../../core/extensions/src/testing/type-text';

@@ -15,7 +15,7 @@ import { LiveExample } from '../content/live-example';
 import type { PageData, PageExamples } from '../content/page';
 
 /** Repositório (a 07c não muda pacotes); `TODO-AUTOR`: confirmar a organização final. */
-const EDIT_BASE = 'https://github.com/GustavoALDev/cds-text-editor/edit/main/';
+const EDIT_BASE = 'https://github.com/GustavoALDev/comodeviaser-editor/edit/main/';
 
 /** Página de conteúdo: título, sumário, segmentos, anterior/próximo e “editar esta página”. */
 @Component({
@@ -57,7 +57,7 @@ export class DocPage {
   constructor() {
     effect(() => {
       const page = this.page();
-      if (page) this.title.setTitle(`${page.title} · cds-text-editor`);
+      if (page) this.title.setTitle(`${page.title} · DEVI.A Editor`);
     });
   }
 }

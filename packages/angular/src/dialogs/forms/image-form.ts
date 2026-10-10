@@ -17,8 +17,8 @@ import {
   validate,
   type FieldTree,
 } from '@angular/forms/signals';
-import type { RteAttrRule } from '@cds/rte-core';
-import type { RteImageAlign } from '@cds/rte-core/extensions';
+import type { RteAttrRule } from '@comodeviaser/rte-core';
+import type { RteImageAlign } from '@comodeviaser/rte-core/extensions';
 import { applyImage, removeMediaAt } from '../apply-media';
 import type { RteDialogRequest } from '../controller';
 import { focusFirstInvalid, text } from '../form-helpers';

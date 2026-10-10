@@ -1,6 +1,6 @@
-# cds-text-editor
+# DEVI.A Editor
 
-Editor de texto rico para **Angular 22+**, construído sobre o **Tiptap 3**, publicado como um conjunto de pacotes versionados juntos sob licença MIT.
+Editor de texto rico da **Como DEVI.A ser** para **Angular 22+**, construído sobre o **Tiptap 3**, publicado como um conjunto de pacotes versionados juntos sob licença MIT.
 
 > **Status: em construção.** Os cinco pacotes estão implementados (spec 05 fechada no ADR 0016) e sem versão publicada; a confirmação nos três navegadores é a rodada do CI. A superfície pública de cada entry está congelada em relatórios `packages/*/api/*.api.md` (alvo `api`).
 
@@ -8,13 +8,13 @@ Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
 ## Início rápido
 
-Os pacotes ainda não foram publicados e o nome `@cds/*` é provisório (`TODO-AUTOR`); o comando abaixo é o gerado do mesmo ponto que o site usa. O texto abaixo vem dos exemplos compilados do Início rápido do guia: nada é copiado à mão.
+Os pacotes ainda não foram publicados e ficam no escopo `@comodeviaser`, da marca Como DEVI.A ser (ADR 0024); o comando abaixo é o gerado do mesmo ponto que o site usa. O texto abaixo vem dos exemplos compilados do Início rápido do guia: nada é copiado à mão.
 
 ### 1. Instale
 
 <!-- readme: generated install-command -->
 ```bash
-npm install @cds/rte-angular \
+npm install @comodeviaser/rte-angular \
   @tiptap/core@^3.31.4 \
   @tiptap/extension-blockquote@^3.31.4 \
   @tiptap/extension-bold@^3.31.4 \
@@ -47,8 +47,8 @@ npm install @cds/rte-angular \
 <!-- readme: example examples/inicio-rapido/app.config.ts#config -->
 ```ts
 import type { ApplicationConfig } from '@angular/core';
-import { provideRichText } from '@cds/rte-angular';
-import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
+import { provideRichText } from '@comodeviaser/rte-angular';
+import { RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
 
 export const appConfig: ApplicationConfig = {
   providers: [provideRichText({ labels: RTE_LABELS_PT_BR })],
@@ -62,13 +62,13 @@ export const appConfig: ApplicationConfig = {
 ```ts
 import { Component, computed, signal } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
-import { RteEditor } from '@cds/rte-angular';
-import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
+import { RteEditor } from '@comodeviaser/rte-angular';
+import { RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
 import {
   formatRteError,
   isRteValidationError,
   rteMaxChars,
-} from '@cds/rte-angular/validators';
+} from '@comodeviaser/rte-angular/validators';
 import { DisplayExample } from './display-example';
 
 @Component({
@@ -116,8 +116,8 @@ export class FormExample {
 <!-- readme: example examples/inicio-rapido/display-example.ts#display -->
 ```ts
 import { Component, input } from '@angular/core';
-import { provideRteRender, RteContent } from '@cds/rte-render';
-import { createSanitizer } from '@cds/rte-sanitizer';
+import { provideRteRender, RteContent } from '@comodeviaser/rte-render';
+import { createSanitizer } from '@comodeviaser/rte-sanitizer';
 
 @Component({
   selector: 'docs-display-example',
@@ -135,21 +135,21 @@ O guia continua em [Configuração](apps/docs/content/guia/configuracao.md): CSS
 
 ## Guia, demo e servidor de exemplo
 
-- **Site do guia e referência de API:** `TODO-AUTOR` (URL do GitHub Pages, ainda não publicado: `https://TODO-AUTOR.github.io/cds-text-editor/`). Enquanto o site não estiver publicado, o mesmo conteúdo está em [`apps/docs/content/guia/`](apps/docs/content/guia/inicio-rapido.md).
+- **Site do guia e referência de API:** `TODO-AUTOR` (URL do GitHub Pages, ainda não publicado: `https://TODO-AUTOR.github.io/comodeviaser-editor/`). Enquanto o site não estiver publicado, o mesmo conteúdo está em [`apps/docs/content/guia/`](apps/docs/content/guia/inicio-rapido.md).
 - **Demo** (playground do tema, formulários, barra e idiomas): [`apps/demo`](apps/demo), publicada junto do site em `demo/`.
 - **Servidor de exemplo de upload:** [`examples/server-node`](examples/server-node/README.md). **É uma referência, não um produto**: mostra o contrato do `httpUploadAdapter` e as defesas mínimas de um endpoint de upload; não o publique como está.
 
 ## Pacotes
 
-Os nomes `@cds/rte-*` são provisórios (ver [ADR 0001](docs/decisions/0001-escopo-nome-versoes-e-ferramentas.md)).
+Os pacotes ficam no escopo `@comodeviaser`, da marca Como DEVI.A ser (ver [ADR 0024](docs/decisions/0024-nome-e-marca.md)).
 
 | Pacote                                     | Estado                                                | Descrição                                       |
 | ------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------- |
-| [`@cds/rte-core`](packages/core)           | implementado; API em [`api/`](packages/core/api)      | Extensões Tiptap, utilitários e esquema do HTML |
-| [`@cds/rte-sanitizer`](packages/sanitizer) | implementado; API em [`api/`](packages/sanitizer/api) | Sanitização do HTML                             |
-| [`@cds/rte-theme`](packages/theme)         | implementado; API em [`api/`](packages/theme/api)     | Tema (CSS e tokens)                             |
-| [`@cds/rte-angular`](packages/angular)     | implementado; API em [`api/`](packages/angular/api)   | Componente Angular do editor                    |
-| [`@cds/rte-render`](packages/render)       | implementado; API em [`api/`](packages/render/api)    | Renderização do HTML                            |
+| [`@comodeviaser/rte-core`](packages/core)           | implementado; API em [`api/`](packages/core/api)      | Extensões Tiptap, utilitários e esquema do HTML |
+| [`@comodeviaser/rte-sanitizer`](packages/sanitizer) | implementado; API em [`api/`](packages/sanitizer/api) | Sanitização do HTML                             |
+| [`@comodeviaser/rte-theme`](packages/theme)         | implementado; API em [`api/`](packages/theme/api)     | Tema (CSS e tokens)                             |
+| [`@comodeviaser/rte-angular`](packages/angular)     | implementado; API em [`api/`](packages/angular/api)   | Componente Angular do editor                    |
+| [`@comodeviaser/rte-render`](packages/render)       | implementado; API em [`api/`](packages/render/api)    | Renderização do HTML                            |
 
 ## Navegadores
 

@@ -6,7 +6,7 @@ import type { Page } from '@playwright/test';
 const PORT = Number(process.env['RTE_DOCS_PORT'] ?? 4320);
 
 /** Prefixo da publicação (X2): todo E2E roda sob ele. */
-export const BASE = '/cds-text-editor/';
+export const BASE = '/comodeviaser-editor/';
 
 /** Origens dos dois servidores do `webServer` (ver `playwright.config.ts`). */
 export const ORIGIN = `http://127.0.0.1:${PORT}`;

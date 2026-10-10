@@ -12,12 +12,12 @@ import {
   hidden,
   readonly,
 } from '@angular/forms/signals';
-import { RteEditor } from '@cds/rte-angular';
+import { RteEditor } from '@comodeviaser/rte-angular';
 import {
   rteMaxChars,
   rteRequired,
   RteValidators,
-} from '@cds/rte-angular/validators';
+} from '@comodeviaser/rte-angular/validators';
 import { E2eBridge, NO_FORM_STATE } from '../e2e-bridge';
 
 /** N1/N2: Signal Forms, Reactive Forms (caminho nativo, sem diretiva) e `[(value)]`. */

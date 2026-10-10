@@ -13,8 +13,8 @@ import {
   viewChild,
   ViewEncapsulation,
 } from '@angular/core';
-import type { RteAttrRule, RteLinkPolicy } from '@cds/rte-core';
-import type { RteImageAlign } from '@cds/rte-core/extensions';
+import type { RteAttrRule, RteLinkPolicy } from '@comodeviaser/rte-core';
+import type { RteImageAlign } from '@comodeviaser/rte-core/extensions';
 import type { RteDialogLabels } from '../labels/types';
 import type { RteDialogUploads } from '../upload/dialog-port';
 import type { RteDialogController, RteDialogRequest } from './controller';

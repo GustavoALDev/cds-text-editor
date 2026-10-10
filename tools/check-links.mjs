@@ -1,5 +1,5 @@
 // Verificação de links internos (spec 07c, X9).
-//   node tools/check-links.mjs <siteDir> [--base /cds-text-editor/] [--demo-root <dir>] [--readmes]
+//   node tools/check-links.mjs <siteDir> [--base /comodeviaser-editor/] [--demo-root <dir>] [--readmes]
 //                              [--externos <arquivo>] [--repo <raiz>]
 //   node tools/check-links.mjs --consultar <links-externos.txt>   (links.yml: consulta e resume, nunca falha)
 // Sobre o HTML construído: todo href/src interno resolve para um arquivo do build e todo #âncora existe
@@ -432,7 +432,7 @@ export function main(
   const siteDir = args[0];
   if (!siteDir && !readmes) {
     log.error(
-      'uso: node tools/check-links.mjs <siteDir> [--base /cds-text-editor/] [--demo-root <dir>] [--readmes] [--externos <arquivo>]',
+      'uso: node tools/check-links.mjs <siteDir> [--base /comodeviaser-editor/] [--demo-root <dir>] [--readmes] [--externos <arquivo>]',
     );
     return 2;
   }

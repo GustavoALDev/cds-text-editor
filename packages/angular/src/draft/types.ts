@@ -1,4 +1,4 @@
-import type { RteDraftStorage } from '@cds/rte-core';
+import type { RteDraftStorage } from '@comodeviaser/rte-core';
 
 /** Rascunho do editor (S3): tudo opcional, padrões do core. */
 export interface RteDraftConfig {

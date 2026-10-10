@@ -22,7 +22,7 @@ function tree(files) {
   return root;
 }
 
-const page = (body, base = '/cds-text-editor/') =>
+const page = (body, base = '/comodeviaser-editor/') =>
   `<!doctype html><html><head><base href="${base}"></head><body>${body}</body></html>`;
 
 test('parseHtml: ids, name, base e referências; ignora comentário e script inline', () => {
@@ -45,7 +45,7 @@ test('site: links, arquivos e âncoras válidos; externos só listados (deduplic
     'guia/a/index.html': page('<h2 id="sec">S</h2><a href="">v</a>'),
     'img/p.png': 'x',
   });
-  const r = checkSite({ siteDir: root, base: '/cds-text-editor/' });
+  const r = checkSite({ siteDir: root, base: '/comodeviaser-editor/' });
   assert.deepEqual(r.errors, []);
   assert.deepEqual(r.externals, ['https://x.test/y']);
 });
@@ -57,7 +57,7 @@ test('site: href quebrado, âncora ausente e imagem ausente reprovam com o arqui
     ),
     'guia/a/index.html': page('<h2 id="sec">S</h2>'),
   });
-  const r = checkSite({ siteDir: root, base: '/cds-text-editor/' });
+  const r = checkSite({ siteDir: root, base: '/comodeviaser-editor/' });
   assert.equal(r.errors.length, 3);
   assert.match(
     r.errors[0],
@@ -76,14 +76,14 @@ test('site: com <base>, "#x" resolve para a raiz, não para a página (armadilha
     'guia/a/index.html': page('<a href="#x">x</a>'),
   });
   assert.deepEqual(
-    checkSite({ siteDir: root, base: '/cds-text-editor/' }).errors,
+    checkSite({ siteDir: root, base: '/comodeviaser-editor/' }).errors,
     [],
   );
   const root2 = tree({
     'index.html': page('<p>sem x</p>'),
     'guia/a/index.html': page('<h2 id="x">X</h2><a href="#x">x</a>'),
   });
-  const r = checkSite({ siteDir: root2, base: '/cds-text-editor/' });
+  const r = checkSite({ siteDir: root2, base: '/comodeviaser-editor/' });
   assert.equal(r.errors.length, 1);
   assert.match(r.errors[0], /^guia\/a\/index\.html: href="#x"/);
 });
@@ -91,17 +91,17 @@ test('site: com <base>, "#x" resolve para a raiz, não para a página (armadilha
 test('site: href absoluto com a base resolve; fora da base reprova; demo só com --demo-root', () => {
   const root = tree({
     'index.html': page(
-      '<a href="/cds-text-editor/guia/a">ok</a><a href="/fora/x">fora</a><a href="/cds-text-editor/demo/">demo</a><a href="demo/pagina">demo2</a>',
+      '<a href="/comodeviaser-editor/guia/a">ok</a><a href="/fora/x">fora</a><a href="/comodeviaser-editor/demo/">demo</a><a href="demo/pagina">demo2</a>',
     ),
     'guia/a/index.html': page(''),
   });
-  const sem = checkSite({ siteDir: root, base: '/cds-text-editor/' });
+  const sem = checkSite({ siteDir: root, base: '/comodeviaser-editor/' });
   assert.equal(sem.errors.length, 1);
   assert.match(sem.errors[0], /href="\/fora\/x" aponta para fora da base/);
   const demo = tree({ 'index.html': page('<h1 id="d">d</h1>') });
   const com = checkSite({
     siteDir: root,
-    base: '/cds-text-editor/',
+    base: '/comodeviaser-editor/',
     demoRoot: demo,
   });
   assert.equal(com.errors.length, 2);
@@ -166,7 +166,7 @@ test('CLI: sai com 1 e imprime em pt-BR; grava a lista de externos', () => {
   const logs = [];
   const log = { log: (m) => logs.push(m), error: (m) => logs.push(m) };
   const code = main(
-    ['site', '--base', '/cds-text-editor/', '--externos', 'links-externos.txt'],
+    ['site', '--base', '/comodeviaser-editor/', '--externos', 'links-externos.txt'],
     { cwd: root, log },
   );
   assert.equal(code, 1);

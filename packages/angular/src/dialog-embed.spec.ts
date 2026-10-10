@@ -6,12 +6,12 @@ import {
 } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { form } from '@angular/forms/signals';
-import { getHtmlSchema, type RteEmbedProvider } from '@cds/rte-core';
-import { RTE_EMBED_PROVIDERS, RTE_VIMEO_PROVIDER } from '@cds/rte-core/embeds';
-import { getRteHtml } from '@cds/rte-core/extensions';
-import { validateHtml } from '@cds/rte-core/html';
+import { getHtmlSchema, type RteEmbedProvider } from '@comodeviaser/rte-core';
+import { RTE_EMBED_PROVIDERS, RTE_VIMEO_PROVIDER } from '@comodeviaser/rte-core/embeds';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
+import { validateHtml } from '@comodeviaser/rte-core/html';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteEditor, type RteEditorConfig } from '@cds/rte-angular';
+import { RteEditor, type RteEditorConfig } from '@comodeviaser/rte-angular';
 import type { Editor } from '@tiptap/core';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import fc from 'fast-check';
@@ -591,7 +591,7 @@ describe('propriedade R6: aceito ⇔ can().setEmbed do core', () => {
   });
 });
 
-describe('importação (V5): o chunk não importa @cds/rte-core/embeds', () => {
+describe('importação (V5): o chunk não importa @comodeviaser/rte-core/embeds', () => {
   function sources(dir: string): string[] {
     return readdirSync(dir).flatMap((name) => {
       const path = join(dir, name);

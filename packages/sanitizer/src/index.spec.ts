@@ -1,14 +1,14 @@
-import * as core from '@cds/rte-core';
+import * as core from '@comodeviaser/rte-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as mod from './index';
 import { readFixture } from './testing/fixtures';
 
-vi.mock('@cds/rte-core', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@cds/rte-core')>();
+vi.mock('@comodeviaser/rte-core', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@comodeviaser/rte-core')>();
   return { ...original, getHtmlSchema: vi.fn(original.getHtmlSchema) };
 });
 
-describe('@cds/rte-sanitizer', () => {
+describe('@comodeviaser/rte-sanitizer', () => {
   it('exporta só a API pública', () => {
     expect(Object.keys(mod).sort()).toEqual([
       'RteSanitizeError',

@@ -10,7 +10,7 @@ import {
   provideRichText,
   RteEditor,
   type RteMediaChange,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 import { undo } from '@tiptap/pm/history';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {

@@ -1,5 +1,5 @@
 import { untracked } from '@angular/core';
-import type { RteImageAttrs, RteVideoAttrs } from '@cds/rte-core/extensions';
+import type { RteImageAttrs, RteVideoAttrs } from '@comodeviaser/rte-core/extensions';
 import type { RteUploadHost } from './host';
 import {
   insertUploaded,

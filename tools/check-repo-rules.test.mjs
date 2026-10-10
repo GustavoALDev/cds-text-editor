@@ -40,7 +40,7 @@ function fixture(files) {
 test('accepts a clean repo', () => {
   const root = fixture({
     'packages/core/package.json': JSON.stringify({
-      name: '@cds/rte-core',
+      name: '@comodeviaser/rte-core',
       peerDependencies: { '@tiptap/core': '^3.0.0' },
     }),
     'packages/core/tsconfig.spec.json': JSON.stringify({
@@ -53,7 +53,7 @@ test('accepts a clean repo', () => {
 test('rejects @angular/* in core peerDependencies', () => {
   const root = fixture({
     'packages/core/package.json': JSON.stringify({
-      name: '@cds/rte-core',
+      name: '@comodeviaser/rte-core',
       peerDependencies: { '@angular/core': '>=22' },
     }),
   });
@@ -118,7 +118,7 @@ test('unparseable tsconfig is reported as a violation, not a crash', () => {
 test('rejects Angular peers outside >=22.x.y <23', () => {
   const root = fixture({
     'packages/render/package.json': JSON.stringify({
-      name: '@cds/rte-render',
+      name: '@comodeviaser/rte-render',
       peerDependencies: { '@angular/core': '>=21.0.0 <23' },
     }),
   });
@@ -128,7 +128,7 @@ test('rejects Angular peers outside >=22.x.y <23', () => {
 test('accepts Angular peers >=22.2.1 <23', () => {
   const root = fixture({
     'packages/angular/package.json': JSON.stringify({
-      name: '@cds/rte-angular',
+      name: '@comodeviaser/rte-angular',
       peerDependencies: { '@angular/core': '>=22.2.1 <23' },
     }),
   });
@@ -144,7 +144,7 @@ test('requires governance files in the real repo (root package.json)', () => {
 });
 
 const RENDER_PKG = {
-  'packages/render/package.json': JSON.stringify({ name: '@cds/rte-render' }),
+  'packages/render/package.json': JSON.stringify({ name: '@comodeviaser/rte-render' }),
   'packages/render/src/index.ts':
     "export { fb as ɵfb } from './fb';\nexport { ok } from './ok';\n",
 };
@@ -182,7 +182,7 @@ test('ignores ɵ in spec files', () => {
 
 const CORE_PKG = {
   'packages/core/package.json': JSON.stringify({
-    name: '@cds/rte-core',
+    name: '@comodeviaser/rte-core',
     exports: {
       '.': { types: './dist/index.d.ts', default: './dist/index.js' },
       './html': {
@@ -197,17 +197,17 @@ const CORE_PKG = {
 test('rejects a public entry (exports with types) missing from the README', () => {
   const root = fixture({
     ...CORE_PKG,
-    'packages/core/README.md': 'Use `@cds/rte-core`.\n',
+    'packages/core/README.md': 'Use `@comodeviaser/rte-core`.\n',
   });
   const errors = checkRepoRules(root);
   assert.equal(errors.length, 1);
-  assert.match(errors[0], /@cds\/rte-core\/html.*não é citado/);
+  assert.match(errors[0], /@comodeviaser\/rte-core\/html.*não é citado/);
 });
 
 test('accepts when every public entry is cited (css export is not an entry)', () => {
   const root = fixture({
     ...CORE_PKG,
-    'packages/core/README.md': '`@cds/rte-core` e `@cds/rte-core/html`.\n',
+    'packages/core/README.md': '`@comodeviaser/rte-core` e `@comodeviaser/rte-core/html`.\n',
   });
   assert.deepEqual(checkRepoRules(root), []);
 });
@@ -216,7 +216,7 @@ test('a longer subpath does not satisfy a shorter one', () => {
   const root = fixture({
     ...CORE_PKG,
     'packages/core/README.md':
-      '`@cds/rte-core` e `@cds/rte-core/html-extra`.\n',
+      '`@comodeviaser/rte-core` e `@comodeviaser/rte-core/html-extra`.\n',
   });
   assert.equal(checkRepoRules(root).length, 1);
 });
@@ -224,20 +224,20 @@ test('a longer subpath does not satisfy a shorter one', () => {
 test('rejects a secondary entry (ng-package.json) missing from the README', () => {
   const files = {
     'packages/angular/package.json': JSON.stringify({
-      name: '@cds/rte-angular',
+      name: '@comodeviaser/rte-angular',
     }),
     'packages/angular/upload/ng-package.json': '{}',
   };
   const errors = checkRepoRules(
-    fixture({ ...files, 'packages/angular/README.md': '@cds/rte-angular\n' }),
+    fixture({ ...files, 'packages/angular/README.md': '@comodeviaser/rte-angular\n' }),
   );
   assert.equal(errors.length, 1);
-  assert.match(errors[0], /@cds\/rte-angular\/upload/);
+  assert.match(errors[0], /@comodeviaser\/rte-angular\/upload/);
   const ok = checkRepoRules(
     fixture({
       ...files,
       'packages/angular/README.md':
-        '@cds/rte-angular e @cds/rte-angular/upload\n',
+        '@comodeviaser/rte-angular e @comodeviaser/rte-angular/upload\n',
     }),
   );
   assert.deepEqual(ok, []);
@@ -265,7 +265,7 @@ const CLEAN_DEMO = {
   'apps/demo/package.json': JSON.stringify({
     dependencies: {
       '@angular/core': '22.2.1',
-      '@cds/rte-core': '0.0.0',
+      '@comodeviaser/rte-core': '0.0.0',
       '@tiptap/core': '3.31.4',
       lowlight: '3.3.0',
       'highlight.js': '11.11.1',
@@ -312,7 +312,7 @@ test('demo: tsconfig com paths é recusado', () => {
   const root = fixture({
     ...CLEAN_DEMO,
     'apps/demo/tsconfig.json': JSON.stringify({
-      compilerOptions: { paths: { '@cds/rte-core': ['../../x'] } },
+      compilerOptions: { paths: { '@comodeviaser/rte-core': ['../../x'] } },
     }),
   });
   const errors = demoErrors(root);
@@ -563,7 +563,7 @@ test('docs: lockfile, paths, import de packages/, style= e styleUrl são recusad
   const cases = {
     'apps/docs/package-lock.json': '{}',
     'apps/docs/tsconfig.json': JSON.stringify({
-      compilerOptions: { paths: { '@cds/x': ['../x'] } },
+      compilerOptions: { paths: { '@comodeviaser/x': ['../x'] } },
     }),
     'apps/docs/src/app/bad.ts': "import { a } from '../../../../packages/x';\n",
     'apps/docs/src/app/p.html': '<p style="color:red">x</p>',
@@ -756,62 +756,62 @@ test('docs: CSS de exemplo (src/styles/exemplos*.css) não mira :root, html nem 
 
 const pkgJson = (name, extra = {}, version = '0.0.0') =>
   JSON.stringify({ name, version, ...extra });
-const corePkg = pkgJson('@cds/rte-core');
+const corePkg = pkgJson('@comodeviaser/rte-core');
 
 function depsFixture(angularExtra, extraFiles = {}) {
   return fixture({
     'packages/core/package.json': corePkg,
-    'packages/angular/package.json': pkgJson('@cds/rte-angular', angularExtra),
+    'packages/angular/package.json': pkgJson('@comodeviaser/rte-angular', angularExtra),
     'packages/angular/ng-package.json': JSON.stringify({
-      allowedNonPeerDependencies: ['@cds/rte-core'],
+      allowedNonPeerDependencies: ['@comodeviaser/rte-core'],
     }),
-    'packages/angular/src/index.ts': "import { x } from '@cds/rte-core';\n",
+    'packages/angular/src/index.ts': "import { x } from '@comodeviaser/rte-core';\n",
     ...extraFiles,
   });
 }
 
 test('deps internas: cenário correto passa', () => {
-  const root = depsFixture({ dependencies: { '@cds/rte-core': '0.0.0' } });
+  const root = depsFixture({ dependencies: { '@comodeviaser/rte-core': '0.0.0' } });
   assert.deepEqual(checkRepoRules(root), []);
 });
 
 test('deps internas: faixa ^0.0.0 reprova', () => {
-  const root = depsFixture({ dependencies: { '@cds/rte-core': '^0.0.0' } });
+  const root = depsFixture({ dependencies: { '@comodeviaser/rte-core': '^0.0.0' } });
   const errors = checkRepoRules(root);
   assert.equal(errors.length, 1);
-  assert.match(errors[0], /@cds\/rte-core.*exata/);
+  assert.match(errors[0], /@comodeviaser\/rte-core.*exata/);
 });
 
 test('deps internas: versão diferente da do pacote referido reprova', () => {
-  const root = depsFixture({ dependencies: { '@cds/rte-core': '0.0.1' } });
+  const root = depsFixture({ dependencies: { '@comodeviaser/rte-core': '0.0.1' } });
   const errors = checkRepoRules(root);
   assert.equal(errors.length, 1);
   assert.match(errors[0], /0.0.0.*0.0.1/);
 });
 
-test('deps internas: peerDependencies com @cds/rte-core reprova', () => {
+test('deps internas: peerDependencies com @comodeviaser/rte-core reprova', () => {
   const root = depsFixture({
-    dependencies: { '@cds/rte-core': '0.0.0' },
-    peerDependencies: { '@cds/rte-core': '0.0.0' },
+    dependencies: { '@comodeviaser/rte-core': '0.0.0' },
+    peerDependencies: { '@comodeviaser/rte-core': '0.0.0' },
   });
   const errors = checkRepoRules(root);
   assert.equal(errors.length, 1);
   assert.match(errors[0], /peer/);
 });
 
-test('deps internas: peerDependenciesMeta com @cds/rte-* reprova', () => {
+test('deps internas: peerDependenciesMeta com @comodeviaser/rte-* reprova', () => {
   const root = depsFixture({
-    dependencies: { '@cds/rte-core': '0.0.0' },
-    peerDependenciesMeta: { '@cds/rte-core': { optional: true } },
+    dependencies: { '@comodeviaser/rte-core': '0.0.0' },
+    peerDependenciesMeta: { '@comodeviaser/rte-core': { optional: true } },
   });
   assert.equal(checkRepoRules(root).length, 1);
 });
 
-test('deps internas: import de @cds/rte-core em src sem dependencies reprova', () => {
+test('deps internas: import de @comodeviaser/rte-core em src sem dependencies reprova', () => {
   const root = depsFixture({});
   const errors = checkRepoRules(root);
   assert.equal(errors.length, 1);
-  assert.match(errors[0], /packages\/angular\/src\/index\.ts.*@cds\/rte-core/);
+  assert.match(errors[0], /packages\/angular\/src\/index\.ts.*@comodeviaser\/rte-core/);
 });
 
 test('deps internas: import só em *.spec.ts não exige dependência', () => {
@@ -820,7 +820,7 @@ test('deps internas: import só em *.spec.ts não exige dependência', () => {
     {
       'packages/angular/src/index.ts': 'export const a = 1;\n',
       'packages/angular/src/a.spec.ts':
-        "import { x } from '@cds/rte-core/html';\n",
+        "import { x } from '@comodeviaser/rte-core/html';\n",
     },
   );
   assert.deepEqual(checkRepoRules(root), []);
@@ -828,7 +828,7 @@ test('deps internas: import só em *.spec.ts não exige dependência', () => {
 
 test('deps internas: ng-package.json sem allowedNonPeerDependencies reprova', () => {
   const root = depsFixture(
-    { dependencies: { '@cds/rte-core': '0.0.0' } },
+    { dependencies: { '@comodeviaser/rte-core': '0.0.0' } },
     { 'packages/angular/ng-package.json': JSON.stringify({ dest: 'x' }) },
   );
   const errors = checkRepoRules(root);
@@ -852,9 +852,23 @@ test('nomes antigos: .ts com DEFAULT_LINK_POLICY reprova, citando arquivo, antig
   assert.match(errors[0], /RTE_DEFAULT_LINK_POLICY/);
 });
 
+test('nome antigo do projeto: @cds/, cds-rte- e cds-text-editor reprovam fora do histórico', () => {
+  const errors = oldNameErrors({
+    'packages/core/src/a.ts': 'import { x } from "@cds/rte-core";\n',
+    'tools/b.mjs': "const f = 'fesm2022/cds-rte-angular.mjs';\n",
+    'README.md': '# cds-text-editor\n',
+    'docs/decisions/0001-x.md': 'escopo `@cds/rte-core` e cds-text-editor\n',
+    'packages/core/src/ok.ts': 'import { x } from "@comodeviaser/rte-core";\n',
+  });
+  assert.equal(errors.length, 3);
+  assert.match(errors.join('\n'), /a\.ts:1.*"@cds\/".*@comodeviaser\//);
+  assert.match(errors.join('\n'), /b\.mjs:1.*comodeviaser-rte-/);
+  assert.match(errors.join('\n'), /README\.md:1.*comodeviaser-editor/);
+});
+
 test('nomes antigos: .md do site e bloco de código de README reprovam', () => {
   const md =
-    'texto\n\n```ts\nimport { DraftStore } from "@cds/rte-core";\n```\n';
+    'texto\n\n```ts\nimport { DraftStore } from "@comodeviaser/rte-core";\n```\n';
   const errors = oldNameErrors({
     'apps/docs/content/guia/x.md': md,
     'packages/core/README.md': md,

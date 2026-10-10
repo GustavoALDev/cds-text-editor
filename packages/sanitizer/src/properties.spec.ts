@@ -1,8 +1,8 @@
 // Propriedades do sanitizador (spec 04, §6.2): idempotência (R3), saída
 // canônica pelo `validateHtml` (R4) e saída inerte pelo `findUnsafe` (R5), com
 // ≥ 10 000 casos de HTML hostil cada, mais o diferencial sobre HTML válido.
-import { getHtmlSchema, isAllowedUrl, type RteHtmlSchema } from '@cds/rte-core';
-import { validateHtml } from '@cds/rte-core/html';
+import { getHtmlSchema, isAllowedUrl, type RteHtmlSchema } from '@comodeviaser/rte-core';
+import { validateHtml } from '@comodeviaser/rte-core/html';
 import * as fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
 import {

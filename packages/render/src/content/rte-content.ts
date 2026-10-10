@@ -36,7 +36,7 @@ import { applyTableSizing } from './table-sizing';
  *   `console.warn` (H5).
  * - `trusted`: o HTML é exibido como veio. Pré-condição: o HTML `trusted`
  *   precisa estar já sanitizado por `createSanitizer` (mesma versão maior do
- *   `@cds/rte-sanitizer`) — as transformações da H6 (`prepareRteHtml`) são
+ *   `@comodeviaser/rte-sanitizer`) — as transformações da H6 (`prepareRteHtml`) são
  *   uma varredura de *tags* que só é segura sobre essa saída canônica.
  *
  * Esta é a única porta de HTML do pacote (H9): `bypassSecurityTrustHtml` só

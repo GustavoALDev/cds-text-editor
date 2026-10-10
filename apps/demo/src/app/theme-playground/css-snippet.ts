@@ -11,11 +11,11 @@ import {
 
 /** Seção do README do tema com a escada de personalização. */
 export const THEME_README_URL =
-  'https://github.com/GustavoALDev/cds-text-editor/tree/main/packages/theme#escada-de-personaliza%C3%A7%C3%A3o-n%C3%ADveis-0-a-4';
+  'https://github.com/GustavoALDev/comodeviaser-editor/tree/main/packages/theme#escada-de-personaliza%C3%A7%C3%A3o-n%C3%ADveis-0-a-4';
 
 const HEADER = [
   '/* Tema do editor (gerado pelo playground do demo).',
-  ' * Funciona sozinho com o theme.css do @cds/rte-theme (cores relativas nativas).',
+  ' * Funciona sozinho com o theme.css do @comodeviaser/rte-theme (cores relativas nativas).',
   ' * Navegadores sem cores relativas exigem o TypeScript copiado (plano B, applyRteTheme).',
   ` * Escada de personalização: ${THEME_README_URL}`,
   ' */',

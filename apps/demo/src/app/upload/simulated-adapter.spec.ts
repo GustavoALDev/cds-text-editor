@@ -1,4 +1,4 @@
-import { RteUploadError } from '@cds/rte-angular';
+import { RteUploadError } from '@comodeviaser/rte-angular';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createSimulatedAdapter,

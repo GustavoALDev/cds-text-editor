@@ -1,4 +1,4 @@
-import type { RteCharLimitState } from '@cds/rte-core/extensions';
+import type { RteCharLimitState } from '@comodeviaser/rte-core/extensions';
 import type { RteCounterLabels } from '../labels/types';
 
 /** Palavras por minuto do tempo de leitura (K11). */

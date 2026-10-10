@@ -1,5 +1,5 @@
 // #region servidor
-import { createSanitizer, type RteSanitizeOptions } from '@cds/rte-sanitizer';
+import { createSanitizer, type RteSanitizeOptions } from '@comodeviaser/rte-sanitizer';
 
 // O MESMO objeto que o app Angular passa ao editor (provideRichText({ editor }) e provideRteRender).
 // Num projeto real ele mora num pacote compartilhado entre o servidor e o app.

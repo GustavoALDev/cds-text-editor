@@ -59,4 +59,4 @@ httpUploadAdapter({
 - **Armazenamento** durável (objeto/S3, não disco local) e um registro de qual texto usa qual mídia: `POST /media/cleanup` recebe a lista de referências, mas a varredura dos seus textos é sua.
 - **Servir a mídia de outro host/CDN** (origem sem cookies), com `Cache-Control` e CORS próprios.
 - **Antivírus/reprocessamento** de imagens (recodificar elimina payloads em metadados) e limites de taxa/cota.
-- **Sanitização do HTML no servidor** com `@cds/rte-sanitizer`. O pacote é TypeScript compilado (`npm run build -w @cds/rte-sanitizer`), por isso este exemplo recebe o sanitizador por injeção (`createApp({ sanitize })`) em vez de importá-lo; passe a função do pacote ali.
+- **Sanitização do HTML no servidor** com `@comodeviaser/rte-sanitizer`. O pacote é TypeScript compilado (`npm run build -w @comodeviaser/rte-sanitizer`), por isso este exemplo recebe o sanitizador por injeção (`createApp({ sanitize })`) em vez de importá-lo; passe a função do pacote ali.

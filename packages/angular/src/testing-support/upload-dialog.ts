@@ -1,15 +1,15 @@
 import type { Signal, Type, WritableSignal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { getHtmlSchema } from '@cds/rte-core';
-import { getRteHtml } from '@cds/rte-core/extensions';
-import { validateHtml } from '@cds/rte-core/html';
+import { getHtmlSchema } from '@comodeviaser/rte-core';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
+import { validateHtml } from '@comodeviaser/rte-core/html';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import type {
   RteEditor,
   RteLabelsSource,
   RteUploadConfig,
   RteUploadErrorEvent,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 import type { Editor } from '@tiptap/core';
 import { expect } from 'vitest';
 import { RTE_UPLOAD_KEY } from '../upload/markers';

@@ -5,7 +5,7 @@ import {
   type RteTheme,
   type RteThemeMode,
   type RteThemePresetName,
-} from '@cds/rte-theme';
+} from '@comodeviaser/rte-theme';
 
 /** Campos de cor-semente do playground. */
 export const COLOR_FIELDS = ['primary', 'secondary', 'tertiary'] as const;

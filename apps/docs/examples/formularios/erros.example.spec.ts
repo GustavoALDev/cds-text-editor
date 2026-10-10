@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RTE_LABELS_EN } from '@cds/rte-angular/i18n';
+import { RTE_LABELS_EN } from '@comodeviaser/rte-angular/i18n';
 import { mensagem } from './erros.example';
 
 // Prova a tradução dos erros das diretivas pelo formatRteError (nada simulado).

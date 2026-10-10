@@ -1,7 +1,7 @@
 import type {
   RteContentLabels,
   RteSlashLabels,
-} from '@cds/rte-core/extensions';
+} from '@comodeviaser/rte-core/extensions';
 import { RTE_DIALOG_LANGUAGES } from '../dialogs/types';
 import type {
   RteDialogLabels,

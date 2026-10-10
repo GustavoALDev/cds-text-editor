@@ -1,4 +1,4 @@
-import type { RteTocEntry } from '@cds/rte-core/html';
+import type { RteTocEntry } from '@comodeviaser/rte-core/html';
 
 /**
  * Nó do sumário: a entrada e as entradas aninhadas sob ela (H11).

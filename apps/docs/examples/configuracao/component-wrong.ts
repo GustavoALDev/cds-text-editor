@@ -1,6 +1,6 @@
 // #region errado
 import { Component, type Provider } from '@angular/core';
-import { RteEditor, provideRichText } from '@cds/rte-angular';
+import { RteEditor, provideRichText } from '@comodeviaser/rte-angular';
 
 @Component({
   selector: 'docs-wrong-editor',

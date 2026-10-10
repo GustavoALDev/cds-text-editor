@@ -7,12 +7,12 @@ import {
   type Provider,
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { RTE_HIGHLIGHT_COLORS, RTE_TEXT_COLORS } from '@cds/rte-core';
+import { RTE_HIGHLIGHT_COLORS, RTE_TEXT_COLORS } from '@comodeviaser/rte-core';
 import {
   getRteHtml,
   RTE_CONTENT_LABELS,
   RTE_SLASH_LABELS,
-} from '@cds/rte-core/extensions';
+} from '@comodeviaser/rte-core/extensions';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import {
@@ -23,12 +23,12 @@ import {
   type RteLabels,
   type RteLabelsInput,
   type RteLabelsSource,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 import {
   RTE_LABELS_EN,
   RTE_LABELS_ES,
   RTE_LABELS_PT_BR,
-} from '@cds/rte-angular/i18n';
+} from '@comodeviaser/rte-angular/i18n';
 import type { Editor } from '@tiptap/core';
 import { NodeSelection } from '@tiptap/pm/state';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';

@@ -24,15 +24,15 @@
               { "glob": "**/*", "input": "public" },
               {
                 "glob": "theme.css",
-                "input": "node_modules/@cds/rte-theme/dist",
+                "input": "node_modules/@comodeviaser/rte-theme/dist",
                 "output": "/"
               }
             ],
             "styles": [
-              "@cds/rte-theme/theme.css",
-              "@cds/rte-core/styles/content.css",
-              "@cds/rte-angular/styles/editor.css",
-              "@cds/rte-render/styles/render.css",
+              "@comodeviaser/rte-theme/theme.css",
+              "@comodeviaser/rte-core/styles/content.css",
+              "@comodeviaser/rte-angular/styles/editor.css",
+              "@comodeviaser/rte-render/styles/render.css",
               "src/styles.css"
             ],
             "optimization": {

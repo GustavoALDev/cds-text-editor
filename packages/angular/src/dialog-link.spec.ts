@@ -9,10 +9,10 @@ import {
   getLinkAttributes,
   normalizeHref,
   type RteLinkPolicy,
-} from '@cds/rte-core';
-import { getRteHtml } from '@cds/rte-core/extensions';
+} from '@comodeviaser/rte-core';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteEditor, type RteEditorConfig } from '@cds/rte-angular';
+import { RteEditor, type RteEditorConfig } from '@comodeviaser/rte-angular';
 import type { Editor } from '@tiptap/core';
 import fc from 'fast-check';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

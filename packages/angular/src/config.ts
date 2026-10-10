@@ -9,8 +9,8 @@ import {
 import type {
   RteEditorOptions,
   RteSlashOptions,
-} from '@cds/rte-core/extensions';
-import type { RteTheme } from '@cds/rte-theme';
+} from '@comodeviaser/rte-core/extensions';
+import type { RteTheme } from '@comodeviaser/rte-theme';
 import type { RteDraftConfig } from './draft/types';
 import type { RteFloatingMenusConfig } from './floating/types';
 import type { RteToolbarConfig } from './toolbar/items';

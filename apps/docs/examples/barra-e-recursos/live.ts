@@ -5,8 +5,8 @@ import {
   computed,
   signal,
 } from '@angular/core';
-import { RteEditor, type RteToolbarPreset } from '@cds/rte-angular';
-import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
+import { RteEditor, type RteToolbarPreset } from '@comodeviaser/rte-angular';
+import { RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
 
 const PRESETS: readonly RteToolbarPreset[] = ['minimal', 'article', 'full'];
 

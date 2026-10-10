@@ -27,11 +27,11 @@ const ctx = (extra = {}) => ({
 });
 
 const angular = (peers = {}, meta = {}) => ({
-  name: '@cds/rte-angular',
+  name: '@comodeviaser/rte-angular',
   peerDependencies: {
     '@angular/core': '>=22.2.1 <23',
-    '@cds/rte-core': '0.0.0',
-    '@cds/rte-theme': '0.0.0',
+    '@comodeviaser/rte-core': '0.0.0',
+    '@comodeviaser/rte-theme': '0.0.0',
     '@tiptap/core': '^3.31.4',
     lowlight: '^3.3.0',
     ...peers,
@@ -167,7 +167,7 @@ test('example seguido de bloco cercado manual falha', () => {
 test('generated: install-command usa os peers obrigatórios do package.json publicado', () => {
   assert.equal(
     generateInstallCommand({ angular: angular() }),
-    'npm install @cds/rte-angular @cds/rte-core @cds/rte-theme \\\n  @tiptap/core@^3.31.4 \\\n  lowlight@^3.3.0',
+    'npm install @comodeviaser/rte-angular @comodeviaser/rte-core @comodeviaser/rte-theme \\\n  @tiptap/core@^3.31.4 \\\n  lowlight@^3.3.0',
   );
 });
 
@@ -186,17 +186,17 @@ test('generated: mudar um peer na fixture muda a saída; peer opcional some', ()
 
 test('generated: styles-order segue os exports e exige o export', () => {
   const pk = {
-    theme: { name: '@cds/rte-theme', exports: { './theme.css': 'x' } },
-    core: { name: '@cds/rte-core', exports: { './styles/content.css': 'x' } },
+    theme: { name: '@comodeviaser/rte-theme', exports: { './theme.css': 'x' } },
+    core: { name: '@comodeviaser/rte-core', exports: { './styles/content.css': 'x' } },
     angular: angular(),
     render: {
-      name: '@cds/rte-render',
+      name: '@comodeviaser/rte-render',
       exports: { './styles/render.css': 'x' },
     },
   };
   assert.equal(
     generateStylesOrder(pk),
-    '"styles": [\n  "@cds/rte-theme/theme.css",\n  "@cds/rte-core/styles/content.css",\n  "@cds/rte-angular/styles/editor.css"\n]',
+    '"styles": [\n  "@comodeviaser/rte-theme/theme.css",\n  "@comodeviaser/rte-core/styles/content.css",\n  "@comodeviaser/rte-angular/styles/editor.css"\n]',
   );
   assert.match(
     generateStylesOrder(pk, { render: true }),
@@ -208,7 +208,7 @@ test('generated: styles-order segue os exports e exige o export', () => {
     '<!-- generated: install-command -->',
     ctx({ packages: { angular: angular() } }),
   );
-  assert.match(md, /^```bash\nnpm install @cds\/rte-angular/);
+  assert.match(md, /^```bash\nnpm install @comodeviaser\/rte-angular/);
   assert.throws(
     () => expandDirectives('<!-- generated: outra -->', ctx()),
     /"outra" desconhecido/,

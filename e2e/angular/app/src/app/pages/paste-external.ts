@@ -4,7 +4,7 @@ import {
   Component,
   signal,
 } from '@angular/core';
-import { RteEditor, type RteUploadConfig } from '@cds/rte-angular';
+import { RteEditor, type RteUploadConfig } from '@comodeviaser/rte-angular';
 
 /** O que o teste lê e comanda na re-hospedagem (N41). */
 interface PasteExternalProbe {

@@ -1,4 +1,4 @@
-import type { RteAttrRule, RteHtmlSchema } from '@cds/rte-core';
+import type { RteAttrRule, RteHtmlSchema } from '@comodeviaser/rte-core';
 
 /**
  * Regras de URL e de idioma das mídias, lidas do esquema do editor (V4,

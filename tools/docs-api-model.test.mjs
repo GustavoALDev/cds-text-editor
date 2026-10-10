@@ -13,7 +13,7 @@ import {
 } from './docs/api-model.mjs';
 
 const CORE = {
-  name: '@cds/rte-core',
+  name: '@comodeviaser/rte-core',
   exports: {
     '.': { types: './dist/index.d.ts' },
     './html': { types: './dist/html/index.d.ts' },
@@ -25,32 +25,32 @@ const CORE = {
 
 test('syntheticName: nome do relatório e do pacote viram o nome sintético', () => {
   assert.equal(
-    syntheticName({ report: 'rte-core-html.api.md' }, '@cds/rte-core'),
+    syntheticName({ report: 'rte-core-html.api.md' }, '@comodeviaser/rte-core'),
     'rte-core-html',
   );
   assert.equal(
-    syntheticName({ report: 'core.html.api.md' }, '@cds/rte-core'),
+    syntheticName({ report: 'core.html.api.md' }, '@comodeviaser/rte-core'),
     'rte-core-html',
   );
   assert.equal(
-    syntheticName({ report: 'rte-core.api.md' }, '@cds/rte-core'),
+    syntheticName({ report: 'rte-core.api.md' }, '@comodeviaser/rte-core'),
     'rte-core',
   );
 });
 
 test('listModelEntries e entrySpecifier: a lista vem dos exports, não de regex', () => {
   assert.deepEqual(listModelEntries(CORE), [
-    { synthetic: 'rte-core', specifier: '@cds/rte-core' },
-    { synthetic: 'rte-core-html', specifier: '@cds/rte-core/html' },
+    { synthetic: 'rte-core', specifier: '@comodeviaser/rte-core' },
+    { synthetic: 'rte-core-html', specifier: '@comodeviaser/rte-core/html' },
     {
       synthetic: 'rte-core-code-languages',
-      specifier: '@cds/rte-core/code-languages',
+      specifier: '@comodeviaser/rte-core/code-languages',
     },
   ]);
-  assert.equal(entrySpecifier('rte-core-html', [CORE]), '@cds/rte-core/html');
+  assert.equal(entrySpecifier('rte-core-html', [CORE]), '@comodeviaser/rte-core/html');
   assert.equal(
     entrySpecifier('rte-core-code-languages', [CORE]),
-    '@cds/rte-core/code-languages',
+    '@comodeviaser/rte-core/code-languages',
   );
   assert.throws(() => entrySpecifier('rte-core-nada', [CORE]), /sem entry/);
 });

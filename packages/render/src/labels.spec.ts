@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import {
   RTE_RENDER_LABELS_ES,
   RTE_RENDER_LABELS_PT_BR,
-} from '@cds/rte-render/i18n';
+} from '@comodeviaser/rte-render/i18n';
 import { describe, expect, it } from 'vitest';
 import {
   mergeRenderLabels,

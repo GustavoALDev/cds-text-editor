@@ -10,9 +10,9 @@ import {
 } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { getHtmlSchema } from '@cds/rte-core';
-import { RTE_CODE_LANGUAGES } from '@cds/rte-core/code-languages';
-import { getRteHtml } from '@cds/rte-core/extensions';
+import { getHtmlSchema } from '@comodeviaser/rte-core';
+import { RTE_CODE_LANGUAGES } from '@comodeviaser/rte-core/code-languages';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import {
   provideRichText,
@@ -20,9 +20,9 @@ import {
   type RteEditorConfig,
   type RteLabelsSource,
   type RteToolbarConfig,
-} from '@cds/rte-angular';
-import { RTE_LABELS_ES, RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
-import { getRteEditor } from '@cds/rte-angular/testing';
+} from '@comodeviaser/rte-angular';
+import { RTE_LABELS_ES, RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
+import { getRteEditor } from '@comodeviaser/rte-angular/testing';
 import type { Editor } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RteDialogController } from './dialogs/controller';

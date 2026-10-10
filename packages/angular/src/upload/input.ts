@@ -12,7 +12,7 @@ export interface RteUploadInput {
 
 /**
  * `setEmbed` do core, sem importar o tipo (o aumento de `Commands` vive em
- * `@cds/rte-core/extensions`; a validação é do comando, S11).
+ * `@comodeviaser/rte-core/extensions`; a validação é do comando, S11).
  */
 function embedCommand(commands: object): (url: string) => boolean {
   const run = (commands as { setEmbed?: (url: string) => boolean }).setEmbed;

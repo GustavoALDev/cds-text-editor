@@ -1,4 +1,4 @@
-import { checkRteTheme, RTE_THEME_PRESETS } from '@cds/rte-theme';
+import { checkRteTheme, RTE_THEME_PRESETS } from '@comodeviaser/rte-theme';
 import { describe, expect, it } from 'vitest';
 import { applyPreset, DEFAULT_STATE, PRESET_NAMES } from './model';
 import { buildContrastReport, summaryText } from './report';

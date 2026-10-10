@@ -1,4 +1,4 @@
-import { htmlToText } from '@cds/rte-core/html';
+import { htmlToText } from '@comodeviaser/rte-core/html';
 
 // #region uso
 export function resumo(html: string): string {

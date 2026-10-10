@@ -1,6 +1,6 @@
 // #region component
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-import { RteEditor } from '@cds/rte-angular';
+import { RteEditor } from '@comodeviaser/rte-angular';
 
 @Component({
   selector: 'docs-value-form',

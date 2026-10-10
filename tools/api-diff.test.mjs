@@ -11,7 +11,7 @@ import {
 } from './api-diff.mjs';
 
 const wrap = (body) =>
-  `## Public API Report File for "@cds/rte-core"\n\n> Do not edit.\n\n\`\`\`ts\n\n${body}\n\n\`\`\`\n`;
+  `## Public API Report File for "@comodeviaser/rte-core"\n\n> Do not edit.\n\n\`\`\`ts\n\n${body}\n\n\`\`\`\n`;
 
 const BASE = wrap(`import { Foo } from 'x';
 
@@ -121,8 +121,8 @@ test('requiredBump segue 0.x e 1.x', () => {
   );
 });
 
-const VERSIONS = { '@cds/rte-core': '0.0.0', '@cds/rte-theme': '0.0.0' };
-const report = (oldText, newText, pkg = '@cds/rte-core') => ({
+const VERSIONS = { '@comodeviaser/rte-core': '0.0.0', '@comodeviaser/rte-theme': '0.0.0' };
+const report = (oldText, newText, pkg = '@comodeviaser/rte-core') => ({
   file: 'packages/core/api/rte-core.api.md',
   package: pkg,
   oldText,
@@ -137,7 +137,7 @@ test('só acréscimo + changeset patch ou minor passa', () => {
     assert.deepEqual(
       checkApiDiff({
         changedReports: [report(BASE, ADDED)],
-        changesets: [cs({ '@cds/rte-core': type })],
+        changesets: [cs({ '@comodeviaser/rte-core': type })],
         versions: VERSIONS,
       }),
       [],
@@ -149,7 +149,7 @@ test('remoção em 0.x: patch falha, minor passa', () => {
   const run = (type) =>
     checkApiDiff({
       changedReports: [report(BASE, REMOVED)],
-      changesets: [cs({ '@cds/rte-core': type })],
+      changesets: [cs({ '@comodeviaser/rte-core': type })],
       versions: VERSIONS,
     });
   assert.equal(run('patch').length, 1);
@@ -158,11 +158,11 @@ test('remoção em 0.x: patch falha, minor passa', () => {
 });
 
 test('remoção em 1.0.0: minor falha, major passa', () => {
-  const versions = { '@cds/rte-core': '1.0.0' };
+  const versions = { '@comodeviaser/rte-core': '1.0.0' };
   const run = (type) =>
     checkApiDiff({
       changedReports: [report(BASE, REMOVED)],
-      changesets: [cs({ '@cds/rte-core': type })],
+      changesets: [cs({ '@comodeviaser/rte-core': type })],
       versions,
     });
   assert.equal(run('minor').length, 1);
@@ -180,11 +180,11 @@ test('relatório mudado sem changeset do pacote falha; o de outro pacote não va
   );
   const errors = checkApiDiff({
     changedReports: [report(BASE, ADDED)],
-    changesets: [cs({ '@cds/rte-theme': 'major' })],
+    changesets: [cs({ '@comodeviaser/rte-theme': 'major' })],
     versions: VERSIONS,
   });
   assert.equal(errors.length, 1);
-  assert.match(errors[0], /@cds\/rte-core/);
+  assert.match(errors[0], /@comodeviaser\/rte-core/);
 });
 
 test('relatório só reformatado/CRLF não exige changeset', () => {
@@ -202,7 +202,7 @@ test('relatório novo (sem versão antiga) conta como só acréscimo', () => {
   assert.deepEqual(
     checkApiDiff({
       changedReports: [report(undefined, BASE)],
-      changesets: [cs({ '@cds/rte-core': 'patch' })],
+      changesets: [cs({ '@comodeviaser/rte-core': 'patch' })],
       versions: VERSIONS,
     }),
     [],
@@ -221,12 +221,12 @@ test('remoção no esquema HTML conta como remoção de API', () => {
     changedReports: [
       {
         file: 'docs/html-schema.md',
-        package: '@cds/rte-core',
+        package: '@comodeviaser/rte-core',
         oldText: oldSchema,
         newText: newSchema,
       },
     ],
-    changesets: [cs({ '@cds/rte-core': 'patch' })],
+    changesets: [cs({ '@comodeviaser/rte-core': 'patch' })],
     versions: VERSIONS,
   });
   assert.equal(errors.length, 1);
@@ -254,10 +254,10 @@ test('CSS: remover item public exige minor; internal removido não exige nada', 
 
 test('parseChangeset lê o frontmatter', () => {
   const text =
-    '---\n"@cds/rte-core": minor\n\'@cds/rte-theme\': patch\n---\n\nTexto\n';
+    '---\n"@comodeviaser/rte-core": minor\n\'@comodeviaser/rte-theme\': patch\n---\n\nTexto\n';
   assert.deepEqual(parseChangeset(text.replace(/\n/g, '\r\n')), {
-    '@cds/rte-core': 'minor',
-    '@cds/rte-theme': 'patch',
+    '@comodeviaser/rte-core': 'minor',
+    '@comodeviaser/rte-theme': 'patch',
   });
   assert.deepEqual(parseChangeset('sem frontmatter'), {});
 });
@@ -265,13 +265,13 @@ test('parseChangeset lê o frontmatter', () => {
 test('packageOfReport mapeia arquivo para pacote', () => {
   assert.equal(
     packageOfReport('packages/angular/api/rte-angular.api.md'),
-    '@cds/rte-angular',
+    '@comodeviaser/rte-angular',
   );
   assert.equal(
     packageOfReport('packages/theme/api/theme.css-api.md'),
-    '@cds/rte-theme',
+    '@comodeviaser/rte-theme',
   );
-  assert.equal(packageOfReport('docs/html-schema.md'), '@cds/rte-core');
+  assert.equal(packageOfReport('docs/html-schema.md'), '@comodeviaser/rte-core');
   assert.equal(packageOfReport('packages/core/src/x.ts'), null);
   assert.equal(packageOfReport('packages/core/api/css-public.json'), null);
 });
@@ -281,9 +281,9 @@ test('collectChanges usa o git injetado', () => {
   const files = {
     'base:packages/core/api/rte-core.api.md': BASE,
     'disk:packages/core/api/rte-core.api.md': ADDED,
-    'disk:.changeset/novo.md': '---\n"@cds/rte-core": minor\n---\n\nx\n',
+    'disk:.changeset/novo.md': '---\n"@comodeviaser/rte-core": minor\n---\n\nx\n',
     'disk:packages/core/package.json':
-      '{"name":"@cds/rte-core","version":"0.0.0"}',
+      '{"name":"@comodeviaser/rte-core","version":"0.0.0"}',
   };
   const git = (args) => {
     calls.push(args.join(' '));
@@ -309,11 +309,11 @@ test('collectChanges usa o git injetado', () => {
     packageDirs: ['core'],
   });
   assert.equal(out.changedReports.length, 1);
-  assert.equal(out.changedReports[0].package, '@cds/rte-core');
+  assert.equal(out.changedReports[0].package, '@comodeviaser/rte-core');
   assert.equal(out.changedReports[0].oldText, BASE);
   assert.equal(out.changesets.length, 1);
-  assert.deepEqual(out.changesets[0].releases, { '@cds/rte-core': 'minor' });
-  assert.deepEqual(out.versions, { '@cds/rte-core': '0.0.0' });
+  assert.deepEqual(out.changesets[0].releases, { '@comodeviaser/rte-core': 'minor' });
+  assert.deepEqual(out.versions, { '@comodeviaser/rte-core': '0.0.0' });
   assert.ok(calls.every((c) => !c.includes('push')));
   // Base = merge-base (não a ponta da base) e sem detecção de renomeação (M3).
   assert.ok(calls.some((c) => c === 'merge-base origin/main HEAD'));

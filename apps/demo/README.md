@@ -1,6 +1,6 @@
 # Demo e playground do tema
 
-App Angular 22 pré-renderizado (spec 07b, ADR 0017) que consome os pacotes `@cds/rte-*` **pelos tarballs**, fora do repositório, como um consumidor externo. Rotas: `/`, `/editor`, `/toolbar`, `/forms`, `/i18n`, `/files`, `/render` e `/theme` (playground com CSS e TypeScript copiáveis).
+App Angular 22 pré-renderizado (spec 07b, ADR 0017) que consome os pacotes `@comodeviaser/rte-*` **pelos tarballs**, fora do repositório, como um consumidor externo. Rotas: `/`, `/editor`, `/toolbar`, `/forms`, `/i18n`, `/files`, `/render` e `/theme` (playground com CSS e TypeScript copiáveis).
 
 ## Como rodar
 
@@ -13,7 +13,7 @@ node apps/demo/serve.mjs --with-server                            # idem + servi
 node tools/consumer.mjs dev                                       # ng serve com proxy para o servidor de exemplo
 ```
 
-Variáveis: `RTE_CONSUMER_DIR` (diretório do consumidor, **fora** do repositório; padrão `$RUNNER_TEMP` ou `$TMPDIR/cds-rte-consumer/demo`), `RTE_NPM` (npm a usar, ex.: `npx -y npm@11`), `HOST` (`dev` e servidor de exemplo; padrão `127.0.0.1`), `RTE_DEMO_PORT` e `RTE_SERVER_PORT`.
+Variáveis: `RTE_CONSUMER_DIR` (diretório do consumidor, **fora** do repositório; padrão `$RUNNER_TEMP` ou `$TMPDIR/comodeviaser-rte-consumer/demo`), `RTE_NPM` (npm a usar, ex.: `npx -y npm@11`), `HOST` (`dev` e servidor de exemplo; padrão `127.0.0.1`), `RTE_DEMO_PORT` e `RTE_SERVER_PORT`.
 
 Nunca rode `npm install` dentro de `apps/demo`: ele não é um _workspace_; o `prepare` copia o app para o diretório do consumidor.
 

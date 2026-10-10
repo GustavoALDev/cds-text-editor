@@ -1,4 +1,4 @@
-import type { RteSlashMenuState } from '@cds/rte-core/extensions';
+import type { RteSlashMenuState } from '@comodeviaser/rte-core/extensions';
 import { slashListId, slashOptionId } from './state';
 
 const NONE: Readonly<Record<string, string>> = Object.freeze({});

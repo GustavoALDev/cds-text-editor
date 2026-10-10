@@ -5,9 +5,9 @@ import {
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RTE_LABELS, RTE_LABELS_EN, provideRichText } from '@cds/rte-angular';
-import { RTE_LABELS_ES } from '@cds/rte-angular/i18n';
-import { RTE_CONTENT_LABELS, RTE_SLASH_LABELS } from '@cds/rte-core/extensions';
+import { RTE_LABELS, RTE_LABELS_EN, provideRichText } from '@comodeviaser/rte-angular';
+import { RTE_LABELS_ES } from '@comodeviaser/rte-angular/i18n';
+import { RTE_CONTENT_LABELS, RTE_SLASH_LABELS } from '@comodeviaser/rte-core/extensions';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildEditorOptions, mergeEditorConfig } from './editor/options';
 

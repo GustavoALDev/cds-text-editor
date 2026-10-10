@@ -59,7 +59,7 @@ const INTERNAL = [
   'embedsFeature',
 ];
 
-describe('API pública do @cds/rte-core', () => {
+describe('API pública do @comodeviaser/rte-core', () => {
   it('exporta a lista pública', () => {
     for (const n of MAIN) {
       expect(typeof (main as Record<string, unknown>)[n], n).not.toBe(

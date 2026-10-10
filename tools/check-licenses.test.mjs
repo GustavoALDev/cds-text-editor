@@ -121,8 +121,8 @@ test('workspace-internal packages and links are not flagged', () => {
     lockfileVersion: 3,
     packages: {
       '': { name: 'root' },
-      'packages/core': { name: '@cds/core', version: '0.0.0' },
-      'node_modules/@cds/core': { resolved: 'packages/core', link: true },
+      'packages/core': { name: '@comodeviaser/core', version: '0.0.0' },
+      'node_modules/@comodeviaser/core': { resolved: 'packages/core', link: true },
     },
   };
   assert.deepEqual(
@@ -247,13 +247,13 @@ test('manifest dependencies with allowed licenses (0BSD) pass; peers and devDepe
 
 test('manifest dependencies not found in the lockfile fail closed; workspace links are skipped', () => {
   const l = manifestLock({
-    'node_modules/@cds/rte-core': { resolved: 'packages/core', link: true },
+    'node_modules/@comodeviaser/rte-core': { resolved: 'packages/core', link: true },
   });
   const errors = checkManifestDependencies(l, [
     {
       path: 'p/package.json',
       json: {
-        dependencies: { '@cds/rte-core': '^0.0.0' },
+        dependencies: { '@comodeviaser/rte-core': '^0.0.0' },
         optionalDependencies: { ghost: '1.0.0' },
       },
     },

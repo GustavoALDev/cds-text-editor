@@ -4,7 +4,7 @@ import {
   RteEditor,
   provideRichText,
   type RteToolbarConfig,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 
 @Component({
   selector: 'docs-precedence-editor',

@@ -1,4 +1,4 @@
-import { createEditorExtensions } from '@cds/rte-core/extensions';
+import { createEditorExtensions } from '@comodeviaser/rte-core/extensions';
 import { Editor } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRteUiExtension } from './dialogs/ui-extension';

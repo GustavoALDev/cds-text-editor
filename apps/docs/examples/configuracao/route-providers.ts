@@ -1,8 +1,8 @@
 // #region rota
 import { Component } from '@angular/core';
 import type { Route } from '@angular/router';
-import { RteEditor, provideRichText } from '@cds/rte-angular';
-import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
+import { RteEditor, provideRichText } from '@comodeviaser/rte-angular';
+import { RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
 
 @Component({
   selector: 'docs-article-editor',

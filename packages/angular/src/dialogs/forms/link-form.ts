@@ -16,7 +16,7 @@ import {
   validate,
   type FieldTree,
 } from '@angular/forms/signals';
-import { normalizeHref, type RteLinkPolicy } from '@cds/rte-core';
+import { normalizeHref, type RteLinkPolicy } from '@comodeviaser/rte-core';
 import { applyLink, linkTargetPreserved, removeLink } from '../apply';
 import type { RteDialogRequest } from '../controller';
 import { RteDialogFormBase } from './form-base';

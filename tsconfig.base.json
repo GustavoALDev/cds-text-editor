@@ -18,25 +18,25 @@
     "sourceMap": true,
     "experimentalDecorators": true,
     "paths": {
-      "@cds/rte-core": ["./packages/core/src/index.ts"],
-      "@cds/rte-core/embeds": ["./packages/core/embeds/src/index.ts"],
-      "@cds/rte-core/html": ["./packages/core/html/src/index.ts"],
-      "@cds/rte-core/extensions": ["./packages/core/extensions/src/index.ts"],
-      "@cds/rte-core/code-languages": [
+      "@comodeviaser/rte-core": ["./packages/core/src/index.ts"],
+      "@comodeviaser/rte-core/embeds": ["./packages/core/embeds/src/index.ts"],
+      "@comodeviaser/rte-core/html": ["./packages/core/html/src/index.ts"],
+      "@comodeviaser/rte-core/extensions": ["./packages/core/extensions/src/index.ts"],
+      "@comodeviaser/rte-core/code-languages": [
         "./packages/core/code-languages/src/index.ts"
       ],
-      "@cds/rte-sanitizer": ["./packages/sanitizer/src/index.ts"],
-      "@cds/rte-theme": ["./packages/theme/src/index.ts"],
-      "@cds/rte-angular": ["./packages/angular/src/index.ts"],
-      "@cds/rte-angular/i18n": ["./packages/angular/i18n/src/index.ts"],
-      "@cds/rte-angular/testing": ["./packages/angular/testing/src/index.ts"],
-      "@cds/rte-angular/upload": ["./packages/angular/upload/src/index.ts"],
-      "@cds/rte-angular/validators": [
+      "@comodeviaser/rte-sanitizer": ["./packages/sanitizer/src/index.ts"],
+      "@comodeviaser/rte-theme": ["./packages/theme/src/index.ts"],
+      "@comodeviaser/rte-angular": ["./packages/angular/src/index.ts"],
+      "@comodeviaser/rte-angular/i18n": ["./packages/angular/i18n/src/index.ts"],
+      "@comodeviaser/rte-angular/testing": ["./packages/angular/testing/src/index.ts"],
+      "@comodeviaser/rte-angular/upload": ["./packages/angular/upload/src/index.ts"],
+      "@comodeviaser/rte-angular/validators": [
         "./packages/angular/validators/src/index.ts"
       ],
-      "@cds/rte-render": ["./packages/render/src/index.ts"],
-      "@cds/rte-render/i18n": ["./packages/render/i18n/src/index.ts"],
-      "@cds/rte-render/toc": ["./packages/render/toc/src/index.ts"]
+      "@comodeviaser/rte-render": ["./packages/render/src/index.ts"],
+      "@comodeviaser/rte-render/i18n": ["./packages/render/i18n/src/index.ts"],
+      "@comodeviaser/rte-render/toc": ["./packages/render/toc/src/index.ts"]
     }
   }
 }

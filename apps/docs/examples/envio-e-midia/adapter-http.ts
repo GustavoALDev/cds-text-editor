@@ -1,7 +1,7 @@
 // #region http
 import type { ApplicationConfig } from '@angular/core';
-import { provideRichText } from '@cds/rte-angular';
-import { httpUploadAdapter } from '@cds/rte-angular/upload';
+import { provideRichText } from '@comodeviaser/rte-angular';
+import { httpUploadAdapter } from '@comodeviaser/rte-angular/upload';
 
 /** Quem devolve o token de acesso é o seu código de autenticação. */
 export function uploadConfig(getToken: () => Promise<string>) {

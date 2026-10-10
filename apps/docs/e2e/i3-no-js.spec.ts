@@ -12,7 +12,7 @@ test.describe('I3: sem JavaScript', () => {
     await expect(page.locator('h1')).toHaveText('Início rápido');
     await expect(page.locator('.doc pre').first()).toContainText('npm install');
     await expect(page.locator('.doc pre').nth(1)).toContainText(
-      '@cds/rte-theme/theme.css',
+      '@comodeviaser/rte-theme/theme.css',
     );
   });
 

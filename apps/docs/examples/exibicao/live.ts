@@ -4,10 +4,10 @@ import {
   signal,
   ViewEncapsulation,
 } from '@angular/core';
-import { RteEditor } from '@cds/rte-angular';
-import { provideRteRender, RteContent } from '@cds/rte-render';
-import { RteToc } from '@cds/rte-render/toc';
-import { createSanitizer } from '@cds/rte-sanitizer';
+import { RteEditor } from '@comodeviaser/rte-angular';
+import { provideRteRender, RteContent } from '@comodeviaser/rte-render';
+import { RteToc } from '@comodeviaser/rte-render/toc';
+import { createSanitizer } from '@comodeviaser/rte-sanitizer';
 import { editorOptions } from './display';
 
 /**

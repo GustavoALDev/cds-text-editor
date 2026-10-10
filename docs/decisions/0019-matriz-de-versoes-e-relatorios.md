@@ -62,7 +62,7 @@ N47 (`Mod+F` com o editor em `readonly`: abre com a seleção, navega, sem subst
 
 ### (e) J8 (`apps/demo/e2e/j8-server.spec.ts`)
 
-(a) PNG 201 com bearer e `X-CSRF-Token`, mídia com `nosniff` e `default-src 'none'; sandbox`, bytes idênticos; (b) sem `X-CSRF-Token` 403; (c) SVG com nome `.png` 415; (d) corpo de 11 MiB 413 (o cliente já recusa acima de 10 MiB, então o corpo é trocado na rede); (e) cancelar com a requisição retida; (f) WebM com `readyState >= 1`. "Nada gravado" é conferido por um rótulo único anexado ao final dos bytes e procurado em todas as pastas `cds-rte-demo-media-*`. Resultado local: Chromium e Firefox 6/6; WebKit 6/6 com a anotação `webkit-sem-range` no (f): o `GET /media` do servidor de exemplo não responde a `Range` com 206 e o WebKit fica em `readyState` 0 (causa no servidor, nem no editor nem no demo). O teste volta sozinho à verificação estrita quando `Range` → 206 passar a funcionar (correção do PR #21). Com o #21, `files.page.ts` busca `/csrf` com o bearer, e a asserção de CSP do `/media` deve valer também para o 206. Após o merge do #21 (verificado no Chromium local, com `AUTH_TOKEN`): J1–J8 59/59, J8 (a)–(f) estritos; WebKit e Firefox seguem no CI do PR.
+(a) PNG 201 com bearer e `X-CSRF-Token`, mídia com `nosniff` e `default-src 'none'; sandbox`, bytes idênticos; (b) sem `X-CSRF-Token` 403; (c) SVG com nome `.png` 415; (d) corpo de 11 MiB 413 (o cliente já recusa acima de 10 MiB, então o corpo é trocado na rede); (e) cancelar com a requisição retida; (f) WebM com `readyState >= 1`. "Nada gravado" é conferido por um rótulo único anexado ao final dos bytes e procurado em todas as pastas `comodeviaser-rte-demo-media-*`. Resultado local: Chromium e Firefox 6/6; WebKit 6/6 com a anotação `webkit-sem-range` no (f): o `GET /media` do servidor de exemplo não responde a `Range` com 206 e o WebKit fica em `readyState` 0 (causa no servidor, nem no editor nem no demo). O teste volta sozinho à verificação estrita quando `Range` → 206 passar a funcionar (correção do PR #21). Com o #21, `files.page.ts` busca `/csrf` com o bearer, e a asserção de CSP do `/media` deve valer também para o 206. Após o merge do #21 (verificado no Chromium local, com `AUTH_TOKEN`): J1–J8 59/59, J8 (a)–(f) estritos; WebKit e Firefox seguem no CI do PR.
 
 ### (f) Referência para a 08b: cobertura, tamanhos e N45
 
@@ -86,10 +86,10 @@ Tamanhos (bytes min+gzip, folga): `angular` _editor_ 37837 (5683), `core/html` 3
 
 ```bash
 curl -X PUT -H "Authorization: Bearer $PAT" -H "Accept: application/vnd.github+json" \
-  https://api.github.com/repos/GustavoALDev/cds-text-editor/branches/main/protection \
+  https://api.github.com/repos/GustavoALDev/comodeviaser-editor/branches/main/protection \
   --data @.github/branch-protection.json
 curl -H "Authorization: Bearer $PAT" -H "Accept: application/vnd.github+json" \
-  https://api.github.com/repos/GustavoALDev/cds-text-editor/branches/main/protection
+  https://api.github.com/repos/GustavoALDev/comodeviaser-editor/branches/main/protection
 ```
 
 O PAT vem de arquivo temporário e nunca entra no repositório. Antes de aplicar, confirmar que os quatro checks já aparecem em um PR (um check exigido que nunca foi reportado trava o merge).

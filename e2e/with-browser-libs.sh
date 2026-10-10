@@ -2,10 +2,10 @@
 # Executa um comando com as bibliotecas de sistema do Chromium, Firefox e WebKit
 # extraídas em $HOME/.cache/playwright-libs/root (WSL/Ubuntu sem sudo; ver e2e/README.md).
 # Uso: e2e/with-browser-libs.sh npx playwright test -c e2e
-# Variável opcional: CDS_BROWSER_LIBS_ROOT (padrão: $HOME/.cache/playwright-libs/root).
+# Variável opcional: RTE_BROWSER_LIBS_ROOT (padrão: $HOME/.cache/playwright-libs/root).
 set -euo pipefail
 
-root="${CDS_BROWSER_LIBS_ROOT:-$HOME/.cache/playwright-libs/root}"
+root="${RTE_BROWSER_LIBS_ROOT:-$HOME/.cache/playwright-libs/root}"
 if [ ! -d "$root" ] || [ -z "$(ls -A "$root" 2>/dev/null)" ]; then
   echo "Erro: bibliotecas dos navegadores não encontradas em $root; veja e2e/README.md (seção WSL)." >&2
   exit 1
@@ -24,10 +24,10 @@ if [ "${#wrappers[@]}" -eq 0 ]; then
 fi
 for w in "${wrappers[@]}"; do
   grep -q 'LD_LIBRARY_PATH:+' "$w" && continue
-  [ -e "$w.cds-orig" ] || cp -p "$w" "$w.cds-orig"
+  [ -e "$w.rte-orig" ] || cp -p "$w" "$w.rte-orig"
   sed -i 's|^export LD_LIBRARY_PATH="\(.*\)"$|export LD_LIBRARY_PATH="\1${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"|' "$w"
   if ! grep -q 'LD_LIBRARY_PATH:+' "$w"; then
-    echo "Aviso: não foi possível ajustar $w (formato mudou?). O WebKit pode falhar com 'error while loading shared libraries'. Para restaurar: cp $w.cds-orig $w" >&2
+    echo "Aviso: não foi possível ajustar $w (formato mudou?). O WebKit pode falhar com 'error while loading shared libraries'. Para restaurar: cp $w.rte-orig $w" >&2
   fi
 done
 

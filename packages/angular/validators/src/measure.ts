@@ -1,5 +1,5 @@
-import { countCharacters, countWords } from '@cds/rte-core';
-import { htmlToText } from '@cds/rte-core/html';
+import { countCharacters, countWords } from '@comodeviaser/rte-core';
+import { htmlToText } from '@comodeviaser/rte-core/html';
 
 /** Medida do texto de um valor HTML (regra do C5: a mesma do `textStats()`). */
 export interface RteTextMeasure {

@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteEditor } from '@cds/rte-angular';
-import { getRteEditor } from '@cds/rte-angular/testing';
+import { RteEditor } from '@comodeviaser/rte-angular';
+import { getRteEditor } from '@comodeviaser/rte-angular/testing';
 import { describe, expect, it } from 'vitest';
 import { settle } from './testing-support/render';
 
@@ -23,7 +23,7 @@ describe('getRteEditor (/testing, D23)', () => {
 
   it('valor que não parece um Editor → null', () => {
     const el = document.createElement('div');
-    Object.defineProperty(el, Symbol.for('@cds/rte-angular/editor'), {
+    Object.defineProperty(el, Symbol.for('@comodeviaser/rte-angular/editor'), {
       value: { nope: true },
     });
     expect(getRteEditor(el)).toBeNull();

@@ -38,11 +38,11 @@ test('ng-packagr: accepts build output at the package root', () => {
     'package.json',
     'README.md',
     'LICENSE',
-    'fesm2022/cds-rte-angular.mjs',
-    'fesm2022/cds-rte-angular.mjs.map',
-    'types/cds-rte-angular.d.ts',
+    'fesm2022/comodeviaser-rte-angular.mjs',
+    'fesm2022/comodeviaser-rte-angular.mjs.map',
+    'types/comodeviaser-rte-angular.d.ts',
     'i18n/package.json',
-    'i18n/types/cds-rte-angular-i18n.d.ts',
+    'i18n/types/comodeviaser-rte-angular-i18n.d.ts',
   ];
   assert.deepEqual(checkPackFiles(files, 'ng-packagr'), []);
 });
@@ -66,8 +66,8 @@ test('ng-packagr: accepts lazy chunks directly under fesm2022/ (spec 05b2a, R1)'
   assert.deepEqual(
     checkPackFiles(
       [
-        'fesm2022/cds-rte-angular-rte-dialogs-AbC123.mjs',
-        'fesm2022/cds-rte-angular-rte-dialogs-AbC123.mjs.map',
+        'fesm2022/comodeviaser-rte-angular-rte-dialogs-AbC123.mjs',
+        'fesm2022/comodeviaser-rte-angular-rte-dialogs-AbC123.mjs.map',
       ],
       'ng-packagr',
     ),

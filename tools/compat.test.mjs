@@ -53,16 +53,16 @@ const VIEW_NEW = viewOf({
 test('readFloors lê o piso dos peers publicados', () => {
   const fs = fakeFs({
     angular: {
-      name: '@cds/rte-angular',
+      name: '@comodeviaser/rte-angular',
       peerDependencies: {
         '@angular/core': '>=22.2.1 <23',
         '@angular/forms': '>=22.2.1 <23',
-        '@cds/rte-core': '0.0.0',
+        '@comodeviaser/rte-core': '0.0.0',
         '@tiptap/core': '^3.31.4',
       },
     },
     core: {
-      name: '@cds/rte-core',
+      name: '@comodeviaser/rte-core',
       peerDependencies: { '@tiptap/extension-bold': '^3.31.4' },
     },
   });
@@ -89,7 +89,7 @@ test('readFloors pega o maior piso quando os pacotes divergem', () => {
 test('readFloors falha em pt-BR se o formato do peer não casar', () => {
   const fs = fakeFs({
     a: {
-      name: '@cds/rte-angular',
+      name: '@comodeviaser/rte-angular',
       peerDependencies: { '@angular/core': 'latest', '@tiptap/core': '^3.1.0' },
     },
   });

@@ -2,7 +2,7 @@ import {
   RTE_DEFAULT_LINK_POLICY,
   normalizeHref,
   type RteLinkPolicy,
-} from '@cds/rte-core';
+} from '@comodeviaser/rte-core';
 import type { Editor } from '@tiptap/core';
 // Tipos dos comandos de link (`setLink`, `unsetLink`) e de tabela
 // (`insertTable`, `toggleHeaderColumn`) no `ChainedCommands`.

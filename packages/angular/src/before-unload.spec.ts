@@ -11,7 +11,7 @@ import {
   provideRichText,
   RteEditor,
   type RteUploadConfig,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installDialogShim } from './testing-support/dialog';
 import { createFakeUploadAdapter } from './testing-support/fake-upload-adapter';

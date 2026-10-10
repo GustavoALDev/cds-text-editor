@@ -6,7 +6,7 @@ import {
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteEditor, type RteDialogKind } from '@cds/rte-angular';
+import { RteEditor, type RteDialogKind } from '@comodeviaser/rte-angular';
 import type { Editor } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {

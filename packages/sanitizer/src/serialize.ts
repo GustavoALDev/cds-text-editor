@@ -1,6 +1,6 @@
 // Serialização canônica da árvore sanitizada (spec 04, S13), com os mesmos
 // escapes do `getRteHtml`. Sem recursão: pilha explícita de nós e fechamentos.
-import { escapeHtmlAttribute, escapeHtmlText } from '@cds/rte-core';
+import { escapeHtmlAttribute, escapeHtmlText } from '@comodeviaser/rte-core';
 import { VOID_TAGS } from './parser-model';
 import type { HtmlNode } from './tree';
 

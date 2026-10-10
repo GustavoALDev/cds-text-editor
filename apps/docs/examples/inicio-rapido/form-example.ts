@@ -1,13 +1,13 @@
 // #region component
 import { Component, computed, signal } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
-import { RteEditor } from '@cds/rte-angular';
-import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
+import { RteEditor } from '@comodeviaser/rte-angular';
+import { RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
 import {
   formatRteError,
   isRteValidationError,
   rteMaxChars,
-} from '@cds/rte-angular/validators';
+} from '@comodeviaser/rte-angular/validators';
 import { DisplayExample } from './display-example';
 
 @Component({

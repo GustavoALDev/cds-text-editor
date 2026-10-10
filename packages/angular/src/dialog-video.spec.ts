@@ -10,9 +10,9 @@ import {
   getHtmlSchema,
   normalizeAttribute,
   type RteAttrRule,
-} from '@cds/rte-core';
-import { getRteHtml } from '@cds/rte-core/extensions';
-import { validateHtml } from '@cds/rte-core/html';
+} from '@comodeviaser/rte-core';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
+import { validateHtml } from '@comodeviaser/rte-core/html';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import {
   RteEditor,
@@ -20,7 +20,7 @@ import {
   type RteLabelsSource,
   type RteUploadConfig,
   type RteUploadErrorEvent,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 import type { Editor } from '@tiptap/core';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import fc from 'fast-check';

@@ -78,7 +78,7 @@ test('withMjsImports: importações relativas ganham .mjs; pacotes ficam', () =>
     "import { a } from './model';",
     'import { b } from "../x/y";',
     "import { c } from './z.mjs';",
-    "import { d } from '@cds/rte-theme';",
+    "import { d } from '@comodeviaser/rte-theme';",
   ].join('\n');
   assert.equal(
     withMjsImports(js),
@@ -86,7 +86,7 @@ test('withMjsImports: importações relativas ganham .mjs; pacotes ficam', () =>
       "import { a } from './model.mjs';",
       'import { b } from "../x/y.mjs";',
       "import { c } from './z.mjs';",
-      "import { d } from '@cds/rte-theme';",
+      "import { d } from '@comodeviaser/rte-theme';",
     ].join('\n'),
   );
 });

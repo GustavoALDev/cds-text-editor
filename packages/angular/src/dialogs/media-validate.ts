@@ -6,7 +6,7 @@ import {
   validate,
   type SchemaPath,
 } from '@angular/forms/signals';
-import { normalizeAttribute, type RteAttrRule } from '@cds/rte-core';
+import { normalizeAttribute, type RteAttrRule } from '@comodeviaser/rte-core';
 import type { CanCommands, Editor } from '@tiptap/core';
 import { integerError, nonIntegerCheck } from './form-helpers';
 

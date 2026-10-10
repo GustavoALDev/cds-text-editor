@@ -8,9 +8,9 @@ import {
 } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { form, FormField } from '@angular/forms/signals';
-import { getRteHtml } from '@cds/rte-core/extensions';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteEditor, type RteToolbarConfig } from '@cds/rte-angular';
+import { RteEditor, type RteToolbarConfig } from '@comodeviaser/rte-angular';
 import type { Editor } from '@tiptap/core';
 import { EditorState, NodeSelection } from '@tiptap/pm/state';
 import {

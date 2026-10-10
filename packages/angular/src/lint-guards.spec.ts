@@ -106,8 +106,8 @@ const forbidden: ReadonlyArray<[string, string, string]> = [
     'no-restricted-imports',
   ],
   [
-    "import de '@cds/rte-core/html'",
-    "import { htmlToText } from '@cds/rte-core/html';\nexport const t = htmlToText('');\n",
+    "import de '@comodeviaser/rte-core/html'",
+    "import { htmlToText } from '@comodeviaser/rte-core/html';\nexport const t = htmlToText('');\n",
     'no-restricted-imports',
   ],
   // No Angular 22 o OnPush é o padrão: a regra barra quem sai dele.
@@ -147,9 +147,9 @@ describe('guardas por lint (spec 05a, D25)', () => {
     );
   });
 
-  it("o entry /validators pode importar '@cds/rte-core/html', mas não zone.js", async () => {
+  it("o entry /validators pode importar '@comodeviaser/rte-core/html', mas não zone.js", async () => {
     const html =
-      "import { htmlToText } from '@cds/rte-core/html';\nexport const t = htmlToText('');\n";
+      "import { htmlToText } from '@comodeviaser/rte-core/html';\nexport const t = htmlToText('');\n";
     expect(await ruleIds(html, VALIDATORS_FILE)).not.toContain(
       'no-restricted-imports',
     );
@@ -161,16 +161,16 @@ describe('guardas por lint (spec 05a, D25)', () => {
   it.each([
     'packages/angular/i18n/src/__guard__.ts',
     'packages/angular/testing/src/__guard__.ts',
-  ])("%s não pode importar '@cds/rte-core/html' (R1)", async (file) => {
+  ])("%s não pode importar '@comodeviaser/rte-core/html' (R1)", async (file) => {
     const html =
-      "import { htmlToText } from '@cds/rte-core/html';\nexport const t = htmlToText('');\n";
+      "import { htmlToText } from '@comodeviaser/rte-core/html';\nexport const t = htmlToText('');\n";
     expect(await ruleIds(html, file)).toContain('no-restricted-imports');
   });
 
   it.each([
     "import { signal } from '@angular/core'; export const s = signal(1);",
-    "import { RteUploadError } from '@cds/rte-angular'; export const e = RteUploadError;",
-    "import { htmlToText } from '@cds/rte-core/html'; export const t = htmlToText('');",
+    "import { RteUploadError } from '@comodeviaser/rte-angular'; export const e = RteUploadError;",
+    "import { htmlToText } from '@comodeviaser/rte-core/html'; export const t = htmlToText('');",
     "import 'zone.js';",
   ])('o entry /upload recusa import de valor: %s', async (code) => {
     expect(await ruleIds(code, UPLOAD_FILE)).toContain('no-restricted-imports');
@@ -178,7 +178,7 @@ describe('guardas por lint (spec 05a, D25)', () => {
 
   it('o entry /upload aceita import type do principal e de @angular', async () => {
     const code =
-      "import type { RteUploadAdapter } from '@cds/rte-angular'; import type { Signal } from '@angular/core'; export type T = [RteUploadAdapter, Signal<number>];";
+      "import type { RteUploadAdapter } from '@comodeviaser/rte-angular'; import type { Signal } from '@angular/core'; export type T = [RteUploadAdapter, Signal<number>];";
     expect(await ruleIds(code, UPLOAD_FILE)).not.toContain(
       'no-restricted-imports',
     );

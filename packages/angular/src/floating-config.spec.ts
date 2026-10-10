@@ -1,4 +1,4 @@
-import type { RteFeatureId } from '@cds/rte-core';
+import type { RteFeatureId } from '@comodeviaser/rte-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   floatingItemIds,

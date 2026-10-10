@@ -2,7 +2,7 @@ import { computed, type Signal } from '@angular/core';
 import {
   getSlashMenuState,
   type RteSlashMenuState,
-} from '@cds/rte-core/extensions';
+} from '@comodeviaser/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 
 /** Estado fechado (editor ausente, destruído ou sem a extensão). */

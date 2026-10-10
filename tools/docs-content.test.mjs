@@ -218,11 +218,11 @@ test('docs-content: páginas de API entram na nav e são geradas por entry', () 
   );
   const pkg = (name, exportsMap) => ({ name, exports: exportsMap });
   const packages = {
-    core: pkg('@cds/rte-core', { '.': { types: './x.d.ts' } }),
-    sanitizer: pkg('@cds/rte-sanitizer', {}),
-    theme: pkg('@cds/rte-theme', {}),
-    angular: pkg('@cds/rte-angular', {}),
-    render: pkg('@cds/rte-render', {}),
+    core: pkg('@comodeviaser/rte-core', { '.': { types: './x.d.ts' } }),
+    sanitizer: pkg('@comodeviaser/rte-sanitizer', {}),
+    theme: pkg('@comodeviaser/rte-theme', {}),
+    angular: pkg('@comodeviaser/rte-angular', {}),
+    render: pkg('@comodeviaser/rte-render', {}),
   };
   const out = join(root, 'out');
   try {
@@ -233,9 +233,9 @@ test('docs-content: páginas de API entram na nav e são geradas por entry', () 
       readFileSync(join(out, 'nav.ts'), 'utf8'),
       /"path": "api\/core"/,
     );
-    assert.equal(pageOf(out, 'api-core').title, '@cds/rte-core');
+    assert.equal(pageOf(out, 'api-core').title, '@comodeviaser/rte-core');
     // entry publicado sem arquivo do api-documenter falha
-    packages.theme = pkg('@cds/rte-theme', { '.': { types: './t.d.ts' } });
+    packages.theme = pkg('@comodeviaser/rte-theme', { '.': { types: './t.d.ts' } });
     assert.throws(
       () => main({ repoRoot: root, out, apiDir: api, packages }),
       /rte-theme\.md/,
@@ -274,8 +274,8 @@ const README_SRC = [
 
 const README_PACKAGES = {
   angular: {
-    name: '@cds/rte-angular',
-    peerDependencies: { '@cds/rte-core': '0.0.0' },
+    name: '@comodeviaser/rte-angular',
+    peerDependencies: { '@comodeviaser/rte-core': '0.0.0' },
   },
 };
 
@@ -299,7 +299,7 @@ test('docs-content: README raiz diverge sem UPDATE_README falha com a diferença
     );
     assert.match(
       written,
-      /```bash\nnpm install @cds\/rte-angular @cds\/rte-core\n```/,
+      /```bash\nnpm install @comodeviaser\/rte-angular @comodeviaser\/rte-core\n```/,
     );
     assert.ok(written.endsWith('\nFim.'));
     // agora confere sem reescrever

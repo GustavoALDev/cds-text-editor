@@ -10,7 +10,7 @@ import {
   type Root,
   type Rule,
 } from 'postcss';
-import { RTE_HIGHLIGHT_COLORS, RTE_TEXT_COLORS } from '@cds/rte-core';
+import { RTE_HIGHLIGHT_COLORS, RTE_TEXT_COLORS } from '@comodeviaser/rte-core';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { workspacePath } from './testing-support/workspace';
 

@@ -84,7 +84,7 @@ Diretrizes F1–F9 da 05b2b (Apêndice A da spec; viram decisões numeradas na 0
 
 ### (d) Números (2026-10-05)
 
-Tamanho (`min+gzip`, Angular, Tiptap, `@cds/*`, `lowlight` e `highlight.js` externos, _chunk_ dos diálogos externo; orçamento = `ceil(medido × 1,15 / 64) × 64`):
+Tamanho (`min+gzip`, Angular, Tiptap, `@comodeviaser/*`, `lowlight` e `highlight.js` externos, _chunk_ dos diálogos externo; orçamento = `ceil(medido × 1,15 / 64) × 64`):
 
 | Cenário      | Antes (05b1) | Agora | Orçamento antes | Orçamento agora |
 | ------------ | ------------ | ----- | --------------- | --------------- |
@@ -94,7 +94,7 @@ Tamanho (`min+gzip`, Angular, Tiptap, `@cds/*`, `lowlight` e `highlight.js` exte
 | `i18n`       | 1544         | 2455  | 1792            | 2880            |
 | `validators` | 1156         | 1156  | 1344            | 1344 (igual)    |
 
-O acréscimo do `editor`/`whole` (+3,6 kB gzip) vem dos itens novos, de `RteUiExtension`, do controlador e dos rótulos `dialogs` em inglês (`RTE_LABELS_EN`; pt-BR e es ficam no entry `/i18n`); os formulários ficam no _chunk_. O _chunk_ dos diálogos (`fesm2022/cds-rte-angular-rte-dialogs-<hash>.mjs`): 43066 B brutos no pacote, 29592 B minificados, 5059 B gzip na medida de tamanho (7993 B com `gzip -9` do arquivo bruto).
+O acréscimo do `editor`/`whole` (+3,6 kB gzip) vem dos itens novos, de `RteUiExtension`, do controlador e dos rótulos `dialogs` em inglês (`RTE_LABELS_EN`; pt-BR e es ficam no entry `/i18n`); os formulários ficam no _chunk_. O _chunk_ dos diálogos (`fesm2022/comodeviaser-rte-angular-rte-dialogs-<hash>.mjs`): 43066 B brutos no pacote, 29592 B minificados, 5059 B gzip na medida de tamanho (7993 B com `gzip -9` do arquivo bruto).
 
 `editor.css`: 22644 B brutos, 5109 B gzip (05b1: 17287 / 4197).
 
@@ -117,4 +117,4 @@ N16 (diálogo de link pela interface), N17 (idioma, autor da citação e tabela)
 - **Spec 05b2b:** `openDialog('link')` a partir do menu flutuante de link (origem no item do menu); menus flutuantes ocultos com diálogo aberto (G6); `Alt+F10` com a prioridade da F5; diretrizes F1–F9.
 - **Spec 05c:** novos `RteDialogKind` (imagem, vídeo, _embed_) no mesmo `RteDialogs` e no mesmo `@defer`; G5 e seleção pendente quando houver intervalo.
 - **Spec 05d:** `onUiItem` chama `openDialog(kind)` (assíncrono por construção); `api-extractor` cobre `RteDialogKind`, `RTE_DIALOG_LANGUAGES` e `openDialog`.
-- O orçamento do `@cds/rte-angular` agora é `editor` 24384 B, `whole` 24448 B, `dialogs` 5824 B, `i18n` 2880 B e `validators` 1344 B.
+- O orçamento do `@comodeviaser/rte-angular` agora é `editor` 24384 B, `whole` 24448 B, `dialogs` 5824 B, `i18n` 2880 B e `validators` 1344 B.

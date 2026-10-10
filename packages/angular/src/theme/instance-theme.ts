@@ -1,4 +1,4 @@
-import type { RteTheme } from '@cds/rte-theme';
+import type { RteTheme } from '@comodeviaser/rte-theme';
 
 const KEYS = ['primary', 'secondary', 'tertiary', 'mode', 'neutral'] as const;
 

@@ -5,7 +5,7 @@ description: Onde sanitizar, com quais opções, o que o sanitizador não cobre 
 
 # Segurança
 
-O HTML que o editor produz vem de uma pessoa, e o HTML que você exibe pode ter vindo de qualquer lugar. Esta página diz **onde** sanitizar e o que mais você precisa fazer. O modelo de ameaças completo, com as garantias e as hipóteses, está em [`docs/security.md`](https://github.com/GustavoALDev/cds-text-editor/blob/main/docs/security.md); aqui está só o caminho prático.
+O HTML que o editor produz vem de uma pessoa, e o HTML que você exibe pode ter vindo de qualquer lugar. Esta página diz **onde** sanitizar e o que mais você precisa fazer. O modelo de ameaças completo, com as garantias e as hipóteses, está em [`docs/security.md`](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/docs/security.md); aqui está só o caminho prático.
 
 ## A regra que importa
 
@@ -17,7 +17,7 @@ O objeto `editorOptions` é o mesmo que o app passa ao `provideRichText` e ao `p
 
 <!-- example: examples/seguranca/sanitizar-na-gravacao.ts#divergente -->
 
-Entrada acima dos limites lança `RteSanitizeError` (`input-too-long`, `max-depth`); responda com 413 ou 422 em vez de truncar. O padrão de uso está na seção "Uso no servidor" do [README do sanitizador](https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/sanitizer/README.md) e a referência em [`api/sanitizer`](api/sanitizer).
+Entrada acima dos limites lança `RteSanitizeError` (`input-too-long`, `max-depth`); responda com 413 ou 422 em vez de truncar. O padrão de uso está na seção "Uso no servidor" do [README do sanitizador](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/sanitizer/README.md) e a referência em [`api/sanitizer`](api/sanitizer).
 
 ## Exibir sem `bypassSecurityTrustHtml`
 
@@ -39,7 +39,7 @@ A sanitização não substitui a CSP; as duas se somam. O resumo do que o modelo
 
 ## Envio de arquivos
 
-O editor não envia nada sem um gesto da pessoa, mas o servidor que recebe o arquivo precisa autenticar, proteger contra CSRF (token ligado à sessão, cookie `SameSite=Strict`), conferir o tipo real, limitar tamanho, pixels e envios simultâneos, e apagar órfãs só depois de uma carência de pelo menos a vida do rascunho (7 dias). A lista completa e atual está na seção "O que o servidor DEVE fazer" de [`docs/security.md`](https://github.com/GustavoALDev/cds-text-editor/blob/main/docs/security.md); o caminho com o servidor de exemplo está em [Envio e mídia](guia/envio-e-midia).
+O editor não envia nada sem um gesto da pessoa, mas o servidor que recebe o arquivo precisa autenticar, proteger contra CSRF (token ligado à sessão, cookie `SameSite=Strict`), conferir o tipo real, limitar tamanho, pixels e envios simultâneos, e apagar órfãs só depois de uma carência de pelo menos a vida do rascunho (7 dias). A lista completa e atual está na seção "O que o servidor DEVE fazer" de [`docs/security.md`](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/docs/security.md); o caminho com o servidor de exemplo está em [Envio e mídia](guia/envio-e-midia).
 
 ## Links e mídia: configure para sites com vários autores
 
@@ -47,4 +47,4 @@ O padrão é permissivo: sem `mediaHosts`, qualquer host `https` vale como mídi
 
 ## Reportar uma vulnerabilidade
 
-Não abra issue pública. O canal e os prazos estão no [SECURITY.md](https://github.com/GustavoALDev/cds-text-editor/blob/main/SECURITY.md).
+Não abra issue pública. O canal e os prazos estão no [SECURITY.md](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/SECURITY.md).

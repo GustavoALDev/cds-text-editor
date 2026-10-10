@@ -1,25 +1,25 @@
-# @cds/rte-theme
+# @comodeviaser/rte-theme
 
 Guia: [Tema](../../apps/docs/content/guia/tema.md)
 
-Tema de 3 cores para o editor de texto rico `cds-text-editor`: você informa até três cores (`primary`, `secondary`, `tertiary`) e todo o resto (hover, ativo, fundo suave, borda, texto legível, foco, neutros, claro e escuro) é **derivado em CSS**, com contraste acessível por construção. Sem build de tema e sem Sass.
+Tema de 3 cores para o editor de texto rico **DEVI.A Editor**: você informa até três cores (`primary`, `secondary`, `tertiary`) e todo o resto (hover, ativo, fundo suave, borda, texto legível, foco, neutros, claro e escuro) é **derivado em CSS**, com contraste acessível por construção. Sem build de tema e sem Sass.
 
 O pacote **não depende de Angular** (nem exige Angular 22+): é CSS puro mais helpers de JavaScript opcionais. A integração com Angular (`provideRichText`, `<rte-editor [theme]>`) pertence à spec 05, que consumirá este pacote; ela ainda não existe.
 
-**Status: em construção.** Ainda sem versão publicada. O nome `@cds/rte-theme` é provisório (escopo `@cds` ainda não confirmado no npm).
+**Status: em construção.** Ainda sem versão publicada.
 
 Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
 Instalação (futura: o pacote **ainda não foi publicado** e o nome pode mudar; hoje o comando falha):
 
 ```bash
-npm i @cds/rte-theme
+npm i @comodeviaser/rte-theme
 ```
 
 ## Uso mínimo
 
 ```ts
-import '@cds/rte-theme/theme.css'; // entrada `exports["./theme.css"]` do pacote
+import '@comodeviaser/rte-theme/theme.css'; // entrada `exports["./theme.css"]` do pacote
 ```
 
 ```html
@@ -35,7 +35,7 @@ import '@cds/rte-theme/theme.css'; // entrada `exports["./theme.css"]` do pacote
 }
 ```
 
-Os helpers de JavaScript (`createRteTheme`, `applyRteTheme`, `checkRteTheme`, ...) são exports nomeados do pacote (`import { applyRteTheme } from '@cds/rte-theme'`) e não são necessários para o caminho em CSS puro.
+Os helpers de JavaScript (`createRteTheme`, `applyRteTheme`, `checkRteTheme`, ...) são exports nomeados do pacote (`import { applyRteTheme } from '@comodeviaser/rte-theme'`) e não são necessários para o caminho em CSS puro.
 
 ## Escada de personalização (níveis 0 a 4)
 
@@ -72,7 +72,7 @@ Prioridade: **padrão < `:root` < ancestral < instância (inline)**.
 3. **Por instância:** `style` inline no próprio `.rte-root` (por exemplo `style="--rte-primary: #15803d"`).
 
 ```ts
-import { applyRteTheme } from '@cds/rte-theme';
+import { applyRteTheme } from '@comodeviaser/rte-theme';
 
 const cleanup = applyRteTheme(el, {
   primary: '#0369a1',
@@ -141,7 +141,7 @@ import {
   suggestRteColor,
   supportsRelativeColors,
   warnIfPoorTheme,
-} from '@cds/rte-theme';
+} from '@comodeviaser/rte-theme';
 ```
 
 | Export                                  | O que faz                                                                                                                                                                                                                                                      |
@@ -250,10 +250,10 @@ No CI os navegadores são instalados com `npx playwright install --with-deps`. O
 
 Os relatórios da superfície pública (gerados pelo `api-extractor` e conferidos pelo alvo `nx run theme:api`; após uma mudança intencional, `UPDATE_API=1 npx nx run theme:api`) ficam em `packages/theme/api/`:
 
-- [`rte-theme.api.md`](api/rte-theme.api.md): `@cds/rte-theme`
+- [`rte-theme.api.md`](api/rte-theme.api.md): `@comodeviaser/rte-theme`
 
 Exports com prefixo `ɵ` e tudo marcado `@internal` ficam fora dos relatórios e não são API pública.
 
-Repositório: cds-text-editor (monorepo). Licença MIT.
+Repositório: comodeviaser-editor (monorepo). Licença MIT.
 
 > Projeto independente, **não afiliado à Tiptap nem ao ProseMirror**.
