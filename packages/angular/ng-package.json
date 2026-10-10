@@ -5,5 +5,5 @@
     "entryFile": "src/index.ts"
   },
   "assets": ["LICENSE", "styles/*.css"],
-  "allowedNonPeerDependencies": ["@cds/rte-core", "@cds/rte-theme"]
+  "allowedNonPeerDependencies": ["@comodeviaser/rte-core", "@comodeviaser/rte-theme"]
 }

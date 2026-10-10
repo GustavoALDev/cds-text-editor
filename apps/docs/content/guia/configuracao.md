@@ -46,7 +46,7 @@ As opções de criação, a entrada `options` e o campo `editor` do _provider_, 
 
 ## Rótulos, barra e política de links
 
-- **Rótulos:** `labels` troca o idioma; `RTE_LABELS_PT_BR` e `RTE_LABELS_ES` vêm de `@cds/rte-angular/i18n`.
+- **Rótulos:** `labels` troca o idioma; `RTE_LABELS_PT_BR` e `RTE_LABELS_ES` vêm de `@comodeviaser/rte-angular/i18n`.
 - **Barra:** `toolbar` aceita um preset (`minimal`, `article`, `full`), uma lista de grupos ou `false` para esconder a barra.
 - **Política de links:** `editor.linkPolicy` define os protocolos aceitos, o `rel`, os domínios bloqueados e o `target`.
 

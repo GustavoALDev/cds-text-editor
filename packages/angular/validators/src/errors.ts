@@ -1,6 +1,6 @@
 import type { ValidationErrors } from '@angular/forms';
 import type { ValidationError } from '@angular/forms/signals';
-import { RTE_LABELS_EN, type RteLabels } from '@cds/rte-angular';
+import { RTE_LABELS_EN, type RteLabels } from '@comodeviaser/rte-angular';
 
 /** Erro do validador `rteRequired`: sem texto e sem mídia. */
 export interface RteRequiredError extends ValidationError {

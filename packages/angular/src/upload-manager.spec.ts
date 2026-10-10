@@ -14,8 +14,8 @@ import {
   type RteUploadAdapter,
   type RteUploadConfig,
   type RteUploadErrorEvent,
-} from '@cds/rte-angular';
-import { getRteHtml } from '@cds/rte-core/extensions';
+} from '@comodeviaser/rte-angular';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {

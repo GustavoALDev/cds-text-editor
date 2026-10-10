@@ -1,8 +1,8 @@
 ---
-'@cds/rte-theme': minor
+'@comodeviaser/rte-theme': minor
 ---
 
-Primeira versão do `@cds/rte-theme`: o tema do editor e da exibição a partir de poucas cores-semente, sem Angular. Entries: `.` e `@cds/rte-theme/theme.css`.
+Primeira versão do `@comodeviaser/rte-theme`: o tema do editor e da exibição a partir de poucas cores-semente, sem Angular. Entries: `.` e `@comodeviaser/rte-theme/theme.css`.
 
 **Recursos.** `theme.css` deriva os tokens `--rte-*` com cores relativas nativas do CSS (OKLab). O "plano B" em TypeScript reproduz a mesma fórmula para navegadores sem cores relativas: `createRteTheme` (`RteCreateThemeOptions`, `RteThemeVariables`), `applyRteTheme` (`RteApplyThemeOptions`; grava por CSSOM, compatível com CSP), `checkRteTheme` (`RteCheckThemeOptions`, `RteThemeReport`, `RteThemeCheck`), `suggestRteColor` (`RteSuggestColorOptions`), `warnIfPoorTheme`, `supportsRelativeColors`, `parseColor` (com `RteColorParser` e `RteRgb`), os presets `RTE_THEME_PRESETS` (`RteThemePresetName`) e os tipos `RteTheme`, `RteThemeMode` (`auto`, `inherit`, `light`, `dark`) e `RteNeutral` (`tinted`, `gray`). Fórmulas e constantes de calibração andam juntas no CSS e no TypeScript (ADR 0002).
 

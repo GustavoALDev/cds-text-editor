@@ -5,9 +5,9 @@ import {
   withNoIncrementalHydration,
 } from '@angular/platform-browser';
 import { provideServerRendering, withRoutes } from '@angular/ssr';
-import { provideRichText } from '@cds/rte-angular';
-import { provideRteRender } from '@cds/rte-render';
-import { createSanitizer } from '@cds/rte-sanitizer';
+import { provideRichText } from '@comodeviaser/rte-angular';
+import { provideRteRender } from '@comodeviaser/rte-render';
+import { createSanitizer } from '@comodeviaser/rte-sanitizer';
 
 // As opções do editor: as mesmas no servidor, no navegador e na gravação.
 const editorOptions = {};

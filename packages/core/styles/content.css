@@ -1,11 +1,11 @@
 @layer rte.reset, rte.base, rte.theme, rte.components, rte.content;
 
 /*
- * @cds/rte-core/styles/content.css — aparência do conteúdo `rt-*` (spec 05b1, U16 e U17).
+ * @comodeviaser/rte-core/styles/content.css — aparência do conteúdo `rt-*` (spec 05b1, U16 e U17).
  *
  * Arquivo único, sem JavaScript: serve o editor (`.rte-content` do ProseMirror) e qualquer página
- * que mostre o HTML publicado. Incluir depois de `@cds/rte-theme/theme.css` e antes do
- * `editor.css` do `@cds/rte-angular`. O contêiner precisa de um ancestral `.rte-root` (tokens do
+ * que mostre o HTML publicado. Incluir depois de `@comodeviaser/rte-theme/theme.css` e antes do
+ * `editor.css` do `@comodeviaser/rte-angular`. O contêiner precisa de um ancestral `.rte-root` (tokens do
  * tema) e da classe `.rte-content`:
  *
  *   <div class="rte-root"><div class="rte-content"> …HTML… </div></div>
@@ -135,7 +135,7 @@
   }
 
   /*
-   * Tabela com larguras de coluna na exibição (classe do `@cds/rte-render`, que lhe dá
+   * Tabela com larguras de coluna na exibição (classe do `@comodeviaser/rte-render`, que lhe dá
    * `width`/`min-width` por CSSOM): layout fixo como o do editor (`editor.css`), que nunca vê
    * a classe.
    */

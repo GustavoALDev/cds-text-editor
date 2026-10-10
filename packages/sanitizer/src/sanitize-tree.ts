@@ -6,7 +6,7 @@ import {
   getElementSpec,
   hasRequiredChild,
   sanitizeAttributes,
-} from '@cds/rte-core';
+} from '@comodeviaser/rte-core';
 import {
   HEADING_TAGS,
   P_CLOSING_TAGS,

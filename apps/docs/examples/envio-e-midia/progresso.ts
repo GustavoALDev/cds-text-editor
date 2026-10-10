@@ -1,6 +1,6 @@
 // #region progresso
 import { Component, signal } from '@angular/core';
-import { RteEditor, type RteUploadErrorEvent } from '@cds/rte-angular';
+import { RteEditor, type RteUploadErrorEvent } from '@comodeviaser/rte-angular';
 import { meuAdaptador } from './adapter-proprio';
 
 @Component({

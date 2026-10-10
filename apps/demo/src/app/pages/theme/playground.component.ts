@@ -20,7 +20,7 @@ import {
   type RteTheme,
   type RteThemePresetName,
   type RteThemeReport,
-} from '@cds/rte-theme';
+} from '@comodeviaser/rte-theme';
 import { buildCss } from '../../theme-playground/css-snippet';
 import {
   activePreset,

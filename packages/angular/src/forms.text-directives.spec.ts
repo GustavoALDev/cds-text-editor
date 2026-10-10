@@ -16,7 +16,7 @@ import {
   type AbstractControl,
 } from '@angular/forms';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteEditor } from '@cds/rte-angular';
+import { RteEditor } from '@comodeviaser/rte-angular';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import {
   RteMaxCharsValidator,
@@ -24,7 +24,7 @@ import {
   RteNoEmptyHeadingsValidator,
   RteRequiredValidator,
   RteSafeLinksValidator,
-} from '@cds/rte-angular/validators';
+} from '@comodeviaser/rte-angular/validators';
 import { By } from '@angular/platform-browser';
 import { afterEach, describe, expect, it } from 'vitest';
 import { settle } from './testing-support/render';

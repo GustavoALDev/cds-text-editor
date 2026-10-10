@@ -1,5 +1,5 @@
 // API pública do sanitizador (spec 04, S8 e S9).
-import { getHtmlSchema, type RteHtmlSchemaOptions } from '@cds/rte-core';
+import { getHtmlSchema, type RteHtmlSchemaOptions } from '@comodeviaser/rte-core';
 import { sanitizeWithSchema } from './engine';
 import { RteSanitizeError } from './errors';
 

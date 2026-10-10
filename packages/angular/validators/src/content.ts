@@ -1,5 +1,5 @@
-import { normalizeHref, type RteLinkPolicy } from '@cds/rte-core';
-import { inspectRteHtml, type RteHtmlInspection } from '@cds/rte-core/html';
+import { normalizeHref, type RteLinkPolicy } from '@comodeviaser/rte-core';
+import { inspectRteHtml, type RteHtmlInspection } from '@comodeviaser/rte-core/html';
 
 /** Opções de `rteSafeLinks` / `RteValidators.safeLinks`. */
 export interface RteSafeLinksOptions {

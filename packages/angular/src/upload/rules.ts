@@ -1,4 +1,4 @@
-import type { RteAttrRule, RteHtmlSchema } from '@cds/rte-core';
+import type { RteAttrRule, RteHtmlSchema } from '@comodeviaser/rte-core';
 import { readMediaRules, type RteMediaRules } from '../dialogs/media-rules';
 
 /** Regras da resposta do adaptador (E6): as de mídia mais `srcset`/`sizes`. */

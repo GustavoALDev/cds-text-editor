@@ -1,11 +1,11 @@
 import { PlatformLocation } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { RteEditor } from '@cds/rte-angular';
-import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
-import { provideRteRender, RteContent } from '@cds/rte-render';
-import { RTE_RENDER_LABELS_PT_BR } from '@cds/rte-render/i18n';
-import { RteToc } from '@cds/rte-render/toc';
-import { createSanitizer } from '@cds/rte-sanitizer';
+import { RteEditor } from '@comodeviaser/rte-angular';
+import { RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
+import { provideRteRender, RteContent } from '@comodeviaser/rte-render';
+import { RTE_RENDER_LABELS_PT_BR } from '@comodeviaser/rte-render/i18n';
+import { RteToc } from '@comodeviaser/rte-render/toc';
+import { createSanitizer } from '@comodeviaser/rte-sanitizer';
 import { RENDER_OPTIONS } from './render-options';
 
 /** Sanitizador da exibição: as mesmas opções do editor. */
@@ -19,7 +19,7 @@ export const RENDER_SAMPLE =
 
 /**
  * HTML bruto de exemplo, com marcação perigosa que a exibição remove. A imagem usa o caminho
- * absoluto sob a base do site (`/` no desenvolvimento, `/cds-text-editor/demo/` no Pages).
+ * absoluto sob a base do site (`/` no desenvolvimento, `/comodeviaser-editor/demo/` no Pages).
  */
 export const unsafeSample = (base = '/'): string =>
   '<h2>Colado de fora</h2><p>Texto seguro.</p><script>alert(1)</script>' +
@@ -44,7 +44,7 @@ export class RenderPage {
     unsafeSample(inject(PlatformLocation).getBaseHrefFromDOM() || '/'),
   );
   protected readonly readmeUrl =
-    'https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/render/README.md';
+    'https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/render/README.md';
 
   protected setRaw(event: Event): void {
     this.raw.set((event.target as HTMLTextAreaElement).value);

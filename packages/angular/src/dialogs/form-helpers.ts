@@ -1,7 +1,7 @@
 // Só tipos de `@angular/forms/signals`: este módulo fica no *chunk*
 // principal (âncora, `form-kit.ts`) e não pode puxar os Signal Forms para ele.
 import type { FieldTree, ValidationError } from '@angular/forms/signals';
-import { normalizeAttribute, type RteAttrRule } from '@cds/rte-core';
+import { normalizeAttribute, type RteAttrRule } from '@comodeviaser/rte-core';
 import type { RteDialogLabels } from '../labels/types';
 
 function numberOf(error: ValidationError, key: string): number {

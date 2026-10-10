@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-import { RteEditor } from '@cds/rte-angular';
-import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
+import { RteEditor } from '@comodeviaser/rte-angular';
+import { RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
 
 /** Limite de caracteres do exemplo (mede o texto, não o HTML). */
 export const EDITOR_MAX_CHARS = 2000;
@@ -20,5 +20,5 @@ export class EditorPage {
       'use <code>Ctrl</code>+<code>F</code> para buscar e selecione um trecho para ver o menu flutuante.</p>',
   );
   protected readonly readmeUrl =
-    'https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/angular/README.md#uso';
+    'https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/angular/README.md#uso';
 }

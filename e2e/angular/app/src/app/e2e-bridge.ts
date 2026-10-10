@@ -15,10 +15,10 @@ import type {
   RteToolbarConfig,
   RteUploadErrorEvent,
   RteUploadStatus,
-} from '@cds/rte-angular';
-import { getRteEditor } from '@cds/rte-angular/testing';
-import { getRteHtml } from '@cds/rte-core/extensions';
-import { applyRteTheme, type RteTheme } from '@cds/rte-theme';
+} from '@comodeviaser/rte-angular';
+import { getRteEditor } from '@comodeviaser/rte-angular/testing';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
+import { applyRteTheme, type RteTheme } from '@comodeviaser/rte-theme';
 import type { Editor } from '@tiptap/core';
 
 /** Editores que os testes leem (`data-testid` igual ao id). */

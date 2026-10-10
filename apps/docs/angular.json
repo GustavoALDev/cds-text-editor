@@ -33,10 +33,10 @@
               }
             ],
             "styles": [
-              "@cds/rte-theme/theme.css",
-              "@cds/rte-core/styles/content.css",
-              "@cds/rte-angular/styles/editor.css",
-              "@cds/rte-render/styles/render.css",
+              "@comodeviaser/rte-theme/theme.css",
+              "@comodeviaser/rte-core/styles/content.css",
+              "@comodeviaser/rte-angular/styles/editor.css",
+              "@comodeviaser/rte-render/styles/render.css",
               "src/styles/docs.css",
               "src/styles/exemplos.css",
               "src/styles/exemplos-tema.css"

@@ -7,7 +7,7 @@ import {
   type NgZone,
   type Signal,
 } from '@angular/core';
-import { serializeRteHtml } from '@cds/rte-core/extensions';
+import { serializeRteHtml } from '@comodeviaser/rte-core/extensions';
 import { createDocument, type Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { isEmptyDoc } from './empty';

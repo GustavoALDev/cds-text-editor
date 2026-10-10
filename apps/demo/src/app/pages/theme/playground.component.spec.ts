@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { checkRteTheme, RTE_THEME_PRESETS } from '@cds/rte-theme';
+import { checkRteTheme, RTE_THEME_PRESETS } from '@comodeviaser/rte-theme';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildCss } from '../../theme-playground/css-snippet';
 import { DEFAULT_STATE } from '../../theme-playground/model';

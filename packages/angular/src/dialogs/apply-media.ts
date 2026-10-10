@@ -4,7 +4,7 @@ import type {
   RteImageAttrs,
   RteVideoAttrs,
   RteVideoTrack,
-} from '@cds/rte-core/extensions';
+} from '@comodeviaser/rte-core/extensions';
 import type { ChainedCommands, CommandProps, Editor } from '@tiptap/core';
 import type { RteDialogRequest } from './controller';
 

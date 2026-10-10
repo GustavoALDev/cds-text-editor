@@ -6,7 +6,7 @@ import {
   output,
   ViewEncapsulation,
 } from '@angular/core';
-import type { RteImageAlign } from '@cds/rte-core/extensions';
+import type { RteImageAlign } from '@comodeviaser/rte-core/extensions';
 import type { RteDialogLabels } from '../labels/types';
 import type { RteDialogUploads } from '../upload/dialog-port';
 import type { RteDialogController, RteDialogRequest } from './controller';

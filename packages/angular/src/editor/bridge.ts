@@ -2,7 +2,7 @@ import { computed, signal, type Signal } from '@angular/core';
 import {
   getCharLimitState,
   type RteCharLimitState,
-} from '@cds/rte-core/extensions';
+} from '@comodeviaser/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 import type { RteEditor } from './rte-editor';
 import { isEmptyDoc } from './empty';

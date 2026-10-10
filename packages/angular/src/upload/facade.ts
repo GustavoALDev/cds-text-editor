@@ -31,7 +31,7 @@ export type RteUploadLoader = () => Promise<RteUploadModule>;
 
 /**
  * Carregador do *chunk* `rte-upload` (Ruling 28): o `import()` que o
- * ng-packagr separa em `fesm2022/cds-rte-angular-rte-upload-<hash>.mjs`.
+ * ng-packagr separa em `fesm2022/comodeviaser-rte-angular-rte-upload-<hash>.mjs`.
  * Interno; os testes o trocam para atrasar ou falhar a carga.
  */
 export const RTE_UPLOAD_LOADER = new InjectionToken<RteUploadLoader>(

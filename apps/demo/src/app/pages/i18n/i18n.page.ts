@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
-import { RteEditor, type RteLabels } from '@cds/rte-angular';
-import { RTE_LABELS_EN, RTE_LABELS_ES, RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
+import { RteEditor, type RteLabels } from '@comodeviaser/rte-angular';
+import { RTE_LABELS_EN, RTE_LABELS_ES, RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
 
 export type DemoLang = 'pt-BR' | 'en' | 'es';
 
@@ -26,7 +26,7 @@ const PACKS: Readonly<Record<DemoLang, RteLabels>> = {
 export class I18nPage {
   protected readonly langs = DEMO_LANGS;
   protected readonly readmeUrl =
-    'https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/angular/README.md#rotulos-e-idioma';
+    'https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/angular/README.md#rotulos-e-idioma';
 
   readonly lang = signal<DemoLang>('pt-BR');
   protected readonly labels = computed(() => PACKS[this.lang()]);

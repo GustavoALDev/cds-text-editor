@@ -5,10 +5,10 @@ import {
   RteEditor,
   provideRichText,
   type RteEditorConfig,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 import { type Editor } from '@tiptap/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getRteEditor } from '@cds/rte-angular/testing';
+import { getRteEditor } from '@comodeviaser/rte-angular/testing';
 import { settle } from './testing-support/render';
 
 afterEach(() => {

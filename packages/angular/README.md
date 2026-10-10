@@ -1,4 +1,4 @@
-# @cds/rte-angular
+# @comodeviaser/rte-angular
 
 Guia: [Formulários](../../apps/docs/content/guia/formularios.md) · [Barra e recursos](../../apps/docs/content/guia/barra-e-recursos.md)
 
@@ -6,14 +6,14 @@ Componente Angular do editor de texto rico (`rte-editor`), sobre Tiptap 3: ponte
 
 **Status: specs 05a a 05d2 (componente e formulários, barra e tema, diálogos e menus, mídia, upload e rascunho, busca, comandos `/` e contadores, desempenho e API) implementadas e a spec 05 fechada (ADR 0016; pendências com dono: CI do PR nos três navegadores, spec 07, 08 e 09); a confirmação nos três navegadores é a rodada do CI do PR. Ainda sem versão publicada.** `features.search` e `features.slashCommands` seguem o padrão do core (ligados).
 
-Nome do pacote provisório (escopo `@cds` ainda não confirmado). Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
+Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
 ## Instalação
 
-Exige Angular `>=22.2.1 <23` (a 22.2.1 é a versão verificada para o caminho nativo de Reactive/Template Forms). Os peers (Angular, Tiptap, `lowlight` e `highlight.js`) são obrigatórios; o npm 7+ os instala sozinho, mas o comando completo é. `@cds/rte-core` e `@cds/rte-theme` não são peers: vêm como dependências do componente, na mesma versão.
+Exige Angular `>=22.2.1 <23` (a 22.2.1 é a versão verificada para o caminho nativo de Reactive/Template Forms). Os peers (Angular, Tiptap, `lowlight` e `highlight.js`) são obrigatórios; o npm 7+ os instala sozinho, mas o comando completo é. `@comodeviaser/rte-core` e `@comodeviaser/rte-theme` não são peers: vêm como dependências do componente, na mesma versão.
 
 ```bash
-npm i @cds/rte-angular \
+npm i @comodeviaser/rte-angular \
   @tiptap/core@^3.31.4 @tiptap/extension-blockquote@^3.31.4 @tiptap/extension-bold@^3.31.4 \
   @tiptap/extension-code@^3.31.4 @tiptap/extension-code-block@^3.31.4 @tiptap/extension-document@^3.31.4 \
   @tiptap/extension-hard-break@^3.31.4 @tiptap/extension-heading@^3.31.4 \
@@ -32,9 +32,9 @@ O pacote não injeta CSS em tempo de execução (nem o Tiptap). Inclua os três 
 
 ```json
 "styles": [
-  "@cds/rte-theme/theme.css",
-  "@cds/rte-core/styles/content.css",
-  "@cds/rte-angular/styles/editor.css"
+  "@comodeviaser/rte-theme/theme.css",
+  "@comodeviaser/rte-core/styles/content.css",
+  "@comodeviaser/rte-angular/styles/editor.css"
 ]
 ```
 
@@ -50,8 +50,8 @@ Os dois últimos usam `@layer rte.reset, rte.base, rte.theme, rte.components, rt
 
 ```ts
 // app.config.ts
-import { provideRichText } from '@cds/rte-angular';
-import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
+import { provideRichText } from '@comodeviaser/rte-angular';
+import { RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
 
 export const appConfig: ApplicationConfig = {
   providers: [provideRichText({ labels: RTE_LABELS_PT_BR })],
@@ -64,8 +64,8 @@ O valor é sempre **HTML canônico** (`getRteHtml`); documento vazio vale `''`; 
 
 ```ts
 import { form, FormField } from '@angular/forms/signals';
-import { RteEditor } from '@cds/rte-angular';
-import { rteMaxChars, rteRequired } from '@cds/rte-angular/validators';
+import { RteEditor } from '@comodeviaser/rte-angular';
+import { rteMaxChars, rteRequired } from '@comodeviaser/rte-angular/validators';
 
 @Component({
   imports: [RteEditor, FormField],
@@ -177,7 +177,7 @@ Grupos próprios são listas de ids (`RteToolbarItemId`) na ordem de exibição;
 
 Os itens `link`, `lang`, `quoteAuthor`, `image`, `video` e `embed` e a entrada "Inserir tabela…" do menu `table` (`insertTableCustom`) abrem um `<dialog>` nativo **modal** (`showModal()`), último filho do `rte-editor`, com o título em `h2.rte-dialog__title` (`aria-labelledby`). Os formulários são Signal Forms; os textos vêm da seção `dialogs` de `RteLabels` (trocar o idioma com o diálogo aberto atualiza os textos sem perder o digitado). Fecha com `Escape`, "Cancelar" ou aplicação; clicar no fundo não fecha. Só um diálogo por vez. Se o documento mudar por fora, ou o editor ficar `disabled`/`readonly`/`hidden` ou for destruído, o diálogo fecha como cancelamento e nada é aplicado. Abrir e fechar não emitem `editorBlur`/`editorFocus`/`touch`, mas `Tab` depois do último controle leva o foco à interface do navegador (a lib não prende o foco) e isso conta como saída: o campo fica `touched`.
 
-**Carga sob demanda (`@defer`).** Os formulários ficam num _chunk_ separado (`fesm2022/cds-rte-angular-rte-dialogs-<hash>.mjs`), carregado por `@defer (when ...; prefetch on idle)`: ele é buscado quando o navegador está ocioso, e o primeiro pedido espera a chegada se ainda for preciso. O _bundler_ do consumidor precisa manter `import()` dinâmico (o padrão do Angular CLI). Se o _chunk_ falhar, o pedido é descartado com aviso em desenvolvimento e `openDialog` passa a devolver `false` até recarregar a página.
+**Carga sob demanda (`@defer`).** Os formulários ficam num _chunk_ separado (`fesm2022/comodeviaser-rte-angular-rte-dialogs-<hash>.mjs`), carregado por `@defer (when ...; prefetch on idle)`: ele é buscado quando o navegador está ocioso, e o primeiro pedido espera a chegada se ainda for preciso. O _bundler_ do consumidor precisa manter `import()` dinâmico (o padrão do Angular CLI). Se o _chunk_ falhar, o pedido é descartado com aviso em desenvolvimento e `openDialog` passa a devolver `false` até recarregar a página.
 
 **`Mod-K`** (`Ctrl+K`, ou `⌘K`) abre o diálogo de link com o foco no editável, só quando aplicável (senão a tecla segue para o navegador).
 
@@ -256,7 +256,7 @@ provideRichText({
 
 **Adaptador (`RteUploadAdapter`).** `uploadImage(file, { signal, onProgress })` e, opcional, `uploadVideo(...)`; resolva com `{ url, width?, height?, srcset?, sizes? }` (vídeo: `poster?`). O editor chama uma vez por arquivo, **fora da zona**, nunca repete sozinho. Respeite o `signal`: cancelar chama `abort()` de verdade, e uma resolução ou rejeição depois disso é ignorada (nada é inserido). Para dar o motivo da falha, rejeite com `new RteUploadError('network' | 'server' | 'response')`; qualquer outra rejeição vale `'server'`. A resposta é **revalidada** pelas regras do esquema (`mediaHosts`, `allowRelativeMedia`): `url`, `srcset`, `sizes` ou `poster` recusados dão `'response'` e nada entra (um CDN fora de `mediaHosts` aparece no primeiro teste); `width`/`height` que não sejam inteiros de 1 a 10000 são ignorados.
 
-**`httpUploadAdapter` (`@cds/rte-angular/upload`).** `XMLHttpRequest` com `multipart/form-data`: o arquivo em `fieldName` (padrão `'file'`) e o campo `kind` (`'image'` ou `'video'`). Opções: `endpoint` (texto ou `{ image, video? }`), `fieldName`, `headers` (objeto ou função chamada a cada envio, pode devolver `Promise`), `withCredentials`, `timeoutMs` e `mapResponse(body, { file, kind })`. **Segurança:** o envio usa `XMLHttpRequest`, então os _interceptors_ do `HttpClient` **não** passam por aqui (nenhum cabeçalho XSRF do Angular é acrescentado; envie o seu por `headers`) e, com `withCredentials`, os cookies vão ao endpoint (use a mesma origem ou CORS por lista de origens permitidas). `headers` nunca sobrescreve o `Content-Type` do multipart. Sem `mapResponse`, o corpo JSON deve ser `{ "url": "…", "width"?, "height"?, "srcset"?, "sizes"?, "poster"? }`. Progresso determinado (ou indeterminado quando o tamanho é desconhecido); cancelar aborta o `XMLHttpRequest`. Sem dependência além dos tipos.
+**`httpUploadAdapter` (`@comodeviaser/rte-angular/upload`).** `XMLHttpRequest` com `multipart/form-data`: o arquivo em `fieldName` (padrão `'file'`) e o campo `kind` (`'image'` ou `'video'`). Opções: `endpoint` (texto ou `{ image, video? }`), `fieldName`, `headers` (objeto ou função chamada a cada envio, pode devolver `Promise`), `withCredentials`, `timeoutMs` e `mapResponse(body, { file, kind })`. **Segurança:** o envio usa `XMLHttpRequest`, então os _interceptors_ do `HttpClient` **não** passam por aqui (nenhum cabeçalho XSRF do Angular é acrescentado; envie o seu por `headers`) e, com `withCredentials`, os cookies vão ao endpoint (use a mesma origem ou CORS por lista de origens permitidas). `headers` nunca sobrescreve o `Content-Type` do multipart. Sem `mapResponse`, o corpo JSON deve ser `{ "url": "…", "width"?, "height"?, "srcset"?, "sizes"?, "poster"? }`. Progresso determinado (ou indeterminado quando o tamanho é desconhecido); cancelar aborta o `XMLHttpRequest`. Sem dependência além dos tipos.
 
 **Colar e soltar.** Colar com arquivo toma a colagem **só se `text/plain` está vazio**: Word, Excel e páginas põem texto **e** uma imagem renderizada, e o texto vence (colar um parágrafo não vira uma imagem). A seleção não é apagada; o marcador entra em `selection.to`. Soltar usa a posição do ponteiro (`Dropcursor` do core); arrastar uma imagem já no documento continua movendo o nó. Limites conhecidos: soltar sobre as alças de redimensionar, a barra ou a bandeja ainda deixa o navegador abrir o arquivo, e arrastar uma imagem de **outro** editor sem adaptador é ignorado no Chromium.
 
@@ -274,7 +274,7 @@ provideRichText({
 
 ## Rascunho e salvamento
 
-**Rascunho (`draftKey`).** Opt-in: `<rte-editor draftKey="doc-42" />` (1 a 200 caracteres; use usuário **e** documento na chave, ex.: `user-7:doc-42`). Grava no `localStorage` (`rte-draft:<chave>`) 1 s depois da última alteração e ao ocultar a página; nunca grava `readonly`/`disabled`. Ao carregar, se há rascunho diferente do valor, aparece um aviso acessível (`section.rte-draft`) com data e botões "Restaurar"/"Descartar"; **nunca restaura sozinho**. Sinais e métodos: `draftAvailable` (`{ savedAt }` ou `null`), `restoreDraft()`, `discardDraft()` e a saída `draftError` (`'write'` | `'unavailable'`). `provideRichText({ draft: { storage, maxAgeMs, prompt } })`: `storage` próprio (`RteDraftStorage` do core), validade (7 dias) e `prompt: false` para construir a sua interface. O código é um _chunk_ (`rte-draft`) carregado só com `draftKey`. **Privacidade:** o rascunho fica no navegador em texto claro e **sem escopo por usuário** (quem usa o mesmo navegador e a mesma chave o lê): ponha o **id do usuário na `draftKey`** (`user-7:doc-42`); no logout chame `clearLocalDrafts()` (de `@cds/rte-angular`; aceita um prefixo e devolve quantos apagou).
+**Rascunho (`draftKey`).** Opt-in: `<rte-editor draftKey="doc-42" />` (1 a 200 caracteres; use usuário **e** documento na chave, ex.: `user-7:doc-42`). Grava no `localStorage` (`rte-draft:<chave>`) 1 s depois da última alteração e ao ocultar a página; nunca grava `readonly`/`disabled`. Ao carregar, se há rascunho diferente do valor, aparece um aviso acessível (`section.rte-draft`) com data e botões "Restaurar"/"Descartar"; **nunca restaura sozinho**. Sinais e métodos: `draftAvailable` (`{ savedAt }` ou `null`), `restoreDraft()`, `discardDraft()` e a saída `draftError` (`'write'` | `'unavailable'`). `provideRichText({ draft: { storage, maxAgeMs, prompt } })`: `storage` próprio (`RteDraftStorage` do core), validade (7 dias) e `prompt: false` para construir a sua interface. O código é um _chunk_ (`rte-draft`) carregado só com `draftKey`. **Privacidade:** o rascunho fica no navegador em texto claro e **sem escopo por usuário** (quem usa o mesmo navegador e a mesma chave o lê): ponha o **id do usuário na `draftKey`** (`user-7:doc-42`); no logout chame `clearLocalDrafts()` (de `@comodeviaser/rte-angular`; aceita um prefixo e devolve quantos apagou).
 
 **`isDirty` e `markSaved(savedHtml?)`.** `isDirty()` é `true` quando o valor difere da base salva (a de criação ou da última carga externa). Depois de salvar no servidor chame `editor.markSaved(htmlSalvo)`: a base passa a ser esse HTML (sem argumento, o valor atual) e o rascunho é apagado.
 
@@ -303,7 +303,7 @@ Seis menus contextuais (os de vídeo e _embed_ estão em "Diálogos de mídia") 
 <rte-editor [floatingMenus]="false" />
 ```
 
-**Quando aparecem.** Só com o foco no editável ou no próprio menu (foco na barra, num menu da barra ou fora do host oculta); ficam ocultos em `disabled`, `readonly` e `hidden`, durante o arrasto do ponteiro (aparecem no `pointerup`), durante a composição de IME, com um diálogo aberto ou pedido por qualquer editor do documento e quando a âncora sai da área visível do editor (contêiner com rolagem); voltam sozinhos quando a condição some. Aparecer, trocar de tipo, reposicionar e ocultar nunca mudam o foco, e os itens não são parada de `Tab`. Posição: acima da âncora, centrado, a 8 px; vira para baixo se não couber (e prefere baixo em texto e link com `pointer: coarse`); `overlay` no topo da parte visível quando a âncora é mais alta que a área. Os menus são carregados sob demanda (`@defer`, _chunk_ `fesm2022/cds-rte-angular-rte-floating-menus-<hash>.mjs`) logo depois da criação do editor; se o _chunk_ falhar, o editor segue sem eles (aviso em desenvolvimento).
+**Quando aparecem.** Só com o foco no editável ou no próprio menu (foco na barra, num menu da barra ou fora do host oculta); ficam ocultos em `disabled`, `readonly` e `hidden`, durante o arrasto do ponteiro (aparecem no `pointerup`), durante a composição de IME, com um diálogo aberto ou pedido por qualquer editor do documento e quando a âncora sai da área visível do editor (contêiner com rolagem); voltam sozinhos quando a condição some. Aparecer, trocar de tipo, reposicionar e ocultar nunca mudam o foco, e os itens não são parada de `Tab`. Posição: acima da âncora, centrado, a 8 px; vira para baixo se não couber (e prefere baixo em texto e link com `pointer: coarse`); `overlay` no topo da parte visível quando a âncora é mais alta que a área. Os menus são carregados sob demanda (`@defer`, _chunk_ `fesm2022/comodeviaser-rte-angular-rte-floating-menus-<hash>.mjs`) logo depois da criação do editor; se o _chunk_ falhar, o editor segue sem eles (aviso em desenvolvimento).
 
 **Teclado virtual e zoom.** Os menus flutuantes e a lista do `/` são posicionados pela **viewport visual** (`window.visualViewport`: `offsetLeft`, `offsetTop`, `width`, `height`) quando ela existe, e pela de _layout_ nos demais casos; `resize` e `scroll` da viewport visual reposicionam enquanto o menu está visível. No iOS o teclado virtual reduz só a viewport visual, então o menu fica acima do teclado, e a pinça (zoom) mantém o menu dentro da parte que se vê. Na _meta viewport_, `interactive-widget=resizes-content` (Chrome/Android) faz o teclado encolher também a viewport de _layout_; o padrão (`resizes-visual`) só encolhe a visual. Os dois funcionam com o editor, sem configuração. O teclado real e as alças de seleção só se verificam em aparelho (roteiro móvel da spec 08).
 
@@ -321,10 +321,10 @@ Seis menus contextuais (os de vídeo e _embed_ estão em "Diálogos de mídia") 
 
 **Contadores.** `showCharCount` e `showWordCount` (ou `provideRichText({ counters: { chars, words } })`) desenham o rodapé `.rte-editor__footer`: caracteres ("120/500" com limite) e palavras com tempo de leitura (`ceil(palavras / 200)` min). O rodapé não é região viva. Com limite (`maxLength`/`rteMaxChars`), mesmo sem contadores visíveis, uma região viva anuncia entrada rejeitada, proximidade do limite e excesso, sem repetir. Estados visuais `.rte-counter--near` e `--over` (também por texto). Para desenhar o próprio, use `textStats()`.
 
-**Validadores de conteúdo** (`@cds/rte-angular/validators`, medem só o valor):
+**Validadores de conteúdo** (`@comodeviaser/rte-angular/validators`, medem só o valor):
 
 ```ts
-import { rteNoEmptyHeadings, rteSafeLinks } from '@cds/rte-angular/validators';
+import { rteNoEmptyHeadings, rteSafeLinks } from '@comodeviaser/rte-angular/validators';
 rteSafeLinks(p.body); // erro { kind: 'rteUnsafeLinks', count, hrefs } (até 5)
 rteNoEmptyHeadings(p.body); // erro { kind: 'rteEmptyHeadings', count } (h2-h4 vazios)
 ```
@@ -343,11 +343,11 @@ provideRichText({ theme: { primary: '#0b5fff' } });
 <rte-editor [theme]="{ primary: '#c2185b', mode: 'dark' }" />
 ```
 
-O tema é mesclado por chave (instância > `provideRichText`) e aplicado ao host por `applyRteTheme` do `@cds/rte-theme` (CSSOM, compatível com CSP estrita; nenhum atributo `style` no HTML do SSR). `data-rte-mode` sai no host. Trocar `[theme]` reaplica, `undefined` limpa e o destroy limpa; duas instâncias com temas diferentes não interferem, e os menus herdam o tema da instância. Em desenvolvimento, `warnIfPoorTheme` avisa **só para valores inválidos** (por exemplo `'banana'`); sementes válidas têm contraste garantido pela derivação. Sem tema em lugar nenhum, vale o CSS em cascata.
+O tema é mesclado por chave (instância > `provideRichText`) e aplicado ao host por `applyRteTheme` do `@comodeviaser/rte-theme` (CSSOM, compatível com CSP estrita; nenhum atributo `style` no HTML do SSR). `data-rte-mode` sai no host. Trocar `[theme]` reaplica, `undefined` limpa e o destroy limpa; duas instâncias com temas diferentes não interferem, e os menus herdam o tema da instância. Em desenvolvimento, `warnIfPoorTheme` avisa **só para valores inválidos** (por exemplo `'banana'`); sementes válidas têm contraste garantido pela derivação. Sem tema em lugar nenhum, vale o CSS em cascata.
 
 ## Rótulos e idioma
 
-`RteLabels` = `content` + `slash` + `editor` + `errors` + `toolbar` + `dialogs`. A fonte é um objeto parcial **ou uma função** (lida dentro de `computed`, então pode ler signals). Prioridade: entrada `[labels]` > `provideRichText({ labels })` (também aninhado em rotas/componentes) > inglês. Pacotes completos em `@cds/rte-angular/i18n`: `RTE_LABELS_PT_BR`, `RTE_LABELS_EN`, `RTE_LABELS_ES`.
+`RteLabels` = `content` + `slash` + `editor` + `errors` + `toolbar` + `dialogs`. A fonte é um objeto parcial **ou uma função** (lida dentro de `computed`, então pode ler signals). Prioridade: entrada `[labels]` > `provideRichText({ labels })` (também aninhado em rotas/componentes) > inglês. Pacotes completos em `@comodeviaser/rte-angular/i18n`: `RTE_LABELS_PT_BR`, `RTE_LABELS_EN`, `RTE_LABELS_ES`.
 
 ```ts
 // Por instância: a entrada `labels` ligada a um signal.
@@ -369,7 +369,7 @@ As opções de criação (`[options]` e `provideRichText({ editor })`) são lida
 
 ## SSR e hidratação
 
-No servidor o template renderiza só uma **casca**: moldura e um editável falso (`role="textbox"`, nome acessível, `aria-busy`) com o placeholder quando `value` é `''`. O HTML do valor **não** é renderizado (o servidor não tem `DOMParser` para a leitura do esquema e não há sanitizador nesta parte). A exibição de conteúdo sem JavaScript é o papel do `@cds/rte-render` (spec 06). O `Editor` é criado só no navegador (`afterNextRender`, fora da zona).
+No servidor o template renderiza só uma **casca**: moldura e um editável falso (`role="textbox"`, nome acessível, `aria-busy`) com o placeholder quando `value` é `''`. O HTML do valor **não** é renderizado (o servidor não tem `DOMParser` para a leitura do esquema e não há sanitizador nesta parte). A exibição de conteúdo sem JavaScript é o papel do `@comodeviaser/rte-render` (spec 06). O `Editor` é criado só no navegador (`afterNextRender`, fora da zona).
 
 Hidratação incremental fica para a spec 08. Com CSP estrita, desligue-a (`provideClientHydration(withNoIncrementalHydration())`, sem `withEventReplay()`) e use `optimization.styles.inlineCritical: false`: o _event replay_ injeta um `<script>` inline e o CSS crítico, um `<style>`.
 
@@ -386,7 +386,7 @@ Testado com `default-src 'self'; script-src 'self'; style-src 'self'` por cabeç
 
 ## Teste
 
-`@cds/rte-angular/testing` exporta `getRteEditor(host)`, que lê o `Editor` do Tiptap do elemento `rte-editor` pelo gancho `Symbol.for('@cds/rte-angular/editor')` (funciona em _build_ de produção); `null` antes da criação ou depois de destruir.
+`@comodeviaser/rte-angular/testing` exporta `getRteEditor(host)`, que lê o `Editor` do Tiptap do elemento `rte-editor` pelo gancho `Symbol.for('@comodeviaser/rte-angular/editor')` (funciona em _build_ de produção); `null` antes da criação ou depois de destruir.
 
 ## Desempenho e limites conhecidos
 
@@ -419,11 +419,11 @@ Os orçamentos são verificados por `e2e/angular/editor-perf-budget.spec.ts` (co
 
 Os relatórios da superfície pública (gerados pelo `api-extractor` e conferidos pelo alvo `nx run angular:api`; para regenerar após uma mudança intencional, `UPDATE_API=1 npx nx run angular:api`) ficam em `packages/angular/api/`:
 
-- [`rte-angular.api.md`](api/rte-angular.api.md): `@cds/rte-angular`
-- [`rte-angular-i18n.api.md`](api/rte-angular-i18n.api.md): `@cds/rte-angular/i18n`
-- [`rte-angular-validators.api.md`](api/rte-angular-validators.api.md): `@cds/rte-angular/validators`
-- [`rte-angular-upload.api.md`](api/rte-angular-upload.api.md): `@cds/rte-angular/upload`
-- [`rte-angular-testing.api.md`](api/rte-angular-testing.api.md): `@cds/rte-angular/testing`
+- [`rte-angular.api.md`](api/rte-angular.api.md): `@comodeviaser/rte-angular`
+- [`rte-angular-i18n.api.md`](api/rte-angular-i18n.api.md): `@comodeviaser/rte-angular/i18n`
+- [`rte-angular-validators.api.md`](api/rte-angular-validators.api.md): `@comodeviaser/rte-angular/validators`
+- [`rte-angular-upload.api.md`](api/rte-angular-upload.api.md): `@comodeviaser/rte-angular/upload`
+- [`rte-angular-testing.api.md`](api/rte-angular-testing.api.md): `@comodeviaser/rte-angular/testing`
 
 Exports com prefixo `ɵ` e tudo marcado `@internal` ficam fora dos relatórios e não são API pública.
 
@@ -431,6 +431,6 @@ Exports com prefixo `ɵ` e tudo marcado `@internal` ficam fora dos relatórios e
 
 Spec 06: `rte-render` (exibição). Spec 08: matriz de versões do Angular/Tiptap, hidratação incremental e teclado virtual.
 
-Repositório: cds-text-editor (monorepo). Licença MIT.
+Repositório: comodeviaser-editor (monorepo). Licença MIT.
 
 > Projeto independente, **não afiliado à Tiptap nem ao ProseMirror**.

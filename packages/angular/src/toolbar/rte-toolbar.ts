@@ -17,9 +17,9 @@ import {
   ViewEncapsulation,
   type Signal,
 } from '@angular/core';
-import type { RteHtmlSchema } from '@cds/rte-core';
-import type { RteCodeLanguage } from '@cds/rte-core/code-languages';
-import type { RteContentLabels } from '@cds/rte-core/extensions';
+import type { RteHtmlSchema } from '@comodeviaser/rte-core';
+import type { RteCodeLanguage } from '@comodeviaser/rte-core/code-languages';
+import type { RteContentLabels } from '@comodeviaser/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 import type { RteDialogKind } from '../dialogs/types';
 import type { RteToolbarLabels } from '../labels/types';

@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam os entries pelo alias público
-import { httpUploadAdapter } from '@cds/rte-angular/upload';
+import { httpUploadAdapter } from '@comodeviaser/rte-angular/upload';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   installFakeXhr,
@@ -253,7 +253,7 @@ describe('httpUploadAdapter', () => {
           (l) =>
             /^\s*(import|export)\b/.test(l) &&
             !/^\s*(import|export)\s+type\b/.test(l) &&
-            /['"](@angular\/|@cds\/rte-angular['"/])/.test(l),
+            /['"](@angular\/|@comodeviaser\/rte-angular['"/])/.test(l),
         );
       expect(bad, f).toEqual([]);
     }

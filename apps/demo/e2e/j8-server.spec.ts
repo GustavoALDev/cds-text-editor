@@ -32,7 +32,7 @@ const tagged = (bytes: Buffer, tag: string): Buffer =>
 /** Arquivos de todas as pastas de mídia do demo (a do servidor desta execução está entre elas). */
 function stored(): Buffer[] {
   return readdirSync(tmpdir())
-    .filter((name) => name.startsWith('cds-rte-demo-media-'))
+    .filter((name) => name.startsWith('comodeviaser-rte-demo-media-'))
     .map((name) => join(tmpdir(), name))
     .filter((dir) => existsSync(dir))
     .flatMap((dir) =>

@@ -1,6 +1,6 @@
 // #region parcial
 import { Component } from '@angular/core';
-import { RteEditor, type RteLabelsInput } from '@cds/rte-angular';
+import { RteEditor, type RteLabelsInput } from '@comodeviaser/rte-angular';
 
 // Um objeto parcial também vale: o que faltar cai no inglês.
 const MEUS_ROTULOS: RteLabelsInput = {

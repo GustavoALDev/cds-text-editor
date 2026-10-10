@@ -1,7 +1,7 @@
 {
-  "name": "@cds/rte-core",
+  "name": "@comodeviaser/rte-core",
   "version": "0.0.0",
-  "description": "Núcleo do editor de texto rico cds-text-editor: extensões Tiptap, utilitários e esquema do HTML.",
+  "description": "Núcleo do editor de texto rico DEVI.A Editor: extensões Tiptap, utilitários e esquema do HTML.",
   "license": "MIT",
   "type": "module",
   "sideEffects": [
@@ -138,11 +138,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GustavoALDev/cds-text-editor.git",
+    "url": "git+https://github.com/GustavoALDev/comodeviaser-editor.git",
     "directory": "packages/core"
   },
-  "bugs": "https://github.com/GustavoALDev/cds-text-editor/issues",
-  "homepage": "https://github.com/GustavoALDev/cds-text-editor#readme",
+  "bugs": "https://github.com/GustavoALDev/comodeviaser-editor/issues",
+  "homepage": "https://github.com/GustavoALDev/comodeviaser-editor#readme",
   "keywords": [
     "rich-text-editor",
     "tiptap",

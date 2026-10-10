@@ -92,3 +92,7 @@ Marcador `TODO-AUTOR` (`grep -rn TODO-AUTOR --exclude-dir=node_modules --exclude
 - Nome do autor no `LICENSE`.
 - E-mail de contato de segurança (`SECURITY.md`, `CODE_OF_CONDUCT.md`).
 - ~~Nome do repositório~~ resolvido: `cds-text-editor`.
+
+## Adendo (2026-10-10): nome definitivo
+
+O escopo `@cds` e o plano B `cds-text-editor-*` foram substituídos pelo escopo `@comodeviaser` (pacotes `@comodeviaser/rte-*`, produto DEVI.A Editor, repositório `comodeviaser-editor`): ver [ADR 0024](0024-nome-e-marca.md). Este ADR mantém o nome antigo como registro histórico.

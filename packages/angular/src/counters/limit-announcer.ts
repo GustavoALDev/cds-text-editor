@@ -7,7 +7,7 @@ import {
   type NgZone,
   type Signal,
 } from '@angular/core';
-import type { RteCharLimitState } from '@cds/rte-core/extensions';
+import type { RteCharLimitState } from '@comodeviaser/rte-core/extensions';
 import type { RteCounterLabels } from '../labels/types';
 
 /** Intervalo mínimo entre anúncios de recusa (K12). */

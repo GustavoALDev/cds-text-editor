@@ -1,6 +1,6 @@
 import type { Editor } from '@tiptap/core';
 import { AllSelection, NodeSelection, TextSelection } from '@tiptap/pm/state';
-import { getHtmlSchema } from '@cds/rte-core';
+import { getHtmlSchema } from '@comodeviaser/rte-core';
 import { readMediaRules } from './dialogs/media-rules';
 import { dialogTarget } from './dialogs/target';
 import {

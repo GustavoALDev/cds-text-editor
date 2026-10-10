@@ -5,7 +5,7 @@ import {
   inject,
   input,
 } from '@angular/core';
-import { applyRteTheme, type RteTheme } from '@cds/rte-theme';
+import { applyRteTheme, type RteTheme } from '@comodeviaser/rte-theme';
 
 /**
  * Aplica o tema num painel pelo mesmo caminho do integrador (`applyRteTheme`, estilo só por

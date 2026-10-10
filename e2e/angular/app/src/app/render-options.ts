@@ -1,4 +1,4 @@
-import { createSanitizer } from '@cds/rte-sanitizer';
+import { createSanitizer } from '@comodeviaser/rte-sanitizer';
 
 /**
  * Sanitizador das rotas `render*` (spec 06, pré-voo 12): `createSanitizer()` com as

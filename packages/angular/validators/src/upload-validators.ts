@@ -1,6 +1,6 @@
 import type { Signal } from '@angular/core';
 import { validate, type PathKind } from '@angular/forms/signals';
-import type { RteEditor } from '@cds/rte-angular';
+import type { RteEditor } from '@comodeviaser/rte-angular';
 import type { RtePath } from './signal-validators';
 
 /** O editor ligado ao campo (tipicamente um `viewChild`); ausente = válido. */

@@ -15,7 +15,7 @@ import {
   provideServerRendering,
   renderApplication,
 } from '@angular/platform-server';
-import { createSanitizer } from '@cds/rte-sanitizer';
+import { createSanitizer } from '@comodeviaser/rte-sanitizer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { restoreContentStyles } from './content/restore-styles';
 import { RteContent } from './content/rte-content';
@@ -23,7 +23,7 @@ import { createTableScrollers } from './content/table-scroller';
 import { provideRteRender } from './provide';
 import { readFixture } from './testing-support/fixtures';
 import { withServerDomAdapter } from './testing-support/server-dom';
-import { RteToc } from '@cds/rte-render/toc';
+import { RteToc } from '@comodeviaser/rte-render/toc';
 
 // R8 (H10): a diretiva e o sumário rodam no servidor (Node, domino) sem tocar
 // em globais de DOM; o HTML do servidor já traz a H6. "Nada no servidor" da

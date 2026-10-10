@@ -15,8 +15,8 @@ import {
   type RteEditorConfig,
   type RteLabelsSource,
   type RteToolbarConfig,
-} from '@cds/rte-angular';
-import { getRteEditor } from '@cds/rte-angular/testing';
+} from '@comodeviaser/rte-angular';
+import { getRteEditor } from '@comodeviaser/rte-angular/testing';
 import { Editor } from '@tiptap/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHost, settle } from './testing-support/render';
@@ -68,7 +68,7 @@ class LabelsHost {
   readonly cmp = viewChild.required(RteEditor);
 }
 
-const HOOK = Symbol.for('@cds/rte-angular/editor');
+const HOOK = Symbol.for('@comodeviaser/rte-angular/editor');
 
 function names(editor: Editor): string[] {
   return editor.extensionManager.extensions.map((e) => e.name);

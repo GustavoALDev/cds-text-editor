@@ -5,12 +5,12 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { RteEditor, type RteLabelsInput } from '@cds/rte-angular';
+import { RteEditor, type RteLabelsInput } from '@comodeviaser/rte-angular';
 import {
   RTE_LABELS_EN,
   RTE_LABELS_ES,
   RTE_LABELS_PT_BR,
-} from '@cds/rte-angular/i18n';
+} from '@comodeviaser/rte-angular/i18n';
 import { E2eBridge, NO_FORM_STATE, type RteE2eLang } from '../e2e-bridge';
 
 const LABELS: Record<RteE2eLang, RteLabelsInput> = {

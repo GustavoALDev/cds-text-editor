@@ -1,4 +1,4 @@
-import { RTE_THEME_PRESETS } from '@cds/rte-theme';
+import { RTE_THEME_PRESETS } from '@comodeviaser/rte-theme';
 import { describe, expect, it } from 'vitest';
 import { buildCss, THEME_README_URL } from './css-snippet';
 import { applyPreset, DEFAULT_STATE, type PlaygroundState } from './model';

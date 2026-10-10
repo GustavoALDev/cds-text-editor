@@ -39,7 +39,7 @@ export function buildTs(
   if (state.neutral !== 'tinted')
     themeLines.push(`      neutral: ${quote(state.neutral)},`);
 
-  const lines = ["import { provideRichText } from '@cds/rte-angular';", ''];
+  const lines = ["import { provideRichText } from '@comodeviaser/rte-angular';", ''];
   if (state.radius !== DEFAULT_RADIUS || state.density !== DEFAULT_DENSITY)
     lines.push(
       '// Raio e densidade são CSS do nível 2 (não fazem parte de RteTheme): use também o CSS copiado.',

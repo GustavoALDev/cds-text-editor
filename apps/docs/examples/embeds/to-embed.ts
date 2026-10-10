@@ -1,5 +1,5 @@
 // #region to-embed
-import { toEmbed } from '@cds/rte-core/embeds';
+import { toEmbed } from '@comodeviaser/rte-core/embeds';
 
 // O `src` é sempre montado pelo provedor e revalidado pelo core.
 export const youtube = toEmbed('https://youtu.be/dQw4w9WgXcQ?t=42');

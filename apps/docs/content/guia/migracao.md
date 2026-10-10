@@ -7,10 +7,10 @@ description: Como trazer HTML legado ou de outro editor para o esquema, e o que 
 
 ## Trazer HTML antigo
 
-O editor só guarda HTML do **esquema** do `@cds/rte-core` (tags, atributos, classes `rt-*` e estilos de uma lista fechada). Tudo o que está fora dele precisa ser filtrado ou convertido antes de entrar no banco. Há dois instrumentos:
+O editor só guarda HTML do **esquema** do `@comodeviaser/rte-core` (tags, atributos, classes `rt-*` e estilos de uma lista fechada). Tudo o que está fora dele precisa ser filtrado ou convertido antes de entrar no banco. Há dois instrumentos:
 
-- **`validateHtml`** (`@cds/rte-core/html`) só **lê** e devolve a lista do que está fora do esquema; use-o para medir o estrago antes de mexer. No modo `accepted` ele aponta o que o sanitizador descartaria.
-- **O sanitizador** (`@cds/rte-sanitizer`) é um **filtro do contrato, não um conversor**: tag fora do esquema é desembrulhada (`<h1>Título</h1>` vira o texto solto `Título`) e nada é reescrito para o equivalente. HTML legado como `h1`, `b` ou `p > img` entra melhor pelo leitor tolerante do editor, que converte esses casos (veja a seção do sanitizador no [README](https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/sanitizer/README.md)).
+- **`validateHtml`** (`@comodeviaser/rte-core/html`) só **lê** e devolve a lista do que está fora do esquema; use-o para medir o estrago antes de mexer. No modo `accepted` ele aponta o que o sanitizador descartaria.
+- **O sanitizador** (`@comodeviaser/rte-sanitizer`) é um **filtro do contrato, não um conversor**: tag fora do esquema é desembrulhada (`<h1>Título</h1>` vira o texto solto `Título`) e nada é reescrito para o equivalente. HTML legado como `h1`, `b` ou `p > img` entra melhor pelo leitor tolerante do editor, que converte esses casos (veja a seção do sanitizador no [README](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/sanitizer/README.md)).
 
 A função abaixo junta os dois e conta o que ficou de fora, para você revisar antes de gravar:
 
@@ -21,7 +21,7 @@ Rode-a em lote sobre o legado, olhe os totais de `descartado` por tipo (por exem
 ## Depois de migrar
 
 - Passe os mesmos dados pelo `createSanitizer` do servidor na gravação (veja [Segurança](guia/seguranca)).
-- Para transformar um endereço de vídeo ou de áudio do legado em _embed_, use o `toEmbed` de `@cds/rte-core/embeds` (veja [Embeds](guia/embeds)).
+- Para transformar um endereço de vídeo ou de áudio do legado em _embed_, use o `toEmbed` de `@comodeviaser/rte-core/embeds` (veja [Embeds](guia/embeds)).
 - O sumário só existe para títulos com id `rt-…`. HTML de outra origem não os traz, e o sumário fica vazio até o editor reserializar o documento (veja [Exibição](guia/exibicao)).
 
 ## Mudanças que quebram, antes da primeira publicação
@@ -31,6 +31,6 @@ Rode-a em lote sobre o legado, olhe os totais de `descartado` por tipo (por exem
 
 ## Versões `0.x` e o que é API pública
 
-Os pacotes ainda não foram publicados e o nome `@cds/rte-*` é provisório. Enquanto a versão for `0.x`, uma versão _minor_ pode quebrar a API; leia o changelog antes de atualizar.
+Os pacotes ainda não foram publicados. Enquanto a versão for `0.x`, uma versão _minor_ pode quebrar a API; leia o changelog antes de atualizar.
 
-**API pública** é o que está nos relatórios `.api.md` de cada pacote (`packages/*/api/`, gerados pelo `api-extractor` e conferidos no CI), as classes CSS `rte-*` e as variáveis `--rte-*` dos níveis 1 a 3 do tema. Exports com prefixo `ɵ` e tudo marcado `@internal` **não** são API pública. A política de versões e de depreciação está em [`docs/support.md`](https://github.com/GustavoALDev/cds-text-editor/blob/main/docs/support.md) e a referência completa em [`api/angular`](api/angular), [`api/core`](api/core) e as demais entradas da seção "Referência da API".
+**API pública** é o que está nos relatórios `.api.md` de cada pacote (`packages/*/api/`, gerados pelo `api-extractor` e conferidos no CI), as classes CSS `rte-*` e as variáveis `--rte-*` dos níveis 1 a 3 do tema. Exports com prefixo `ɵ` e tudo marcado `@internal` **não** são API pública. A política de versões e de depreciação está em [`docs/support.md`](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/docs/support.md) e a referência completa em [`api/angular`](api/angular), [`api/core`](api/core) e as demais entradas da seção "Referência da API".

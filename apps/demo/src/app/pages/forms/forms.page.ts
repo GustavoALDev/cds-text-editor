@@ -6,8 +6,8 @@ import {
 } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { form, FormField } from '@angular/forms/signals';
-import { RteEditor } from '@cds/rte-angular';
-import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
+import { RteEditor } from '@comodeviaser/rte-angular';
+import { RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
 import {
   formatRteError,
   isRteValidationError,
@@ -15,7 +15,7 @@ import {
   RteValidators,
   rteMaxChars,
   rteRequired,
-} from '@cds/rte-angular/validators';
+} from '@comodeviaser/rte-angular/validators';
 
 /** Limite curto para o erro ser fácil de provocar (texto colado acima dele fica inválido). */
 export const FORMS_MAX_CHARS = 60;
@@ -37,7 +37,7 @@ export class FormsPage {
   protected readonly labels = RTE_LABELS_PT_BR;
   protected readonly max = FORMS_MAX_CHARS;
   protected readonly readmeUrl =
-    'https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/angular/README.md#1-signal-forms-caminho-principal';
+    'https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/angular/README.md#1-signal-forms-caminho-principal';
 
   // 1. Signal Forms
   readonly model = signal({ body: '<p>Signal Forms</p>' });

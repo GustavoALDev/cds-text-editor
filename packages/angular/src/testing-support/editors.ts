@@ -1,8 +1,8 @@
-import { RTE_CODE_LANGUAGES } from '@cds/rte-core/code-languages';
+import { RTE_CODE_LANGUAGES } from '@comodeviaser/rte-core/code-languages';
 import {
   createEditorExtensions,
   type RteEditorOptions,
-} from '@cds/rte-core/extensions';
+} from '@comodeviaser/rte-core/extensions';
 import type { AnyExtension, Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';

@@ -1,8 +1,8 @@
 // Servidor estático do build do site de documentação (spec 07c, X2). Node puro, como
-// `apps/demo/serve.mjs`: serve o `browser/` SOB um prefixo (`--base`, padrão `/cds-text-editor/`),
+// `apps/demo/serve.mjs`: serve o `browser/` SOB um prefixo (`--base`, padrão `/comodeviaser-editor/`),
 // diretório → `index.html`, rota inexistente → `404.html` com status 404, só `GET`/`HEAD`. Toda
 // resposta leva a CSP estrita por cabeçalho (o `index.html` repete o texto numa `<meta>`).
-// Uso: node apps/docs/serve.mjs [--dir <browser/>] [--base /cds-text-editor/] [--no-csp-header]
+// Uso: node apps/docs/serve.mjs [--dir <browser/>] [--base /comodeviaser-editor/] [--no-csp-header]
 //   (ou RTE_CONSUMER_DIR + dist/docs/browser)
 // Variáveis: RTE_DOCS_PORT (padrão 4320), RTE_CONSUMER_DIR, RTE_SITE_BASE.
 import { createReadStream, readFileSync, statSync } from 'node:fs';
@@ -14,7 +14,7 @@ import { pathToFileURL } from 'node:url';
 export const CSP =
   "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'";
 
-export const DEFAULT_BASE = '/cds-text-editor/';
+export const DEFAULT_BASE = '/comodeviaser-editor/';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -96,7 +96,7 @@ export function resolveDir(argv, env) {
   );
 }
 
-/** Prefixo servido: `--base`, senão `RTE_SITE_BASE`, senão `/cds-text-editor/`. */
+/** Prefixo servido: `--base`, senão `RTE_SITE_BASE`, senão `/comodeviaser-editor/`. */
 export function resolveBase(argv, env) {
   const flag = argv.indexOf('--base');
   if (flag !== -1) {

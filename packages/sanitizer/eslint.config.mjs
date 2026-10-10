@@ -20,9 +20,9 @@ export default [
                 'core, sanitizer e theme não podem importar @angular/* (spec 01, R4).',
             },
             {
-              group: ['@tiptap/*', '@cds/rte-core/*'],
+              group: ['@tiptap/*', '@comodeviaser/rte-core/*'],
               message:
-                'O sanitizador importa só @cds/rte-core (entry .) e htmlparser2 (spec 04, R12).',
+                'O sanitizador importa só @comodeviaser/rte-core (entry .) e htmlparser2 (spec 04, R12).',
             },
           ],
         },

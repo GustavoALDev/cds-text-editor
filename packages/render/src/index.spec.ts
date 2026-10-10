@@ -1,18 +1,18 @@
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público
-import * as api from '@cds/rte-render';
+import * as api from '@comodeviaser/rte-render';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público
 import type {
   RteRenderLabels,
   RteRenderMode,
   RteRenderOptions,
   RteSanitizeErrorLike,
-} from '@cds/rte-render';
-import * as toc from '@cds/rte-render/toc';
-import type { RteTocEntry } from '@cds/rte-render/toc';
-import * as i18n from '@cds/rte-render/i18n';
+} from '@comodeviaser/rte-render';
+import * as toc from '@comodeviaser/rte-render/toc';
+import type { RteTocEntry } from '@comodeviaser/rte-render/toc';
+import * as i18n from '@comodeviaser/rte-render/i18n';
 import { describe, expect, it } from 'vitest';
 
-describe('@cds/rte-render', () => {
+describe('@comodeviaser/rte-render', () => {
   it('exporta só a API pública do entry .', () => {
     expect(Object.keys(api).sort()).toEqual([
       'RTE_RENDER_LABELS',

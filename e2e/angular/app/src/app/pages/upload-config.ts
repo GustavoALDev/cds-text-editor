@@ -1,5 +1,5 @@
-import type { RteUploadConfig } from '@cds/rte-angular';
-import { httpUploadAdapter } from '@cds/rte-angular/upload';
+import type { RteUploadConfig } from '@comodeviaser/rte-angular';
+import { httpUploadAdapter } from '@comodeviaser/rte-angular/upload';
 
 /** Teto das imagens no app de teste (o servidor recusa acima de 5 MB). */
 const MAX_IMAGE_BYTES = 1024 * 1024;

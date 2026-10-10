@@ -1,7 +1,7 @@
 import type {
   RteContentLabels,
   RteSlashLabels,
-} from '@cds/rte-core/extensions';
+} from '@comodeviaser/rte-core/extensions';
 import type { RteUploadErrorReason } from '../upload/types';
 
 /** Textos do editor em si. */

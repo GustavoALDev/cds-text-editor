@@ -20,7 +20,7 @@ test.describe('I6: referência da API', () => {
       const problems = await watch(page);
       await page.goto(url(ORIGIN, `api/${name}`));
       await ready(page);
-      await expect(page.locator('h1')).toContainText(`@cds/rte-${name}`);
+      await expect(page.locator('h1')).toContainText(`@comodeviaser/rte-${name}`);
       await expect(page.locator('#indice')).toBeVisible();
 
       const text = (await page.locator('.doc').innerText()) ?? '';

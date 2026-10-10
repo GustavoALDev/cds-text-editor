@@ -26,7 +26,7 @@ export type RteE2eId =
   | 'productivity'
   | 'productivity-free';
 
-/** `RteUploadStatus` do `@cds/rte-angular` (spec 05c2a, E18). */
+/** `RteUploadStatus` do `@comodeviaser/rte-angular` (spec 05c2a, E18). */
 export interface RteE2eUploadStatus {
   readonly id: string;
   readonly fileName: string;
@@ -35,7 +35,7 @@ export interface RteE2eUploadStatus {
   readonly progress: number | null;
 }
 
-/** `RteUploadErrorEvent` do `@cds/rte-angular` (sem `cause`, que não atravessa a ponte). */
+/** `RteUploadErrorEvent` do `@comodeviaser/rte-angular` (sem `cause`, que não atravessa a ponte). */
 export interface RteE2eUploadError {
   readonly fileName: string;
   readonly type: 'image' | 'video';
@@ -53,17 +53,17 @@ export interface RteE2eUploadError {
 export type RteE2eRenderId =
   'render-main' | 'render-wide' | 'render-input' | 'render-keep';
 
-/** `RteToolbarConfig` do `@cds/rte-angular` (sem importar o pacote Angular aqui). */
+/** `RteToolbarConfig` do `@comodeviaser/rte-angular` (sem importar o pacote Angular aqui). */
 export type RteE2eToolbarConfig =
   'minimal' | 'article' | 'full' | readonly (readonly string[])[] | false;
 
-/** `RteMediaChange` do `@cds/rte-angular`. */
+/** `RteMediaChange` do `@comodeviaser/rte-angular`. */
 export interface RteE2eMediaChange {
   readonly added: readonly string[];
   readonly removed: readonly string[];
 }
 
-/** `RteMediaSession` do `@cds/rte-angular`. */
+/** `RteMediaSession` do `@comodeviaser/rte-angular`. */
 export interface RteE2eMediaSession {
   readonly current: readonly string[];
   readonly added: readonly string[];
@@ -93,7 +93,7 @@ declare global {
       setToolbar(id: RteE2eId, config: RteE2eToolbarConfig): void;
       setTheme(
         id: RteE2eId,
-        theme: import('@cds/rte-theme').RteTheme | undefined,
+        theme: import('@comodeviaser/rte-theme').RteTheme | undefined,
       ): void;
       /** `openDialog(kind)` do editor `id` (G18); o retorno da API. */
       openDialog(id: RteE2eId, kind: string): boolean;
@@ -130,7 +130,7 @@ declare global {
       /** `applyRteTheme` num elemento qualquer (referência do N12). */
       applyTheme(
         element: HTMLElement,
-        theme: import('@cds/rte-theme').RteTheme,
+        theme: import('@comodeviaser/rte-theme').RteTheme,
       ): void;
       /** Detecção de mudanças síncrona (`ApplicationRef.tick`). */
       tick(): void;

@@ -10,12 +10,12 @@ import {
   RteEditor,
   type RteEditorConfig,
   type RteToolbarConfig,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 import {
   rteMaxChars,
   rteNoEmptyHeadings,
   rteSafeLinks,
-} from '@cds/rte-angular/validators';
+} from '@comodeviaser/rte-angular/validators';
 import { E2eBridge } from '../e2e-bridge';
 
 /**

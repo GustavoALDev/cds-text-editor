@@ -2,7 +2,7 @@ import { Location, PlatformLocation } from '@angular/common';
 import { Component, signal, type Provider } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { DomSanitizer } from '@angular/platform-browser';
-import { createSanitizer } from '@cds/rte-sanitizer';
+import { createSanitizer } from '@comodeviaser/rte-sanitizer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RteContent } from './content/rte-content';
 import {

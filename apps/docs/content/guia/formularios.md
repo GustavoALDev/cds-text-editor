@@ -5,7 +5,7 @@ description: O editor em Signal Forms, Reactive Forms e Template Forms, com as d
 
 # Formulários
 
-O `rte-editor` é um controle de formulário nos três modelos do Angular, e também funciona sem formulário. O valor é sempre **HTML canônico**; um documento vazio vale `''`. Esta página ensina o caminho de cada modelo; as tabelas completas estão no [README do `@cds/rte-angular`](https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/angular/README.md#uso) e na referência [`api/angular-validators`](api/angular-validators).
+O `rte-editor` é um controle de formulário nos três modelos do Angular, e também funciona sem formulário. O valor é sempre **HTML canônico**; um documento vazio vale `''`. Esta página ensina o caminho de cada modelo; as tabelas completas estão no [README do `@comodeviaser/rte-angular`](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/angular/README.md#uso) e na referência [`api/angular-validators`](api/angular-validators).
 
 ## Signal Forms (caminho principal)
 

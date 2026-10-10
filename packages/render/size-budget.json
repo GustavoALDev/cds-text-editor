@@ -1,27 +1,27 @@
 {
   "scenarios": {
     "content": {
-      "entry": "dist/packages/render/fesm2022/cds-rte-render.mjs",
+      "entry": "dist/packages/render/fesm2022/comodeviaser-rte-render.mjs",
       "exports": ["RteContent", "provideRteRender"],
-      "external": ["@angular/*", "@cds/*", "rxjs", "rxjs/*", "tslib"]
+      "external": ["@angular/*", "@comodeviaser/*", "rxjs", "rxjs/*", "tslib"]
     },
     "toc": {
-      "entry": "dist/packages/render/fesm2022/cds-rte-render-toc.mjs",
+      "entry": "dist/packages/render/fesm2022/comodeviaser-rte-render-toc.mjs",
       "exports": ["RteToc"],
-      "external": ["@angular/*", "@cds/*", "rxjs", "rxjs/*", "tslib"]
+      "external": ["@angular/*", "@comodeviaser/*", "rxjs", "rxjs/*", "tslib"]
     },
     "whole": {
-      "entry": "dist/packages/render/fesm2022/cds-rte-render.mjs",
+      "entry": "dist/packages/render/fesm2022/comodeviaser-rte-render.mjs",
       "exports": ["*"],
-      "external": ["@angular/*", "@cds/*", "rxjs", "rxjs/*", "tslib"]
+      "external": ["@angular/*", "@comodeviaser/*", "rxjs", "rxjs/*", "tslib"]
     },
     "i18n": {
-      "entry": "dist/packages/render/fesm2022/cds-rte-render-i18n.mjs",
+      "entry": "dist/packages/render/fesm2022/comodeviaser-rte-render-i18n.mjs",
       "exports": ["*"],
-      "external": ["@angular/*", "@cds/*", "rxjs", "rxjs/*", "tslib"]
+      "external": ["@angular/*", "@comodeviaser/*", "rxjs", "rxjs/*", "tslib"]
     },
     "content-page": {
-      "entry": "dist/packages/render/fesm2022/cds-rte-render.mjs",
+      "entry": "dist/packages/render/fesm2022/comodeviaser-rte-render.mjs",
       "exports": ["RteContent", "provideRteRender"],
       "external": ["@angular/*", "rxjs", "rxjs/*", "tslib"]
     },

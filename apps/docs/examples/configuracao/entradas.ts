@@ -1,6 +1,6 @@
 // #region entradas
 import { Component } from '@angular/core';
-import { RteEditor, type RteEditorConfig } from '@cds/rte-angular';
+import { RteEditor, type RteEditorConfig } from '@comodeviaser/rte-angular';
 
 // `options` é lido uma vez, na criação do editor: passe uma constante.
 const OPTIONS: RteEditorConfig = {

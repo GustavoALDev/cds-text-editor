@@ -6,13 +6,13 @@ Escopo: XSS e abuso a partir de conteúdo não confiável (HTML salvo, colado ou
 
 | Ameaça                | Vetor                                             | Defesa da biblioteca                                                                                                                                    |
 | --------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| XSS via HTML          | Conteúdo salvo, importado ou exibido no site      | `@cds/rte-sanitizer` (lista de permissões do esquema); `validateHtml` e os validadores do Angular; exibição por `@cds/rte-render`                       |
+| XSS via HTML          | Conteúdo salvo, importado ou exibido no site      | `@comodeviaser/rte-sanitizer` (lista de permissões do esquema); `validateHtml` e os validadores do Angular; exibição por `@comodeviaser/rte-render`                       |
 | XSS via colagem       | HTML/Markdown colado no editor                    | O esquema do Tiptap descarta o que não é do esquema; classes e estilos filtrados; links e URLs validados                                                |
 | Respostas de servidor | Adaptador de upload devolvendo URL ou HTML hostil | `mapResponse` do consumidor + `readUploadedMedia` validam a mídia; nada da resposta vira HTML sem passar pelo esquema                                   |
 | Upload                | Tipo, tamanho e origem do arquivo                 | Limites e tipos no adaptador são conveniência; **o servidor revalida tudo** (seção abaixo)                                                              |
 | CSP                   | Estilos e scripts inline                          | Sem `eval`, scripts inline nem `style` inline injetado; o app de teste roda com CSP estrita; embeds exigem `frame-src` do consumidor                    |
 | SSR                   | Execução no servidor                              | Sem globais de DOM no código da lib (lint, D25); HTML renderizado sem `<script>`                                                                        |
-| Cadeia de suprimentos | Dependência comprometida                          | Única dependência de runtime: `htmlparser2` (só em `@cds/rte-core/html`); `npm audit --omit=dev --audit-level=high` **bloqueia** o CI; gate de licenças |
+| Cadeia de suprimentos | Dependência comprometida                          | Única dependência de runtime: `htmlparser2` (só em `@comodeviaser/rte-core/html`); `npm audit --omit=dev --audit-level=high` **bloqueia** o CI; gate de licenças |
 
 ## O que o servidor DEVE fazer
 
@@ -45,13 +45,13 @@ O rascunho (`draftKey`) fica no `localStorage`, em texto claro, **sem escopo por
 
 ## Cadeia de suprimentos
 
-- Dependência de runtime: só `htmlparser2` (e só no entry `@cds/rte-core/html`); `@angular/*`, `@tiptap/*` etc. são peers.
+- Dependência de runtime: só `htmlparser2` (e só no entry `@comodeviaser/rte-core/html`); `@angular/*`, `@tiptap/*` etc. são peers.
 - `npm run audit` (`npm audit --omit=dev --audit-level=high`) roda no job `verify` do CI e **bloqueia**; `npm run check:licenses` confere as licenças; `THIRD-PARTY-NOTICES.md` é gerado.
 - Publicação (provenance, assinatura, 2FA do registro) fica para a spec 09b. TODO-AUTOR: definir o registro e a política de publicação.
 
 # Sanitizador: o que protege e o que não protege
 
-Este documento descreve o que o `@cds/rte-sanitizer` protege, o que ele não protege, as hipóteses em que a garantia vale, a CSP recomendada e como reportar vulnerabilidades. A decisão e as evidências estão no [ADR 0006](decisions/0006-sanitizador.md); o contrato, na [spec 04](specs/04-sanitizador.md).
+Este documento descreve o que o `@comodeviaser/rte-sanitizer` protege, o que ele não protege, as hipóteses em que a garantia vale, a CSP recomendada e como reportar vulnerabilidades. A decisão e as evidências estão no [ADR 0006](decisions/0006-sanitizador.md); o contrato, na [spec 04](specs/04-sanitizador.md).
 
 ## O que o sanitizador protege
 
@@ -95,7 +95,7 @@ A sanitização não substitui a CSP; as duas camadas se somam.
 - `object-src 'none'` e `base-uri 'none'`.
 - Quem já sanitiza no servidor e quer evitar o custo do pipe no navegador usa o modo `trusted` da spec 06, junto com Trusted Types, com a CSP acima como defesa em profundidade.
 
-## Exibição (`@cds/rte-render`)
+## Exibição (`@comodeviaser/rte-render`)
 
 A exibição do HTML publicado (spec 06, [ADR 0012](decisions/0012-renderizacao.md)) é uma **segunda barreira**: a que vale continua sendo a do servidor, na gravação (hipótese 1). O que a diretiva `[rteContent]` faz e o que ela supõe:
 

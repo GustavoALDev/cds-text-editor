@@ -8,9 +8,9 @@ description: O que o editor e a exibição fazem no servidor, a hidratação e u
 ## O que roda no servidor
 
 - **`rte-editor`** renderiza só uma **casca**: a moldura e um editável falso (`role="textbox"`, com nome acessível e `aria-busy`), com o placeholder quando o valor é vazio. O HTML do valor **não** aparece no HTML do servidor, e o `Editor` do Tiptap só é criado no navegador, depois da hidratação.
-- **`[rteContent]`** (do `@cds/rte-render`) é o que mostra o texto sem JavaScript: o HTML do servidor já traz o conteúdo, o sumário e os `href` de âncora corretos. Para o texto que o leitor lê, é ele, não o editor, que você usa na página pública (veja [Exibição](guia/exibicao)).
+- **`[rteContent]`** (do `@comodeviaser/rte-render`) é o que mostra o texto sem JavaScript: o HTML do servidor já traz o conteúdo, o sumário e os `href` de âncora corretos. Para o texto que o leitor lê, é ele, não o editor, que você usa na página pública (veja [Exibição](guia/exibicao)).
 
-Os pormenores estão nas seções "SSR e hidratação" do [README do `rte-angular`](https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/angular/README.md) e do [README do `rte-render`](https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/render/README.md).
+Os pormenores estão nas seções "SSR e hidratação" do [README do `rte-angular`](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/angular/README.md) e do [README do `rte-render`](https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/render/README.md).
 
 ## Hidratação sob CSP estrita
 

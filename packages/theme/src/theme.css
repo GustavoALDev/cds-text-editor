@@ -1,5 +1,5 @@
 /*
- * @cds/rte-theme — tema de 3 cores em CSS puro (spec 02).
+ * @comodeviaser/rte-theme — tema de 3 cores em CSS puro (spec 02).
  *
  * Entradas (qualquer cor CSS): --rte-primary, --rte-secondary, --rte-tertiary (+ --rte-neutral-tint: 1 | 0).
  * Tudo mais é DERIVADO aqui, sem JavaScript, sem Sass e sem build. O plano B (createRteTheme/applyRteTheme)

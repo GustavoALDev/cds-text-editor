@@ -16,7 +16,7 @@ import {
   type Validator,
   type ValidatorFn,
 } from '@angular/forms';
-import { RteEditor } from '@cds/rte-angular';
+import { RteEditor } from '@comodeviaser/rte-angular';
 
 /**
  * Validador do Reactive/Template Forms sobre uma contagem do editor (E19):

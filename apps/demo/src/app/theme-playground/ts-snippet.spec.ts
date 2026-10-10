@@ -1,4 +1,4 @@
-import { createRteTheme, RTE_THEME_PRESETS } from '@cds/rte-theme';
+import { createRteTheme, RTE_THEME_PRESETS } from '@comodeviaser/rte-theme';
 import { ModuleKind, ScriptTarget, transpileModule } from 'typescript';
 import { describe, expect, it } from 'vitest';
 import {
@@ -23,7 +23,7 @@ function evaluate(snippet: string): { called: boolean; arg: unknown } {
   };
   const exports: Record<string, unknown> = {};
   const require = (id: string): unknown => {
-    if (id !== '@cds/rte-angular') throw new Error(`import inesperado: ${id}`);
+    if (id !== '@comodeviaser/rte-angular') throw new Error(`import inesperado: ${id}`);
     return { provideRichText: fake };
   };
   new Function('exports', 'require', outputText)(exports, require);
@@ -44,7 +44,7 @@ describe('buildTs', () => {
   it('estado padrão: import e provideRichText() sem argumento', () => {
     const ts = buildTs(DEFAULT_STATE);
     expect(ts).toContain(
-      "import { provideRichText } from '@cds/rte-angular';",
+      "import { provideRichText } from '@comodeviaser/rte-angular';",
     );
     expect(ts).toContain('provideRichText()');
     expect(ts).not.toContain('theme');

@@ -1,7 +1,7 @@
 // #region js
 import { Component } from '@angular/core';
-import { provideRichText, RteEditor } from '@cds/rte-angular';
-import type { RteTheme } from '@cds/rte-theme';
+import { provideRichText, RteEditor } from '@comodeviaser/rte-angular';
+import type { RteTheme } from '@comodeviaser/rte-theme';
 
 // Para a aplicação: sementes e modo no provider (mesclam por chave com o da instância).
 export const appTheme: RteTheme = {

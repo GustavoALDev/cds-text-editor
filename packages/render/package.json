@@ -1,7 +1,7 @@
 {
-  "name": "@cds/rte-render",
+  "name": "@comodeviaser/rte-render",
   "version": "0.0.0",
-  "description": "Renderização do HTML do editor de texto rico cds-text-editor.",
+  "description": "Renderização do HTML do editor de texto rico DEVI.A Editor.",
   "license": "MIT",
   "exports": {
     "./styles/render.css": "./styles/render.css"
@@ -16,11 +16,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GustavoALDev/cds-text-editor.git",
+    "url": "git+https://github.com/GustavoALDev/comodeviaser-editor.git",
     "directory": "packages/render"
   },
-  "bugs": "https://github.com/GustavoALDev/cds-text-editor/issues",
-  "homepage": "https://github.com/GustavoALDev/cds-text-editor#readme",
+  "bugs": "https://github.com/GustavoALDev/comodeviaser-editor/issues",
+  "homepage": "https://github.com/GustavoALDev/comodeviaser-editor#readme",
   "keywords": [
     "rich-text-editor",
     "tiptap",
@@ -32,6 +32,6 @@
     "provenance": true
   },
   "dependencies": {
-    "@cds/rte-core": "0.0.0"
+    "@comodeviaser/rte-core": "0.0.0"
   }
 }

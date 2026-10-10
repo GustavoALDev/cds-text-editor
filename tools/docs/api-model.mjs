@@ -43,7 +43,7 @@ export function listModelEntries(packageJson) {
   return out;
 }
 
-// `rte-core-html` -> `@cds/rte-core/html`, procurando nos `exports` dos pacotes dados.
+// `rte-core-html` -> `@comodeviaser/rte-core/html`, procurando nos `exports` dos pacotes dados.
 export function entrySpecifier(synthetic, packageJsons) {
   for (const pkg of packageJsons) {
     const hit = listModelEntries(pkg).find((e) => e.synthetic === synthetic);

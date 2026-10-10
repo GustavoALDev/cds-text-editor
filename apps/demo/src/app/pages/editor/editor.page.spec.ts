@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { RteEditor } from '@cds/rte-angular';
-import { getRteEditor } from '@cds/rte-angular/testing';
+import { RteEditor } from '@comodeviaser/rte-angular';
+import { getRteEditor } from '@comodeviaser/rte-angular/testing';
 import { describe, expect, it, vi } from 'vitest';
 
 // Primeira criação do editor carrega chunks sob demanda: folga no relógio do teste.

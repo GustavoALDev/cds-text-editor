@@ -193,7 +193,7 @@ test('J7: cópia do CSS e do TypeScript (área de transferência só no Chromium
   const css = (await page.getByTestId('css-snippet').textContent()) ?? '';
   const ts = (await page.getByTestId('ts-snippet').textContent()) ?? '';
   expect(css).toContain('--rte-primary');
-  expect(ts).toContain("import { provideRichText } from '@cds/rte-angular';");
+  expect(ts).toContain("import { provideRichText } from '@comodeviaser/rte-angular';");
   if (browserName === 'chromium') {
     await page.getByTestId('copy-css').click();
     await expect(page.getByTestId('copied')).toHaveText('CSS copiado.');

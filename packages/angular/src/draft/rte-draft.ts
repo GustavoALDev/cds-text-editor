@@ -3,7 +3,7 @@ import {
   createLocalDraftStorage,
   type RteDraftStorage,
   type RteDraftStore,
-} from '@cds/rte-core';
+} from '@comodeviaser/rte-core';
 import {
   DRAFT_KEY_PREFIX,
   type RteDraftHost,

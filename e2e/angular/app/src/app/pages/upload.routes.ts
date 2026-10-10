@@ -1,5 +1,5 @@
 import type { Routes } from '@angular/router';
-import { provideRichText } from '@cds/rte-angular';
+import { provideRichText } from '@comodeviaser/rte-angular';
 import { uploadConfig } from './upload-config';
 
 /**

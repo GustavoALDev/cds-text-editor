@@ -3,7 +3,7 @@ import type {
   RteEditorOptions,
   RteSlashLabels,
   RteSlashOptions,
-} from '@cds/rte-core/extensions';
+} from '@comodeviaser/rte-core/extensions';
 import type { RteEditorConfig } from '../config';
 
 function mergeKey<T extends object>(

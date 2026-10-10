@@ -22,8 +22,8 @@ import {
   validate,
   type FieldTree,
 } from '@angular/forms/signals';
-import { normalizeAttribute } from '@cds/rte-core';
-import type { RteVideoTrack } from '@cds/rte-core/extensions';
+import { normalizeAttribute } from '@comodeviaser/rte-core';
+import type { RteVideoTrack } from '@comodeviaser/rte-core/extensions';
 import { applyVideo, removeMediaAt } from '../apply-media';
 import type { RteDialogRequest } from '../controller';
 import { focusFirstInvalid, langCodeCheck, text } from '../form-helpers';

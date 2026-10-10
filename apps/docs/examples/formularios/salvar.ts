@@ -1,6 +1,6 @@
 // #region salvar
 import { Component, signal, viewChild } from '@angular/core';
-import { RteEditor } from '@cds/rte-angular';
+import { RteEditor } from '@comodeviaser/rte-angular';
 
 // Troque pela chamada ao seu servidor: devolva o HTML que ele gravou (já sanitizado).
 async function enviar(html: string): Promise<string> {

@@ -12,8 +12,8 @@ import {
   type RteDialogKind,
   type RteEditorConfig,
   type RteToolbarConfig,
-} from '@cds/rte-angular';
-import { getRteHtml } from '@cds/rte-core/extensions';
+} from '@comodeviaser/rte-angular';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 import { NodeSelection } from '@tiptap/pm/state';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

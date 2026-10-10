@@ -10,7 +10,7 @@ import {
   RteEditor,
   type RteUploadConfig,
   type RteUploadErrorEvent,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 import { undo } from '@tiptap/pm/history';
 import type { Editor } from '@tiptap/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

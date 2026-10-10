@@ -3,8 +3,8 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { map } from 'rxjs';
-import { RteEditor } from '@cds/rte-angular';
-import { RteValidators } from '@cds/rte-angular/validators';
+import { RteEditor } from '@comodeviaser/rte-angular';
+import { RteValidators } from '@comodeviaser/rte-angular/validators';
 import { mensagem } from './erros.example';
 
 @Component({

@@ -1,6 +1,6 @@
 // Fuzz da revisão R9: custo linear de `prepareRteHtml` e `restoreContentStyles` sobre a saída do
 // sanitizador, com geradores de pior caso. Semente e execuções por ambiente (`FC_SEED`, `FC_RUNS`).
-import { createSanitizer } from '@cds/rte-sanitizer';
+import { createSanitizer } from '@comodeviaser/rte-sanitizer';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { restoreContentStyles } from './content/restore-styles';

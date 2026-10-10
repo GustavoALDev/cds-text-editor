@@ -1,6 +1,6 @@
 # Documentação (apps/docs)
 
-Site de documentação do cds-text-editor (spec 07c, ADR 0018): app Angular 22 pré-renderizado, com a CSP estrita do demo, que consome os pacotes `@cds/rte-*` **pelos tarballs**, fora do repositório, como um consumidor externo. Guias em Markdown (`content/`), referência de API gerada dos `.d.ts` publicados, exemplos compilados (`examples/`), busca offline e links verificados.
+Site de documentação do DEVI.A Editor (spec 07c, ADR 0018): app Angular 22 pré-renderizado, com a CSP estrita do demo, que consome os pacotes `@comodeviaser/rte-*` **pelos tarballs**, fora do repositório, como um consumidor externo. Guias em Markdown (`content/`), referência de API gerada dos `.d.ts` publicados, exemplos compilados (`examples/`), busca offline e links verificados.
 
 ## Como rodar
 
@@ -18,13 +18,13 @@ npx api-documenter markdown -i dist/api-model -o dist/api-markdown
 
 node tools/docs-content.mjs                                       # dist/docs-content/: páginas, nav, índice de busca, links
 node tools/consumer.mjs --app docs pack prepare install test build
-node tools/check-links.mjs "$RTE_CONSUMER_DIR/dist/docs/browser" --base /cds-text-editor/ --readmes
-node apps/docs/serve.mjs --dir "$RTE_CONSUMER_DIR/dist/docs/browser"   # serve sob /cds-text-editor/ com a CSP
+node tools/check-links.mjs "$RTE_CONSUMER_DIR/dist/docs/browser" --base /comodeviaser-editor/ --readmes
+node apps/docs/serve.mjs --dir "$RTE_CONSUMER_DIR/dist/docs/browser"   # serve sob /comodeviaser-editor/ com a CSP
 ```
 
 Mudou só um Markdown ou exemplo? Repita `node tools/docs-content.mjs` e o `consumer.mjs --app docs prepare install test build` (os pacotes e o modelo de API só mudam com o código dos pacotes).
 
-Variáveis: `RTE_CONSUMER_DIR` (consumidor, **fora** do repositório; padrão `$TMPDIR/cds-rte-consumer/docs`), `RTE_NPM` (npm a usar, ex.: `npx -y npm@11`), `RTE_SITE_BASE` (prefixo da publicação, padrão `/cds-text-editor/`; vale só no `consumer.mjs` e no `serve.mjs`), `RTE_DOCS_PORT` (padrão 4320; +1 para `--no-csp-header`) e `RTE_DOCS_DIR` (E2E: serve outra pasta, como o site montado do _job_ `pages`).
+Variáveis: `RTE_CONSUMER_DIR` (consumidor, **fora** do repositório; padrão `$TMPDIR/comodeviaser-rte-consumer/docs`), `RTE_NPM` (npm a usar, ex.: `npx -y npm@11`), `RTE_SITE_BASE` (prefixo da publicação, padrão `/comodeviaser-editor/`; vale só no `consumer.mjs` e no `serve.mjs`), `RTE_DOCS_PORT` (padrão 4320; +1 para `--no-csp-header`) e `RTE_DOCS_DIR` (E2E: serve outra pasta, como o site montado do _job_ `pages`).
 
 Nunca rode `npm install` dentro de `apps/docs`: ele não é um _workspace_; o `prepare` copia o app (sem `content/` nem `e2e/`) e o conteúdo gerado para `src/generated/` do consumidor. No Git Bash use `MSYS_NO_PATHCONV=1` ao passar `--base /x/`.
 
@@ -54,7 +54,7 @@ Uma página por entry publicado (`api/<entry>`, por exemplo `api/core-html`), ag
 npx playwright test -c apps/docs/e2e --project=chromium --workers=2
 ```
 
-I1 (fumaça, CSP, offline e axe), I2 (navegação), I3 (sem JS), I4 (busca), I5 (exemplos vivos) e I6 (API). Dois servidores sob `/cds-text-editor/`: um com a CSP por cabeçalho e `<meta>`, outro só com a `<meta>`; exigem `RTE_CONSUMER_DIR` com o `build` pronto. Firefox e WebKit rodam no _job_ `docs` do CI; no Windows, o Firefox com 4 _workers_ às vezes trava (repita com `--workers=2`).
+I1 (fumaça, CSP, offline e axe), I2 (navegação), I3 (sem JS), I4 (busca), I5 (exemplos vivos) e I6 (API). Dois servidores sob `/comodeviaser-editor/`: um com a CSP por cabeçalho e `<meta>`, outro só com a `<meta>`; exigem `RTE_CONSUMER_DIR` com o `build` pronto. Firefox e WebKit rodam no _job_ `docs` do CI; no Windows, o Firefox com 4 _workers_ às vezes trava (repita com `--workers=2`).
 
 ## Publicação
 

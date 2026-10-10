@@ -2,31 +2,31 @@
   "files": {
     "dir": "dist/packages/angular/fesm2022",
     "allowed": [
-      "cds-rte-angular.mjs",
-      "cds-rte-angular-cds-rte-angular-*.mjs",
-      "cds-rte-angular-rte-dialogs-*.mjs",
-      "cds-rte-angular-rte-media-forms-*.mjs",
-      "cds-rte-angular-rte-floating-menus-*.mjs",
-      "cds-rte-angular-rte-slash-menu-*.mjs",
-      "cds-rte-angular-rte-search-*.mjs",
-      "cds-rte-angular-viewport-watch-*.mjs",
-      "cds-rte-angular-rte-draft-*.mjs",
-      "cds-rte-angular-rte-upload-*.mjs",
-      "cds-rte-angular-i18n.mjs",
-      "cds-rte-angular-testing.mjs",
-      "cds-rte-angular-upload.mjs",
-      "cds-rte-angular-validators.mjs"
+      "comodeviaser-rte-angular.mjs",
+      "comodeviaser-rte-angular-comodeviaser-rte-angular-*.mjs",
+      "comodeviaser-rte-angular-rte-dialogs-*.mjs",
+      "comodeviaser-rte-angular-rte-media-forms-*.mjs",
+      "comodeviaser-rte-angular-rte-floating-menus-*.mjs",
+      "comodeviaser-rte-angular-rte-slash-menu-*.mjs",
+      "comodeviaser-rte-angular-rte-search-*.mjs",
+      "comodeviaser-rte-angular-viewport-watch-*.mjs",
+      "comodeviaser-rte-angular-rte-draft-*.mjs",
+      "comodeviaser-rte-angular-rte-upload-*.mjs",
+      "comodeviaser-rte-angular-i18n.mjs",
+      "comodeviaser-rte-angular-testing.mjs",
+      "comodeviaser-rte-angular-upload.mjs",
+      "comodeviaser-rte-angular-validators.mjs"
     ]
   },
   "scenarios": {
     "editor": {
-      "entry": "dist/packages/angular/fesm2022/cds-rte-angular.mjs",
+      "entry": "dist/packages/angular/fesm2022/comodeviaser-rte-angular.mjs",
       "exports": ["RteEditor", "provideRichText"],
       "externalChunks": "dynamic",
       "external": [
         "@angular/*",
         "@tiptap/*",
-        "@cds/*",
+        "@comodeviaser/*",
         "lowlight",
         "highlight.js",
         "highlight.js/*",
@@ -45,13 +45,13 @@
       ]
     },
     "whole": {
-      "entry": "dist/packages/angular/fesm2022/cds-rte-angular.mjs",
+      "entry": "dist/packages/angular/fesm2022/comodeviaser-rte-angular.mjs",
       "exports": ["*"],
       "externalChunks": "dynamic",
       "external": [
         "@angular/*",
         "@tiptap/*",
-        "@cds/*",
+        "@comodeviaser/*",
         "lowlight",
         "highlight.js",
         "highlight.js/*",
@@ -70,13 +70,13 @@
       ]
     },
     "dialogs": {
-      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-dialogs-*.mjs",
+      "entry": "dist/packages/angular/fesm2022/comodeviaser-rte-angular-rte-dialogs-*.mjs",
       "exports": ["*"],
       "externalChunks": true,
       "external": [
         "@angular/*",
         "@tiptap/*",
-        "@cds/*",
+        "@comodeviaser/*",
         "lowlight",
         "highlight.js",
         "highlight.js/*",
@@ -86,13 +86,13 @@
       ]
     },
     "media": {
-      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-media-forms-*.mjs",
+      "entry": "dist/packages/angular/fesm2022/comodeviaser-rte-angular-rte-media-forms-*.mjs",
       "exports": ["*"],
       "externalChunks": true,
       "external": [
         "@angular/*",
         "@tiptap/*",
-        "@cds/*",
+        "@comodeviaser/*",
         "lowlight",
         "highlight.js",
         "highlight.js/*",
@@ -102,13 +102,13 @@
       ]
     },
     "floating": {
-      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-floating-menus-*.mjs",
+      "entry": "dist/packages/angular/fesm2022/comodeviaser-rte-angular-rte-floating-menus-*.mjs",
       "exports": ["*"],
       "externalChunks": true,
       "external": [
         "@angular/*",
         "@tiptap/*",
-        "@cds/*",
+        "@comodeviaser/*",
         "lowlight",
         "highlight.js",
         "highlight.js/*",
@@ -118,13 +118,13 @@
       ]
     },
     "slash-menu": {
-      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-slash-menu-*.mjs",
+      "entry": "dist/packages/angular/fesm2022/comodeviaser-rte-angular-rte-slash-menu-*.mjs",
       "exports": ["*"],
       "externalChunks": true,
       "external": [
         "@angular/*",
         "@tiptap/*",
-        "@cds/*",
+        "@comodeviaser/*",
         "lowlight",
         "highlight.js",
         "highlight.js/*",
@@ -134,13 +134,13 @@
       ]
     },
     "search": {
-      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-search-*.mjs",
+      "entry": "dist/packages/angular/fesm2022/comodeviaser-rte-angular-rte-search-*.mjs",
       "exports": ["*"],
       "externalChunks": true,
       "external": [
         "@angular/*",
         "@tiptap/*",
-        "@cds/*",
+        "@comodeviaser/*",
         "lowlight",
         "highlight.js",
         "highlight.js/*",
@@ -150,13 +150,13 @@
       ]
     },
     "overlay-shared": {
-      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-viewport-watch-*.mjs",
+      "entry": "dist/packages/angular/fesm2022/comodeviaser-rte-angular-viewport-watch-*.mjs",
       "exports": ["*"],
       "externalChunks": true,
       "external": [
         "@angular/*",
         "@tiptap/*",
-        "@cds/*",
+        "@comodeviaser/*",
         "lowlight",
         "highlight.js",
         "highlight.js/*",
@@ -166,13 +166,13 @@
       ]
     },
     "upload-runtime": {
-      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-upload-*.mjs",
+      "entry": "dist/packages/angular/fesm2022/comodeviaser-rte-angular-rte-upload-*.mjs",
       "exports": ["*"],
       "externalChunks": true,
       "external": [
         "@angular/*",
         "@tiptap/*",
-        "@cds/*",
+        "@comodeviaser/*",
         "lowlight",
         "highlight.js",
         "highlight.js/*",
@@ -182,13 +182,13 @@
       ]
     },
     "draft": {
-      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-rte-draft-*.mjs",
+      "entry": "dist/packages/angular/fesm2022/comodeviaser-rte-angular-rte-draft-*.mjs",
       "exports": ["*"],
       "externalChunks": true,
       "external": [
         "@angular/*",
         "@tiptap/*",
-        "@cds/*",
+        "@comodeviaser/*",
         "lowlight",
         "highlight.js",
         "highlight.js/*",
@@ -198,12 +198,12 @@
       ]
     },
     "i18n": {
-      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-i18n.mjs",
+      "entry": "dist/packages/angular/fesm2022/comodeviaser-rte-angular-i18n.mjs",
       "exports": ["*"],
       "external": [
         "@angular/*",
         "@tiptap/*",
-        "@cds/*",
+        "@comodeviaser/*",
         "lowlight",
         "highlight.js",
         "highlight.js/*",
@@ -213,12 +213,12 @@
       ]
     },
     "validators": {
-      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-validators.mjs",
+      "entry": "dist/packages/angular/fesm2022/comodeviaser-rte-angular-validators.mjs",
       "exports": ["*"],
       "external": [
         "@angular/*",
         "@tiptap/*",
-        "@cds/*",
+        "@comodeviaser/*",
         "lowlight",
         "highlight.js",
         "highlight.js/*",
@@ -228,12 +228,12 @@
       ]
     },
     "upload": {
-      "entry": "dist/packages/angular/fesm2022/cds-rte-angular-upload.mjs",
+      "entry": "dist/packages/angular/fesm2022/comodeviaser-rte-angular-upload.mjs",
       "exports": ["*"],
       "external": [
         "@angular/*",
         "@tiptap/*",
-        "@cds/*",
+        "@comodeviaser/*",
         "lowlight",
         "highlight.js",
         "highlight.js/*",

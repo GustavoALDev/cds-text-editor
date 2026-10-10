@@ -4,8 +4,8 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { RteEditor, type RteEditorConfig } from '@cds/rte-angular';
-import { RTE_CODE_LANGUAGES } from '@cds/rte-core/code-languages';
+import { RteEditor, type RteEditorConfig } from '@comodeviaser/rte-angular';
+import { RTE_CODE_LANGUAGES } from '@comodeviaser/rte-core/code-languages';
 import { E2eBridge, NO_FORM_STATE } from '../e2e-bridge';
 
 /** N5: um editor com todas as gramáticas, carregado pelo teste (`setValue`). */

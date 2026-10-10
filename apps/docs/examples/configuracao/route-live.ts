@@ -5,7 +5,7 @@ import {
   createEnvironmentInjector,
   inject,
 } from '@angular/core';
-import { RteEditor } from '@cds/rte-angular';
+import { RteEditor } from '@comodeviaser/rte-angular';
 import { ArticleEditor, articleRoute } from './route-providers';
 
 /**

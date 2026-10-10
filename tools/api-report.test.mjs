@@ -22,7 +22,7 @@ import {
   sourceEntryFile,
 } from './api-report.mjs';
 
-function fixture(files, exportsField, name = '@cds/rte-demo') {
+function fixture(files, exportsField, name = '@comodeviaser/rte-demo') {
   const dir = mkdtempSync(join(tmpdir(), 'api-report-test-'));
   writeFileSync(
     join(dir, 'package.json'),
@@ -45,13 +45,13 @@ const EXPORTS = {
 };
 
 test('reportFileName: sem escopo, subcaminho com hífen', () => {
-  assert.equal(reportFileName('@cds/rte-core', '.'), 'rte-core.api.md');
+  assert.equal(reportFileName('@comodeviaser/rte-core', '.'), 'rte-core.api.md');
   assert.equal(
-    reportFileName('@cds/rte-core', './html'),
+    reportFileName('@comodeviaser/rte-core', './html'),
     'rte-core-html.api.md',
   );
   assert.equal(
-    reportFileName('@cds/rte-angular', './a/b'),
+    reportFileName('@comodeviaser/rte-angular', './a/b'),
     'rte-angular-a-b.api.md',
   );
 });

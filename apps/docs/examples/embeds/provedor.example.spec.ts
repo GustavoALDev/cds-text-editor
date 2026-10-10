@@ -1,4 +1,4 @@
-import { RTE_EMBED_PROVIDERS, toEmbed } from '@cds/rte-core/embeds';
+import { RTE_EMBED_PROVIDERS, toEmbed } from '@comodeviaser/rte-core/embeds';
 import { describe, expect, it } from 'vitest';
 import { MEU_PLAYER } from './provedor';
 

@@ -14,7 +14,7 @@ import {
   viewChild,
   ViewEncapsulation,
 } from '@angular/core';
-import type { RteSearchState } from '@cds/rte-core/extensions';
+import type { RteSearchState } from '@comodeviaser/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 import type { RteSearchLabels } from '../labels/types';
 import { createSearchAnnouncement, searchPositionText } from './announce';

@@ -1,5 +1,5 @@
 import { InjectionToken } from '@angular/core';
-import type { RteFeatureId } from '@cds/rte-core';
+import type { RteFeatureId } from '@comodeviaser/rte-core';
 
 /**
  * Tipos de menu flutuante. Vídeo e *embed* são chaves separadas (V10), para a

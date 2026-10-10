@@ -1,6 +1,6 @@
 // #region sessao
 import { Component, viewChild } from '@angular/core';
-import { RteEditor, type RteMediaChange } from '@cds/rte-angular';
+import { RteEditor, type RteMediaChange } from '@comodeviaser/rte-angular';
 
 @Component({
   selector: 'docs-media-save',
@@ -35,7 +35,7 @@ export class MediaSave {
 // #endregion
 
 // #region remocao
-import type { RteUploadAdapter } from '@cds/rte-angular';
+import type { RteUploadAdapter } from '@comodeviaser/rte-angular';
 
 export const comLimpeza: RteUploadAdapter = {
   uploadImage: () => Promise.reject(new Error('veja o adaptador do envio')),

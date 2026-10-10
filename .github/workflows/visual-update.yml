@@ -73,7 +73,7 @@ jobs:
       # O demo (O5) é reconstruído aqui, com os mesmos passos do job demo do ci.yml (pack, prepare,
       # install, build), em vez de baixar o artefato demo-static de outro run: determinístico e sem
       # depender do ci.yml da mesma ref já ter terminado.
-      - run: echo "RTE_CONSUMER_DIR=$RUNNER_TEMP/cds-rte-consumer/demo" >> "$GITHUB_ENV"
+      - run: echo "RTE_CONSUMER_DIR=$RUNNER_TEMP/comodeviaser-rte-consumer/demo" >> "$GITHUB_ENV"
       - run: npx nx run-many -t build -p core sanitizer theme angular render
       - run: node tools/consumer.mjs pack prepare install build
       # `changed` só regrava o que mudou além da tolerância (e cria o que falta): rodar duas vezes no mesmo

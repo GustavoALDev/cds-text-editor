@@ -17,13 +17,13 @@ import {
   type RteEditorConfig,
   type RteFloatingMenusConfig,
   type RteLabelsInput,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 import {
   RTE_LABELS_EN,
   RTE_LABELS_ES,
   RTE_LABELS_PT_BR,
-} from '@cds/rte-angular/i18n';
-import { RTE_CODE_LANGUAGES } from '@cds/rte-core/code-languages';
+} from '@comodeviaser/rte-angular/i18n';
+import { RTE_CODE_LANGUAGES } from '@comodeviaser/rte-core/code-languages';
 import { E2eBridge, NO_FORM_STATE, type RteE2eLang } from '../e2e-bridge';
 import { ALT_THEME, MAIN_THEME } from './toolbar';
 

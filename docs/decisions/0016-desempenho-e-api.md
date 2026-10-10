@@ -16,7 +16,7 @@ Z1–Z15 valem como escritas na spec (fonte única). Desvios e achados abaixo.
 ### (b) Relatórios de API (Z6–Z8)
 
 - **Motor:** `@microsoft/api-extractor` 7.59.4 (exato, raiz) sobre os `.d.ts` publicados (`dist`) dos 15 entries; o spike não achou incompatibilidade com o TypeScript 6.0.3 (o plano B pelo compilador não foi necessário). A instalação exigiu npm 11.
-- **Referências entre pacotes:** `tools/api-report.mjs` cria junções temporárias em `node_modules` e `paths` para os `@cds/rte-*`, que entram como externos (sem isso viravam `ae-forgotten-export` falsos); a limpeza é garantida mesmo em falha.
+- **Referências entre pacotes:** `tools/api-report.mjs` cria junções temporárias em `node_modules` e `paths` para os `@comodeviaser/rte-*`, que entram como externos (sem isso viravam `ae-forgotten-export` falsos); a limpeza é garantida mesmo em falha.
 - **Relatório:** o extractor sufixa `.public.api.md`; o script o renomeia para `<entry>.api.md` (`packages/*/api/`) e o compara à parte (`localBuild: true`). `UPDATE_API=1` regrava; sem ele, diferença falha (CI). Chunks com hash dão o mesmo relatório (teste em `tools/api-report.test.mjs`).
 - **Cache do alvo `api`:** o desenho original dos `inputs` era cego à mudança (achado da revisão: o cache acertava com a API alterada). Correção: `production` + `^production` + `dependentTasksOutputFiles` (`**/*.d.ts`, transitivo) + `api/**` + o script + `UPDATE_API`.
 - **Regra do `ɵ`:** todo export `ɵ` exige `@internal` (`check:rules`). Exceção da R6: `static ɵcmp/ɵfac` gerados pelo compilador do Angular nos `.d.ts` não podem ser marcados; o relatório falha com `ɵ` público fora desses estáticos.
@@ -90,7 +90,7 @@ O salto do `editor` vem do que as partes 05b2 a 05d1 colocaram no principal (ARI
 
 - **Toda mudança de API pública** atualiza o relatório no mesmo commit (`UPDATE_API=1`); o CI falha com relatório desatualizado.
 - Mudança que afete o custo por tecla ou de criação roda o N45 com `RTE_PERF_ENFORCE=1`.
-- Changesets: `minor` para `@cds/rte-angular` e `@cds/rte-core` (tipos novos exportados), `patch` para `@cds/rte-render` (só `@internal`/JSDoc).
+- Changesets: `minor` para `@comodeviaser/rte-angular` e `@comodeviaser/rte-core` (tipos novos exportados), `patch` para `@comodeviaser/rte-render` (só `@internal`/JSDoc).
 
 ## Adendo (2026-10-08): números do CI Linux
 

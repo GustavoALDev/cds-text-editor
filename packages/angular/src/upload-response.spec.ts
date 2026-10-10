@@ -1,4 +1,4 @@
-import { getHtmlSchema } from '@cds/rte-core';
+import { getHtmlSchema } from '@comodeviaser/rte-core';
 import { describe, expect, it } from 'vitest';
 import { uploadReason } from './upload/reason';
 import { readUploadedMedia } from './upload/response';

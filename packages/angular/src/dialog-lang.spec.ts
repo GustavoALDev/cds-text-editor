@@ -5,10 +5,10 @@ import {
   viewChild,
 } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { getHtmlSchema, normalizeAttribute } from '@cds/rte-core';
-import { getRteHtml } from '@cds/rte-core/extensions';
+import { getHtmlSchema, normalizeAttribute } from '@comodeviaser/rte-core';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RTE_DIALOG_LANGUAGES, RteEditor } from '@cds/rte-angular';
+import { RTE_DIALOG_LANGUAGES, RteEditor } from '@comodeviaser/rte-angular';
 import type { Editor } from '@tiptap/core';
 import fc from 'fast-check';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

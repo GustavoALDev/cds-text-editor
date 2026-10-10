@@ -39,28 +39,28 @@ function tmp(prefix) {
 const MANIFEST = {
   packages: [
     {
-      name: '@cds/rte-core',
+      name: '@comodeviaser/rte-core',
       version: '0.0.0',
-      file: 'cds-rte-core-0.0.0.tgz',
+      file: 'comodeviaser-rte-core-0.0.0.tgz',
       integrity: sha('core'),
     },
     {
-      name: '@cds/rte-theme',
+      name: '@comodeviaser/rte-theme',
       version: '0.0.0',
-      file: 'cds-rte-theme-0.0.0.tgz',
+      file: 'comodeviaser-rte-theme-0.0.0.tgz',
       integrity: sha('theme'),
     },
   ],
 };
 
-test('rewriteDependencies troca só @cds/* por file: com barras', () => {
+test('rewriteDependencies troca só @comodeviaser/* por file: com barras', () => {
   const pkg = {
     name: 'demo',
     dependencies: {
-      '@cds/rte-core': '0.0.0',
+      '@comodeviaser/rte-core': '0.0.0',
       '@angular/core': '22.2.1',
     },
-    devDependencies: { '@cds/rte-theme': '0.0.0', vitest: '4.1.11' },
+    devDependencies: { '@comodeviaser/rte-theme': '0.0.0', vitest: '4.1.11' },
   };
   const out = rewriteDependencies(
     pkg,
@@ -68,19 +68,19 @@ test('rewriteDependencies troca só @cds/* por file: com barras', () => {
     'C:\\Users\\x y\\repo\\dist\\tarballs',
   );
   assert.equal(
-    out.dependencies['@cds/rte-core'],
-    'file:C:/Users/x y/repo/dist/tarballs/cds-rte-core-0.0.0.tgz',
+    out.dependencies['@comodeviaser/rte-core'],
+    'file:C:/Users/x y/repo/dist/tarballs/comodeviaser-rte-core-0.0.0.tgz',
   );
   assert.equal(
-    out.devDependencies['@cds/rte-theme'],
-    'file:C:/Users/x y/repo/dist/tarballs/cds-rte-theme-0.0.0.tgz',
+    out.devDependencies['@comodeviaser/rte-theme'],
+    'file:C:/Users/x y/repo/dist/tarballs/comodeviaser-rte-theme-0.0.0.tgz',
   );
   assert.equal(out.dependencies['@angular/core'], '22.2.1');
   assert.equal(out.devDependencies.vitest, '4.1.11');
 });
 
 test('rewriteDependencies não muta a entrada', () => {
-  const pkg = { dependencies: { '@cds/rte-core': '0.0.0' } };
+  const pkg = { dependencies: { '@comodeviaser/rte-core': '0.0.0' } };
   const copy = structuredClone(pkg);
   rewriteDependencies(pkg, MANIFEST, '/t');
   assert.deepEqual(pkg, copy);
@@ -90,35 +90,35 @@ test('rewriteDependencies falha se faltar o tarball', () => {
   assert.throws(
     () =>
       rewriteDependencies(
-        { dependencies: { '@cds/rte-angular': '0.0.0' } },
+        { dependencies: { '@comodeviaser/rte-angular': '0.0.0' } },
         MANIFEST,
         '/t',
       ),
-    /tarball.*@cds[/]rte-angular/,
+    /tarball.*@comodeviaser[/]rte-angular/,
   );
 });
 
 test('buildManifest lê nome e versão da entrada, calcula sha512 e ordena', () => {
   const manifest = buildManifest([
     {
-      name: '@cds/rte-theme',
+      name: '@comodeviaser/rte-theme',
       version: '1.2.3',
-      file: 'cds-rte-theme-1.2.3.tgz',
+      file: 'comodeviaser-rte-theme-1.2.3.tgz',
       bytes: Buffer.from('theme'),
     },
     {
-      name: '@cds/rte-core',
+      name: '@comodeviaser/rte-core',
       version: '1.2.3',
-      file: 'cds-rte-core-1.2.3.tgz',
+      file: 'comodeviaser-rte-core-1.2.3.tgz',
       bytes: Buffer.from('core'),
     },
   ]);
   assert.deepEqual(
     manifest.packages.map((p) => p.name),
-    ['@cds/rte-core', '@cds/rte-theme'],
+    ['@comodeviaser/rte-core', '@comodeviaser/rte-theme'],
   );
   assert.equal(manifest.packages[0].version, '1.2.3');
-  assert.equal(manifest.packages[0].file, 'cds-rte-core-1.2.3.tgz');
+  assert.equal(manifest.packages[0].file, 'comodeviaser-rte-core-1.2.3.tgz');
   assert.equal(manifest.packages[0].integrity, sha('core'));
   assert.equal(manifest.packages[1].integrity, sha('theme'));
 });
@@ -146,11 +146,11 @@ test('resolveConsumerDir: no CI usa RUNNER_TEMP; senão TMPDIR', () => {
   const out = tmp('out-');
   assert.equal(
     resolveConsumerDir({ CI: 'true', RUNNER_TEMP: out, TMPDIR: '/t' }, root),
-    join(resolve(out), 'cds-rte-consumer', 'demo'),
+    join(resolve(out), 'comodeviaser-rte-consumer', 'demo'),
   );
   assert.equal(
     resolveConsumerDir({ TMPDIR: out }, root),
-    join(resolve(out), 'cds-rte-consumer', 'demo'),
+    join(resolve(out), 'comodeviaser-rte-consumer', 'demo'),
   );
 });
 
@@ -206,11 +206,11 @@ test('runPack roda npm pack por pacote com executor injetado e grava o manifest'
     calls.push({ cmd, args, cwd: opts.cwd });
     const dest = args[args.indexOf('--pack-destination') + 1];
     const name = opts.cwd.split(/[\\/]/).pop();
-    const filename = `cds-rte-${name}-0.0.0.tgz`;
+    const filename = `comodeviaser-rte-${name}-0.0.0.tgz`;
     mkdirSync(dest, { recursive: true });
     writeFileSync(join(dest, filename), `bytes-${name}`);
     return JSON.stringify([
-      { name: `@cds/rte-${name}`, version: '0.0.0', filename },
+      { name: `@comodeviaser/rte-${name}`, version: '0.0.0', filename },
     ]);
   };
   const manifest = runPack({ repoRoot: root, npm: ['npm'], exec, fs });
@@ -237,7 +237,7 @@ test('prepareConsumer copia o demo sem node_modules/dist/.angular e reescreve o 
   writeFileSync(join(demo, 'node_modules', 'x', 'i.js'), 'x');
   writeFileSync(
     join(demo, 'package.json'),
-    JSON.stringify({ dependencies: { '@cds/rte-core': '0.0.0' } }),
+    JSON.stringify({ dependencies: { '@comodeviaser/rte-core': '0.0.0' } }),
   );
   mkdirSync(join(root, 'dist', 'tarballs'), { recursive: true });
   writeFileSync(
@@ -246,7 +246,7 @@ test('prepareConsumer copia o demo sem node_modules/dist/.angular e reescreve o 
   );
   // restos de uma rodada anterior: o que é do demo some, node_modules de terceiros fica
   const consumer = join(out, 'c');
-  mkdirSync(join(consumer, 'node_modules', '@cds', 'rte-core'), {
+  mkdirSync(join(consumer, 'node_modules', '@comodeviaser', 'rte-core'), {
     recursive: true,
   });
   writeFileSync(join(consumer, CONSUMER_MARK), '');
@@ -260,16 +260,16 @@ test('prepareConsumer copia o demo sem node_modules/dist/.angular e reescreve o 
   assert.ok(existsSync(join(consumer, 'src', 'a.ts')));
   assert.ok(!existsSync(join(consumer, 'velho.txt')));
   assert.ok(!existsSync(join(consumer, 'package-lock.json')));
-  assert.ok(!existsSync(join(consumer, 'node_modules', '@cds')));
+  assert.ok(!existsSync(join(consumer, 'node_modules', '@comodeviaser')));
   assert.ok(!existsSync(join(consumer, 'node_modules', '.package-lock.json')));
   assert.ok(existsSync(join(consumer, 'node_modules', 'rxjs')));
   assert.ok(!existsSync(join(consumer, 'node_modules', 'x')));
   const pkg = JSON.parse(readFileSync(join(consumer, 'package.json'), 'utf8'));
   assert.match(
-    pkg.dependencies['@cds/rte-core'],
-    /^file:.*cds-rte-core-0\.0\.0\.tgz$/,
+    pkg.dependencies['@comodeviaser/rte-core'],
+    /^file:.*comodeviaser-rte-core-0\.0\.0\.tgz$/,
   );
-  assert.ok(!pkg.dependencies['@cds/rte-core'].includes('\\'));
+  assert.ok(!pkg.dependencies['@comodeviaser/rte-core'].includes('\\'));
   assert.ok(existsSync(join(consumer, 'manifest.json')));
 });
 
@@ -353,7 +353,7 @@ test('o consumidor sob um link que aponta para dentro do repositório é recusad
 
 // ---- prova de origem ----
 
-/** Consumidor falso: node_modules/@cds/<pkg> real + lockfile oculto do npm. */
+/** Consumidor falso: node_modules/@comodeviaser/<pkg> real + lockfile oculto do npm. */
 function fakeInstall({ integrity = {}, versions = {}, dir } = {}) {
   const consumer = dir ?? tmp('consumer-');
   mkdirSync(consumer, { recursive: true });
@@ -401,16 +401,16 @@ test('verifyOrigin recusa symlink', () => {
   const alvo = tmp('alvo-');
   writeFileSync(
     join(alvo, 'package.json'),
-    JSON.stringify({ name: '@cds/rte-core', version: '0.0.0' }),
+    JSON.stringify({ name: '@comodeviaser/rte-core', version: '0.0.0' }),
   );
-  const link = join(consumer, 'node_modules', '@cds', 'rte-core');
+  const link = join(consumer, 'node_modules', '@comodeviaser', 'rte-core');
   rmSync(link, { recursive: true });
   symlinkSync(alvo, link, 'junction');
   const errors = verifyOrigin(consumer, MANIFEST, fs, {
     repoRoot: tmp('repo-'),
   });
   assert.equal(errors.length, 1);
-  assert.match(errors[0], /@cds\/rte-core/);
+  assert.match(errors[0], /@comodeviaser\/rte-core/);
   assert.match(errors[0], /link simbólico/);
 });
 
@@ -421,20 +421,20 @@ test('verifyOrigin recusa realpath fora de node_modules do consumidor', () => {
   mkdirSync(join(fora, 'rte-core'), { recursive: true });
   writeFileSync(
     join(fora, 'rte-core', 'package.json'),
-    JSON.stringify({ name: '@cds/rte-core', version: '0.0.0' }),
+    JSON.stringify({ name: '@comodeviaser/rte-core', version: '0.0.0' }),
   );
   mkdirSync(join(fora, 'rte-theme'), { recursive: true });
   writeFileSync(
     join(fora, 'rte-theme', 'package.json'),
-    JSON.stringify({ name: '@cds/rte-theme', version: '0.0.0' }),
+    JSON.stringify({ name: '@comodeviaser/rte-theme', version: '0.0.0' }),
   );
-  rmSync(join(consumer, 'node_modules', '@cds'), { recursive: true });
-  symlinkSync(fora, join(consumer, 'node_modules', '@cds'), 'junction');
+  rmSync(join(consumer, 'node_modules', '@comodeviaser'), { recursive: true });
+  symlinkSync(fora, join(consumer, 'node_modules', '@comodeviaser'), 'junction');
   const errors = verifyOrigin(consumer, MANIFEST, fs, {
     repoRoot: tmp('repo-'),
   });
   assert.ok(errors.length >= 1);
-  assert.ok(errors.some((e) => /@cds\/rte-core/.test(e) && /fora de/.test(e)));
+  assert.ok(errors.some((e) => /@comodeviaser\/rte-core/.test(e) && /fora de/.test(e)));
 });
 
 test('verifyOrigin recusa pacote que resolve para dentro do repositório', () => {
@@ -442,20 +442,20 @@ test('verifyOrigin recusa pacote que resolve para dentro do repositório', () =>
   mkdirSync(join(repo, 'packages', 'core'), { recursive: true });
   writeFileSync(
     join(repo, 'packages', 'core', 'package.json'),
-    JSON.stringify({ name: '@cds/rte-core', version: '0.0.0' }),
+    JSON.stringify({ name: '@comodeviaser/rte-core', version: '0.0.0' }),
   );
   const consumer = fakeInstall();
-  const link = join(consumer, 'node_modules', '@cds', 'rte-core');
+  const link = join(consumer, 'node_modules', '@comodeviaser', 'rte-core');
   rmSync(link, { recursive: true });
   symlinkSync(join(repo, 'packages', 'core'), link, 'junction');
   const errors = verifyOrigin(consumer, MANIFEST, fs, { repoRoot: repo });
-  assert.ok(errors.some((e) => /@cds\/rte-core/.test(e)));
+  assert.ok(errors.some((e) => /@comodeviaser\/rte-core/.test(e)));
 });
 
 test('verifyOrigin recusa consumidor dentro do repositório', () => {
   const repo = tmp('repo-');
   const consumer = join(repo, 'consumer');
-  mkdirSync(join(consumer, 'node_modules', '@cds', 'rte-core'), {
+  mkdirSync(join(consumer, 'node_modules', '@comodeviaser', 'rte-core'), {
     recursive: true,
   });
   const errors = verifyOrigin(consumer, MANIFEST, fs, { repoRoot: repo });
@@ -464,12 +464,12 @@ test('verifyOrigin recusa consumidor dentro do repositório', () => {
 
 test('verifyOrigin recusa sha diferente e versão diferente', () => {
   const diff = fakeInstall({
-    integrity: { '@cds/rte-core': sha('outro') },
-    versions: { '@cds/rte-theme': '9.9.9' },
+    integrity: { '@comodeviaser/rte-core': sha('outro') },
+    versions: { '@comodeviaser/rte-theme': '9.9.9' },
   });
   const errors = verifyOrigin(diff, MANIFEST, fs, { repoRoot: tmp('repo-') });
-  assert.ok(errors.some((e) => /@cds\/rte-core/.test(e) && /sha512/.test(e)));
-  assert.ok(errors.some((e) => /@cds\/rte-theme/.test(e) && /versão/.test(e)));
+  assert.ok(errors.some((e) => /@comodeviaser\/rte-core/.test(e) && /sha512/.test(e)));
+  assert.ok(errors.some((e) => /@comodeviaser\/rte-theme/.test(e) && /versão/.test(e)));
 });
 
 test('verifyOrigin recusa pacote ausente e lockfile oculto ausente', () => {
@@ -478,7 +478,7 @@ test('verifyOrigin recusa pacote ausente e lockfile oculto ausente', () => {
   const errors = verifyOrigin(consumer, MANIFEST, fs, {
     repoRoot: tmp('repo-'),
   });
-  assert.ok(errors.some((e) => /@cds\/rte-core/.test(e)));
+  assert.ok(errors.some((e) => /@comodeviaser\/rte-core/.test(e)));
 });
 
 // ---- subcomandos ----
@@ -518,7 +518,7 @@ test('applyVersions reescreve framework, ferramentas e Tiptap; o resto fica', ()
       '@angular/router': '22.2.1',
       '@tiptap/core': '3.31.4',
       '@tiptap/pm': '3.31.4',
-      '@cds/rte-core': 'file:/x.tgz',
+      '@comodeviaser/rte-core': 'file:/x.tgz',
       rxjs: '7.8.2',
     },
     devDependencies: {
@@ -538,7 +538,7 @@ test('applyVersions reescreve framework, ferramentas e Tiptap; o resto fica', ()
   assert.equal(out.devDependencies['@angular-devkit/core'], '22.4.2');
   assert.equal(out.dependencies['@tiptap/core'], '3.35.0');
   assert.equal(out.dependencies['@tiptap/pm'], '3.35.0');
-  assert.equal(out.dependencies['@cds/rte-core'], 'file:/x.tgz');
+  assert.equal(out.dependencies['@comodeviaser/rte-core'], 'file:/x.tgz');
   assert.equal(out.dependencies.rxjs, '7.8.2');
   assert.equal(out.devDependencies.vitest, '4.1.11');
   assert.equal(
@@ -557,7 +557,7 @@ test('prepareConsumer com versions reescreve só a cópia, nunca o apps/demo do 
     dependencies: {
       '@angular/core': '22.2.1',
       '@tiptap/core': '3.31.4',
-      '@cds/rte-core': '0.0.0',
+      '@comodeviaser/rte-core': '0.0.0',
     },
   });
   writeFileSync(join(demo, 'package.json'), original);
@@ -576,7 +576,7 @@ test('prepareConsumer com versions reescreve só a cópia, nunca o apps/demo do 
   const pkg = JSON.parse(readFileSync(join(consumer, 'package.json'), 'utf8'));
   assert.equal(pkg.dependencies['@angular/core'], '22.4.0');
   assert.equal(pkg.dependencies['@tiptap/core'], '3.35.0');
-  assert.match(pkg.dependencies['@cds/rte-core'], /^file:/);
+  assert.match(pkg.dependencies['@comodeviaser/rte-core'], /^file:/);
   assert.equal(readFileSync(join(demo, 'package.json'), 'utf8'), original);
 });
 
@@ -625,7 +625,7 @@ test('main com --versions repassa --legacy-peer-deps ao npm install quando a per
   mkdirSync(join(root, 'apps', 'demo'), { recursive: true });
   writeFileSync(
     join(root, 'apps', 'demo', 'package.json'),
-    JSON.stringify({ dependencies: { '@cds/rte-core': '0.0.0' } }),
+    JSON.stringify({ dependencies: { '@comodeviaser/rte-core': '0.0.0' } }),
   );
   mkdirSync(join(root, 'dist', 'tarballs'), { recursive: true });
   writeFileSync(
@@ -653,7 +653,7 @@ test('main com --versions repassa --legacy-peer-deps ao npm install quando a per
   assert.equal(installs.length, 1);
   assert.ok(installs[0].args.includes('--legacy-peer-deps'));
   const pkg = JSON.parse(readFileSync(join(consumer, 'package.json'), 'utf8'));
-  assert.equal(pkg.dependencies['@cds/rte-core'].startsWith('file:'), true);
+  assert.equal(pkg.dependencies['@comodeviaser/rte-core'].startsWith('file:'), true);
 
   // sem legacyPeerDeps e sem a opção: o install continua o da 07b
   writeFileSync(
@@ -683,11 +683,11 @@ test('resolveConsumerDir: o app define a subpasta (padrão demo); RTE_CONSUMER_D
   const out = tmp('out-');
   assert.equal(
     resolveConsumerDir({ TMPDIR: out }, root, fs, 'docs'),
-    join(resolve(out), 'cds-rte-consumer', 'docs'),
+    join(resolve(out), 'comodeviaser-rte-consumer', 'docs'),
   );
   assert.equal(
     resolveConsumerDir({ TMPDIR: out }, root),
-    join(resolve(out), 'cds-rte-consumer', 'demo'),
+    join(resolve(out), 'comodeviaser-rte-consumer', 'demo'),
   );
   const dir = tmp('out-');
   assert.equal(
@@ -731,7 +731,7 @@ function docsRepo() {
   writeFileSync(join(docs, 'examples', 'ex.ts'), 'ex');
   writeFileSync(
     join(docs, 'package.json'),
-    JSON.stringify({ dependencies: { '@cds/rte-core': '0.0.0' } }),
+    JSON.stringify({ dependencies: { '@comodeviaser/rte-core': '0.0.0' } }),
   );
   mkdirSync(join(root, 'dist', 'tarballs'), { recursive: true });
   writeFileSync(
@@ -770,7 +770,7 @@ test('prepareConsumer(docs): sem content/ e e2e/, com o conteúdo gerado em src/
     'p',
   );
   const pkg = JSON.parse(readFileSync(join(consumer, 'package.json'), 'utf8'));
-  assert.match(pkg.dependencies['@cds/rte-core'], /^file:/);
+  assert.match(pkg.dependencies['@comodeviaser/rte-core'], /^file:/);
 });
 
 test('prepareConsumer(demo) não exige o conteúdo gerado e não copia src/generated', () => {

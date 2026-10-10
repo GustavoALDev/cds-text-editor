@@ -5,7 +5,7 @@ import {
   getElementSpec,
   isAllowedUrl,
   type RteHtmlSchema,
-} from '@cds/rte-core';
+} from '@comodeviaser/rte-core';
 import { Parser } from 'htmlparser2';
 
 /** Esquemas de URL aceitos na saída (R5). */

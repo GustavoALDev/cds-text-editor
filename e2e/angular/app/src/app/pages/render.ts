@@ -10,12 +10,12 @@ import {
   RTE_RENDER_LABELS_EN,
   RteContent,
   type RteRenderLabels,
-} from '@cds/rte-render';
+} from '@comodeviaser/rte-render';
 import {
   RTE_RENDER_LABELS_ES,
   RTE_RENDER_LABELS_PT_BR,
-} from '@cds/rte-render/i18n';
-import { RteToc } from '@cds/rte-render/toc';
+} from '@comodeviaser/rte-render/i18n';
+import { RteToc } from '@comodeviaser/rte-render/toc';
 // O fixture compartilhado (spec 04/06) entra como texto, fora do projeto.
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import fixtureHtml from '../../../../../../fixtures/content/all-features.html' with {

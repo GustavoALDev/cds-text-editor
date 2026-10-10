@@ -34,8 +34,8 @@ function repo() {
     mkdirSync(join(root, path, '..'), { recursive: true });
     writeFileSync(join(root, path), content);
   };
-  put('dist/tarballs/cds-rte-core-0.0.0.tgz', 'tgz-core');
-  put('dist/tarballs/cds-rte-theme-0.0.0.tgz', 'tgz-theme');
+  put('dist/tarballs/comodeviaser-rte-core-0.0.0.tgz', 'tgz-core');
+  put('dist/tarballs/comodeviaser-rte-theme-0.0.0.tgz', 'tgz-theme');
   put('dist/tarballs/manifest.json', '{"packages":[]}');
   put('examples/server-node/server.mjs', 'export {};');
   put('examples/server-node/test/a.test.mjs', 'x');
@@ -60,8 +60,8 @@ test('collectKit: tarballs, manifest, servidor sem node_modules e LEIA-ME de uma
   );
   assert.deepEqual(names, [
     'rte-kit-abc1234/LEIA-ME.txt',
-    'rte-kit-abc1234/kit/cds-rte-core-0.0.0.tgz',
-    'rte-kit-abc1234/kit/cds-rte-theme-0.0.0.tgz',
+    'rte-kit-abc1234/kit/comodeviaser-rte-core-0.0.0.tgz',
+    'rte-kit-abc1234/kit/comodeviaser-rte-theme-0.0.0.tgz',
     'rte-kit-abc1234/kit/manifest.json',
     'rte-kit-abc1234/examples/server-node/server.mjs',
     'rte-kit-abc1234/examples/server-node/test/a.test.mjs',
@@ -76,7 +76,7 @@ test('buildKit: grava rte-kit-<sha>.zip legível', () => {
   assert.equal(file, join(root, 'dist', 'rte-kit-abc1234.zip'));
   const files = readZip(readFileSync(file));
   assert.equal(
-    files['rte-kit-abc1234/kit/cds-rte-core-0.0.0.tgz'].toString(),
+    files['rte-kit-abc1234/kit/comodeviaser-rte-core-0.0.0.tgz'].toString(),
     'tgz-core',
   );
 });

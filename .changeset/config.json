@@ -8,11 +8,11 @@
   "ignore": [],
   "fixed": [
     [
-      "@cds/rte-core",
-      "@cds/rte-sanitizer",
-      "@cds/rte-theme",
-      "@cds/rte-angular",
-      "@cds/rte-render"
+      "@comodeviaser/rte-core",
+      "@comodeviaser/rte-sanitizer",
+      "@comodeviaser/rte-theme",
+      "@comodeviaser/rte-angular",
+      "@comodeviaser/rte-render"
     ]
   ],
   "linked": []

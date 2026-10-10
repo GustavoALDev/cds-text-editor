@@ -6,7 +6,7 @@ import {
   type NgZone,
   type Signal,
 } from '@angular/core';
-import type { RteSlashMenuState } from '@cds/rte-core/extensions';
+import type { RteSlashMenuState } from '@comodeviaser/rte-core/extensions';
 import type { RteSlashMenuLabels } from '../labels/types';
 
 /** Atraso do anúncio da contagem (K4). */

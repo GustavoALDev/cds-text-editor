@@ -3,7 +3,7 @@
  * `styles` e a `styleFrom.property` de `getHtmlSchema` com todos os recursos).
  * Constante literal, não derivada em tempo de execução (bytes e CPU na
  * exibição); `style-properties.spec.ts` confere a igualdade com o esquema, então
- * um recurso novo com estilo quebra o teste. Usada pela exibição (`@cds/rte-render`,
+ * um recurso novo com estilo quebra o teste. Usada pela exibição (`@comodeviaser/rte-render`,
  * Ruling 23) para reaplicar por CSSOM só o que o esquema permite.
  */
 export const RTE_STYLE_PROPERTIES: Readonly<Record<string, readonly string[]>> =

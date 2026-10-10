@@ -10,14 +10,14 @@ import {
   createLocalDraftStorage,
   createMemoryDraftStorage,
   type RteDraftStorage,
-} from '@cds/rte-core';
+} from '@comodeviaser/rte-core';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import {
   provideRichText,
   RteEditor,
   type RteDraftConfig,
   type RteDraftErrorEvent,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 import type { Editor } from '@tiptap/core';
 import { vi } from 'vitest';
 import { RTE_DRAFT_LOADER, type RteDraftLoader } from '../draft/facade';

@@ -94,7 +94,7 @@ export async function createExampleApi({ mediaDir } = {}) {
   const { createApp } = await import(pathToFileURL(SERVER_EXAMPLE).href);
   const owned = mediaDir === undefined;
   const dir =
-    mediaDir ?? (await mkdtemp(join(tmpdir(), 'cds-rte-demo-media-')));
+    mediaDir ?? (await mkdtemp(join(tmpdir(), 'comodeviaser-rte-demo-media-')));
   const authToken = randomBytes(16).toString('hex');
   const handler = createApp({
     mediaDir: dir,

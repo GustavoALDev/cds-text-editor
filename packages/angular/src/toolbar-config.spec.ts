@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RTE_TOOLBAR_PRESETS, RteEditor } from '@cds/rte-angular';
+import { RTE_TOOLBAR_PRESETS, RteEditor } from '@comodeviaser/rte-angular';
 import type { Editor } from '@tiptap/core';
-import type { RteFeatureId } from '@cds/rte-core';
+import type { RteFeatureId } from '@comodeviaser/rte-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHost, settle } from './testing-support/render';
 import { pickToolbarConfig, resolveToolbarGroups } from './toolbar/config';

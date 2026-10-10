@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 
-describe('@cds/rte-theme', () => {
+describe('@comodeviaser/rte-theme', () => {
   it('exports exactly the public value API', async () => {
     const mod = await import('./index');
     expect(Object.keys(mod).sort()).toEqual([

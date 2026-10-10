@@ -1,5 +1,5 @@
-import { normalizeHref, type RteLinkPolicy } from '@cds/rte-core';
-import type { RteImageAlign } from '@cds/rte-core/extensions';
+import { normalizeHref, type RteLinkPolicy } from '@comodeviaser/rte-core';
+import type { RteImageAlign } from '@comodeviaser/rte-core/extensions';
 import type { ChainedCommands, Editor } from '@tiptap/core';
 // Tipos de `unsetLink` no `ChainedCommands`.
 import type {} from '@tiptap/extension-link';

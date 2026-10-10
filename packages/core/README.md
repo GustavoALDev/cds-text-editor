@@ -1,4 +1,4 @@
-# @cds/rte-core
+# @comodeviaser/rte-core
 
 Guia: [Exibição](../../apps/docs/content/guia/exibicao.md) · [Embeds](../../apps/docs/content/guia/embeds.md)
 
@@ -6,18 +6,18 @@ Núcleo do editor: extensões Tiptap, utilitários e esquema do HTML.
 
 **Status: em construção.** Ainda sem versão publicada.
 
-Instalação (nome provisório, escopo `@cds` ainda não confirmado): `npm i @cds/rte-core`
+Instalação: `npm i @comodeviaser/rte-core`
 
 Este projeto **não é afiliado** à Tiptap nem ao ProseMirror.
 
 ## Entry points
 
-- `@cds/rte-core`: esquema do HTML, links, títulos, texto, imagem, rascunho e paleta (sem DOM, roda em Node/SSR).
-- `@cds/rte-core/embeds`: `toEmbed` e os provedores padrão (YouTube, Vimeo, Spotify).
-- `@cds/rte-core/html`: `htmlToText`, `extractToc`, `validateHtml` e `inspectRteHtml` (`hrefs`, `emptyHeadings`, `truncated`; base dos validadores `rteSafeLinks`/`rteNoEmptyHeadings`) sem DOM (usa `htmlparser2`, cerca de 22 kB gzip; fora do entry `/` de propósito).
-- `@cds/rte-core/extensions`: extensões Tiptap, `createEditorExtensions` e o serializador canônico (`getRteHtml`, `serializeRteHtml`). Exige os peers do Tiptap (ver abaixo).
-- `@cds/rte-core/code-languages`: catálogo de linguagens de código com gramáticas do `highlight.js` carregadas sob demanda.
-- `@cds/rte-core/styles/content.css`: arquivo CSS (sem JS) com a aparência do conteúdo; ver abaixo.
+- `@comodeviaser/rte-core`: esquema do HTML, links, títulos, texto, imagem, rascunho e paleta (sem DOM, roda em Node/SSR).
+- `@comodeviaser/rte-core/embeds`: `toEmbed` e os provedores padrão (YouTube, Vimeo, Spotify).
+- `@comodeviaser/rte-core/html`: `htmlToText`, `extractToc`, `validateHtml` e `inspectRteHtml` (`hrefs`, `emptyHeadings`, `truncated`; base dos validadores `rteSafeLinks`/`rteNoEmptyHeadings`) sem DOM (usa `htmlparser2`, cerca de 22 kB gzip; fora do entry `/` de propósito).
+- `@comodeviaser/rte-core/extensions`: extensões Tiptap, `createEditorExtensions` e o serializador canônico (`getRteHtml`, `serializeRteHtml`). Exige os peers do Tiptap (ver abaixo).
+- `@comodeviaser/rte-core/code-languages`: catálogo de linguagens de código com gramáticas do `highlight.js` carregadas sob demanda.
+- `@comodeviaser/rte-core/styles/content.css`: arquivo CSS (sem JS) com a aparência do conteúdo; ver abaixo.
 
 Os entries `.`, `/embeds` e `/html` não importam Tiptap: quem só usa o esquema ou o sanitizador no servidor não precisa instalar os peers.
 
@@ -28,7 +28,7 @@ Os entries `.`, `/embeds` e `/html` não importam Tiptap: quem só usa o esquema
 > **Segurança da mídia: o padrão é permissivo.** Sem `mediaHosts`, `img`/`video`/`poster`/`srcset` aceitam **qualquer host `https`**, e `allowRelativeMedia` é `true` (caminhos do próprio site). Isso deixa um autor mal-intencionado usar o navegador do leitor para rastreá-lo ou para disparar `GET`s no seu site. **Em sites com vários autores configure `mediaHosts` com os seus hosts de mídia e `allowRelativeMedia: false`**, alinhe `img-src`/`media-src` da CSP e mantenha todo `GET` do seu site sem efeito colateral. O mesmo vale para o sanitizador e a exibição (passe as mesmas opções). Detalhes em [`docs/security.md`](../../docs/security.md).
 
 ```ts
-import { getHtmlSchema } from '@cds/rte-core';
+import { getHtmlSchema } from '@comodeviaser/rte-core';
 
 const schema = getHtmlSchema({
   features: { tables: false },
@@ -40,7 +40,7 @@ schema.elements['a'].attributes['href']; // regra do href
 `isAllowedClass(spec, token)` diz se uma classe é aceita por um elemento do esquema (`classes.values` ou `classes.patterns`):
 
 ```ts
-import { getHtmlSchema, isAllowedClass } from '@cds/rte-core';
+import { getHtmlSchema, isAllowedClass } from '@comodeviaser/rte-core';
 
 const code = getHtmlSchema().elements['code'];
 isAllowedClass(code, 'language-javascript'); // true
@@ -49,7 +49,7 @@ isAllowedClass(code, 'hljs'); // false
 
 ### Interpretadores
 
-Funções puras, sem parser, que aplicam o esquema a um elemento já lido. São a base do sanitizador (`@cds/rte-sanitizer`) e podem ser reaproveitadas pela renderização. Toda busca no esquema usa `Object.hasOwn`: `constructor` e `__proto__` nunca acertam o protótipo.
+Funções puras, sem parser, que aplicam o esquema a um elemento já lido. São a base do sanitizador (`@comodeviaser/rte-sanitizer`) e podem ser reaproveitadas pela renderização. Toda busca no esquema usa `Object.hasOwn`: `constructor` e `__proto__` nunca acertam o protótipo.
 
 - `getElementSpec(schema, tag)`: a regra da tag, ou `undefined` fora do esquema.
 - `sanitizeClass(spec, value)`: as classes aceitas (separadas por espaço ASCII), na ordem da entrada e sem repetição; `null` se nenhuma.
@@ -62,7 +62,7 @@ import {
   getElementSpec,
   getHtmlSchema,
   sanitizeAttributes,
-} from '@cds/rte-core';
+} from '@comodeviaser/rte-core';
 
 const a = getElementSpec(getHtmlSchema(), 'a')!;
 sanitizeAttributes(a, [
@@ -81,23 +81,23 @@ sanitizeAttributes(a, [['href', 'javascript:alert(1)']]);
 Confere um HTML contra o esquema, sem DOM, e devolve a lista de violações (vazia = conforme). O modo `canonical` (padrão) exige a forma exata que o editor produz; o modo `accepted` só exige valores aceitos (o que o sanitizador deixaria passar).
 
 ```ts
-import { getHtmlSchema } from '@cds/rte-core';
-import { validateHtml } from '@cds/rte-core/html';
+import { getHtmlSchema } from '@comodeviaser/rte-core';
+import { validateHtml } from '@comodeviaser/rte-core/html';
 
 validateHtml('<p class="x">a</p>', getHtmlSchema());
 // [{ kind: 'invalid-class', tag: 'p', path: 'p[0]', name: 'class', value: 'x' }]
 validateHtml(editor.getHTML(), getHtmlSchema(), { mode: 'accepted' }); // []
 ```
 
-`validateHtml` só lê; os interpretadores que transformam o HTML ficam com o sanitizador (`@cds/rte-sanitizer`).
+`validateHtml` só lê; os interpretadores que transformam o HTML ficam com o sanitizador (`@comodeviaser/rte-sanitizer`).
 
 ## CSS do conteúdo (`styles/content.css`)
 
-Arquivo único com a aparência do HTML do esquema, usado pelo editor (`@cds/rte-angular`) e pela página publicada (spec 06). Inclua depois do `theme.css`:
+Arquivo único com a aparência do HTML do esquema, usado pelo editor (`@comodeviaser/rte-angular`) e pela página publicada (spec 06). Inclua depois do `theme.css`:
 
 ```css
-@import '@cds/rte-theme/theme.css';
-@import '@cds/rte-core/styles/content.css';
+@import '@comodeviaser/rte-theme/theme.css';
+@import '@comodeviaser/rte-core/styles/content.css';
 ```
 
 - Contêiner: `<div class="rte-root"><div class="rte-content">…</div></div>`. O `.rte-root` fornece os tokens `--rte-*`; todo seletor do arquivo começa por `.rte-content`.
@@ -122,7 +122,7 @@ npm i @tiptap/core@3.31.4 @tiptap/pm@3.31.4 @tiptap/extensions@3.31.4 \
   @tiptap/extension-table@3.31.4 lowlight@3.3.0 highlight.js@11.11.1
 ```
 
-Não use `@tiptap/starter-kit` junto: ele fixa o `@tiptap/core` em `dependencies` e pode instalar uma segunda cópia do ProseMirror. O `@cds/rte-angular` (spec 05) declara esses peers como obrigatórios.
+Não use `@tiptap/starter-kit` junto: ele fixa o `@tiptap/core` em `dependencies` e pode instalar uma segunda cópia do ProseMirror. O `@comodeviaser/rte-angular` (spec 05) declara esses peers como obrigatórios.
 
 ### Uso
 
@@ -132,8 +132,8 @@ import {
   createEditorExtensions,
   getRteHtml,
   RTE_CONTENT_LABELS,
-} from '@cds/rte-core/extensions';
-import { RTE_CODE_LANGUAGES } from '@cds/rte-core/code-languages';
+} from '@comodeviaser/rte-core/extensions';
+import { RTE_CODE_LANGUAGES } from '@comodeviaser/rte-core/code-languages';
 
 const editor = new Editor({
   element: host,
@@ -163,7 +163,7 @@ As opções são as de `getHtmlSchema` (`features`, `embedProviders`, `idPrefix`
 - **Legenda em texto puro.** Legenda e crédito de imagem/vídeo/embed e autor/cargo da citação são atributos de texto: formatação dentro deles não é preservada.
 - **Links e linguagens canônicos no JSON.** O `href` guardado é sempre o canônico da política; um `href` perigoso vindo de JSON perde o link na primeira edição que passa por ele. O texto de `<caption>` de tabela colada é descartado.
 - **Parser próprio.** A fábrica instala o parser do esquema com um ajuste de espaços; um `clipboardParser`/`domParser` próprio em `editorProps` pula esse ajuste.
-- **CSS e CSP.** As extensões não trazem CSS. Criar o `Editor` com `injectCSS: false` (CSP) e fornecer o CSS das alças da imagem, das tarefas e das classes `hljs-*` fica com o `@cds/rte-angular` (spec 05).
+- **CSS e CSP.** As extensões não trazem CSS. Criar o `Editor` com `injectCSS: false` (CSP) e fornecer o CSS das alças da imagem, das tarefas e das classes `hljs-*` fica com o `@comodeviaser/rte-angular` (spec 05).
 
 ### Produtividade: busca, comandos `/`, limite e placeholder
 
@@ -193,7 +193,7 @@ Detalhes e decisões: [ADR 0004](../../docs/decisions/0004-extensoes-de-conteudo
 import {
   RTE_CODE_LANGUAGES,
   defineCodeLanguage,
-} from '@cds/rte-core/code-languages';
+} from '@comodeviaser/rte-core/code-languages';
 
 const elixir = defineCodeLanguage({
   id: 'elixir',
@@ -211,7 +211,7 @@ Num bundler com divisão de código, cada gramática vira um _chunk_ separado.
 ## Links
 
 ```ts
-import { normalizeHref, getLinkAttributes } from '@cds/rte-core';
+import { normalizeHref, getLinkAttributes } from '@comodeviaser/rte-core';
 
 normalizeHref('site.com'); // 'https://site.com/'
 normalizeHref('javascript:alert(1)'); // null
@@ -226,7 +226,7 @@ getLinkAttributes(
 ## Embeds
 
 ```ts
-import { toEmbed } from '@cds/rte-core/embeds';
+import { toEmbed } from '@comodeviaser/rte-core/embeds';
 
 toEmbed('https://youtu.be/dQw4w9WgXcQ?t=42');
 // { provider: 'youtube', src: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=42', title: 'YouTube', width: 640, height: 360, aspectRatio: '16 / 9' }
@@ -237,7 +237,7 @@ O `src` é sempre montado pelo provedor e revalidado pelo core; URL desconhecida
 ## Sumário e texto
 
 ```ts
-import { extractToc, htmlToText } from '@cds/rte-core/html';
+import { extractToc, htmlToText } from '@comodeviaser/rte-core/html';
 
 extractToc('<h2 id="rt-intro">Introdução</h2>');
 // [{ id: 'rt-intro', text: 'Introdução', level: 2 }]
@@ -251,7 +251,7 @@ htmlToText('<p>Olá</p><script>x()</script>'); // 'Olá'
 > O rascunho fica no `localStorage` em texto claro e **sem escopo por usuário**: ponha o id do usuário na chave (`user-7:doc-42`) e chame `clearLocalDrafts()`/`drafts.clear()` no logout. A vida do rascunho (`maxAgeMs`, 7 dias) é o mínimo para a carência de mídia órfã no servidor.
 
 ```ts
-import { createDraftStore, createLocalDraftStorage } from '@cds/rte-core';
+import { createDraftStore, createLocalDraftStorage } from '@comodeviaser/rte-core';
 
 const drafts = createDraftStore({
   storage: createLocalDraftStorage(),
@@ -266,14 +266,14 @@ drafts.clear(); // chame no logout em computadores compartilhados
 
 Os relatórios da superfície pública (gerados pelo `api-extractor` e conferidos pelo alvo `nx run core:api`; após uma mudança intencional, `UPDATE_API=1 npx nx run core:api`) ficam em `packages/core/api/`:
 
-- [`rte-core.api.md`](api/rte-core.api.md): `@cds/rte-core`
-- [`rte-core-embeds.api.md`](api/rte-core-embeds.api.md): `@cds/rte-core/embeds`
-- [`rte-core-html.api.md`](api/rte-core-html.api.md): `@cds/rte-core/html`
-- [`rte-core-extensions.api.md`](api/rte-core-extensions.api.md): `@cds/rte-core/extensions`
-- [`rte-core-code-languages.api.md`](api/rte-core-code-languages.api.md): `@cds/rte-core/code-languages`
+- [`rte-core.api.md`](api/rte-core.api.md): `@comodeviaser/rte-core`
+- [`rte-core-embeds.api.md`](api/rte-core-embeds.api.md): `@comodeviaser/rte-core/embeds`
+- [`rte-core-html.api.md`](api/rte-core-html.api.md): `@comodeviaser/rte-core/html`
+- [`rte-core-extensions.api.md`](api/rte-core-extensions.api.md): `@comodeviaser/rte-core/extensions`
+- [`rte-core-code-languages.api.md`](api/rte-core-code-languages.api.md): `@comodeviaser/rte-core/code-languages`
 
 Exports com prefixo `ɵ` e tudo marcado `@internal` ficam fora dos relatórios e não são API pública.
 
-Repositório: cds-text-editor (monorepo). Licença MIT.
+Repositório: comodeviaser-editor (monorepo). Licença MIT.
 
 > Projeto independente, **não afiliado à Tiptap nem ao ProseMirror**.

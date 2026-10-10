@@ -1,5 +1,5 @@
 // #region adaptador
-import { RteUploadError, type RteUploadAdapter } from '@cds/rte-angular';
+import { RteUploadError, type RteUploadAdapter } from '@comodeviaser/rte-angular';
 
 interface UploadResponse {
   url: string;

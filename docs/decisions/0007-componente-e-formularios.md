@@ -5,7 +5,7 @@
 
 ## Contexto
 
-A spec 03c (ADR 0005) entregou a lógica do editor sem UI; faltava o componente Angular que a consome. A 05a entrega o `rte-editor` **sem barra de ferramentas** em `@cds/rte-angular`: `Editor` do Tiptap criado só no navegador, ponte Tiptap → signals, Signal Forms, Reactive/Template Forms, valor canônico, rótulos, validadores de texto, CSS funcional sem injeção (CSP), casca de SSR, gancho de teste e um app de teste Angular que leva o componente ao navegador real nos 3 motores. Nada importa o sanitizador (spec 04). O ADR 0006 pertence ao sanitizador (outro branch); este é o 0007. Este ADR registra as decisões D1–D26 da spec, os rulings da execução (inclusive o pré-voo do plano), as mudanças na spec, os números medidos, a verificação em navegador e as pendências.
+A spec 03c (ADR 0005) entregou a lógica do editor sem UI; faltava o componente Angular que a consome. A 05a entrega o `rte-editor` **sem barra de ferramentas** em `@comodeviaser/rte-angular`: `Editor` do Tiptap criado só no navegador, ponte Tiptap → signals, Signal Forms, Reactive/Template Forms, valor canônico, rótulos, validadores de texto, CSS funcional sem injeção (CSP), casca de SSR, gancho de teste e um app de teste Angular que leva o componente ao navegador real nos 3 motores. Nada importa o sanitizador (spec 04). O ADR 0006 pertence ao sanitizador (outro branch); este é o 0007. Este ADR registra as decisões D1–D26 da spec, os rulings da execução (inclusive o pré-voo do plano), as mudanças na spec, os números medidos, a verificação em navegador e as pendências.
 
 ## Decisão
 
@@ -35,8 +35,8 @@ A spec 03c (ADR 0005) entregou a lógica do editor sem UI; faltava o componente 
 | D20 | Opções de criação lidas uma vez; mudar `options` depois avisa em `isDevMode()`; mescla instância > provider > padrões do core.                                                                                                                             | Recriar perde seleção e histórico; extensões do Tiptap são fixas por instância.                                                                    |
 | D21 | Zoneless primeiro, zone.js suportado: a mesma suíte nos alvos `test` e `test-zone`; dois _builds_ do app de teste.                                                                                                                                         | Apps existentes ainda usam zone.js.                                                                                                                |
 | D22 | Pilha de testes: executor `@nx/angular:unit-test` (Vitest 4 + jsdom), SSR em Node com `renderApplication`, navegador real com app Angular (_prerender_ + hidratação) servido com CSP estrita.                                                              | O Tiptap real roda em jsdom; a lição 12 exige navegador real; o _prerender_ prova a casca e a hidratação; a CSP por cabeçalho prova D16.           |
-| D23 | Gancho de teste: o host recebe `Symbol.for('@cds/rte-angular/editor')` com o `Editor`; `getRteEditor(host)` no `/testing`.                                                                                                                                 | Funciona em _build_ de produção e entre bundles; sem depender de `ng.getComponent`.                                                                |
-| D24 | Peers: `@angular/{core,common,forms}` (piso atualizado, ver ruling 20), `@cds/rte-core` e `@cds/rte-theme` `0.0.0`, todos os peers Tiptap do core, `lowlight` e `highlight.js` obrigatórios; `zone.js` não é peer.                                         | Testar só o que se suporta; uma cópia do ProseMirror; o tema é dependência de CSS, não de código.                                                  |
+| D23 | Gancho de teste: o host recebe `Symbol.for('@comodeviaser/rte-angular/editor')` com o `Editor`; `getRteEditor(host)` no `/testing`.                                                                                                                                 | Funciona em _build_ de produção e entre bundles; sem depender de `ng.getComponent`.                                                                |
+| D24 | Peers: `@angular/{core,common,forms}` (piso atualizado, ver ruling 20), `@comodeviaser/rte-core` e `@comodeviaser/rte-theme` `0.0.0`, todos os peers Tiptap do core, `lowlight` e `highlight.js` obrigatórios; `zone.js` não é peer.                                         | Testar só o que se suporta; uma cópia do ProseMirror; o tema é dependência de CSS, não de código.                                                  |
 | D25 | Guardas por lint em `packages/angular` (sem `@Input`/`@Output`/`@HostListener`/`@HostBinding`, `ngOnChanges`, `detectChanges`, `zone.js`, globais de DOM, `setTimeout` para forçar detecção; OnPush obrigatório) e teste contra texto literal em template. | Mantém o código no estilo signal-first e traduzível, e a regressão acusada em CI.                                                                  |
 | D26 | Orçamento de tamanho por cenário (`packages/angular/size-budget.json`, alvo `size`), `ceil(medido × 1,15 / 64) × 64` (ADR 0003); tamanho do app de teste registrado (informativo).                                                                         | Mesmo método do core.                                                                                                                              |
 
@@ -46,11 +46,11 @@ Cada uma com o custo se estiver errada.
 
 **Pré-voo do plano** (conflitos entre a spec e o código, decididos pela spec)
 
-1. **Aliases.** `tsconfig.base.json` não tinha `@cds/rte-core/html` nem `@cds/rte-angular/validators` e tinha `@cds/rte-angular/styles`, que D16 remove: a Tarefa 1 acrescentou os dois e removeu o terceiro (com `styles/ng-package.json` e `styles/src/index.ts`). Custo: nenhum.
+1. **Aliases.** `tsconfig.base.json` não tinha `@comodeviaser/rte-core/html` nem `@comodeviaser/rte-angular/validators` e tinha `@comodeviaser/rte-angular/styles`, que D16 remove: a Tarefa 1 acrescentou os dois e removeu o terceiro (com `styles/ng-package.json` e `styles/src/index.ts`). Custo: nenhum.
 2. **Zone no executor de testes.** Com o `zone.js` instalado, o _builder_ `unit-test` sobre um alvo de _build_ de biblioteca carregaria o `zone.js` sozinho e o `test` deixaria de ser zoneless. Alvo `unit-test-build` (`@nx/angular:application`, nunca executado, só fornece opções) com configurações `zoneless` (`polyfills: []`) e `zone` (`polyfills: ["zone.js"]`); `test` e `test-zone` têm `providersFile` próprio que marca o modo (`RTE_TEST_MODE`, conferido por `mode.spec.ts`). Custo: um alvo "fantasma" no `project.json`.
 3. **`@angular/router`.** `@angular/ssr@22.2.1` tem `@angular/router` como peer, ausente de D24: entra como devDependency exata; o app de teste usa rotas (atende também R16, com e sem o editor numa rota). Custo: nenhum.
 4. **Nome das tarefas na troca de idioma (R8).** A vista de tarefa do core só reaplicava o `aria-label` em `update(node)`, e uma transação só de _meta_ não redesenha o nó. O core ganhou `RTE_LABELS_META` (`'rtLabels'`) no entry `/extensions` (vista de tarefa relê rótulo e `disabled`; changeset do core). Custo: mudança no core por conta de uma parte do Angular.
-5. **`@nx/dependency-checks`.** Os peers Tiptap/`lowlight`/`highlight.js` exigidos por D24 e o `@cds/rte-theme` (peer só de CSS) ficam em `ignoredDependencies` com comentário; R1 vale como "nenhuma entrada fora de D24". Custo: a regra não acusa um peer realmente sobrando.
+5. **`@nx/dependency-checks`.** Os peers Tiptap/`lowlight`/`highlight.js` exigidos por D24 e o `@comodeviaser/rte-theme` (peer só de CSS) ficam em `ignoredDependencies` com comentário; R1 vale como "nenhuma entrada fora de D24". Custo: a regra não acusa um peer realmente sobrando.
 6. **`check-pack`.** `NG_OUTPUT` recusaria `styles/editor.css` no tarball: `/^styles\/[^/]+\.css$/` e um caso em `tools/check-pack.test.mjs`. Custo: nenhum.
 7. **`disabled` e CVA (superado).** O plano previa um elo interno `cva-link.ts` para o `setDisabledState`; foi removido junto da diretiva (ruling 19). Custo: nenhum.
 8. **`RTE_LABELS_EN` no `.` e no `/i18n`.** Um entry secundário importa o primário, nunca o contrário: o `.` também exporta `RTE_LABELS_EN` (além da §4) e o `/i18n` o reexporta (mesmo objeto). Custo: um export a mais no `.`.
@@ -102,7 +102,7 @@ Cada uma com o custo se estiver errada.
 
 ### (d) Números medidos (2026-10-04)
 
-Tamanho (`node tools/check-size.mjs --config packages/angular/size-budget.json`, após `nx build angular`; orçamento sobre `min+gzip`, com Angular, Tiptap, `@cds/*`, `lowlight` e `highlight.js` externos):
+Tamanho (`node tools/check-size.mjs --config packages/angular/size-budget.json`, após `nx build angular`; orçamento sobre `min+gzip`, com Angular, Tiptap, `@comodeviaser/*`, `lowlight` e `highlight.js` externos):
 
 | Cenário      | min (B) | min+gzip (B) | Orçamento (B) |
 | ------------ | ------- | ------------ | ------------- |
@@ -111,7 +111,7 @@ Tamanho (`node tools/check-size.mjs --config packages/angular/size-budget.json`,
 | `i18n`       | 884     | 387          | 448           |
 | `validators` | 2770    | 1156         | 1344          |
 
-Orçamento = `Math.ceil(gzip × 1,15 / 64) × 64`. O `validators` não inclui o `htmlparser2` (externo via `@cds/*`; ≈ 31 kB gzip no core `/html`).
+Orçamento = `Math.ceil(gzip × 1,15 / 64) × 64`. O `validators` não inclui o `htmlparser2` (externo via `@comodeviaser/*`; ≈ 31 kB gzip no core `/html`).
 
 App de teste (`npx nx run angular-e2e-app:build`, informativo): _bundle_ inicial 300,94 kB bruto / 79,80 kB transferido (**sem** o editor: a rota inicial não o importa); o _chunk_ lazy que traz o editor (Tiptap, ProseMirror, núcleo, `lowlight`) tem 564,08 kB bruto / 155,17 kB transferido; as gramáticas do `highlight.js` são _chunks_ lazy menores.
 
@@ -164,4 +164,4 @@ Itens `minor` adiados nas revisões; não são decisões. Agrupados por área.
 - **Spec 06:** renderiza o valor da 05a (HTML canônico; `''` = sem conteúdo); a exibição sem JS é do `rte-render`, não da casca.
 - **Spec 08:** matriz Angular 22.0 × último (o piso do peer é 22.2.1) e Tiptap 3.31.4 × último; hidratação incremental; teclado virtual e IME fora do Chromium.
 - **Core:** `RTE_LABELS_META` é API nova do `/extensions`; o alinhamento é lido do atributo `style` (ruling 28); uma alternativa de leitura sem DOM resolveria o desvio de CSP do Chromium.
-- O orçamento de tamanho do `@cds/rte-angular` é por cenário (`editor` 6016 B, `i18n` 448 B, `validators` 1344 B, `whole` 6016 B); mudar o componente exige reconferir `npx nx run angular:size`.
+- O orçamento de tamanho do `@comodeviaser/rte-angular` é por cenário (`editor` 6016 B, `i18n` 448 B, `validators` 1344 B, `whole` 6016 B); mudar o componente exige reconferir `npx nx run angular:size`.

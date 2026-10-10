@@ -68,7 +68,7 @@ function isInside(parent, child) {
 }
 
 /** Marca gravada na criação do consumidor: só um diretório com ela pode ser apagado pelo `prepare`. */
-export const CONSUMER_MARK = '.cds-rte-consumer';
+export const CONSUMER_MARK = '.comodeviaser-rte-consumer';
 
 /**
  * `realpath` do caminho; se não existir, o do ancestral existente mais próximo seguido do resto
@@ -119,15 +119,15 @@ export function packDirOf(repoRoot, dir) {
 }
 
 /**
- * Troca as dependências `@cds/*` por `file:<tarball>`; mantém as de terceiros. Falha se faltar o
- * tarball de algum `@cds/*`. Não muta a entrada.
+ * Troca as dependências `@comodeviaser/*` por `file:<tarball>`; mantém as de terceiros. Falha se faltar o
+ * tarball de algum `@comodeviaser/*`. Não muta a entrada.
  */
 export function rewriteDependencies(pkg, manifest, tarballDir) {
   const out = structuredClone(pkg);
   const base = toSlash(tarballDir).replace(/\/+$/, '');
   for (const field of DEP_FIELDS) {
     for (const name of Object.keys(out[field] ?? {})) {
-      if (!name.startsWith('@cds/')) continue;
+      if (!name.startsWith('@comodeviaser/')) continue;
       const entry = manifest.packages.find((p) => p.name === name);
       if (!entry) {
         throw new Error(
@@ -169,7 +169,7 @@ export function resolveConsumerDir(env, repoRoot, fs = nodeFs, app = 'demo') {
       env.CI && env.RUNNER_TEMP
         ? env.RUNNER_TEMP
         : (env.TMPDIR ?? env.RUNNER_TEMP ?? tmpdir());
-    dir = join(resolve(base), 'cds-rte-consumer', app);
+    dir = join(resolve(base), 'comodeviaser-rte-consumer', app);
   }
   assertOutsideRepo(dir, repoRoot, fs);
   return dir;
@@ -210,9 +210,9 @@ export function runPack({ repoRoot, npm, exec, fs = nodeFs }) {
       { cwd, capture: true },
     );
     const [report] = parsePackJson(out);
-    if (report.name !== `@cds/rte-${dir}`) {
+    if (report.name !== `@comodeviaser/rte-${dir}`) {
       throw new Error(
-        `npm pack em ${cwd} gerou ${report.name}, esperado @cds/rte-${dir}`,
+        `npm pack em ${cwd} gerou ${report.name}, esperado @comodeviaser/rte-${dir}`,
       );
     }
     entries.push({
@@ -268,8 +268,8 @@ export function readVersions(path, fs = nodeFs) {
 
 /**
  * Copia `apps/demo` para o consumidor e reescreve o `package.json`. Limpa o consumidor antes,
- * mas preserva o `node_modules` de terceiros (só `@cds` e o lockfile oculto saem, para o
- * npm reinstalar os tarballs novos). Só apaga um diretório com a marca `.cds-rte-consumer`
+ * mas preserva o `node_modules` de terceiros (só `@comodeviaser` e o lockfile oculto saem, para o
+ * npm reinstalar os tarballs novos). Só apaga um diretório com a marca `.comodeviaser-rte-consumer`
  * (gravada na criação); um diretório não vazio sem a marca é recusado.
  */
 export function prepareConsumer({
@@ -314,7 +314,7 @@ export function prepareConsumer({
     }
   }
   const modules = join(consumerDir, 'node_modules');
-  fs.rmSync(join(modules, '@cds'), { recursive: true, force: true });
+  fs.rmSync(join(modules, '@comodeviaser'), { recursive: true, force: true });
   fs.rmSync(join(modules, '.package-lock.json'), { force: true });
 
   fs.cpSync(demo, consumerDir, {
@@ -342,7 +342,7 @@ export function prepareConsumer({
 }
 
 /**
- * Prova de origem (W3): cada `@cds/*` do manifest está em `<consumidor>/node_modules` como
+ * Prova de origem (W3): cada `@comodeviaser/*` do manifest está em `<consumidor>/node_modules` como
  * diretório real (não link), resolve (`realpath`) para dentro dele e fora do repositório, tem a
  * versão do manifest e o sha512 que o npm registrou no lockfile oculto. Devolve as mensagens de
  * erro (vazio = ok).
@@ -784,7 +784,7 @@ export async function runDev({ repoRoot, consumerDir, env, fs, spawn }) {
     configPath,
     `${JSON.stringify({ upload: 'server', authToken })}\n`,
   );
-  const mediaDir = fs.mkdtempSync(join(tmpdir(), 'cds-rte-dev-media-'));
+  const mediaDir = fs.mkdtempSync(join(tmpdir(), 'comodeviaser-rte-dev-media-'));
   const server = run(
     process.execPath,
     [join(repoRoot, 'examples', 'server-node', 'server.mjs')],

@@ -5,7 +5,7 @@ import {
   signal,
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import { RteEditor, type RteEditorConfig } from '@cds/rte-angular';
+import { RteEditor, type RteEditorConfig } from '@comodeviaser/rte-angular';
 import { E2eBridge } from '../e2e-bridge';
 
 /** Documento pequeno do cenário completo (N46): texto, link, tabela e imagem. */

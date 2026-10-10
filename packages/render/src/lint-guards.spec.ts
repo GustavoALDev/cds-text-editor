@@ -39,11 +39,11 @@ const INSERT_ADJACENT =
 const DOC_WRITE =
   'export function f(doc: Document, x: string): void { doc.write(x); }\n';
 const EXTRACT_TOC =
-  "import { extractToc } from '@cds/rte-core/html';\nexport const t = extractToc;\n";
+  "import { extractToc } from '@comodeviaser/rte-core/html';\nexport const t = extractToc;\n";
 const DYNAMIC_SANITIZER =
-  "export const load = () => import('@cds/rte-sanitizer');\n";
+  "export const load = () => import('@comodeviaser/rte-sanitizer');\n";
 const DYNAMIC_CORE_HTML =
-  "export const load = () => import('@cds/rte-core/html');\n";
+  "export const load = () => import('@comodeviaser/rte-core/html');\n";
 const COMPUTED_INNER_HTML =
   "export function f(el: HTMLElement, x: string): void { el['innerHTML'] = x; }\n";
 
@@ -143,23 +143,23 @@ const forbidden: ReadonlyArray<[string, string, string]> = [
   ['s.bypassSecurityTrustHtml(x)', BYPASS, 'no-restricted-syntax'],
   ["host: { '[innerHTML]': 'x' }", HOST_INNER_HTML, 'no-restricted-syntax'],
   [
-    "import { createSanitizer } from '@cds/rte-sanitizer'",
-    "import { createSanitizer } from '@cds/rte-sanitizer';\nexport const s = createSanitizer;\n",
+    "import { createSanitizer } from '@comodeviaser/rte-sanitizer'",
+    "import { createSanitizer } from '@comodeviaser/rte-sanitizer';\nexport const s = createSanitizer;\n",
     TS_IMPORTS,
   ],
-  ["import de '@cds/rte-core/html' fora de toc", EXTRACT_TOC, TS_IMPORTS],
+  ["import de '@comodeviaser/rte-core/html' fora de toc", EXTRACT_TOC, TS_IMPORTS],
   [
-    "import('@cds/rte-sanitizer') dinâmico",
+    "import('@comodeviaser/rte-sanitizer') dinâmico",
     DYNAMIC_SANITIZER,
     'no-restricted-syntax',
   ],
   [
-    "import('@cds/rte-sanitizer/x') dinâmico",
-    "export const load = () => import('@cds/rte-sanitizer/x');\n",
+    "import('@comodeviaser/rte-sanitizer/x') dinâmico",
+    "export const load = () => import('@comodeviaser/rte-sanitizer/x');\n",
     'no-restricted-syntax',
   ],
   [
-    "import('@cds/rte-core/html') dinâmico fora de toc",
+    "import('@comodeviaser/rte-core/html') dinâmico fora de toc",
     DYNAMIC_CORE_HTML,
     'no-restricted-syntax',
   ],
@@ -220,7 +220,7 @@ describe('guardas por lint (spec 06, H19)', () => {
     ['insertAdjacentHTML', INSERT_ADJACENT],
     ['write', DOC_WRITE],
     ["el['innerHTML']", COMPUTED_INNER_HTML],
-    ["import('@cds/rte-sanitizer')", DYNAMIC_SANITIZER],
+    ["import('@comodeviaser/rte-sanitizer')", DYNAMIC_SANITIZER],
   ])('src/content/rte-content.ts continua barrando %s', async (_n, code) => {
     expect(await ruleIds(code, CONTENT_FILE)).toContain('no-restricted-syntax');
   });
@@ -234,13 +234,13 @@ describe('guardas por lint (spec 06, H19)', () => {
   it('import type do sanitizador é permitido', async () => {
     expect(
       await ruleIds(
-        "import type { RteSanitizeOptions } from '@cds/rte-sanitizer';\nexport type T = RteSanitizeOptions;\n",
+        "import type { RteSanitizeOptions } from '@comodeviaser/rte-sanitizer';\nexport type T = RteSanitizeOptions;\n",
         SRC_FILE,
       ),
     ).not.toContain(TS_IMPORTS);
   });
 
-  it('@cds/rte-core/html é permitido no entry /toc e barrado em src/content/', async () => {
+  it('@comodeviaser/rte-core/html é permitido no entry /toc e barrado em src/content/', async () => {
     expect(await ruleIds(EXTRACT_TOC, TOC_FILE)).not.toContain(TS_IMPORTS);
     expect(await ruleIds(EXTRACT_TOC, CONTENT_OTHER)).toContain(TS_IMPORTS);
     expect(await ruleIds("import 'zone.js';\n", TOC_FILE)).toContain(
@@ -248,7 +248,7 @@ describe('guardas por lint (spec 06, H19)', () => {
     );
   });
 
-  it('import() dinâmico: @cds/rte-core/html permitido no /toc; o sanitizador e HTML cru, não', async () => {
+  it('import() dinâmico: @comodeviaser/rte-core/html permitido no /toc; o sanitizador e HTML cru, não', async () => {
     expect(await ruleIds(DYNAMIC_CORE_HTML, TOC_FILE)).not.toContain(
       'no-restricted-syntax',
     );

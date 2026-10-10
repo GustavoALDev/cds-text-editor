@@ -27,11 +27,11 @@ test('only the transitive closure of workspace production dependencies is listed
   const out = generateNotices(
     lockOf({
       'packages/core': {
-        name: '@cds/rte-core',
+        name: '@comodeviaser/rte-core',
         dependencies: { htmlparser2: '^12.0.0' },
         peerDependencies: { '@tiptap/core': '^3.0.0' },
       },
-      'node_modules/@cds/rte-core': { resolved: 'packages/core', link: true },
+      'node_modules/@comodeviaser/rte-core': { resolved: 'packages/core', link: true },
       'node_modules/htmlparser2': {
         version: '12.0.0',
         license: 'MIT',

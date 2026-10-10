@@ -1,7 +1,7 @@
 // #region display
 import { Component, input } from '@angular/core';
-import { provideRteRender, RteContent } from '@cds/rte-render';
-import { createSanitizer } from '@cds/rte-sanitizer';
+import { provideRteRender, RteContent } from '@comodeviaser/rte-render';
+import { createSanitizer } from '@comodeviaser/rte-sanitizer';
 
 @Component({
   selector: 'docs-display-example',

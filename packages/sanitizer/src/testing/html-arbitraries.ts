@@ -10,7 +10,7 @@ import {
   RTE_HIGHLIGHT_COLORS,
   RTE_TEXT_COLORS,
   type RteAttrRule,
-} from '@cds/rte-core';
+} from '@comodeviaser/rte-core';
 import * as fc from 'fast-check';
 import { dangerousUrl } from './dangerous-urls';
 

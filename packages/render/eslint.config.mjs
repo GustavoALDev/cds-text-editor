@@ -14,16 +14,16 @@ const ZONE_IMPORT = {
 };
 
 const SANITIZER_PATH = {
-  name: '@cds/rte-sanitizer',
+  name: '@comodeviaser/rte-sanitizer',
   allowTypeImports: true,
   message:
-    'O código publicado do render não importa o @cds/rte-sanitizer: o sanitizador chega por provideRteRender (spec 06, H4/H5).',
+    'O código publicado do render não importa o @comodeviaser/rte-sanitizer: o sanitizador chega por provideRteRender (spec 06, H4/H5).',
 };
 
 const CORE_HTML_PATH = {
-  name: '@cds/rte-core/html',
+  name: '@comodeviaser/rte-core/html',
   message:
-    'Só o entry /toc (toc/src/**) importa @cds/rte-core/html; o RteContent fica sem htmlparser2 (spec 06, R1, Ruling 11).',
+    'Só o entry /toc (toc/src/**) importa @comodeviaser/rte-core/html; o RteContent fica sem htmlparser2 (spec 06, R1, Ruling 11).',
 };
 
 const D25_SELECTORS = [
@@ -60,12 +60,12 @@ const D25_SELECTORS = [
 // `import()` dinâmico escapa do no-restricted-imports: mesma regra por sintaxe
 // (revisão final). O esquery não aceita `/` dentro do regex: `\x2F` é a barra.
 const SANITIZER_DYNAMIC_IMPORT = {
-  selector: String.raw`ImportExpression[source.value=/^@cds\x2Frte-sanitizer(\x2F|$)/]`,
+  selector: String.raw`ImportExpression[source.value=/^@comodeviaser\x2Frte-sanitizer(\x2F|$)/]`,
   message: `${SANITIZER_PATH.message} Nem por import().`,
 };
 
 const CORE_HTML_DYNAMIC_IMPORT = {
-  selector: String.raw`ImportExpression[source.value=/^@cds\x2Frte-core\x2Fhtml$/]`,
+  selector: String.raw`ImportExpression[source.value=/^@comodeviaser\x2Frte-core\x2Fhtml$/]`,
   message: `${CORE_HTML_PATH.message} Nem por import().`,
 };
 
@@ -241,7 +241,7 @@ export default [
     },
   },
   {
-    // R1: só o entry `/toc` (`toc/src/**`) importa `@cds/rte-core/html`.
+    // R1: só o entry `/toc` (`toc/src/**`) importa `@comodeviaser/rte-core/html`.
     files: ['**/toc/src/**/*.ts'],
     ignores: NOT_PUBLISHED,
     rules: {

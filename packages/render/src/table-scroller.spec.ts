@@ -1,6 +1,6 @@
 import { Component, NgZone, signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { RTE_RENDER_LABELS_PT_BR } from '@cds/rte-render/i18n';
+import { RTE_RENDER_LABELS_PT_BR } from '@comodeviaser/rte-render/i18n';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RteContent } from './content/rte-content';
 import { createTableScrollers } from './content/table-scroller';

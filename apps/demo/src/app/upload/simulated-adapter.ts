@@ -3,7 +3,7 @@ import {
   type RteUploadAdapter,
   type RteUploadContext,
   type RteUploadedImage,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 
 /** Imagem de exemplo do próprio demo (relativa à raiz; vale com `allowRelativeMedia`). */
 export const SAMPLE_IMAGE_URL = '/exemplo.png';

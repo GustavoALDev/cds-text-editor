@@ -1,5 +1,5 @@
 import { isDevMode } from '@angular/core';
-import type { RteSlashOptions } from '@cds/rte-core/extensions';
+import type { RteSlashOptions } from '@comodeviaser/rte-core/extensions';
 import { isMediaKind, type RteDialogKind } from '../dialogs/types';
 
 const USER_FAILED =

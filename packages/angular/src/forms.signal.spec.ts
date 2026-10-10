@@ -19,14 +19,14 @@ import {
   type SchemaFn,
 } from '@angular/forms/signals';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import { RteEditor } from '@cds/rte-angular';
+import { RteEditor } from '@comodeviaser/rte-angular';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import {
   rteImagesHaveAlt,
   rteMaxChars,
   rteRequired,
   rteUploadsFinished,
-} from '@cds/rte-angular/validators';
+} from '@comodeviaser/rte-angular/validators';
 import type { Editor } from '@tiptap/core';
 import type { Transaction } from '@tiptap/pm/state';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';

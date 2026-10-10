@@ -1,4 +1,4 @@
-import { getRteHtml } from '@cds/rte-core/extensions';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 

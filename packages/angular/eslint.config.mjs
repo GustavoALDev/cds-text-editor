@@ -31,7 +31,7 @@ export default [
           ],
           // Peers exigidos por D24 sem import direto no pacote: as extensões
           // do Tiptap, o lowlight e o highlight.js chegam pelo
-          // `@cds/rte-core/extensions`
+          // `@comodeviaser/rte-core/extensions`
           // (uma cópia só do ProseMirror).
           ignoredDependencies: [
             // Permanentes:
@@ -166,7 +166,7 @@ export default [
     },
   },
   {
-    // R1: só o entry /validators mede texto com `@cds/rte-core/html`; o `.`,
+    // R1: só o entry /validators mede texto com `@comodeviaser/rte-core/html`; o `.`,
     // o /i18n e o /testing não o importam. No flat config a última ocorrência da regra substitui a
     // anterior: o grupo do zone.js é repetido aqui.
     files: ['**/*.ts'],
@@ -178,9 +178,9 @@ export default [
           patterns: [
             ZONE_IMPORT,
             {
-              group: ['@cds/rte-core/html'],
+              group: ['@comodeviaser/rte-core/html'],
               message:
-                'O entry . não importa @cds/rte-core/html; medir texto é do /validators (spec 05a, R1).',
+                'O entry . não importa @comodeviaser/rte-core/html; medir texto é do /validators (spec 05a, R1).',
             },
           ],
         },
@@ -200,12 +200,12 @@ export default [
           patterns: [
             ZONE_IMPORT,
             {
-              group: ['@cds/rte-core/html'],
+              group: ['@comodeviaser/rte-core/html'],
               message:
-                'O entry /upload não importa @cds/rte-core/html; medir texto é do /validators (spec 05a, R1).',
+                'O entry /upload não importa @comodeviaser/rte-core/html; medir texto é do /validators (spec 05a, R1).',
             },
             {
-              group: ['@angular/*', '@cds/rte-angular', '@cds/rte-angular/*'],
+              group: ['@angular/*', '@comodeviaser/rte-angular', '@comodeviaser/rte-angular/*'],
               allowTypeImports: true,
               message:
                 'O entry /upload não importa valores de @angular/* nem do entry principal; só `import type` (spec 05c2a, E24).',

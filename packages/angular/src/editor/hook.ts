@@ -3,4 +3,4 @@
  * `Editor` enquanto ele existe. `Symbol.for` vale entre bundles e em build de
  * produção; `getRteEditor` (entry `/testing`) a lê.
  */
-export const RTE_EDITOR_HOOK = Symbol.for('@cds/rte-angular/editor');
+export const RTE_EDITOR_HOOK = Symbol.for('@comodeviaser/rte-angular/editor');

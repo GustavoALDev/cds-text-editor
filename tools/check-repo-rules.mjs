@@ -27,7 +27,7 @@ const GOVERNANCE_FILES = [
   '.github/ISSUE_TEMPLATE/feature_request.yml',
   '.github/ISSUE_TEMPLATE/config.yml',
 ];
-// Piso 22.x e teto <23 (o @cds/rte-angular pode subir o piso para um minor do 22).
+// Piso 22.x e teto <23 (o @comodeviaser/rte-angular pode subir o piso para um minor do 22).
 const ANGULAR_PEER_RANGE = /^>=22\.\d+\.\d+ <23$/;
 
 const ts = createRequire(import.meta.url)('typescript');
@@ -305,7 +305,7 @@ function checkApp(rootDir, app) {
     }
     if (config.compilerOptions?.paths !== undefined) {
       errors.push(
-        `apps/${app}/${name}: "paths" é proibido no ${app} (consome @cds/* só pelos tarballs; spec 07b, W3)`,
+        `apps/${app}/${name}: "paths" é proibido no ${app} (consome @comodeviaser/* só pelos tarballs; spec 07b, W3)`,
       );
     }
     for (const target of [config.extends].flat().filter(Boolean)) {
@@ -551,11 +551,11 @@ export function checkRoteiro(rootDir) {
   return errors;
 }
 
-// Dependências internas (spec 09c, AP12): `@cds/rte-*` importado vai em `dependencies`
+// Dependências internas (spec 09c, AP12): `@comodeviaser/rte-*` importado vai em `dependencies`
 // com a versão exata do pacote referido; nenhum peer interno; ng-package.json lista as
 // internas em `allowedNonPeerDependencies`.
-const INTERNAL_SCOPE = '@cds/rte-';
-const INTERNAL_IMPORT = /^(@cds\/rte-[a-z]+)(?:\/|$)/;
+const INTERNAL_SCOPE = '@comodeviaser/rte-';
+const INTERNAL_IMPORT = /^(@comodeviaser\/rte-[a-z]+)(?:\/|$)/;
 
 export function checkInternalDeps(rootDir) {
   const errors = [];
@@ -660,6 +660,12 @@ export const REMOVED_NAMES = [
   'THEME_VERSION',
   'RENDER_VERSION',
 ];
+// Nome antigo do projeto (escopo `@cds`, ADR 0024): só o histórico (ADRs, specs, planos) o cita.
+export const OLD_PROJECT_NAMES = [
+  ['@cds/', '@comodeviaser/'],
+  ['cds-rte-', 'comodeviaser-rte-'],
+  ['cds-text-editor', 'comodeviaser-editor'],
+];
 const OLD_NAME_SKIP_PREFIXES = [
   'docs/decisions/',
   'docs/specs/',
@@ -717,6 +723,10 @@ export function checkOldNames(rootDir) {
     ...Object.entries(OLD_TO_NEW).map(([old, novo]) => [old, novo]),
     ...REMOVED_NAMES.map((old) => [old, null]),
   ].map(([old, novo]) => [old, novo, oldNameRegex(old)]);
+  for (const [old, novo] of OLD_PROJECT_NAMES) {
+    const escaped = old.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+    entries.push([old, novo, new RegExp(`(?<![A-Za-z0-9_])${escaped}`, 'g')]);
+  }
   for (const path of trackedFiles(rootDir)) {
     if (
       OLD_NAME_SKIP_FILES.has(path) ||

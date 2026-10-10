@@ -1,5 +1,5 @@
 // #region opcoes
-import type { RteEditorConfig } from '@cds/rte-angular';
+import type { RteEditorConfig } from '@comodeviaser/rte-angular';
 
 // Um só objeto: o mesmo para o editor, para o sanitizador do servidor e para o da exibição.
 export const editorOptions: RteEditorConfig = {
@@ -9,9 +9,9 @@ export const editorOptions: RteEditorConfig = {
 
 // #region exibicao
 import { Component, input } from '@angular/core';
-import { provideRteRender, RteContent } from '@cds/rte-render';
-import { RteToc } from '@cds/rte-render/toc';
-import { createSanitizer } from '@cds/rte-sanitizer';
+import { provideRteRender, RteContent } from '@comodeviaser/rte-render';
+import { RteToc } from '@comodeviaser/rte-render/toc';
+import { createSanitizer } from '@comodeviaser/rte-sanitizer';
 
 @Component({
   selector: 'docs-post-view',
@@ -30,7 +30,7 @@ export class PostView {
 // #endregion
 
 // #region servidor
-import { extractToc } from '@cds/rte-core/html';
+import { extractToc } from '@comodeviaser/rte-core/html';
 
 // No servidor (ou no build) o sumário sai do HTML salvo, sem Angular.
 export function tocOf(html: string) {

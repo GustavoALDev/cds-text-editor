@@ -19,12 +19,12 @@ import {
   type RteLabelsInput,
   type RteToolbarConfig,
   type RteMediaChange,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 import {
   RTE_LABELS_EN,
   RTE_LABELS_ES,
   RTE_LABELS_PT_BR,
-} from '@cds/rte-angular/i18n';
+} from '@comodeviaser/rte-angular/i18n';
 import { E2eBridge, NO_FORM_STATE, type RteE2eLang } from '../e2e-bridge';
 import { MEDIA_FIXTURE } from './media-fixture';
 import { ALT_THEME, MAIN_THEME } from './toolbar';

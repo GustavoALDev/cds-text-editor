@@ -49,6 +49,6 @@ O navegador envia o arquivo para o endereço do `endpoint`, então ele precisa e
 
 No servidor ele renderiza só uma casca; o texto sem JavaScript é papel da exibição. Veja [SSR e CSP](guia/ssr-e-csp).
 
-## Os nomes `@cds/rte-*` e a Tiptap.
+## Os nomes `@comodeviaser/rte-*` e a Tiptap.
 
-Os nomes são provisórios e os pacotes ainda não foram publicados. O projeto é independente e **não é afiliado à Tiptap nem ao ProseMirror**. Veja [Instalação](guia/instalacao) e [Migração](guia/migracao).
+O escopo `@comodeviaser` é o da marca Como DEVI.A ser, e os pacotes ainda não foram publicados. O projeto é independente e **não é afiliado à Tiptap nem ao ProseMirror**. Veja [Instalação](guia/instalacao) e [Migração](guia/migracao).

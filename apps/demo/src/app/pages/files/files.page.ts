@@ -11,9 +11,9 @@ import {
   type RteMediaChange,
   type RteUploadConfig,
   type RteUploadErrorEvent,
-} from '@cds/rte-angular';
-import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
-import { httpUploadAdapter } from '@cds/rte-angular/upload';
+} from '@comodeviaser/rte-angular';
+import { RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
+import { httpUploadAdapter } from '@comodeviaser/rte-angular/upload';
 import { loadDemoConfig, type UploadMode } from '../../upload/demo-config';
 import { createSimulatedAdapter } from '../../upload/simulated-adapter';
 
@@ -42,7 +42,7 @@ export function describeUploadError(event: RteUploadErrorEvent): string {
 export class FilesPage {
   protected readonly labels = RTE_LABELS_PT_BR;
   protected readonly readmeUrl =
-    'https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/angular/README.md';
+    'https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/angular/README.md';
   protected readonly html = signal(
     '<p>Insira uma imagem para testar o envio.</p>',
   );

@@ -12,7 +12,7 @@ import {
   viewChild,
   ViewEncapsulation,
 } from '@angular/core';
-import type { RteSlashMenuState } from '@cds/rte-core/extensions';
+import type { RteSlashMenuState } from '@comodeviaser/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 import { clipAncestors, readVisibleArea } from '../floating/anchor';
 import { touches } from '../floating/place';

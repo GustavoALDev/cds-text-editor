@@ -16,7 +16,7 @@ import {
   validate,
   type FieldTree,
 } from '@angular/forms/signals';
-import type { RteAttrRule } from '@cds/rte-core';
+import type { RteAttrRule } from '@comodeviaser/rte-core';
 import { applyLang, removeLang } from '../apply';
 import type { RteDialogRequest } from '../controller';
 import { RteDialogFormBase } from './form-base';

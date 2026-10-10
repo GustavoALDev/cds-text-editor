@@ -108,7 +108,7 @@ export function generateInstallCommand(packages) {
   for (const [name, range] of Object.entries(peers)) {
     if (optional[name]?.optional) continue;
     if (name.startsWith('@angular/')) continue;
-    if (name.startsWith('@cds/')) own.push(name);
+    if (name.startsWith('@comodeviaser/')) own.push(name);
     else third.push(`${name}@${range}`);
   }
   const names = [...new Set(own)].sort((a, b) =>

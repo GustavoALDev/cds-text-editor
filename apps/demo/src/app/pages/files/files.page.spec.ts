@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { RteEditor } from '@cds/rte-angular';
+import { RteEditor } from '@comodeviaser/rte-angular';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { describeUploadError, FilesPage } from './files.page';
 

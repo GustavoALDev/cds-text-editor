@@ -1,5 +1,5 @@
 import { isDevMode } from '@angular/core';
-import type { RteFeatureId } from '@cds/rte-core';
+import type { RteFeatureId } from '@comodeviaser/rte-core';
 import {
   RTE_TOOLBAR_ITEMS,
   RTE_TOOLBAR_PRESETS,

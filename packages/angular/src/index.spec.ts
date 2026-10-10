@@ -1,6 +1,6 @@
 import type { InputSignal, OutputRef, Signal } from '@angular/core';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import * as api from '@cds/rte-angular';
+import * as api from '@comodeviaser/rte-angular';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
 import type {
   RteDialogKind,
@@ -13,16 +13,16 @@ import type {
   RteUploadConfig,
   RteUploadErrorEvent,
   RteUploadStatus,
-} from '@cds/rte-angular';
-import * as i18n from '@cds/rte-angular/i18n';
-import * as testing from '@cds/rte-angular/testing';
+} from '@comodeviaser/rte-angular';
+import * as i18n from '@comodeviaser/rte-angular/i18n';
+import * as testing from '@comodeviaser/rte-angular/testing';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import * as upload from '@cds/rte-angular/upload';
+import * as upload from '@comodeviaser/rte-angular/upload';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import * as validators from '@cds/rte-angular/validators';
+import * as validators from '@comodeviaser/rte-angular/validators';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
-describe('@cds/rte-angular', () => {
+describe('@comodeviaser/rte-angular', () => {
   it('exporta só a API pública do entry .', () => {
     expect(Object.keys(api).sort()).toEqual([
       'RTE_DIALOG_LANGUAGES',

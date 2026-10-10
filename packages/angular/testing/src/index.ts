@@ -7,7 +7,7 @@
 import type { Editor } from '@tiptap/core';
 
 /** Mesma chave do componente (D23): `Symbol.for` vale entre bundles. */
-const HOOK = Symbol.for('@cds/rte-angular/editor');
+const HOOK = Symbol.for('@comodeviaser/rte-angular/editor');
 
 function isEditorLike(value: unknown): value is Editor {
   return (

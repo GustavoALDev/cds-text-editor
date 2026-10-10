@@ -1,6 +1,6 @@
 import { NgZone } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { createMemoryDraftStorage, type RteDraftStorage } from '@cds/rte-core';
+import { createMemoryDraftStorage, type RteDraftStorage } from '@comodeviaser/rte-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installDialogShim } from './testing-support/dialog';
 import {

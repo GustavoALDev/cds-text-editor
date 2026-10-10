@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
-import { RteEditor, type RteToolbarConfig } from '@cds/rte-angular';
-import { RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
+import { RteEditor, type RteToolbarConfig } from '@comodeviaser/rte-angular';
+import { RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
 
 export type ToolbarPreset = 'minimal' | 'article' | 'full';
 export type ToolbarFeature = 'colors' | 'tasks' | 'code' | 'tables' | 'newsBlocks';
@@ -33,7 +33,7 @@ export class ToolbarPage {
   protected readonly presets = TOOLBAR_PRESETS;
   protected readonly featureList = TOOLBAR_FEATURES;
   protected readonly readmeUrl =
-    'https://github.com/GustavoALDev/cds-text-editor/blob/main/packages/angular/README.md#barra-de-ferramentas';
+    'https://github.com/GustavoALDev/comodeviaser-editor/blob/main/packages/angular/README.md#barra-de-ferramentas';
 
   readonly preset = signal<ToolbarPreset>('article');
   readonly features = signal<Readonly<Record<ToolbarFeature, boolean>>>({

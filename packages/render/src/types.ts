@@ -11,7 +11,7 @@ export interface RteRenderLabels {
 
 /** Opções do conteúdo renderizado, fornecidas por `provideRteRender`. */
 export interface RteRenderOptions {
-  /** Sanitizador do modo `sanitize`: `createSanitizer(opçõesDoEditor)` do `@cds/rte-sanitizer` (H4). */
+  /** Sanitizador do modo `sanitize`: `createSanitizer(opçõesDoEditor)` do `@comodeviaser/rte-sanitizer` (H4). */
   sanitize?: (html: string) => string;
   /** `href="#x"` vira `<caminho do documento>#x` (padrão) ou é mantido (H6). */
   fragmentLinks?: 'document' | 'keep';

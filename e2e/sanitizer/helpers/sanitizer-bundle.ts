@@ -8,7 +8,7 @@ let cached: string | undefined;
 /**
  * Bundle IIFE (`window.RteSanitizerLab`) com `sanitizeRichText` e
  * `createSanitizer` do sanitizador e `getHtmlSchema` do core, gerado uma vez
- * por worker. O alias aponta `@cds/rte-core` para o código-fonte do core.
+ * por worker. O alias aponta `@comodeviaser/rte-core` para o código-fonte do core.
  */
 export function sanitizerBundle(): string {
   cached ??= buildSync({
@@ -20,7 +20,7 @@ export function sanitizerBundle(): string {
       resolveDir: ROOT,
       loader: 'ts',
     },
-    alias: { '@cds/rte-core': resolve(ROOT, 'packages/core/src/index.ts') },
+    alias: { '@comodeviaser/rte-core': resolve(ROOT, 'packages/core/src/index.ts') },
     bundle: true,
     format: 'iife',
     globalName: 'RteSanitizerLab',

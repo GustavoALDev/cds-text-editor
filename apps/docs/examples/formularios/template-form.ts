@@ -1,14 +1,14 @@
 // #region component
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { FormsModule, type ValidationErrors } from '@angular/forms';
-import { RteEditor } from '@cds/rte-angular';
+import { RteEditor } from '@comodeviaser/rte-angular';
 import {
   RteMaxCharsValidator,
   RteMaxWordsValidator,
   RteNoEmptyHeadingsValidator,
   RteRequiredValidator,
   RteSafeLinksValidator,
-} from '@cds/rte-angular/validators';
+} from '@comodeviaser/rte-angular/validators';
 import { mensagem } from './erros.example';
 
 @Component({

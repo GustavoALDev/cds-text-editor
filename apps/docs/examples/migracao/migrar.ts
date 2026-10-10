@@ -1,7 +1,7 @@
 // #region migrar
-import { getHtmlSchema } from '@cds/rte-core';
-import { validateHtml, type RteHtmlViolation } from '@cds/rte-core/html';
-import { createSanitizer } from '@cds/rte-sanitizer';
+import { getHtmlSchema } from '@comodeviaser/rte-core';
+import { validateHtml, type RteHtmlViolation } from '@comodeviaser/rte-core/html';
+import { createSanitizer } from '@comodeviaser/rte-sanitizer';
 
 const schema = getHtmlSchema();
 const sanitize = createSanitizer();

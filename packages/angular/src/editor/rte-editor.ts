@@ -26,17 +26,17 @@ import {
   getHtmlSchema,
   type RteHtmlSchema,
   type RtePaletteColor,
-} from '@cds/rte-core';
-import type { RteCodeLanguage } from '@cds/rte-core/code-languages';
-import { RTE_EMBED_PROVIDERS } from '@cds/rte-core/embeds';
+} from '@comodeviaser/rte-core';
+import type { RteCodeLanguage } from '@comodeviaser/rte-core/code-languages';
+import { RTE_EMBED_PROVIDERS } from '@comodeviaser/rte-core/embeds';
 import {
   createEditorExtensions,
   getSearchState,
   RTE_LABELS_META,
   type RteCharLimitState,
   type RteImageAlign,
-} from '@cds/rte-core/extensions';
-import { applyRteTheme, warnIfPoorTheme, type RteTheme } from '@cds/rte-theme';
+} from '@comodeviaser/rte-core/extensions';
+import { applyRteTheme, warnIfPoorTheme, type RteTheme } from '@comodeviaser/rte-theme';
 import { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { EditorState, type Transaction } from '@tiptap/pm/state';

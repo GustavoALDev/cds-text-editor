@@ -4,7 +4,7 @@ import {
   inject,
   viewChild,
 } from '@angular/core';
-import { provideRteRender, RteContent } from '@cds/rte-render';
+import { provideRteRender, RteContent } from '@comodeviaser/rte-render';
 import { E2eBridge } from '../e2e-bridge';
 import { RENDER_SANITIZE } from '../render-options';
 

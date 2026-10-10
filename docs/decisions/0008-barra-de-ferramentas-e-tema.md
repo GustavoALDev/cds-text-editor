@@ -5,7 +5,7 @@
 
 ## Contexto
 
-A 05a entregou o `rte-editor` sem interface. A 05b1 dá a ele a barra de ferramentas acessível (APG _toolbar_ e _menu button_, `popover` nativo, ícones SVG internos, estado por transação sem re-render, comandos sem diálogo, guarda de tabela > 100), o tema por instância compatível com a CSP, o `content.css` `rt-*` no `@cds/rte-core` e a correção do `blur` em `disabled`/`hidden`. Tudo foi provado em jsdom (zoneless e zone.js) e nos 3 motores do Playwright. O 0006 é do sanitizador; este é o 0008.
+A 05a entregou o `rte-editor` sem interface. A 05b1 dá a ele a barra de ferramentas acessível (APG _toolbar_ e _menu button_, `popover` nativo, ícones SVG internos, estado por transação sem re-render, comandos sem diálogo, guarda de tabela > 100), o tema por instância compatível com a CSP, o `content.css` `rt-*` no `@comodeviaser/rte-core` e a correção do `blur` em `disabled`/`hidden`. Tudo foi provado em jsdom (zoneless e zone.js) e nos 3 motores do Playwright. O 0006 é do sanitizador; este é o 0008.
 
 ## Decisão
 
@@ -28,7 +28,7 @@ A 05a entregou o `rte-editor` sem interface. A 05b1 dá a ele a barra de ferrame
 | U13 | Menus de cor listam a paleta do esquema com amostra por classe e nome, mais "Cor padrão".                                                                                  | WCAG 1.4.1; sem atributo `style` no SSR.                                                                                    |
 | U14 | Guarda de tabela por ensaio (`dispatch` que só captura) das operações que crescem; > 100 bloqueia com o motivo no `title`; ensaios só com o menu aberto.                   | Mede o resultado real do `prosemirror-tables`; limita o custo.                                                              |
 | U15 | `theme` por instância e em `provideRichText`, mesclado por chave, aplicado por `applyRteTheme` num `afterRenderEffect`; `data-rte-mode` no host; `warnIfPoorTheme` em dev. | CSSOM é aceito pela CSP; o plano B não duplica fórmula; grafo `angular` → `theme`.                                          |
-| U16 | `@cds/rte-core/styles/content.css`: camada `rte.content`, tudo sob `.rte-content`; `editor.css` fica só com o funcional. Ordem: `theme.css`, `content.css`, `editor.css`.  | O core é dono do contrato `rt-*`; o `rte-render` (spec 06) reaproveita.                                                     |
+| U16 | `@comodeviaser/rte-core/styles/content.css`: camada `rte.content`, tudo sob `.rte-content`; `editor.css` fica só com o funcional. Ordem: `theme.css`, `content.css`, `editor.css`.  | O core é dono do contrato `rt-*`; o `rte-render` (spec 06) reaproveita.                                                     |
 | U17 | Cores da paleta com `light-dark()` por variáveis `--rte-content-color`/`--rte-content-highlight`; `!important` só nessas duas declarações.                                 | O `style` do HTML canônico venceria qualquer regra sem `!important` e quebraria o contraste no escuro.                      |
 | U18 | `blur()` de `disabled`/`hidden` passa para `afterRenderEffect`.                                                                                                            | Evita saídas e estado de formulário durante a detecção (`NG0100`).                                                          |
 | U19 | A barra faz parte do `RteEditor`; orçamento de tamanho remedido.                                                                                                           | Uma API só (`toolbar: false` desliga).                                                                                      |
@@ -91,7 +91,7 @@ A 05a entregou o `rte-editor` sem interface. A 05b1 dá a ele a barra de ferrame
 
 ### (d) Números (2026-10-04)
 
-Tamanho (`min+gzip`, Angular, Tiptap, `@cds/*`, `lowlight` e `highlight.js` externos; orçamento = `ceil(medido × 1,15 / 64) × 64`):
+Tamanho (`min+gzip`, Angular, Tiptap, `@comodeviaser/*`, `lowlight` e `highlight.js` externos; orçamento = `ceil(medido × 1,15 / 64) × 64`):
 
 | Cenário      | Antes (05a) | Agora (B) | Orçamento antes | Orçamento agora |
 | ------------ | ----------- | --------- | --------------- | --------------- |
@@ -100,11 +100,11 @@ Tamanho (`min+gzip`, Angular, Tiptap, `@cds/*`, `lowlight` e `highlight.js` exte
 | `i18n`       | 387         | 1544      | 448             | 1792            |
 | `validators` | 1156        | 1156      | 1344            | 1344 (igual)    |
 
-O acréscimo vem da barra, dos ícones, do modelo de itens e dos rótulos da seção `toolbar` nos três idiomas. O custo do `applyRteTheme` é o cenário `apply` do tema: 9810 B min, 4400 B gzip (orçamento 5120); no cenário do Angular o `@cds/*` é externo e não entra na conta. Core e tema dentro do orçamento (`whole` do core 8391 B, `extensions` 34716 B). Depois da revisão final: `editor` 17635 B, `whole` 17676 B (orçamento igual), `extensions` do core 34874 B.
+O acréscimo vem da barra, dos ícones, do modelo de itens e dos rótulos da seção `toolbar` nos três idiomas. O custo do `applyRteTheme` é o cenário `apply` do tema: 9810 B min, 4400 B gzip (orçamento 5120); no cenário do Angular o `@comodeviaser/*` é externo e não entra na conta. Core e tema dentro do orçamento (`whole` do core 8391 B, `extensions` 34716 B). Depois da revisão final: `editor` 17635 B, `whole` 17676 B (orçamento igual), `extensions` do core 34874 B.
 
 `content.css`: 9266 B brutos, 2481 B gzip. `editor.css`: 17287 B brutos, 4197 B gzip (inclui barra e menus).
 
-App de teste (`angular-e2e-app:build`, informativo): _bundle_ inicial 892,92 kB brutos / 238,39 kB transferidos (não comparável ao da 05a: `e2e-bridge.ts` importa Tiptap, `@cds/rte-core/extensions` e `applyRteTheme` no _bundle_ principal); _chunk_ lazy da rota `toolbar` 4,27 kB / 1,20 kB.
+App de teste (`angular-e2e-app:build`, informativo): _bundle_ inicial 892,92 kB brutos / 238,39 kB transferidos (não comparável ao da 05a: `e2e-bridge.ts` importa Tiptap, `@comodeviaser/rte-core/extensions` e `applyRteTheme` no _bundle_ principal); _chunk_ lazy da rota `toolbar` 4,27 kB / 1,20 kB.
 
 N15 (mediana por tecla em ms, documento de 20 mil palavras, `toolbar: false` / `full` / `full` + render; 0 mutações na barra em 50 teclas):
 
@@ -140,5 +140,5 @@ N9–N15 em `e2e/angular/editor-toolbar-*.spec.ts`, `editor-theme.spec.ts` e `ed
 - **Spec 05b2:** reaproveita `RteRovingFocus`, `RteMenu`, `positionMenu`, `createToolbarState` e `readTableMenuState` nos menus flutuantes (a mesma guarda de tabela); acrescenta `link`/`lang` à barra e aos presets; diálogos em `<dialog>` dentro do host.
 - **Spec 05c:** os itens de mídia entram no modelo de itens e nos presets.
 - **Spec 05d:** usa o N15 e o salto de ~8 para ~44 ms por tecla depois de ~200 transações nos orçamentos de desempenho e em `updateOn`; libera busca e `/`.
-- **Spec 06:** o `rte-render` usa `@cds/rte-core/styles/content.css` (o contêiner precisa de `.rte-root > .rte-content`); com CSP sem `'unsafe-inline'` em `style-src-attr`, o `text-align`, as larguras de coluna e o `aspect-ratio` dos _embeds_ (atributo `style`) não se aplicam: a spec 06 decide (CSSOM, aceitar ou documentar); as cores da paleta não dependem disso (U17).
-- O orçamento do `@cds/rte-angular` agora é `editor` 20032 B, `whole` 20032 B, `i18n` 1792 B e `validators` 1344 B.
+- **Spec 06:** o `rte-render` usa `@comodeviaser/rte-core/styles/content.css` (o contêiner precisa de `.rte-root > .rte-content`); com CSP sem `'unsafe-inline'` em `style-src-attr`, o `text-align`, as larguras de coluna e o `aspect-ratio` dos _embeds_ (atributo `style`) não se aplicam: a spec 06 decide (CSSOM, aceitar ou documentar); as cores da paleta não dependem disso (U17).
+- O orçamento do `@comodeviaser/rte-angular` agora é `editor` 20032 B, `whole` 20032 B, `i18n` 1792 B e `validators` 1344 B.

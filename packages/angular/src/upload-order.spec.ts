@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { getRteHtml } from '@cds/rte-core/extensions';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
 import type { Editor, JSONContent } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { TextSelection, type Transaction } from '@tiptap/pm/state';

@@ -59,8 +59,8 @@ const FILES = {
 };
 
 const ENTRIES = [
-  { synthetic: 'rte-core-html', specifier: '@cds/rte-core/html' },
-  { synthetic: 'rte-theme', specifier: '@cds/rte-theme' },
+  { synthetic: 'rte-core-html', specifier: '@comodeviaser/rte-core/html' },
+  { synthetic: 'rte-theme', specifier: '@comodeviaser/rte-theme' },
 ];
 
 function withDir(fn, files = FILES) {
@@ -80,8 +80,8 @@ test('api-group: uma página por entry com título = especificador', () => {
     assert.deepEqual(
       pages.map((p) => [p.id, p.title]),
       [
-        ['api/core-html', '@cds/rte-core/html'],
-        ['api/theme', '@cds/rte-theme'],
+        ['api/core-html', '@comodeviaser/rte-core/html'],
+        ['api/theme', '@comodeviaser/rte-theme'],
       ],
     );
     assert.equal(apiPageId('rte-angular-i18n'), 'api/angular-i18n');
@@ -91,7 +91,7 @@ test('api-group: uma página por entry com título = especificador', () => {
 test('api-group: índice no topo, âncora por item e por membro, links reescritos', () => {
   withDir((markdownDir) => {
     const md = groupApiPages({ markdownDir, entries: ENTRIES })[0].markdown;
-    assert.match(md, /^Especificador de importação: `@cds\/rte-core\/html`\./);
+    assert.match(md, /^Especificador de importação: `@comodeviaser\/rte-core\/html`\./);
     assert.ok(
       md.indexOf('## Índice {#indice}') <
         md.indexOf('## htmlToText() function {#htmltotext}'),
@@ -187,17 +187,17 @@ test('api-group: link para arquivo inexistente falha', () => {
 
 test('assertCoverage: entry sem página e página sem entry falham', () => {
   const pages = [
-    { specifier: '@cds/rte-core' },
-    { specifier: '@cds/rte-extra' },
+    { specifier: '@comodeviaser/rte-core' },
+    { specifier: '@comodeviaser/rte-extra' },
   ];
-  assertCoverage(['@cds/rte-core'], [{ specifier: '@cds/rte-core' }]);
+  assertCoverage(['@comodeviaser/rte-core'], [{ specifier: '@comodeviaser/rte-core' }]);
   assert.throws(
-    () => assertCoverage(['@cds/rte-core', '@cds/rte-core/html'], [pages[0]]),
-    /entry publicado "@cds\/rte-core\/html" sem página de API/,
+    () => assertCoverage(['@comodeviaser/rte-core', '@comodeviaser/rte-core/html'], [pages[0]]),
+    /entry publicado "@comodeviaser\/rte-core\/html" sem página de API/,
   );
   assert.throws(
-    () => assertCoverage(['@cds/rte-core'], pages),
-    /página de API "@cds\/rte-extra" sem entry publicado/,
+    () => assertCoverage(['@comodeviaser/rte-core'], pages),
+    /página de API "@comodeviaser\/rte-extra" sem entry publicado/,
   );
   void mkdirSync;
 });

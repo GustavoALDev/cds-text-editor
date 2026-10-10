@@ -132,7 +132,7 @@ test.describe('J5 com servidor (--with-server)', () => {
 
     // Presente na pasta temporária do servidor de exemplo (a que o `serve.mjs` criou).
     const stored = readdirSync(tmpdir())
-      .filter((name) => name.startsWith('cds-rte-demo-media-'))
+      .filter((name) => name.startsWith('comodeviaser-rte-demo-media-'))
       .map((name) => join(tmpdir(), name))
       .filter((dir) => existsSync(dir))
       .flatMap((dir) =>

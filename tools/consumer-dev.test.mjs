@@ -118,7 +118,7 @@ test('nenhum token fixo no bundle do demo, no serve.mjs nem no consumer.mjs', ()
 });
 
 test('dev: token por execução no demo-config.json, host em servidor e ng serve, config restaurada', async () => {
-  const consumer = await mkdtemp(join(tmpdir(), 'cds-rte-dev-'));
+  const consumer = await mkdtemp(join(tmpdir(), 'comodeviaser-rte-dev-'));
   const ngDir = join(consumer, 'node_modules', '@angular', 'cli', 'bin');
   mkdirSync(ngDir, { recursive: true });
   writeFileSync(join(ngDir, 'ng.js'), '');
@@ -192,7 +192,7 @@ async function listen(server) {
 }
 
 test('serve.mjs --with-server: demo-config server, CSRF, upload real e mídia, pasta removida', async () => {
-  const browser = await mkdtemp(join(tmpdir(), 'cds-rte-browser-'));
+  const browser = await mkdtemp(join(tmpdir(), 'comodeviaser-rte-browser-'));
   const example = await createExampleApi();
   const server = createDemoServer(browser, {
     api: example.handler,
@@ -261,7 +261,7 @@ test('serve.mjs --with-server: demo-config server, CSRF, upload real e mídia, p
 });
 
 test('serve.mjs sem --with-server: sem rotas da API nem demo-config', async () => {
-  const browser = await mkdtemp(join(tmpdir(), 'cds-rte-browser-'));
+  const browser = await mkdtemp(join(tmpdir(), 'comodeviaser-rte-browser-'));
   const server = createDemoServer(browser);
   const base = await listen(server);
   try {
@@ -278,7 +278,7 @@ test('serve.mjs sem --with-server: sem rotas da API nem demo-config', async () =
 });
 
 test('serve.mjs: o cabeçalho de CSP vai por padrão e some com cspHeader: false', async () => {
-  const browser = await mkdtemp(join(tmpdir(), 'cds-rte-browser-'));
+  const browser = await mkdtemp(join(tmpdir(), 'comodeviaser-rte-browser-'));
   try {
     for (const [options, expected] of [
       [{}, true],

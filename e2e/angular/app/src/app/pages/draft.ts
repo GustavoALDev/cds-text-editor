@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-import { clearLocalDrafts, RteEditor } from '@cds/rte-angular';
+import { clearLocalDrafts, RteEditor } from '@comodeviaser/rte-angular';
 
 /** N39 (spec 05c2b): editor com `draftKey` e o botão de `clearLocalDrafts`. */
 @Component({

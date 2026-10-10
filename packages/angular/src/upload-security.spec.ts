@@ -11,10 +11,10 @@ import {
   RteUploadError,
   type RteUploadConfig,
   type RteUploadErrorEvent,
-} from '@cds/rte-angular';
-import { getHtmlSchema } from '@cds/rte-core';
-import { getRteHtml } from '@cds/rte-core/extensions';
-import { validateHtml } from '@cds/rte-core/html';
+} from '@comodeviaser/rte-angular';
+import { getHtmlSchema } from '@comodeviaser/rte-core';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
+import { validateHtml } from '@comodeviaser/rte-core/html';
 import type { Editor } from '@tiptap/core';
 import fc from 'fast-check';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

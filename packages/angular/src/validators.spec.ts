@@ -13,8 +13,8 @@ import {
   type SchemaFn,
 } from '@angular/forms/signals';
 /* eslint-disable @nx/enforce-module-boundaries -- os testes importam os entries pelo alias público (pré-voo 9) */
-import { RTE_LABELS_EN, RteEditor, provideRichText } from '@cds/rte-angular';
-import { RTE_LABELS_ES, RTE_LABELS_PT_BR } from '@cds/rte-angular/i18n';
+import { RTE_LABELS_EN, RteEditor, provideRichText } from '@comodeviaser/rte-angular';
+import { RTE_LABELS_ES, RTE_LABELS_PT_BR } from '@comodeviaser/rte-angular/i18n';
 import {
   RteValidators,
   formatRteError,
@@ -26,10 +26,10 @@ import {
   rteRequired,
   rteSafeLinks,
   rteUploadsFinished,
-} from '@cds/rte-angular/validators';
+} from '@comodeviaser/rte-angular/validators';
 /* eslint-enable @nx/enforce-module-boundaries */
-import { RTE_CODE_LANGUAGES } from '@cds/rte-core/code-languages';
-import { getRteHtml } from '@cds/rte-core/extensions';
+import { RTE_CODE_LANGUAGES } from '@comodeviaser/rte-core/code-languages';
+import { getRteHtml } from '@comodeviaser/rte-core/extensions';
 import type { Editor } from '@tiptap/core';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';

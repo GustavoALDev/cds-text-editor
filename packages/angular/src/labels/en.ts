@@ -1,4 +1,4 @@
-import { RTE_CONTENT_LABELS, RTE_SLASH_LABELS } from '@cds/rte-core/extensions';
+import { RTE_CONTENT_LABELS, RTE_SLASH_LABELS } from '@comodeviaser/rte-core/extensions';
 import type { RteUploadErrorReason } from '../upload/types';
 import type { RteLabels } from './types';
 

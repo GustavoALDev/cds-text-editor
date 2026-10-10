@@ -14,7 +14,7 @@ const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SKIP_DIRS = new Set(['node_modules', 'media', '.git']);
 
 export const LEIA_ME =
-  'Onde o guia manda instalar os pacotes @cds/rte-* do registro, instale os arquivos ./kit/*.tgz (o servidor de exemplo está em ./examples/server-node).\n';
+  'Onde o guia manda instalar os pacotes @comodeviaser/rte-* do registro, instale os arquivos ./kit/*.tgz (o servidor de exemplo está em ./examples/server-node).\n';
 
 /** Zip mínimo (deflate, nomes UTF-8, data fixa 1980-01-01 para ser reprodutível). */
 export function createZip(entries) {

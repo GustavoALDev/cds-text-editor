@@ -9,11 +9,11 @@ Em cinco passos você instala o editor, liga o CSS, escolhe os rótulos, valida 
 
 ## 1. Instale
 
-Os pacotes ainda não foram publicados, e o nome `@cds/*` é provisório. O comando traz o componente, o núcleo, o tema e os peers do Tiptap:
+Os pacotes ainda não foram publicados. O comando traz o componente, o núcleo, o tema e os peers do Tiptap:
 
 <!-- generated: install-command -->
 
-Para exibir o texto sem carregar o editor (passo 5), instale também o `@cds/rte-render` e o `@cds/rte-sanitizer` (`npm install @cds/rte-render @cds/rte-sanitizer`). A página [Instalação](guia/instalacao) explica cada pacote.
+Para exibir o texto sem carregar o editor (passo 5), instale também o `@comodeviaser/rte-render` e o `@comodeviaser/rte-sanitizer` (`npm install @comodeviaser/rte-render @comodeviaser/rte-sanitizer`). A página [Instalação](guia/instalacao) explica cada pacote.
 
 ## 2. Inclua o CSS
 

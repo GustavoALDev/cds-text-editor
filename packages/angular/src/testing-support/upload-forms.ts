@@ -1,6 +1,6 @@
 import type { ComponentFixture } from '@angular/core/testing';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- os testes importam o entry . pelo alias público (pré-voo 9)
-import type { RteEditor } from '@cds/rte-angular';
+import type { RteEditor } from '@comodeviaser/rte-angular';
 import type { Editor } from '@tiptap/core';
 import { NodeSelection } from '@tiptap/pm/state';
 import { expect } from 'vitest';

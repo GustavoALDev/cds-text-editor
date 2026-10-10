@@ -1,12 +1,12 @@
 import { Location, PlatformLocation } from '@angular/common';
 import { Component, signal, type Provider } from '@angular/core';
 import type { ComponentFixture } from '@angular/core/testing';
-import type { RteHeadingLevel } from '@cds/rte-core';
-import type { RteTocEntry } from '@cds/rte-core/html';
+import type { RteHeadingLevel } from '@comodeviaser/rte-core';
+import type { RteTocEntry } from '@comodeviaser/rte-core/html';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { provideRteRender } from './provide';
 import { renderHost } from './testing-support/render';
-import { RteToc } from '@cds/rte-render/toc';
+import { RteToc } from '@comodeviaser/rte-render/toc';
 import {
   buildTocTree,
   uniqueTocEntries,

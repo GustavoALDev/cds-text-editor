@@ -5,12 +5,12 @@ import {
   computed,
   signal,
 } from '@angular/core';
-import { RteEditor, type RteLabels } from '@cds/rte-angular';
+import { RteEditor, type RteLabels } from '@comodeviaser/rte-angular';
 import {
   RTE_LABELS_EN,
   RTE_LABELS_ES,
   RTE_LABELS_PT_BR,
-} from '@cds/rte-angular/i18n';
+} from '@comodeviaser/rte-angular/i18n';
 
 type Lang = 'pt-BR' | 'en' | 'es';
 

@@ -1,4 +1,4 @@
-import type { RteImageAttrs, RteVideoAttrs } from '@cds/rte-core/extensions';
+import type { RteImageAttrs, RteVideoAttrs } from '@comodeviaser/rte-core/extensions';
 import type { CommandProps, Editor } from '@tiptap/core';
 import { closeHistory } from '@tiptap/pm/history';
 import { NodeSelection } from '@tiptap/pm/state';

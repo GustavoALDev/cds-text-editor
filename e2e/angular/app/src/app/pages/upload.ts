@@ -28,19 +28,19 @@ import {
   type RteLabels,
   type RteUploadConfig,
   type RteUploadErrorEvent,
-} from '@cds/rte-angular';
+} from '@comodeviaser/rte-angular';
 import {
   RTE_LABELS_EN,
   RTE_LABELS_ES,
   RTE_LABELS_PT_BR,
-} from '@cds/rte-angular/i18n';
+} from '@comodeviaser/rte-angular/i18n';
 import {
   formatRteError,
   rteImagesHaveAlt,
   RteImagesHaveAltValidator,
   rteUploadsFinished,
   RteUploadsFinishedValidator,
-} from '@cds/rte-angular/validators';
+} from '@comodeviaser/rte-angular/validators';
 import {
   E2eBridge,
   NO_FORM_STATE,
